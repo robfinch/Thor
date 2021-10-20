@@ -44,7 +44,7 @@ input Value b;
 input Value c;
 output Value o;
 
-reg [127:0] o1, o2;
+reg [127:0] o1, o2, o3;
 wire [5:0] mw = ir[42:37];
 wire [5:0] me = ir[42:37];
 wire [5:0] mb = c[5:0];
@@ -67,38 +67,42 @@ begin
 	case(ir.any.opcode)
 	BTFLD:
 		case(func)
-		BFCLR:	begin for (n = 0; n < $bits(Value); n = n + 1) o[n] = mask[n] ?  1'b0 : a[n]; end
-		BFSET:	begin for (n = 0; n < $bits(Value); n = n + 1) o[n] = mask[n] ?  1'b1 : a[n]; end
-		BFCHG:	begin for (n = 0; n < $bits(Value); n = n + 1) o[n] = mask[n] ? ~a[n] : a[n]; end
+		BFCLR:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b0 : a[n]; end
+		BFSET:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b1 : a[n]; end
+		BFCHG:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ? ~a[n] : a[n]; end
 		// The following does SRL,SRA and ROR
 		BFEXT:
 			begin
 				o1 = {b,a} >> mb;
 				for (n = 0; n < $bits(Value); n = n + 1)
 					if (n > mw)
-						o[n] = ir[35] ? o1[mw] : 1'b0;
+						o2[n] = ir[35] ? o1[mw] : 1'b0;
 					else
-						o[n] = o1[n];
+						o2[n] = o1[n];
 			end
 		BFINS:
 			begin
 				o1 = {64'd0,b} << mb;
-				for (n = 0; n < $bits(Value); n = n + 1) o[n] = (mask[n] ? o1[n] : a[n]);
+				for (n = 0; n < $bits(Value); n = n + 1) o2[n] = (mask[n] ? o1[n] : a[n]);
 			end
 		BFINSI:
 			begin
 				o1 = {64'd0,imm} << mb;
-				for (n = 0; n < $bits(Value); n = n + 1) o[n] = (mask[n] ? o1[n] : a[n]);
+				for (n = 0; n < $bits(Value); n = n + 1) o2[n] = (mask[n] ? o1[n] : a[n]);
 			end
 		BFFFO:
 			begin
 				for (n = 0; n < $bits(Value); n = n + 1)
 					o1[n] = mask[n] ? a[n] : 1'b0;
-				o = (ffoo==7'd127) ? -64'd1 : ffoo - mb;	// ffoo returns 127 if no one was found
+				o2 = (ffoo==7'd127) ? -64'd1 : ffoo - mb;	// ffoo returns 127 if no one was found
 			end
-		default:	o = 64'd0;
+		default:	o2 = 64'd0;
 		endcase
-	default:	o = 64'd0;
+	default:	o2 = 64'd0;
 	endcase
 end
+
+always_comb
+	o = o2;
+
 endmodule

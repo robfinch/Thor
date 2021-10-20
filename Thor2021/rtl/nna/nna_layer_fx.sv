@@ -81,8 +81,8 @@ R2:
 	NNA_MTBIAS:	wrb <= b;
 	NNA_MTMC:		wrm <= b;	
 	NNA_MTFB:		wf <= b;
-	NNA_MTIN:		wrx <= 64'd1 << b[21:16];
-	NNA_MTWT:		wr <= 64'd1 << b[21:16];
+	NNA_MTIN:		wrx <= b[63:32];
+	NNA_MTWT:		wr <= b[63:32];
 	default:	;
 	endcase
 default:	;

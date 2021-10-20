@@ -119,7 +119,6 @@ parameter BGTUL		= 8'h3F;
 parameter DIVI		= 8'h40;
 parameter CPUID		= 8'h41;
 parameter DIVIL		= 8'h42;
-parameter MUX			= 8'h43;
 parameter ADDIL		= 8'h44;
 parameter CHKI		= 8'h45;
 parameter MULIL		= 8'h46;
@@ -134,13 +133,13 @@ parameter DIVUI		= 8'h4F;
 parameter CMPI		= 8'h50;
 parameter VM			= 8'h52;
 parameter VMFILL	= 8'h53;
-parameter ADDIS		= 8'h54;
+parameter ADDIH		= 8'h54;
 parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
-parameter ANDIS		= 8'h58;
-parameter ORIS		= 8'h59;
-parameter XORIS		= 8'h5A;
+parameter ANDIH		= 8'h58;
+parameter ORIH		= 8'h59;
+parameter XORIH		= 8'h5A;
 parameter CMPIL		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
@@ -181,11 +180,66 @@ parameter MEMDB		= 8'hF9;
 parameter WFI			= 8'hFA;
 parameter SEI			= 8'hFB;
 
+// R1
+parameter CNTLZ		= 7'h00;
+parameter CNTLO		= 7'h01;
+parameter CNTPOP	= 7'h02;
+parameter ABS			= 7'h06;
+parameter NABS		= 7'h07;
+parameter SQRT		= 7'h08;
+parameter V2BITS	= 7'h18;
+parameter BITS2V	= 7'h19;
+
+// R2
+parameter NAND		= 7'h00;
+parameter NOR			= 7'h01;
+parameter XNOR		= 7'h02;
+parameter ORC			= 7'h03;
+parameter ADD			= 7'h04;
+parameter SUBF		= 7'h05;
+parameter AND			= 7'h08;
+parameter OR			= 7'h09;
+parameter XOR			= 7'h0A;
+parameter ANDC		= 7'h0B;
+parameter SLT			= 7'h20;
+parameter SGE			= 7'h21;
+parameter SLTU		= 7'h22;
+parameter SGEU		= 7'h23;
+parameter SEQ			= 7'h26;
+parameter SNE			= 7'h27;
+parameter CMP			= 7'h2A;
+parameter SLL			= 7'h40;
+parameter SRL			= 7'h41;
+parameter SRA			= 7'h42;
+parameter ROL			= 7'h43;
+parameter ROR			= 7'h44;
+
 // R3
 parameter PTRDIF	= 4'h1;
 parameter	CHK			= 4'h2;
 parameter MUX			= 4'h4;
 parameter CMOVNZ	= 4'h6;
+
+// OSR2
+parameter REX			= 7'h10;
+
+// VM
+parameter VMADD		= 5'h04;
+parameter VMSUB		= 5'h05;
+parameter VMAND		= 5'h08;
+parameter VMOR		= 5'h09;
+parameter VMXOR		= 5'h0A;
+parameter VMCNTPOP	= 5'h0D;
+parameter VMFIRST	= 5'h0E;
+parameter VMLAST	= 5'h0F;
+parameter MTVM		= 5'h10;
+parameter MFVM		= 5'h11;
+parameter MTVL		= 5'h12;
+parameter MFVL		= 5'h13;
+parameter VMSLL0	= 5'h1C;
+parameter VMSLL1	= 5'h1D;
+parameter VMSRL0	= 5'h1E;
+parameter VMSRL1	= 5'h1F;
 
 // Cypto
 parameter SM4ED		= 4'hE;
@@ -218,6 +272,7 @@ parameter I2F		= 6'h02;
 parameter F2I		= 6'h03;
 parameter FSQRT	= 6'h08;
 parameter FRM		= 6'h14;
+parameter FSYNC	= 6'h16;
 parameter CPYSGN= 6'h18;
 parameter SGNINV= 6'h19;
 parameter FABS	= 6'h20;
@@ -244,6 +299,32 @@ parameter FMA		= 4'h00;
 parameter FMS		= 4'h01;
 parameter FNMA	= 4'h02;
 parameter FNMS	= 4'h03;
+
+// DF1
+parameter DFMOV		= 6'h00;
+parameter I2DF		= 6'h02;
+parameter DF2I		= 6'h03;
+parameter DFSQRT	= 6'h08;
+parameter DFRM		= 6'h14;
+parameter DFSYNC	= 6'h16;
+parameter DFCPYSGN= 6'h18;
+parameter DFSGNINV= 6'h19;
+parameter DFABS		= 6'h20;
+parameter DFNABS	= 6'h21;
+parameter DFNEG		= 6'h22;
+
+// P1
+parameter PMOV	= 6'h00;
+parameter I2P		= 6'h02;
+parameter P2I		= 6'h03;
+parameter PSQRT	= 6'h08;
+parameter PRM		= 6'h14;
+parameter PSYNC	= 6'h16;
+parameter PCPYSGN	= 6'h18;
+parameter PSGNINV	= 6'h19;
+parameter PABS	= 6'h20;
+parameter PNABS	= 6'h21;
+parameter PNEG	= 6'h22;
 
 
 parameter MR_LOAD = 3'd0;
@@ -471,7 +552,7 @@ typedef struct packed
 typedef struct packed
 {
 	logic [23:0] pad;
-	logic [6:0] func;
+	logic [5:0] func;
 	logic [2:0] seg;
 	logic [1:0] Sc;
 	logic [1:0] Tb;
@@ -743,7 +824,7 @@ OSR2:
 8'h3x:	Source1Valid = isn.br.Ra==6'd0;
 DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,BMAPI,MULUI,DIVUI:
 	Source1Valid = isn.ri.Ra==6'd0;
-CMPI,ADDIS,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIS,ORIS,XORIS:
+CMPI,ADDIH,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIH,ORIH,XORIH:
 	Source1Valid = isn.ri.Ra==6'd0;
 VM:
 	case(isn.vmr2.func)
@@ -751,8 +832,8 @@ VM:
 	MFVL:	Source1Valid = FALSE;
 	MTVM:	Source1Valid = isn[17:12]==6'd0;
 	MTVL:	Source1Valid = isn[17:12]==6'd0;
-	VMADD,VMAND,VMOR,VMXOR,VMSLL,VMSRL,VMSUB:
-	:	Source1Valid = FALSE;
+	VMADD,VMAND,VMOR,VMXOR,VMSLL0,VMSLL1,VMSRL0,VMSRL1,VMSUB:
+		Source1Valid = FALSE;
 	VMCNTPOP,VMFIRST,VMLAST:
 		Source1Valid = TRUE;
 	default:	Source1Valid = TRUE;
@@ -834,7 +915,7 @@ R3:
 	case(isn.r3.func)
 	CHK:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
 	MUX:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
-	default:	Source1Valid = TRUE;
+	default:	Source2Valid = TRUE;
 	endcase
 ADDI,SUBFI,MULI,ANDI,ORI,XORI,ADCI,SBCFI,MULUI,CSR:
 	Source2Valid = TRUE;
@@ -850,7 +931,7 @@ OSR2:
 8'h3x:	Source2Valid = isn.br.Rb==6'd0 || isn.br.Tb[1];
 DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,BMAPI,MULUI,DIVUI:
 	Source2Valid = TRUE;
-CMPI,ADDIS,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIS,ORIS,XORIS:
+CMPI,ADDIH,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIH,ORIH,XORIH:
 	Source2Valid = TRUE;
 VM:
 	case(isn.vmr2.func)
@@ -858,8 +939,8 @@ VM:
 	MFVL:	Source2Valid = TRUE;
 	MTVM:	Source2Valid = TRUE;
 	MTVL:	Source2Valid = TRUE;
-	VMADD,VMAND,VMOR,VMXOR,VMSLL,VMSRL,VMSUB:
-	:	Source2Valid = FALSE;
+	VMADD,VMAND,VMOR,VMXOR,VMSLL0,VMSLL1,VMSRL0,VMSRL1,VMSUB:
+		Source2Valid = FALSE;
 	VMCNTPOP,VMFIRST,VMLAST:
 		Source2Valid = FALSE;
 	default:	Source2Valid = TRUE;
@@ -908,7 +989,7 @@ P1L:
 	endcase
 P2L:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
 8'h8x:	Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 || isn.r2.Tb[1] : TRUE;
-8'h9x:	Source1Valid = isn.st.Rb==6'd0 || isn.r2.Tb[1];
+8'h9x:	Source2Valid = isn.st.Rb==6'd0 || isn.r2.Tb[1];
 SYS:	Source2Valid = TRUE;
 INT:	Source2Valid = TRUE;
 MOV:	Source2Valid = TRUE;
