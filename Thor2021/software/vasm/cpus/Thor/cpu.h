@@ -102,6 +102,10 @@ typedef struct {
 #define R2		8
 #define BL		9
 #define JL2		10
+#define REGIND	11
+#define SCNDX		12
+#define J			13
+#define JL		14
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((X) & 0x3fLL) << 15LL)
@@ -109,3 +113,5 @@ typedef struct {
 #define TB(x)		(((x) & 3LL) << 27LL)
 #define RC(x)		(((x) & 0x3fLL) << 29LL)
 #define TC(x)		(((x) & 3LL) << 35LL)
+#define SC(x)		(((x) & 7LL) << 29LL)
+#define CA(x)		(((x) & 7LL) << 29LL)
