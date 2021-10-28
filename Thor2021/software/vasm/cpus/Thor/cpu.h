@@ -23,13 +23,15 @@ typedef uint64_t utaddr;
 #define DATA_ALIGN(n) ((n)<=8?1:(n)<=16?2:(n)<=32?4:8)
 
 /* operand class for n-bit data definitions */
-#define DATA_OPERAND(n) OP_DATA
+#define DATA_OPERAND(n) thor_data_operand(n)
 
-#define NEXT (-1)  /* use operand_type+1 for next operand */
+/* #define NEXT (-1)   use operand_type+1 for next operand */
 
 /* type to store each operand */
 typedef struct {
   int type;
+  unsigned char attr;   /* reloc attribute != REL_NONE when present */
+  unsigned char format;
   char basereg;
   char ndxreg;
   char scale;
@@ -43,7 +45,7 @@ typedef struct {
 #define OP_IMM23					0x00000004
 #define OP_IMM30					0x00000008
 #define OP_IMM46					0x00000010
-#define OP_IMM62					0x00000020
+#define OP_IMM64					0x00000020
 #define OP_IMM78					0x00000040
 #define OP_REGT						0x00000100
 #define OP_VMREG					0x00000200
@@ -52,7 +54,7 @@ typedef struct {
 #define OP_REGIND24				0x00001000
 #define OP_REGIND30				0x00002000
 #define OP_REGIND46				0x00004000
-#define OP_REGIND62				0x00008000
+#define OP_REGIND64				0x00008000
 #define OP_REGIND78				0x00010000
 #define OP_SCNDX					0x00020000
 #define OP_LK							0x00040000
@@ -66,10 +68,11 @@ typedef struct {
 #define OP_IMM7						0x04000000
 #define OP_CAREGIND				0x08000000
 #define OP_BRTGT					0x10000000
+#define OP_REG7						0x20000000
 
 /* supersets of other operands */
-#define OP_IMM			OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM62|OP_IMM78
-#define OP_REGIND		OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND62|OP_REGIND78
+#define OP_IMM			OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78
+#define OP_REGIND		OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78
 #define OP_MEM      OP_REGIND|OP_SCNDX
 #define OP_ALL      0xfffffff
 
@@ -85,11 +88,13 @@ typedef struct {
   uint64_t prefix;
   uint64_t opcode;
   size_t len;
+  uint64_t short_opcode;
+  size_t short_len;
 } mnemonic_extension;
 
 #define EXI7	0x46
 #define EXI23	0x47
-#define EXI39	0x48
+#define EXI41	0x7C
 #define EXI55	0x49
 #define EXIM	0x4A
 
@@ -106,12 +111,31 @@ typedef struct {
 #define SCNDX		12
 #define J			13
 #define JL		14
+#define BL2		15
+#define RI		16
+#define RIL		17
+#define RTS		18
+#define R3RR	19
+#define R3IR	20
+#define R3RI	21
+#define R3II	22
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
-#define RA(x)		(((X) & 0x3fLL) << 15LL)
+#define RA(x)		(((x) & 0x3fLL) << 15LL)
 #define RB(x)		(((x) & 0x3fLL) << 21LL)
 #define TB(x)		(((x) & 3LL) << 27LL)
 #define RC(x)		(((x) & 0x3fLL) << 29LL)
 #define TC(x)		(((x) & 3LL) << 35LL)
 #define SC(x)		(((x) & 7LL) << 29LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
+
+/* special data operand types: */
+#define OP_D8  0x1001
+#define OP_D16 0x1002
+#define OP_D32 0x1003
+#define OP_D64 0x1004
+#define OP_F32 0x1005
+#define OP_F64 0x1006
+
+#define OP_DATA(t) (t >= OP_D8)
+#define OP_FLOAT(t) (t >= OP_F32)

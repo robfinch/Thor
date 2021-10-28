@@ -17,3 +17,4 @@
   "ignoring fake operand",WARNING,
   "misplaced selector ignored",WARNING,
 	"misplaced link register",ERROR,
+	"bad instruction alignment",ERROR,
