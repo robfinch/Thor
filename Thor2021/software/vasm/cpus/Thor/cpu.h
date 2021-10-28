@@ -29,7 +29,7 @@ typedef uint64_t utaddr;
 
 /* type to store each operand */
 typedef struct {
-  int type;
+  uint32_t type;
   unsigned char attr;   /* reloc attribute != REL_NONE when present */
   unsigned char format;
   char basereg;
@@ -40,41 +40,41 @@ typedef struct {
 } operand;
 
 /* operand-types */
-#define OP_REG						0x00000001
-#define OP_IMM11					0x00000002
-#define OP_IMM23					0x00000004
-#define OP_IMM30					0x00000008
-#define OP_IMM46					0x00000010
-#define OP_IMM64					0x00000020
-#define OP_IMM78					0x00000040
-#define OP_REGT						0x00000100
-#define OP_VMREG					0x00000200
-#define OP_UIMM6					0x00000400
-#define OP_REGIND8				0x00000800
-#define OP_REGIND24				0x00001000
-#define OP_REGIND30				0x00002000
-#define OP_REGIND46				0x00004000
-#define OP_REGIND64				0x00008000
-#define OP_REGIND78				0x00010000
-#define OP_SCNDX					0x00020000
-#define OP_LK							0x00040000
-#define OP_CAREG					0x00080000
-#define OP_BRTGT20				0x00100000
-#define OP_BRTGT12				0x00200000
-#define OP_BRTGT34				0x00400000
-#define OP_DATA						0x00800000
-#define OP_SEL						0x01000000
-#define OP_VREG						0x02000000
-#define OP_IMM7						0x04000000
-#define OP_CAREGIND				0x08000000
-#define OP_BRTGT					0x10000000
-#define OP_REG7						0x20000000
+#define OP_REG						0x00000001L
+#define OP_IMM11					0x00000002L
+#define OP_IMM23					0x00000004L
+#define OP_IMM30					0x00000008L
+#define OP_IMM46					0x00000010L
+#define OP_IMM64					0x00000020L
+#define OP_IMM78					0x00000040L
+#define OP_REGT						0x00000100L
+#define OP_VMREG					0x00000200L
+#define OP_UIMM6					0x00000400L
+#define OP_REGIND8				0x00000800L
+#define OP_REGIND24				0x00001000L
+#define OP_REGIND30				0x00002000L
+#define OP_REGIND46				0x00004000L
+#define OP_REGIND64				0x00008000L
+#define OP_REGIND78				0x00010000L
+#define OP_SCNDX					0x00020000L
+#define OP_LK							0x00040000L
+#define OP_CAREG					0x00080000L
+#define OP_BRTGT20				0x00100000L
+#define OP_BRTGT12				0x00200000L
+#define OP_BRTGT34				0x00400000L
+#define OP_DATA						0x00800000L
+#define OP_SEL						0x01000000L
+#define OP_VREG						0x02000000L
+#define OP_IMM7						0x04000000L
+#define OP_CAREGIND				0x08000000L
+#define OP_BRTGT					0x10000000L
+#define OP_REG7						0x20000000L
 
 /* supersets of other operands */
 #define OP_IMM			OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78
 #define OP_REGIND		OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78
 #define OP_MEM      OP_REGIND|OP_SCNDX
-#define OP_ALL      0xfffffff
+#define OP_ALL      0x3fffffff
 
 #define OP_ISMEM(x) ((((x) & OP_MEM)!=0)
 
@@ -122,20 +122,20 @@ typedef struct {
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)
-#define RB(x)		(((x) & 0x3fLL) << 21LL)
+#define RB(x)		(((x) & 0x7fLL) << 21LL)
 #define TB(x)		(((x) & 3LL) << 27LL)
-#define RC(x)		(((x) & 0x3fLL) << 29LL)
+#define RC(x)		(((x) & 0x7fLL) << 29LL)
 #define TC(x)		(((x) & 3LL) << 35LL)
 #define SC(x)		(((x) & 7LL) << 29LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
 
 /* special data operand types: */
-#define OP_D8  0x1001
-#define OP_D16 0x1002
-#define OP_D32 0x1003
-#define OP_D64 0x1004
-#define OP_F32 0x1005
-#define OP_F64 0x1006
+#define OP_D8  0x40001001
+#define OP_D16 0x40001002
+#define OP_D32 0x40001003
+#define OP_D64 0x40001004
+#define OP_F32 0x40001005
+#define OP_F64 0x40001006
 
 #define OP_DATA(t) (t >= OP_D8)
 #define OP_FLOAT(t) (t >= OP_F32)
