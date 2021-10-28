@@ -70,6 +70,8 @@ typedef struct {
 #define OP_BRTGT					0x10000000L
 #define OP_REG7						0x20000000L
 
+#define OP_NEXT			-1
+
 /* supersets of other operands */
 #define OP_IMM			OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78
 #define OP_REGIND		OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78
@@ -98,6 +100,7 @@ typedef struct {
 #define EXI55	0x49
 #define EXIM	0x4A
 
+// Instruction Formats
 #define	R3		1
 #define B			2
 #define B2		3
@@ -119,6 +122,13 @@ typedef struct {
 #define R3IR	20
 #define R3RI	21
 #define R3II	22
+#define VR3		23
+#define INT		24
+#define BITS16	25
+#define BITS32	26
+#define REX		27
+#define RTE		28
+#define R1		29
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)
