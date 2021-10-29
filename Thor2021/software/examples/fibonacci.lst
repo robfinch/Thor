@@ -1,0 +1,68 @@
+F00:0001       # Fibonacci calculator Thor2021 asm
+F00:0002       # r1 in the end will hold the Nth fibonacci number
+F00:0003       
+F00:0004       #	.org	0xFFFFFFFFFFFE0000
+F00:0005       
+F00:0006       start:
+F00:0007       	LDI	r2,0xFD
+               S01:00000000:  04 04 A0 1F
+F00:0008       	LDI	r2,0x01		# x = 1
+               S01:00000004:  04 04 20 00
+F00:0009       	STO	r2,00
+               S01:00000008:  93 04 00 20
+F00:0010       
+F00:0011       	LDI	r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
+               S01:0000000C:  04 06 00 02
+F00:0012       	OR	r1,r3,r0	# transfer y register to accumulator
+               S01:00000010:  1D 82 01 00
+F00:0013       	ADD	r3,r3,-3	# handles the algorithm iteration counting
+               S01:00000014:  04 86 A1 FF
+F00:0014       
+F00:0015       	LDI	r1,2		# a = 2
+               S01:00000018:  04 02 40 00
+F00:0016       	STO	r1,4		# stores a
+               S01:0000001C:  93 02 80 20
+F00:0017       
+F00:0018       floop: 
+F00:0019       	LDO	r2,4		# x = a
+               S01:00000020:  86 04 80 20
+F00:0020       	ADD	r1,r1,r2	# a += x
+               S01:00000024:  19 82 40 00
+F00:0021       	STO	r1,4		# stores a
+               S01:00000028:  93 02 80 20
+F00:0022       	STO	r2,0		# stores x
+               S01:0000002C:  93 04 00 20
+F00:0023       	ADD	r3,r3,-1	# y -= 1
+               S01:00000030:  04 86 E1 FF
+F00:0024         BNE r3,r0,floop	# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
+               S01:00000034:  27 B0 01 E0 FF FF
+F00:0025         NOP
+               S01:0000003A:  F1 00
+F00:0026         NOP
+               S01:0000003C:  F1 00
+F00:0027         NOP
+               S01:0000003E:  F1 00
+F00:0028         NOP
+               S01:00000040:  F1 00
+F00:0029         NOP
+               S01:00000042:  F1 00
+F00:0030       	NOP  
+               S01:00000044:  F1 00
+F00:0031       
+
+
+Sections:
+S01  .text
+
+
+Sources:
+F00  fibonacci.asm
+
+
+Symbols:
+floop LAB (0x20) sec=.text 
+start LAB (0x0) UNUSED sec=.text 
+__VASM EXPR(0=0x0) INTERNAL 
+__MSDOSFS EXPR(0=0x0) INTERNAL 
+
+There have been no errors.
