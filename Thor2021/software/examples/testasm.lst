@@ -1,0 +1,53 @@
+F00:0001       	.text
+F00:0002       start:
+F00:0003       	bsr		sub1
+               S01:00000000:  20 DA 00 E0 00 00
+F00:0004       	jsr		sub1
+               S01:00000006:  20 DA 00 00 00 00 [R]
+F00:0005       	bsr		lk2,sub2
+               S01:0000000C:  20 CC 00 E0 00 00
+F00:0006       	jsr		lk1,sub1
+               S01:00000012:  20 DA 00 00 00 00 [R]
+F00:0007       	add		r1,r2,1234
+               S01:00000018:  D4 02 41 9A 00 00
+F00:0008       	add		r48,r32,567
+               S01:0000001E:  04 60 F0 46
+F00:0009       	add		r4,r1,r2,r3
+               S01:00000022:  02 88 40 60 00 08
+F00:0010       	add		r5,r4,r3
+               S01:00000028:  19 0A 62 00
+F00:0011       	bra		start
+               S01:0000002C:  20 50 FF FF FF FF
+F00:0012       	rts
+               S01:00000032:  F2 02 00 00
+F00:0013       
+F00:0014       sub1:
+F00:0015       	add		r3,r4,r5
+               S01:00000036:  19 06 A2 00
+F00:0016       	rts
+               S01:0000003A:  F2 02 00 00
+F00:0017       
+F00:0018       sub2:
+F00:0019       	add		r6,r7,r8
+               S01:0000003E:  19 8C 03 01
+F00:0020       	rts		lk2
+               S01:00000042:  F2 04 00 00
+F00:0021       
+
+
+Sections:
+S01  .text
+
+
+Sources:
+F00  testasm.asm
+
+
+Symbols:
+sub2 LAB (0x3e) sec=.text 
+sub1 LAB (0x36) REF sec=.text 
+start LAB (0x0) sec=.text 
+__VASM EXPR(0=0x0) INTERNAL 
+__MSDOSFS EXPR(0=0x0) INTERNAL 
+
+There have been no errors.
