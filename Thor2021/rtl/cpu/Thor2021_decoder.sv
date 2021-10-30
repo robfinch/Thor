@@ -70,6 +70,48 @@ STOS:
 	Rc = ir[14:9];
 default:	Rc = ir[34:29];
 endcase
+
+// Cat
+case(ir.any.opcode)
+CSR:
+	case (ir.csr.op)
+	CSRRW:
+		// Cannot update ca[7] this way.
+		if (ir.csr.regno[11:4]==8'h10 && ir.csr.regno[11:1] != 11'h87)	// 0x3100 to 0x310F
+			deco.carfwr = TRUE;
+		else
+			deco.carfwr = FALSE;
+	default:	deco.carfwr = FALSE;
+	endcase
+// Cannot update ca[0] with a branch
+JMP,DJMP:
+	deco.carfwr = ir.jxx.lk != 2'd0;
+JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
+	deco.carfwr = ir.jxx.lk != 2'd0;
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.carfwr = ir.jxx.lk != 2'd0;
+default: 	deco.carfwr = FALSE;
+endcase
+
+case(ir.any.opcode)
+CSR:
+	case (ir.csr.op)
+	CSRRW:
+		if (ir.csr.regno[11:4]==8'h10)	// 0x3100 to 0x310F
+			deco.Cat = ir.csr.regno[3:1];
+		else
+			deco.Cat = 3'd0;
+	default:	deco.Cat = 3'd0;
+	endcase
+JMP,DJMP:
+	deco.Cat = {1'b0,ir.jxx.lk};
+JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
+	deco.Cat = {1'b0,ir.jxx.lk};
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.Cat = {1'b0,ir.jxx.lk};
+default: 	deco.Cat = 3'd0;
+endcase
+
 // Detecting register file update
 casez(ir.any.opcode)
 R1,F1,DF1,P1:
@@ -231,6 +273,10 @@ endcase
 
 
 case(ir.any.opcode)
+JMP,DJMP:	deco.jmp = TRUE;
+default: 	deco.jmp = FALSE;;
+endcase
+case(ir.any.opcode)
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.jxx = TRUE;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
@@ -238,8 +284,49 @@ DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 default: 	deco.jxx = FALSE;;
 endcase
 
+case(ir.any.opcode)
+DJMP:	deco.dj = TRUE;
+default: 	deco.dj = FALSE;;
+endcase
+case(ir.any.opcode)
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.dj = TRUE;
+default: 	deco.dj = FALSE;;
+endcase
+
+deco.rts = ir.any.opcode==RTS;
+
+// Detect multi-cycle operations
+case(ir.any.opcode)
+R2:
+	case(ir.r2.func)
+	MUL,MULH:	deco.multi_cycle = TRUE;
+	DIV:			deco.multi_cycle = TRUE;
+	default:	deco.multi_cycle = FALSE;
+	endcase
+MULI,MULIL:		deco.multi_cycle = TRUE;
+DIVI,DIVIL:		deco.multi_cycle = TRUE;
+JMP,DJMP:			deco.multi_cycle = TRUE;
+JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
+	deco.multi_cycle = TRUE;
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.multi_cycle = TRUE;
+RTS:	deco.multi_cycle = TRUE;
+CACHE,CACHEX:	deco.multi_cycle = TRUE;
+LDB,LDBU,STB:	deco.multi_cycle = TRUE;
+LDW,LDWU,STW:	deco.multi_cycle = TRUE;
+LDT,LDTU,STT: deco.multi_cycle = TRUE;
+LDBX,LDBUX,STBX:	deco.multi_cycle = TRUE;
+LDWX,LDWUX,STWX:	deco.multi_cycle = TRUE;
+LDTX,LDTUX,STT:		deco.multi_cycle = TRUE;
+default:	deco.multi_cycle = FALSE;
+endcase
+
 deco.is_cbranch = ir.jxx.ca==3'd7 && ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3;
-deco.jmptgt = {{30{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
+if (deco.jxx)
+	deco.jmptgt = {{44{ir.jxx.Tgthi[15]}},ir.jxx.Tgthi,ir.jxx.Tgtlo,1'b0};
+else
+	deco.jmptgt = {{30{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 end
 
 endmodule

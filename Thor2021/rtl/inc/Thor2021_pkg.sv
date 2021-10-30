@@ -40,12 +40,12 @@
 package Thor2021_pkg;
 
 `define QSLOTS	2		// number of simulataneously queueable instructions
-`define	RSLOTS	8		// number of reorder buffer entries
+`define RENTRIES	8	// number of reorder buffer entries
 
 parameter QSLOTS	= `QSLOTS;
-parameter RSLOTS	= `RSLOTS;
+parameter RENTRIES	= `RENTRIES;
 parameter BitsQS	= $clog2(`QSLOTS-1);
-parameter BitsRS	= $clog2(`RSLOTS-1) + 1;
+parameter BitsRS	= $clog2(`RENTRIES-1) + 1;
 
 parameter VALUE_SIZE = 64;
 
@@ -76,71 +76,68 @@ parameter ADCI		= 8'h0C;
 parameter	SBCFI		= 8'h0D;
 parameter MULUI		= 8'h0E;
 parameter CSR			= 8'h0F;
-parameter R1L			= 8'h11;
-parameter R2L			= 8'h12;
-parameter R3L			= 8'h13;
-parameter ADDQI		= 8'h14;
+
+parameter BEQZ		= 8'h10;
+parameter DBEQZ		= 8'h11;
+parameter BNEZ		= 8'h12;
+parameter DBNEZ		= 8'h13;
+parameter JGATE		= 8'h14;
 parameter MULFI		= 8'h15;
 parameter SEQI		= 8'h16;
 parameter SNEI		= 8'h17;
 parameter SLTI		= 8'h18;
-parameter SLTIL		= 8'h19;
-parameter SGTIL		= 8'h1A;
+parameter ADD2R		= 8'h19;
+parameter AND2R		= 8'h1A;
 parameter SGTI		= 8'h1B;
 parameter SLTUI		= 8'h1C;
-parameter SLTUIL	= 8'h1D;
-parameter SGTUIL	= 8'h1E;
+parameter OR2R		= 8'h1D;
+parameter XOR2R		= 8'h1E;
 parameter SGTUI		= 8'h1F;
-parameter BRA			= 8'h20;
-parameter BBC			= 8'h24;
-parameter BBS			= 8'h25;
-parameter BEQ			= 8'h26;
-parameter BNE			= 8'h27;
-parameter BLT			= 8'h28;
-parameter BGE			= 8'h29;
-parameter BLE			= 8'h2A;
-parameter BGT			= 8'h2B;
-parameter BLTU		= 8'h2C;
-parameter BGEU		= 8'h2D;
-parameter BLEU		= 8'h2E;
-parameter BGTU		= 8'h2F;
-parameter BBCL		= 8'h34;
-parameter BBSL		= 8'h35;
-parameter BEQL		= 8'h36;
-parameter BNEL		= 8'h37;
-parameter BLTL		= 8'h38;
-parameter BGEL		= 8'h39;
-parameter BLEL		= 8'h3A;
-parameter BGTL		= 8'h3B;
-parameter BLTUL		= 8'h3C;
-parameter BGEUL		= 8'h3D;
-parameter BLEUL		= 8'h3E;
-parameter BGTUL		= 8'h3F;
+
+parameter JMP			= 8'h20;
+parameter JBC			= 8'h24;
+parameter JBS			= 8'h25;
+parameter JEQ			= 8'h26;
+parameter JNE			= 8'h27;
+parameter JLT			= 8'h28;
+parameter JGE			= 8'h29;
+parameter JLE			= 8'h2A;
+parameter JGT			= 8'h2B;
+parameter JLTU		= 8'h2C;
+parameter JGEU		= 8'h2D;
+parameter JLEU		= 8'h2E;
+parameter JGTU		= 8'h2F;
+
+parameter DJMP		= 8'h30;
+parameter DJBC		= 8'h34;
+parameter DJBS		= 8'h35;
+parameter DJEQ		= 8'h36;
+parameter DJNE		= 8'h37;
+parameter DJLT		= 8'h38;
+parameter DJGE		= 8'h39;
+parameter DJLE		= 8'h3A;
+parameter DJGT		= 8'h3B;
+parameter DJLTU		= 8'h3C;
+parameter DJGEU		= 8'h3D;
+parameter DJLEU		= 8'h3E;
+parameter DJGTU		= 8'h3F;
+
 parameter DIVI		= 8'h40;
 parameter CPUID		= 8'h41;
-parameter DIVIL		= 8'h42;
-parameter ADDIL		= 8'h44;
+parameter BLEND		= 8'h44;
 parameter CHKI		= 8'h45;
-parameter MULIL		= 8'h46;
-parameter SNEIL		= 8'h47;
-parameter ANDIL		= 8'h48;
-parameter ORIL		= 8'h49;
-parameter XORIL		= 8'h4A;
-parameter SEQIL		= 8'h4B;
-parameter BMAPI		= 8'h4C;
-parameter MULUIL	= 8'h4E;
+parameter EXI7		= 8'h46;
+parameter EXI23		= 8'h47;
+parameter EXI55		= 8'h49;
+parameter EXIM		= 8'h4A;
 parameter DIVUI		= 8'h4F;
+
 parameter CMPI		= 8'h50;
 parameter VM			= 8'h52;
 parameter VMFILL	= 8'h53;
-parameter ADDIH		= 8'h54;
 parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
-parameter ANDIH		= 8'h58;
-parameter ORIH		= 8'h59;
-parameter XORIH		= 8'h5A;
-parameter CMPIL		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
 parameter F3			= 8'h63;
@@ -150,26 +147,38 @@ parameter DF3			= 8'h67;
 parameter P1			= 8'h69;
 parameter P2			= 8'h6A;
 parameter P3			= 8'h6B;
-parameter CMPIS		= 8'h70;
-parameter F1L			= 8'h71;
-parameter F2L			= 8'h72;
-parameter DF1L		= 8'h75;
-parameter DF2L		= 8'h76;
-parameter P1L			= 8'h79;
-parameter P2L			= 8'h7A;
+parameter EXI41		= 8'b011111??
 parameter SYS			= 8'hA5;
 parameter INT			= 8'hA6;
 parameter MOV			= 8'hA7;
 parameter BTFLD		= 8'hAA;
-parameter BFINS			= 4'h0;
+parameter BFALIGN		= 4'h0;
 parameter BFFFO			= 4'h1;
 parameter BFEXT			= 4'h5;
-parameter BFINSI		= 4'h6;
+parameter ANDM			= 4'h8;
 parameter BFSET			= 4'h9;
 parameter BFCHG			= 4'hA;
 parameter BFCLR			= 4'hB;
 parameter LDxX		= 8'hB0;
 parameter STxX		= 8'hC0;
+
+parameter CMPIL		= 8'hD0;
+parameter CMPUIL	= 8'hD1;
+parameter MULIL		= 8'hD2;
+parameter SLTIL		= 8'hD3;
+parameter ADDIL		= 8'hD4;
+parameter SUBFIL	= 8'hD5;
+parameter SEQIL		= 8'hD6;
+parameter SNEIL		= 8'hD7;
+parameter ANDIL		= 8'hD8;
+parameter ORIL		= 8'hD9;
+parameter XORIL		= 8'hDA;
+parameter SGTIL		= 8'hDB;
+parameter SLTUIL	= 8'hDC;
+parameter DIVIL		= 8'hDD;
+parameter MULUIL	= 8'hDE;
+parameter SGTUIL	= 8'hDF;
+
 parameter NOP			= 8'hF1;
 parameter RTS			= 8'hF2;
 parameter RTE			= 8'hF3;
@@ -201,12 +210,17 @@ parameter AND			= 7'h08;
 parameter OR			= 7'h09;
 parameter XOR			= 7'h0A;
 parameter ANDC		= 7'h0B;
+parameter BYTNDX	= 7'h1A;
+parameter WYDNDX	= 7'h1B;
+parameter UTF21NDX= 7'h1C;
 parameter SLT			= 7'h20;
 parameter SGE			= 7'h21;
 parameter SLTU		= 7'h22;
 parameter SGEU		= 7'h23;
 parameter SEQ			= 7'h26;
 parameter SNE			= 7'h27;
+parameter MIN			= 7'h28;
+parameter MAX			= 7'h29;
 parameter CMP			= 7'h2A;
 parameter SLL			= 7'h40;
 parameter SRL			= 7'h41;
@@ -357,6 +371,7 @@ parameter CSR_MVTMP	= 16'h3047;
 parameter CSR_MEIP	=	16'h3048;
 parameter CSR_MECS	= 16'h3049;
 parameter CSR_MPCS	= 16'h304A;
+parameter CSR_MCA		=	16'h310?;
 parameter CSR_DSTUFF0	= 16'h4042;
 parameter CSR_DSTUFF1	= 16'h4043;
 parameter CSR_DTCBPTR=16'h4050;
@@ -371,6 +386,7 @@ parameter FLT_NONE	= 8'h00;
 parameter FLT_TLBMISS = 8'h04;
 parameter FLT_IADR	= 8'h22;
 parameter FLT_CHK		= 8'h27;
+parameter FLT_OFL		= 8'h29;
 parameter FLT_KEY		= 8'h31;
 parameter FLT_WRV		= 8'h32;
 parameter FLT_RDV		= 8'h33;
@@ -391,6 +407,7 @@ typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
 typedef logic [7:0] ASID;
 typedef logic [BitsRS:0] SrcId;
+typedef logic [BitsRS:0] RNdx;
 
 typedef struct packed
 {
@@ -417,8 +434,10 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [7:0] pad;
-	logic [34:0] imm;
+	logic [15:0] pad;
+	logic [2:0] m;
+	logic z;
+	logic [22:0] imm;
 	logic [5:0] Ra;
 	logic [5:0] Rt;
 	logic v;
@@ -483,7 +502,7 @@ typedef struct packed
 {
 	logic [47:0] pad;
 	logic [4:0] cnst;
-	logic [1:0] Ra;
+	logic [1:0] lk;
 	logic v;
 	logic [7:0] opcode;
 } rts_inst;
@@ -497,18 +516,28 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [7:0] pad;
-	logic [23:0] Tgthi;
+	logic [15:0] pad;
+	logic [15:0] Tgthi;
 	logic [2:0] Ca;
 	logic [1:0] Tb;
 	logic [5:0] Rb;
 	logic [5:0] Ra;
-	logic [1:0] Tgtlo;
-	logic [1:0] Cn;
+	logic [3:0] Tgtlo;
 	logic [1:0] Rt;
 	logic v;
 	logic [7:0] opcode;
-} brinst;
+} jxxinst;
+
+typedef struct packed
+{
+	logic [15:0] pad;
+	logic [15:0] Tgthi;
+	logic [2:0] Ca;
+	logic [17:0] Tgtlo;
+	logic [1:0] Rt;
+	logic v;
+	logic [7:0] opcode;
+} jmpinst;
 
 typedef struct packed
 {
@@ -524,6 +553,17 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic [15:0] pad;
+	logic [2:0] seg;
+	logic [23:0] disp;
+	logic [5:0] Ra;
+	logic [5:0] Rt;
+	logic v;
+	logic [7:0] opcode;
+} ld_inst;
+
+typedef struct packed
+{
 	logic [31:0] pad;
 	logic [2:0] seg;
 	logic [7:0] disp;
@@ -531,7 +571,7 @@ typedef struct packed
 	logic [5:0] Rt;
 	logic v;
 	logic [7:0] opcode;
-} ld_inst;
+} lds_inst;
 
 typedef struct packed
 {
@@ -615,10 +655,12 @@ typedef union packed
 	r1inst r1;
 	rilinst ril;
 	riinst ri;
-	brinst br;
+	jxxinst jxx;
+	jmpinst jmp;
 	rts_inst rts;
 	vmr2_inst vmr2;
 	ld_inst ld;
+	lds_inst lds;
 	vld_inst vld;
 	ldx_inst ldx;
 	st_inst st;
@@ -641,6 +683,24 @@ typedef struct packed
 	Address	tgtadr;
 } BTBEntry;
 
+parameter MR_LDB	= 4'd0;
+parameter MR_LDBU	= 4'd1;
+parameter MR_LDW	= 4'd2;
+parameter MR_LDWU	= 4'd3;
+parameter MR_LDT	= 4'd4;
+parameter MR_LDTU	= 4'd5;
+parameter MR_LDO	= 4'd6;
+parameter MR_LDOR	= 4'd7;
+parameter MR_LDOB	= 4'd8;
+parameter MR_LDDESC = 4'd12;
+parameter MR_LEA	= 4'd14;
+parameter MR_STB	= 4'd0;
+parameter MR_STW	= 4'd1;
+parameter MR_STT	= 4'd2;
+parameter MR_STO	= 4'd3;
+parameter MR_STOC	= 4'd4;
+parameter MR_STPTR	= 4'd8;
+
 typedef struct packed
 {
 	logic [7:0] tid;		// tran id
@@ -649,8 +709,9 @@ typedef struct packed
 	logic [2:0] func;		// function to perform
 	logic [3:0] func2;	// more resolution to function
 	Address adr;
+	logic [4:0] seg;
 	logic [127:0] dat;
-	logic [15:0] sel;		// data byte select, indicates size of data (nybbles)
+	logic [15:0] sel;		// data byte select, indicates size of data
 } MemoryRequest;	// 230
 
 // All the fields in this structure are *output* back to the system.
@@ -711,6 +772,60 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic fuf;	// underflow
+	logic fof;	// overflow
+	logic fdz;	// divide by zero
+	logic fnv;	// invalid operation
+	logic fnx;	// inexact
+	logic lt;
+	logic	eq;
+	logic gt;
+	logic inf;
+} sFPFlags;
+
+parameter byt = 3'd0;
+parameter wyde = 3'd1;
+parameter tetra = 3'd2;
+parameter octa = 3'd3;
+parameter hexi = 3'd4;
+
+typedef struct packed
+{
+	logic rfwr;
+	lofic carfwr;
+	Value imm;
+	logic [5:0] Ra;
+	logic [5:0] Rb;
+	logic [5:0] Rc;
+	logic [5:0] Rt;
+	logic [2:0] Cat;
+	logic is_vector;			// a vector instruction
+	logic is_cbranch;			// is a conditional branch
+	logic mul;
+	logic div;
+	logic float;
+	logic addi;
+	logic ld;
+	logic st;
+	logic jmp;
+	logic jxx;
+	logic dj;
+	Offset jmptgt;
+	logic rts;
+	logic loadr;
+	logic loadn;
+	logic storer;
+	logic storen;
+	logic ldz;
+	logic [2:0] memsz;
+	logic multi_cycle;
+} DecodeOut;
+
+parameter RS_INVALID = 3'd0;
+
+typedef struct packed
+{
+	logic [2:0] state;
 	logic [5:0] rid;
 	logic v;
 	logic cmt;						// commit, clears as soon as committed
@@ -724,7 +839,7 @@ typedef struct packed
 	logic is_vec;
 	logic jump;
 	Address jump_tgt;
-	logic [3:0] btag;			// Branch tag
+	logic [3:0] br_tag;			// Branch tag
 	logic veins;
 	logic branch;
 	logic call;

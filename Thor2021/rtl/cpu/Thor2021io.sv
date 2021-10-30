@@ -1,3 +1,41 @@
+// ============================================================================
+//        __
+//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//    \  __ /    All rights reserved.
+//     \/_//     robfinch<remove>@finitron.ca
+//       ||
+//
+//	Thor2021io.sv
+//
+//
+// BSD 3-Clause License
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//                                                                          
+// ============================================================================
+
 import Thor2021_pkg::*;
 
 module Thor2021(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, irq_i, icause_i,
@@ -42,10 +80,13 @@ reg gie;
 Instruction mir,wir;
 Value regfile [0:63];
 Value sp [0:31];
+Value lc;
+Address caregfile [0:7];
 
 // Instruction fetch stage vars
 reg ival;
 Instruction insn;
+wire advance_i;
 Address ip;
 Address [7:0] caregfile;
 wire ihit;
@@ -59,6 +100,7 @@ Address next_ip;
 reg dval;
 Instruction ir;
 Address dip;
+wire advance_d;
 reg [3:0] dlen;
 DecodeOut deco;
 reg dpredict_taken;
@@ -77,13 +119,27 @@ Value rfoa, rfob, rfoc;
 reg xval;
 Instruction xir;
 Address xip;
+reg [3:0] xlen;
+wire advance_x;
 reg [5:0] xRt,xRa,xRb,wRt,tRt;
+reg [2:0] xCat;
 reg xpredict_taken;
+reg xJmp;
 reg xJxx;
+reg xdj;
+reg xRts;
+reg xIsMultiCycle;
+reg xLdz;
+reg xrfwr;
+reg xcarfwr;
+MemoryRequest memreq;
+MemoryResponse memresp;
 reg memresp_fifo_rd;
 wire memresp_fifo_empty;
 wire memresp_fifo_v;
 reg [7:0] tid;
+Value res;
+Address cares;
 
 // CSRs
 reg [63:0] cr0;
@@ -215,9 +271,9 @@ Thor2021_biu ubiu
 	.ihit(ihit),
 	.ifStall(),
 	.ic_line(ic_line),
-	.fifoToCtrl_i(),
+	.fifoToCtrl_i(memreq),
 	.fifoToCtrl_full_o(),
-	.fifoFromCtrl_o(),
+	.fifoFromCtrl_o(memresp),
 	.fifoFromCtrl_rd(memresp_fifo_rd),
 	.fifoFromCtrl_empty(memresp_fifo_empty),
 	.fifoFromCtrl_v(memresp_fifo_v),
@@ -245,6 +301,11 @@ Thor2021_biu ubiu
 );
 
 wire [63:0] siea = xa + {xb << Sc};
+
+wire run = ihit && (state==RUN);
+assign advance_x = !(xIsMultiCycle) & run;
+assign advance_d = (advance_x | ~xval) & run;
+assign advance_i = (advance_d | ~dval) & run;
 
 always_ff @(posedge clk_g)
 begin
@@ -280,8 +341,14 @@ RUN:
 		end
 	end	
 
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Register fetch and decode stage
+  // Much of the decode is done above by combinational logic outside of the
+  // clock domain.
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (advance_d) begin
 		xval <= dval;
+		xlen <= dlen;
 		xa <= rfoa;
 		xb <= rfob;
 		xc <= rfoc;
@@ -290,12 +357,16 @@ RUN:
 		xRb <= Rb;
 		xRc <= Rc;
 		xRt <= Rt;
+		xCat <= deco.Cat;
 		xip <= ip;
 		xlen <= dlen;
 		xIsMul <= deco.mul;
 		xIsDiv <= deco.div;
 		xFloat <= deco.float;
+		xJmp <= deco.jmp;
 		xJxx <= deco.jxx;
+		xdj <= deco.dj;
+		xRts <= deco.rts;
 		xJmptgt <= deco.jmptgt;
 		xpredict_taken <= dpredict_taken;
 		xLoadr <= deco.loadr;
@@ -304,31 +375,105 @@ RUN:
 		xStoren <= deco.storen;
 		xLdz <= deco.ldz;
 		xMemsz <= deco.memsz;
+		xIsMultiCycle <= deco.multi_cycle;
+		xrfwr <= deco.rfwr;
+		xcarfwr <= deco.carfwr;
 	end
 	else if (advance_x)
 		inv_x();
 
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Execute stage
+  // If the execute stage has been invalidated it doesn't do anything. 
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (xval) begin
     if (xJxx) begin
+    	if (xdj)
+    		lc = lc - 2'd1;
+    	if (ir.jxx.lk != 2'd0) begin
+	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
+	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
+    	end
       if (bpe) begin
-        if (xpredict_taken & ~takb) begin
-          ex_branch(xip + xinslen);
+        if (xpredict_taken && !(xdj ? takb && lc != 64'd0 : takb)) begin
+			    ival <= INV;
+			    inv_d();
+			    inv_x();
+          ip.offs <= xip.offs + 3'd6;
+          // Was selector changed? If so change it back.
+	    		if (xip.sel != ip.sel) begin
+	    			ip.sel <= xip.sel;
+	    			memreq.func <= MR_LOAD;
+	    			memreq.func2 <= MR_LDDESC;
+	    			memreq.adr <= xip.sel;
+	    			memreq.seg <= xip.sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	    			memreq.dat <= 5'd7;		// update CS descriptor cache
+	    			memreq.wr <= TRUE;
+	    			goto (WAIT_MEM1);
+	    		end
         end
-        else if (~xpredict_taken & takb) begin
-          ex_branch(xip + xbrdisp);
+        else if (!xpredict_taken && (xdj ? takb && lc != 64'd0 : takb)) begin
+			    ival <= INV;
+			    inv_d();
+			    inv_x();
+			    if (xir.jxx.ca == 3'd0)
+			    	ip.offs <= xJmptgt;
+			    else if (xir.jxx.ca == 3'd7)
+			    	ip.offs <= ip.offs + xJmptgt;
+			    else
+			    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
+	    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0) begin
+	    			ip.sel <= caregfile[xir.jmp.ca].sel;
+	    			memreq.func <= MR_LOAD;
+	    			memreq.func2 <= MR_LDDESC;
+	    			memreq.adr <= caregfile[xir.jmp.ca].sel;
+	    			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	    			memreq.dat <= 5'd7;		// update CS descriptor cache
+	    			memreq.wr <= TRUE;
+	    			goto (WAIT_MEM1);
+	    		end
         end
       end
-      else if (takb)
-        ex_branch(xip + xbrdisp);
+      else if (xdj ? (takb && lc != 64'd0) : takb) begin
+		    ival <= INV;
+		    inv_d();
+		    inv_x();
+		    if (xir.jxx.ca == 3'd0)
+		    	ip.offs <= xJmptgt;
+		    else if (xir.jxx.ca == 3'd7)
+		    	ip.offs <= ip.offs + xJmptgt;
+		    else
+		    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
+    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0) begin
+    			ip.sel <= caregfile[xir.jmp.ca].sel;
+    			memreq.func <= MR_LOAD;
+    			memreq.func2 <= MR_LDDESC;
+    			memreq.adr <= caregfile[xir.jmp.ca].sel;
+    			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+    			memreq.dat <= 5'd7;		// update CS descriptor cache
+    			memreq.wr <= TRUE;
+    			goto (WAIT_MEM1);
+    		end
+      end
     end
     if (xJmp) begin
+    	if (xdj)
+    		lc = lc - 2'd1;
     	if (xir.jmp.ca != 3'd0)	begin // ==0 was already done at ifetch
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
-    		ip.offs <= xJmptgt;
+		    if (xir.jmp.ca == 3'd7)
+		    	ip.offs <= ip.offs + xJmptgt;
+		    else 
+		    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
+		  	if (ir.jxx.lk != 2'd0) begin
+		    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
+		    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
+		  	end
     		// Selector changing?
     		if (caregfile[xir.jmp.ca].sel != ip.sel) begin
+    			ip.sel <= caregfile[xir.jmp.ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
     			memreq.adr <= caregfile[xir.jmp.ca].sel;
@@ -338,6 +483,25 @@ RUN:
     			goto (WAIT_MEM1);
     		end
     	end
+  	end
+  	if (xRts) begin
+  		// Selector changing?
+  		if (xir.rts.lk != 2'd0) begin
+		    ival <= INV;
+		    inv_d();
+		    inv_x();
+	    	ip.offs <= caregfile[{1'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
+	  		if (caregfile[xir.rts.lk].sel != ip.sel) begin
+    			ip.sel <= caregfile[{1'b0,xir.rts.lk}].sel;
+	  			memreq.func <= MR_LOAD;
+	  			memreq.func2 <= MR_LDDESC;
+	  			memreq.adr <= caregfile[xir.jmp.ca].sel;
+	  			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	  			memreq.dat <= 5'd7;		// update CS descriptor cache
+	  			memreq.wr <= TRUE;
+	  			goto (WAIT_MEM1);
+	  		end
+  		end
   	end
 
     if (xIsMul)
@@ -392,7 +556,6 @@ RUN:
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
-    	next_state(STORE1);
     end
     if (xStoren) begin
     	memreq.tid <= tid;
@@ -409,11 +572,13 @@ RUN:
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
-    	next_state(STORE1);
     end
 		
 	end
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Wait for a response from the BIU.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WAIT_MEM1:
 	begin
 		if (!memresp_fifo_empty) begin
@@ -435,8 +600,10 @@ WAIT_MEM2:
 		end
 	end
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Invalidate the xir and switch back to the run state.
 // The xir is invalidated to prevent the instruction from executing again.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
     goto(INVnRUN2);
@@ -447,6 +614,8 @@ INVnRUN2:
     goto(RUN);
   end
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 default:
 	goto (RESTART1);	
 endcase
@@ -457,11 +626,11 @@ end
 
 // The register file is updated outside of the state case statement.
 // It could be updated potentially on every clock cycle as long as
-// upd_rf is true.
+// xrfwr is true.
 
 task update_regfile;
 begin
-  if (upd_rf & !xinv) begin
+  if (xrfwr & xval) begin
     case(xRt)
     6'd63:  sp[{ol,ilvl}] <= {res[63:3],3'h0};
     endcase
@@ -503,5 +672,32 @@ begin
 	state <= st;
 end
 endtask
+
+task disassem;
+input Instruction ir;
+begin
+  case(ir.any.opcode)
+  ADDI:   
+  	if (ir.ri.Ra==6'd0)
+      $display("LDI r%d,%d", ir.ri.Rt, ir.ri.imm);
+  	else
+  		$display("ADD r%d,r%d,%d", ir.ri.Rt, ir.ri.Ra, ir.ri.imm);
+  ADDIL:   
+  	if (ir.ri.Ra==6'd0)
+      $display("LDI r%d,%d", ir.ril.Rt, ir.ril.imm);
+  	else
+  		$display("ADD r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
+  ORI:		$display("OR r%d,r%d,%d", ir.ri.Rt, ir.ri.Ra, ir.ri.imm);
+  ORIL:		$display("OR r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
+  LDT:		$display("LDT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  STT:		$display("STT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  STO:		$display("STO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  RTS:   	$display("RTS #%d", ir.rts.cnst);
+  endcase
+end
+endtask
+
 
 endmodule
