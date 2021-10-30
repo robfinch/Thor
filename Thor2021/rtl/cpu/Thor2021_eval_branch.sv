@@ -45,30 +45,34 @@ output reg takb;
 
 always_comb
 case(inst.br.opcode)
-BEQ: 	takb = a == b;
-BNE: 	takb = a != b;
-BLT: 	takb = $signed(a) < $signed(b);
-BGE:	takb = $signed(a) >= $signed(b);
-BLE:	takb = $signed(a) <= $signed(b);
-BGT:	takb = $signed(a) > $signed(b);
-BLTU: takb = a < b;
-BGEU: takb = a >= b;
-BLEU:	takb = a <= b;
-BGTU:	takb = a > b;
-BBC:	takb = ~a[b[5:0]];
-BBS:	takb =  a[b[5:0]];
-BEQL: 	takb = a == b;
-BNEL: 	takb = a != b;
-BLTL: 	takb = $signed(a) < $signed(b);
-BGEL:		takb = $signed(a) >= $signed(b);
-BLEL:		takb = $signed(a) <= $signed(b);
-BGTL:		takb = $signed(a) > $signed(b);
-BLTUL: 	takb = a < b;
-BGEUL: 	takb = a >= b;
-BLEUL:	takb = a <= b;
-BGTUL:	takb = a > b;
-BBCL:		takb = ~a[b[5:0]];
-BBSL:		takb =  a[b[5:0]];
+JEQ: 	takb = a == b;
+JNE: 	takb = a != b;
+JLT: 	takb = $signed(a) < $signed(b);
+JGE:	takb = $signed(a) >= $signed(b);
+JLE:	takb = $signed(a) <= $signed(b);
+JGT:	takb = $signed(a) > $signed(b);
+JLTU: takb = a < b;
+JGEU: takb = a >= b;
+JLEU:	takb = a <= b;
+JGTU:	takb = a > b;
+JBC:	takb = ~a[b[5:0]];
+JBS:	takb =  a[b[5:0]];
+JEQZ:	takb = a == 64'd0;
+JNEZ:	takb = a != 64'd0;
+DJEQ:	takb = a == b;
+DJNE:	takb = a != b;
+DJLT:	takb = $signed(a) < $signed(b);
+DJGE:	takb = $signed(a) >= $signed(b);
+DJLE:	takb = $signed(a) <= $signed(b);
+DJGT:	takb = $signed(a) > $signed(b);
+DJLTU: 	takb = a < b;
+DJGEU: 	takb = a >= b;
+DJLEU:	takb = a <= b;
+DJGTU:takb = a > b;
+DJBC:	takb = ~a[b[5:0]];
+DJBS:	takb =  a[b[5:0]];
+DJEQZ:	takb = a == 64'd0;
+DJNEZ:	takb = a != 64'd0;
 default:  takb = 1'b0;
 endcase
 

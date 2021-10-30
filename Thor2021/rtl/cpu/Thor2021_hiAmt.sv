@@ -5,7 +5,9 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2021_bitfield.sv
+//	Thor2021_hiAmt.sv
+//  - head pointers increment amount
+//
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -37,68 +39,49 @@
 
 import Thor2021_pkg::*;
 
-module Thor2021_bitfield(ir, a, b, c, o);
-input Instruction ir;
-input Value a;
-input Value b;
-input Value c;
-output Value o;
+module Thor2021_hiAmt(rob, commit0_v, commit1_v, heads, tails, amt_o);
+parameter RENTRIES = `RENTRIES;
+input sReorderEntry rob [0:RENTRIES-1];
+input commit0_v;
+input commit1_v;
+input SrcId heads [0:RENTRIES-1];
+input SrcId tails [0:1];
+output reg [2:0] amt_o;
 
-reg [127:0] o1, o2, o3;
-wire [5:0] mw = c[5:0];
-wire [5:0] mb = b[5:0];
-wire [5:0] me = c[5:0];
-wire [6:0] func = ir[47:41];
-Value imm = ir[28:21];
-Value mask;
-wire [6:0] ffoo;
+reg [2:0] amt;
+SrcId nxtrb;
 
-ffo96 u1 ({32'h0,o1},ffoo);
-
-integer nn, n;
-always_comb
-	for (nn = 0; nn < $bits(Value); nn = nn + 1)
-		mask[nn] <= (nn >= mb) ^ (nn <= me) ^ (me >= mb);
-
+// Determine amount to advance reorder head pointer by. Based on number of
+// consecutive valid commits. Also up to four additional slot that have been
+// marked invalid may be advanced past.
 always_comb
 begin
-	o1 = 128'd0;
-	o2 = 128'd0;
-	case(ir.any.opcode)
-	BTFLD:
-		case(func)
-		ANDM:		begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  a[n] : 1'b0; end
-		BFCLR:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b0 : a[n]; end
-		BFSET:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b1 : a[n]; end
-		BFCHG:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ? ~a[n] : a[n]; end
-		// The following does SRL,SRA and ROR
-		BFEXT:
-			begin
-				o1 = {a,a} >> mb;
-				for (n = 0; n < $bits(Value); n = n + 1)
-					if (n > mw)
-						o2[n] = ir[41] ? o1[mw] : 1'b0;
-					else
-						o2[n] = o1[n];
-			end
-		BFALIGN:
-			begin
-				o1 = {64'd0,a} << mb;
-				for (n = 0; n < $bits(Value); n = n + 1) o2[n] = (mask[n] ? o1[n] : 1'b0);
-			end
-		BFFFO:
-			begin
-				for (n = 0; n < $bits(Value); n = n + 1)
-					o1[n] = mask[n] ? a[n] : 1'b0;
-				o2 = (ffoo==7'd127) ? -64'd1 : ffoo - mb;	// ffoo returns 127 if no one was found
-			end
-		default:	o2 = 64'd0;
-		endcase
-	default:	o2 = 64'd0;
-	endcase
-end
+	if (commit0_v & commit1_v)
+		amt = 3'd2;
+	else if (commit0_v)
+		amt = 3'd1;
+	else
+		amt = 3'd0;
 
-always_comb
-	o = o2;
+	// Now search ahead for invalid entries that can be skipped over.
+	nxtrb = (heads[0] + amt) % RENTRIES;
+	if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
+		amt = amt + 4'd1;
+		nxtrb = (heads[0] + amt) % RENTRIES;
+		if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
+			amt = amt + 4'd1;
+			nxtrb = (heads[0] + amt) % RENTRIES;
+			if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
+				amt = amt + 4'd1;
+				nxtrb = (heads[0] + amt) % RENTRIES;
+				if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
+					amt = amt + 4'd1;
+					nxtrb = (heads[0] + amt) % RENTRIES;
+				end
+			end
+		end
+	end
+	amt_o = amt;
+end
 
 endmodule

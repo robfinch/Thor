@@ -1,7 +1,7 @@
 import Thor2021_pkg::*;
 
 
-module Thor2021_alu64(ir, step, m, z, a, b, c, imm, t, o, crypto_en, bf_en);
+module Thor2021_alu64(ir, step, m, z, a, b, c, imm, t, o, cause, crypto_en, bf_en);
 parameter WID=64;
 input Instruction ir;
 input [5:0] step;
@@ -13,6 +13,7 @@ input [WID-1:0] c;
 input [WID-1:0] imm;
 input [WID-1:0] t;
 output reg [WID-1:0] o;
+output reg [7:0] cause;
 input crypto_en;
 input bf_en;
 
@@ -46,6 +47,8 @@ Thor2021_crypto ucrypto
 );
 
 always_comb
+begin
+cause = FLT_NONE;
 case(ir.any.opcode)
 R1:
 	case(ir.r1.func)
@@ -61,7 +64,12 @@ R1:
 	endcase
 R2:
 	case(ir.r2.func)
-	ADD:	o1 = M ? a + b : z ? 64'd0 : t;
+	ADD:
+		begin
+			o1 = M ? a + b : z ? 64'd0 : t;
+			if (ir[29] & (o1[63] ^ b[63]) & (1'b1 ^ a[63] ^ b[63]))
+				cause = FLT_OFL;
+		end
 	SUBF:	o1 = M ? b - a : z ? 64'd0 : t;
 	AND:	o1 = M ? a & b : z ? 64'd0 : t;
 	OR:		o1 = M ? a | b : z ? 64'd0 : t;
@@ -83,24 +91,27 @@ R2:
 	SGE:	o1 = M ? $signed(a) >= $signed(b) : z ? 64'd0 : t;
 	SLTU:	o1 = M ? a < b : z ? 64'd0 : t;
 	SGEU:	o1 = M ? a >= b : z ? 64'd0 : t;
+	MIN:	o1 = M ? ( $signed(a) < $signed(b) ? a : b) : z ? 64'd0 : t;
+	MAX:	o1 = M ? ( $signed(a) > $signed(b) ? a : b) : z ? 64'd0 : t;
 	default:	o1 = 64'd0;
 	endcase
 R3:
 	case(ir.r3.func)
 	default:	o1 = 64'd0;
 	endcase
-ADDI,ADDIL,ADDIH:		o1 = M ? a + imm : z ? 64'd0 : t;
+ADDI:		o1 = M ? a + imm : z ? 64'd0 : t;
 SUBFI:	o1 = M ? imm - a : z ? 64'd0 : t;
-ANDI,ANDIL,ANDIH:		o1 = M ? a & imm : z ? 64'd0 : t;
-ORI,ORIL,ORIH:			o1 = M ? a | imm : z ? 64'd0 : t;
-XORI,XORIL,XORIH:		o1 = M ? a ^ imm : z ? 64'd0 : t;
-CMPI,CMPIL:		o1 = M ? ($signed(a) < $signed(imm) ? -64'd1 : a==imm ? 64'd0 : 64'd1) : z ? 64'd0 : t;
-SEQI,SEQIL:		o1 = M ? a == imm : z ? 64'd0 : t;
-SNEI,SNEIL:		o1 = M ? a != imm : z ? 64'd0 : t;
-SLTI,SLTIL:		o1 = M ? $signed(a) < $signed(imm) : z ? 64'd0 : t;
+ANDI:		o1 = M ? a & imm : z ? 64'd0 : t;
+ORI:			o1 = M ? a | imm : z ? 64'd0 : t;
+XORI:		o1 = M ? a ^ imm : z ? 64'd0 : t;
+CMPI:		o1 = M ? ($signed(a) < $signed(imm) ? -64'd1 : a==imm ? 64'd0 : 64'd1) : z ? 64'd0 : t;
+SEQI:		o1 = M ? a == imm : z ? 64'd0 : t;
+SNEI:		o1 = M ? a != imm : z ? 64'd0 : t;
+SLTI:		o1 = M ? $signed(a) < $signed(imm) : z ? 64'd0 : t;
 BTFLD:		o1 = M & bf_en ? bfldo : z | ~bf_en ? 64'd0 : t;
 default:	o1 = 64'd0;
 endcase
+end
 
 always_comb
 begin

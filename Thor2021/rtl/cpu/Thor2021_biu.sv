@@ -39,7 +39,7 @@
 import Thor2021_pkg::*;
 
 module Thor2021_biu(rst,clk,tlbclk,UserMode,MUserMode,omode,ASID,ea_seg,bounds_chk,pe,
-	sregfile,cs,ip,ihit,ifStall,ic_line,
+	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
 	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, gdt, ldt);
@@ -49,13 +49,11 @@ input clk;
 input tlbclk;
 input UserMode;
 input MUserMode;
-input [2:0] omode;
+input [1:0] omode;
 input [7:0] ASID;
-output reg [9:0] ea_seg;
+output reg [4:0] ea_seg;
 input bounds_chk;
 input pe;									// protected mode enable
-input [19:0] sregfile;
-input MemSegDesc cs;
 input Address ip;
 output reg ihit;
 input ifStall;
@@ -84,6 +82,7 @@ output reg [127:0] dat_o;
 output reg sr_o;
 output reg cr_o;
 input rb_i;
+
 output reg dce;							// data cache enable
 input [20:0] keys [0:7];
 input [2:0] arange;
@@ -164,17 +163,19 @@ reg memreq_rd = 0;
 MemoryResponse memresp;
 reg zero_data = 0;
 
+MemSegDesc cs_desc;
 Address csip;
 always_comb
-	csip = ip[AWID-1:-1] + {cs.base,7'h0};
+	csip = ip.offs + {cs_desc.base,6'h0};
 
+reg [4:0] seg;
 Address ea;
 Address afilt;
 
 // Get segment selection
 // +9 has extra +1 to account for addresses starting at :-1]
 always_comb
-	ea_seg = memreq.adr >> 6'd55;
+	seg = memreq.seg;
 	
 // Filter out the segment selection from the request address
 always_comb
@@ -623,45 +624,45 @@ Thor2021_TLB utlb (
 // model.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-reg [63:-1] limit;
+reg [63:0] limit;
 reg wr_desc;
-reg [9:0] desc_index;
+reg [4:0] desc_index;
 SegDesc desc_out;
 SegDesc init_desc;
 always_comb
 begin
-	init_desc.base = 58'h0;
-	init_desc.limit = 58'h3FFFFFFFFFFFFFF;
-	init_desc.U = 1'b0;
-	init_desc.con = 1'b1;
-	init_desc.S = 1'b0;
-	init_desc.OM = 3'd4;
-	init_desc.P = 1'b1;
-	init_desc.A = 1'b1;
-	init_desc.C = 1'b1;
-	init_desc.R = 1'b1;
-	init_desc.W = 1'b1;
-	init_desc.X = 1'b1;
+	init_desc.base = 64'h0;
+	init_desc.pad_base = 64'd0;
+	init_desc.limit = 64'hFFFFFFFFFFFFFFFF;
+	init_desc.pad_limit = 44'd0;
+	init_desc.acr.p = 1'b1;	// present
+	init_desc.acr.sys = 1'b0;	// memory segment
+	init_desc.acr.stk = 1'b0;	// non-stack
+	init_desc.acr.a = 1'b1;	// accessed
+	init_desc.acr.c = 1'b1;	// cacheable
+	init_desc.acr.r = 1'b1;	// readable
+	init_desc.acr.w = 1'b1;	// writeable
+	init_desc.acr.x = 1'b0;	// executable
+	init_desc.acr.dpl = 8'hff;	// max dpl
+	init_desc.acr.con = 1'b1;	// conforming
+	init_desc.acr.u = 3'd0;		// user bits
 end
 
 always_comb
-	limit <= {6'd0,desc_out.limit,1'b1};
+	limit = desc_out.limit;
 
-desc_cache_blkram udesc1
-(
-  .clka(~clk),    // input wire clka
-  .ena(1'b1),      // input wire ena
-  .wea(1'b0),      // input wire [0 : 0] wea
-  .addra(ea_seg),  // input wire [9 : 0] addra
-  .dina(128'h0),    // input wire [127 : 0] dina
-  .douta(desc_out),  // output wire [127 : 0] douta
-  .clkb(clk),    // input wire clkb
-  .enb(1'b1),      // input wire enb
-  .web(wr_desc),      // input wire [0 : 0] web
-  .addrb(desc_index),  // input wire [9 : 0] addrb
-  .dinb(memresp.res),    // input wire [127 : 0] dinb
-  .doutb()  // output wire [127 : 0] doutb
-);
+reg [255:0] descbuf;
+reg [255:0] desc_cache [0:31];
+always_ff @(posedge clk)
+	if (wr_desc) begin
+		desc_cache[desc_index] <= descbuf;
+		if (desc_index==5'd7) begin
+			cs_desc <= descbuf;
+			cs_desc.acr.x <= 1'b1;
+			cs_desc.acr.c <= 1'b1;
+		end
+	end
+assign desc_out = desc_cache[seg];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
@@ -705,7 +706,7 @@ if (rst) begin
 	memresp.ret <= FALSE;
 	memresp.call <= FALSE;
 	memresp.ldcs <= FALSE;
-	desc_index <= 10'd0;
+	desc_index <= 4'd0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -721,9 +722,9 @@ else begin
 	MEMORY_INIT:
 		begin
 			wr_desc <= TRUE;
-			memresp.res <= init_desc;
+			descbuf <= init_desc;
 			desc_index <= desc_index + 2'd1;
-			if (desc_index==10'd8)
+			if (desc_index==5'd31)
 				goto (MEMORY1);
 		end
 	MEMORY1:
@@ -762,7 +763,7 @@ else begin
 			memresp.call <= memreq.func==M_CALL;
 			memresp.ldcs <= FALSE;
 			memresp.mtsel <= memreq.func==MR_LOAD && memreq.func2 == LDDESC;
-			ealow <= ea[7:-1];
+			ealow <= ea[7:0];
 			// Detect cache controller commands
   		case(memreq.func)
 			MR_TLB:
@@ -774,7 +775,7 @@ else begin
 				end
 			MR_LOAD,MR_LOADZ:
 				case(memreq.func2)
-				LEA:
+				MR_LEA:
 					begin
 						memresp.tid <= memreq.tid;
 						memresp.step <= memreq.step;
@@ -784,14 +785,24 @@ else begin
 						memresp.res <= 128'd0;
 						goto (MEMORY1);
 					end
-				LDDESC:
+				MR_LDDESC:
 					begin
-						desc_index <= memreq.dat[9:0];
+						desc_index <= memreq.dat[4:0];	// which descriptor gets updated
+						// Global descriptor table descriptor is loaded with a flat model
+						// based at address 0h on reset and is not modifiable.
+						if (memreq.adr[23]) begin	// table indicator
+							tEA({memreq.adr[22:0],5'd0})
+		      		xlaten <= TRUE;
+		      	end
+		      	// Global descriptor table is located at an absolute physical 
+		      	// address which is not mapped.
+						else begin
+							tEA({gdt,12'd0} + {memreq.adr[22:0],5'd0})
+		      		xlaten <= FALSE;
+						end
 			    	daccess <= TRUE;
-    		  	tEA(ea);
-	      		xlaten <= TRUE;
 	      		// Setup proper select lines
-			      sel <= {32'h0,memreq.sel} << ea[3:-1];
+			      sel <= 32'hFFFFFFFF;
 						goto (MEMORY3);
 					end
 				default:
@@ -961,7 +972,7 @@ else begin
 	      case(memreq.func)
 	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
 	      	begin
-	     			sr_o <= memreq.func2==LDOR;
+	     			sr_o <= memreq.func2==MR_LDOR;
   	    		if (dhit) begin
   	    			tDeactivateBus();
       				sr_o <= LOW;
@@ -969,7 +980,7 @@ else begin
 	      	end
 	      MR_STORE,M_CALL:
 	      	begin
-      			cr_o <= memreq.func2==STCR;
+      			cr_o <= memreq.func2==MR_STOC;
 	      		we_o <= HIGH;
 	      	end
 	      default:  ;
@@ -994,7 +1005,7 @@ else begin
 		  				dcache_wr <= TRUE;
 				      goto (MEMORY7);
 				      stb_o <= LOW;
-				      if (sel[63:32]==1'h0)
+				      if (sel[31:16]==1'h0)
 				      	tDeactivateBus();
 				    end
 		  		end
@@ -1009,7 +1020,7 @@ else begin
 		      goto (MEMORY7);
 		      stb_o <= LOW;
 		      dati <= dat_i;
-		      if (sel[63:32]==1'h0) begin
+		      if (sel[31:16]==1'h0) begin
 		      	tDeactivateBus();
 		      end
 		    end
@@ -1019,19 +1030,22 @@ else begin
 	MEMORY7:
 		begin
 		  if (~ack_i) begin
-		    if (|sel[63:32])
-		      goto (MEMORY8);
-		    else begin
-		      case(memreq.func)
-		      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
-		      	begin
-		      		if (dce & dhit)
-		      			dati <= datil >> {adr_o[5:3],6'b0};
+	      case(memreq.func)
+	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
+	      	begin
+				    if (|sel[31:16])
+			  	    goto (MEMORY8);
+	      		if (dce & dhit) begin
+	      			dati <= datil >> {adr_o[5:3],6'b0};
 			        goto (DATA_ALIGN);
-		      	end
-			    MR_STORE,M_CALL:
-			    	begin
-			    		if (memreq.func2==STPTR) begin	// STPTR
+			      end
+	      	end
+		    MR_STORE,M_CALL:
+		    	begin
+				    if (|sel[31:16])
+	  			    goto (MEMORY8);
+	  			  else begin
+			    		if (memreq.func2==MR_STPTR) begin	// STPTR
 					    	if (~|ea[AWID-5:0]) begin
 					  			memresp.step <= memreq.step;
 					    	 	memresp.cmt <= TRUE;
@@ -1055,10 +1069,13 @@ else begin
 					    	ret();
 				      end
 			    	end
-		      default:
-		        goto (DATA_ALIGN);
-		      endcase
-		    end
+		    	end
+	      default:
+			    if (|sel[31:16])
+			      goto (MEMORY8);
+			    else
+	        	goto (DATA_ALIGN);
+	      endcase
 		  end
 	  end
 
@@ -1066,7 +1083,7 @@ else begin
 	  begin
 	    goto (MEMORY9);
 	    xlaten <= TRUE;
-	    tEA({ea[AWID-1:4] + 2'd1,5'd0});
+	    tEA({ea[AWID-1:4] + 2'd1,4'd0});
 	  end
   
 	// Wait a couple of clocks for MR_TLB lookup
@@ -1090,7 +1107,7 @@ else begin
 					if (kyut == keys[n] || kyut==20'd0)
 						goto(MEMORY11);
 			end
-    	if (memreq.func==CACHE)
+    	if (memreq.func==MR_CACHE)
       	tPMAEA();
   	end
 `else
@@ -1157,7 +1174,7 @@ else begin
 	      	end
 		    MR_STORE,M_CALL:
 		    	begin
-		    		if (memreq.func2==STPTR) begin	// STPTR
+		    		if (memreq.func2==MR_STPTR) begin	// STPTR
 				    	if (~|ea[AWID-5:0]) begin
 				  			memresp.step <= memreq.step;
 				    	 	memresp.cmt <= TRUE;
@@ -1202,36 +1219,36 @@ else begin
 	    MR_LOAD:
 	    	begin
 		    	case(memreq.func2)
-		    	LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
-		    	LDW:	begin memresp.res <= {{48{datis[15]}},datis[15:0]}; end
-		    	LDT:	begin memresp.res <= {{32{datis[31]}},datis[31:0]}; end
-		    	LDO:	begin memresp.res <= datis[63:0]; end
-		    	LDOR:	begin memresp.res <= datis[63:0]; end
-		    	LDOB:	begin memresp.res <= datis[63:0]; end
-		    	LDDESC:
+		    	MR_LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
+		    	MR_LDW:	begin memresp.res <= {{48{datis[15]}},datis[15:0]}; end
+		    	MR_LDT:	begin memresp.res <= {{32{datis[31]}},datis[31:0]}; end
+		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDDESC:
 		    		begin
-		    			memresp.res <= datis[127:0];
+		    			memresp.res <= dati;
+		    			descbuf <= dati;
 		    			wr_desc <= TRUE;
-		    			if (desc_index==10'd7)
-		    				memresp.ldcs <= TRUE;
 		    		end
-		    	default:	memresp.res <= 128'h0;
+		    	default:	memresp.res <= 256'h0;
 		    	endcase
 	    	end
 	    MR_LOADZ:
 	    	begin
 		    	case(memreq.func2)
-		    	LDB:	begin memresp.res <= {56'd0,datis[7:0]}; end
-		    	LDW:	begin memresp.res <= {48'd0,datis[15:0]}; end
-		    	LDT:	begin memresp.res <= {32'd0,datis[31:0]}; end
-		    	LDO:	begin memresp.res <= datis[63:0]; end
-		    	LDOR:	begin memresp.res <= datis[63:0]; end
-		    	LDOB:	begin memresp.res <= datis[63:0]; end
-		    	LDDESC:
+		    	MR_LDB:	begin memresp.res <= {56'd0,datis[7:0]}; end
+		    	MR_LDW:	begin memresp.res <= {48'd0,datis[15:0]}; end
+		    	MR_LDT:	begin memresp.res <= {32'd0,datis[31:0]}; end
+		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDDESC:
 		    		begin
-		    			memresp.res <= datis[127:0];
+		    			memresp.res <= dati;
+		    			descbuf <= dati;
 		    			wr_desc <= TRUE;
-		    			if (desc_index==10'd7)
+		    			if (desc_index==4'd7)
 		    				memresp.ldcs <= TRUE;
 		    		end
 		    	default:	memresp.res <= 128'h0;
@@ -1240,10 +1257,10 @@ else begin
 	    M_JALI:
 	    	begin
 		    	case(memreq.func)
-		    	LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
-		    	LDW:	begin memresp.res <= {{48{datis[15]}},datis[15:0]}; end
-		    	LDT:	begin memresp.res <= {{32{datis[31]}},datis[31:0]}; end
-		    	LDO:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
+		    	MR_LDW:	begin memresp.res <= {{48{datis[15]}},datis[15:0]}; end
+		    	MR_LDT:	begin memresp.res <= {{32{datis[31]}},datis[31:0]}; end
+		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
 		    	default:	memresp.res <= 128'h0;
 		    	endcase
 		    	memresp.jali <= TRUE;
@@ -1543,13 +1560,13 @@ begin
 //	if (iea[AWID-1:24]=={AWID-24{1'b1}})
 //		dadr <= iea;
 //	else
-		dadr <= iea[AWID-1:-1] + {desc_out.base,7'd0};
+		dadr <= iea[AWID-1:0] + {desc_out.base,6'd0};
 end
 endtask
 
 task tPMAEA;
 begin
-  if (keyViolation && omode == 3'd0)
+  if (keyViolation && omode == 2'd0)
     memresp.cause <= {8'h80,FLT_KEY};
   // PMA Check
   for (n = 0; n < 8; n = n + 1)
