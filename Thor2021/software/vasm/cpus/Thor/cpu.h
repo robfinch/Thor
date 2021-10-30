@@ -129,6 +129,7 @@ typedef struct {
 #define REX		27
 #define RTE		28
 #define R1		29
+#define DIRECT	30
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)

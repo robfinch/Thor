@@ -215,6 +215,7 @@ mnemonic mnemonics[]={
 	"ldbu",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB1LL,6},	
 	"ldbu",	{OP_VREG,OP_SEL|OP_SCNDX,OP_VMREG,0,0}, {SCNDX,CPU_ALL,0,0x1B1LL,6},	
 	"ldo",	{OP_REG,OP_SEL|OP_REGIND8,0,0,0}, {REGIND,CPU_ALL,0,0x87LL,4},	
+	"ldo",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x86LL,6,0x87,4},
 	"ldo",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x86LL,6},	
 	"ldo",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB6LL,6},	
 	"ldt",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x84LL,6},	
@@ -263,6 +264,8 @@ mnemonic mnemonics[]={
 	"nand", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x000000000002LL,6},	// 3r
 
 	"neg", {OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	// 2r
+
+	"nop",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF1,2},
 
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x020000000102LL,6},	// 3r
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x020000000102LL,6},	// 3r
@@ -360,6 +363,7 @@ mnemonic mnemonics[]={
 	"stb",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x90LL,6},	
 	"stb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC0LL,6},	
 	"sto",	{OP_REG,OP_SEL|OP_REGIND8,0,0,0}, {REGIND,CPU_ALL,0,0x95LL,4},	
+	"sto",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x93LL,6,0x95LL,4},	
 	"sto",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x93LL,6},	
 	"sto",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC3LL,6},	
 	"stt",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x92LL,6},	
@@ -929,20 +933,21 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
       else {  /* instruction operand */
         addend = (btype == BASE_PCREL) ? val + disp : val;
       	switch(op->format) {
+      	/* Conditional jump */
       	case J:
       	case JL:
-          /* branch instruction */
 		      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           11,4,0,0xfLL);
+                           11,4,0,0x1eLL);
 		      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           32,16,0,0xffff0LL);
+                           32,16,0,0x1fffe0LL);
           break;
+      	/* Unconditional jump */
         case J2:
         case JL2:
 		      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           11,18,0,0x3ffffLL);
+                           11,18,0,0x7fffeLL);
 		      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           32,16,0,0x3fffc0000LL);
+                           32,16,0,0x7fff80000LL);
           break;
         case RIL:
         	if (abits < 24) {
@@ -951,24 +956,53 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
         	}
         	else if (abits < 31) {
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           9,7,0,0x7fLL);
+                           9,7,0,0x3f800000LL);
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           21,23,2,0x3fffff80LL);
+                           37,23,0,0x7fffffLL);
         		
         	}
         	else if (abits < 47) {
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           9,23,0,0x7fffffLL);
+                           9,23,0,0x3fffff800000LL);
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           21,23,4,0x3fffff800000LL);
+                           53,23,0,0x7fffffLL);
         	}
         	else {
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           0,2,0,0x3LL);
+                           0,2,0,0x1800000LL);
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           9,39,0,0x1fffffffffcLL);
+                           9,39,0,0xfffffffffe000000LL);
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
-                           21,23,6,0xfffffe0000000000LL);
+                           69,23,0,0x7fffffLL);
+        		
+        	}
+        	break;
+        case DIRECT:
+        	if (abits < 25) {
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           21,24,0,0xffffffLL);
+        	}
+        	else if (abits < 31) {
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           9,7,0,0x3f800000LL);
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           37,24,0,0xffffffLL);
+        		
+        	}
+        	else if (abits < 47) {
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           9,23,0,0x3fffff800000LL);
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           53,24,0,0xffffffLL);
+        	}
+        	else {
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           0,2,0,0x1800000LL);
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           9,39,0,0xfffffffffe000000LL);
+            /* might need a fix here for another bit */
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           69,24,0,0xffffffLL);
         		
         	}
         	break;
@@ -1051,23 +1085,33 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==1)
 				*insn = *insn| (RA(op->basereg & 0x3f));
 			break;
+		case DIRECT:
+			if (i==0)
+				*insn = *insn| (RT(op->basereg & 0x3f));
+			break;
 		}				
 	}
 }
 
-static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo, operand *op, int64_t val, int constexpr, int i)
+static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
+	operand *op, int64_t val, int constexpr, int i, int selector)
 {
 	size_t isize;
 
-	printf("C");
-	printf("|mnemo->operand_type[%d]=%08x   %08x| %08x\r\n", i, mnemo->operand_type[i] & OP_IMM, op->type, OP_IMM);
 	if (constexpr) {
-		if (op->type & OP_IMM11)
-			isize = 4;
-		else
+		if (mnemo->ext.format==DIRECT) {
+			if (selector==-1) {
+				if (op->selector >= 0)
+					selector = op->selector;
+				else
+					selector = select_selector(op->basereg & 0x3f, 0);
+			}
 			isize = 6;
-		if (!is_nbit(val,11)) {
-			isize = 6;
+			if (mnemo->ext.short_opcode) {
+				if (is_nbit(val,8)) {
+					isize = 4;
+				}
+			}
 			if (!is_nbit(val,23)) {
 				if (prefix)
 					*prefix = ((val >> 23LL) << 9LL) | EXI7;
@@ -1088,20 +1132,67 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo, oper
 					}
 				}
 			}
+			if (insn) {
+				switch(isize) {
+				case 4:
+					*insn = *insn | ((val & 0xffLL) << 21LL);
+					*insn |= (selector & 7LL) << 29LL;
+					break;
+				case 6:	
+					*insn = *insn | ((val & 0xffffffLL) << 21LL);
+					*insn |= (selector & 7LL) << 45LL;
+					break;
+				case (2<<8)|6:
+				case (4<<8)|6:
+				case (6<<8)|6:
+					*insn = *insn | ((val & 0xffffffLL) << 21LL);
+					*insn |= (selector & 7LL) << 45LL;
+					break;
+				}
+			}
 		}
-		if (insn) {
-			switch(isize) {
-			case 4:	
-				*insn = *insn | ((val & 0x7ffLL) << 21LL);
-				*insn = *insn & ~0xff;	// clear opcode
-				*insn = *insn | mnemo->ext.short_opcode;
-				break;
-			case 6:	
-			case (2<<8)|6:
-			case (4<<8)|6:
-			case (6<<8)|6:
-				*insn = *insn | ((val & 0x7fffffLL) << 21LL);
-				break;
+		else {
+			if (op->type & OP_IMM11)
+				isize = 4;
+			else
+				isize = 6;
+			if (!is_nbit(val,11)) {
+				isize = 6;
+				if (!is_nbit(val,23)) {
+					if (prefix)
+						*prefix = ((val >> 23LL) << 9LL) | EXI7;
+					isize = (2<<8)|6;
+					if (!is_nbit(val,30)) {
+						if (prefix)
+							*prefix = ((val >> 23LL) << 9LL) | EXI23;
+						isize = (4<<8)|6;
+						if (!is_nbit(val,46)) {
+							if (prefix)
+								*prefix = ((val >> 25LL) << 9LL) | EXI41 | ((val >> 23) & 3LL);
+	 						isize = (6<<8)|6;
+							if (!is_nbit(val,62)) {
+								if (prefix)
+									*prefix = ((val >> 23LL) << 9LL) | EXI55;
+		 						isize = (8<<8)|6;
+							}
+						}
+					}
+				}
+			}
+			if (insn) {
+				switch(isize) {
+				case 4:	
+					*insn = *insn | ((val & 0x7ffLL) << 21LL);
+					*insn = *insn & ~0xff;	// clear opcode
+					*insn = *insn | mnemo->ext.short_opcode;
+					break;
+				case 6:	
+				case (2<<8)|6:
+				case (4<<8)|6:
+				case (6<<8)|6:
+					*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+					break;
+				}
 			}
 		}
 	}
@@ -1352,7 +1443,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
         }
     }
 
-		if (mnemo->operand_type[i]==OP_REG) {
+		if (op.type==OP_REG) {
 			eval_reg(insn, &op, mnemo, i);
 		}
 		else if (mnemo->operand_type[i]==OP_LK) {
@@ -1403,12 +1494,11 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
     }
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
-			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i);
+			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i, selector);
     }
     else if (eval_branch(insn, mnemo, &op, val, &isize, i))
     	;
     else if ((mnemo->operand_type[i]&OP_REGIND) && op.type==OP_REGIND) {
-    	printf("D");
     	// Check for short form
     	if (constexpr) {
 	    	if (is_nbit(val,8) && (mnemo->ext.opcode==0x86LL || mnemo->ext.opcode==0x93LL)) {
@@ -1505,7 +1595,6 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
   		}
     }
     else if ((mnemo->operand_type[i]&OP_SCNDX) && op.type==OP_SCNDX) {
-    	printf("G");
     	isize = 6;
   		if (insn) {
   			*insn |= (RA(op.basereg & 0x3f));
