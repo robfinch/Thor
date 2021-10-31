@@ -71,7 +71,7 @@ output reg trigger_o;
 
 wire clk_g = clk_i;
 
-reg [5:0] state;
+reg [5:0] state, state1, state2;
 wire [1:0] omode;
 wire [1:0] memmode;
 wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
@@ -88,6 +88,7 @@ reg ival;
 Instruction insn;
 wire advance_i;
 Address ip;
+wire ipredict_taken;
 Address [7:0] caregfile;
 wire ihit;
 wire [639:0] ic_line;
@@ -95,6 +96,7 @@ wire [3:0] ilen;
 wire btb_hit;
 Address btb_tgt;
 Address next_ip;
+wire run;
 
 // Decode stage vars
 reg dval;
@@ -132,6 +134,11 @@ reg xIsMultiCycle;
 reg xLdz;
 reg xrfwr;
 reg xcarfwr;
+reg xMul,xMuli;
+reg xMulsu,xMulsui;
+reg xIsMul,xIsDiv;
+reg xDiv,Divsu;
+reg xDivi;
 MemoryRequest memreq;
 MemoryResponse memresp;
 reg memresp_fifo_rd;
@@ -149,6 +156,19 @@ wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
 reg [7:0] asid;
 Value gdt;
+reg [63:0] keys2 [0:3];
+reg [19:0] keys [0:7];
+always_comb
+begin
+	keys[0] = keys2[0][19:0];
+	keys[1] = keys2[0][39:20];
+	keys[2] = keys2[0][59:40];
+	keys[3] = keys2[1][19:0];
+	keys[4] = keys2[1][39:20];
+	keys[5] = keys2[1][59:40];
+	keys[6] = keys2[2][19:0];
+	keys[7] = keys2[2][39:20];
+end
 
 Value bf_out;
 
@@ -189,6 +209,48 @@ else
   6'd63:  rfoc = sp [{ol,ilvl}];
   default:    rfoc = regfile[Rc];
   endcase
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Execute stage combinational logic
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+wire [127:0] mul_prod1;
+reg [127:0] mul_prod;
+reg mul_sign;
+Value aa, bb;
+
+// 6 stage pipeline
+Thor2021_multiplier umul
+(
+  .clk(clk_g),
+  .a(aa),
+  .b(bb),
+  .p(mul_prod1)
+);
+wire multovf = ((xMulu|xMului) ? mul_prod[127:64] != 64'd0 : mul_prod[127:64] != {64{mul_prod[63]}});
+
+wire [63:0] qo, ro;
+wire dvd_done;
+wire dvByZr;
+Thor2021_divider udiv
+(
+  .rst(rst_i),
+  .clk(clk2x_i),
+  .ld(xIsDiv),
+  .abort(1'b0),
+  .ss(xDiv),
+  .su(xDivsu),
+  .isDivi(xDivi),
+  .a(xa),
+  .b(xb),
+  .imm(imm),
+  .qo(qo),
+  .ro(ro),
+  .dvByZr(dvByZr),
+  .done(dvd_done),
+  .idle()
+);
+
 
 Thor2021_bitfield ubf
 (
@@ -255,6 +317,18 @@ Thor2021_BTB_x1 ubtb
 	.nip(next_ip)
 );
 
+Thor2021_gselectPredictor ubp
+(
+	.rst(rst_i),
+	.clk(clk_g),
+	.en(bpe),
+	.xisBranch(xJxx),
+	.xip(xip),
+	.takb(takb),
+	.ip(ip),
+	.predict_taken(ipredict_taken)
+);
+
 Thor2021_biu ubiu
 (
 	.rst(rst),
@@ -269,7 +343,7 @@ Thor2021_biu ubiu
 	.pe(pe),
 	.ip(ip),
 	.ihit(ihit),
-	.ifStall(),
+	.ifStall(!run),
 	.ic_line(ic_line),
 	.fifoToCtrl_i(memreq),
 	.fifoToCtrl_full_o(),
@@ -294,28 +368,36 @@ Thor2021_biu ubiu
 	.cr_o(cr_o),
 	.rb_i(rb_i),
 	.dce(dce),
-	.keys(),
+	.keys(keys),
 	.arange(),
 	.gdt(gdt),
 	.ldt()
 );
 
-wire [63:0] siea = xa + {xb << Sc};
+always_comb
+	insn = ic_line >> {ip.offs[5:1],4'd0};
 
-wire run = ihit && (state==RUN);
+wire [63:0] siea = xa + {xb << xSc};
+
+assign run = ihit && (state==RUN);
 assign advance_x = !(xIsMultiCycle) & run;
 assign advance_d = (advance_x | ~xval) & run;
 assign advance_i = (advance_d | ~dval) & run;
 
 always_ff @(posedge clk_g)
-begin
-	upd_rf <= FALSE;
+if (rst_i)
+	state <= RESTART1;
+else begin
+	xrfwr <= FALSE;
+	xcarfwr <= FALSE;
 	memreq.wr <= FALSE;
 case (state)
 RESTART1:
 	begin
 		memresp_fifo_rd <= FALSE;
-		gdt <= 64'hFFFFFFFFFFFC0000;	// startup table
+		gdt <= 64'hFFFFFFFFFFFFFFC0;	// startup table (bit 75 to 12)
+		ip.offs <= 32'hFFFD0000;
+		ip.sel <= 32'hFF000007;				// entry 7 of the GDT
 		gie <= FALSE;
 		goto(RESTART2);
 	end
@@ -324,15 +406,24 @@ RESTART2:
 		goto(RUN);
 	end
 RUN:
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Instruction Fetch stage
+  // We want decodes in the IFETCH stage to be fast so they don't appear
+  // on the critical path. Keep the decodes to a minimum.
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (advance_i) begin
 		ival <= VAL;
 		ip <= next_ip;
 		if (insn.jmp.ca==3'd0 && insn.any.opcode==JMP)
 			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
+		else if (insn.jmp.ca==3'd7 && insn.any.opcode==JMP)
+			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (btbe & btb_hit)
 			ip <= btb_tgt;
 		dlen <= ilen;
 		dval <= ival;
+		ir <= insn;
+		dpredict_taken <= ipredict_taken;
 	end
 	else begin
 		ip <= ip;
@@ -360,9 +451,7 @@ RUN:
 		xCat <= deco.Cat;
 		xip <= ip;
 		xlen <= dlen;
-		xIsMul <= deco.mul;
-		xIsDiv <= deco.div;
-		xFloat <= deco.float;
+//		xFloat <= deco.float;
 		xJmp <= deco.jmp;
 		xJxx <= deco.jxx;
 		xdj <= deco.dj;
@@ -378,6 +467,16 @@ RUN:
 		xIsMultiCycle <= deco.multi_cycle;
 		xrfwr <= deco.rfwr;
 		xcarfwr <= deco.carfwr;
+		xMul <= deco.mul;
+		xMuli <= deco.muli;
+		xMulsu <= deco.mulsu;
+		xMulsui <= deco.mulsui;
+		xIsMul <= deco.mulall;
+		xIsDiv <= deco.divall;
+		xDiv <= deco.div;
+		xDivsu <= deco.divsu;
+		xDivi <= deco.divalli;
+		xpredict_taken <= dpredict_taken;
 	end
 	else if (advance_x)
 		inv_x();
@@ -422,7 +521,7 @@ RUN:
 			    	ip.offs <= ip.offs + xJmptgt;
 			    else
 			    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
-	    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0) begin
+	    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7) begin
 	    			ip.sel <= caregfile[xir.jmp.ca].sel;
 	    			memreq.func <= MR_LOAD;
 	    			memreq.func2 <= MR_LDDESC;
@@ -444,7 +543,7 @@ RUN:
 		    	ip.offs <= ip.offs + xJmptgt;
 		    else
 		    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
-    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0) begin
+    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7) begin
     			ip.sel <= caregfile[xir.jmp.ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
@@ -459,18 +558,15 @@ RUN:
     if (xJmp) begin
     	if (xdj)
     		lc = lc - 2'd1;
-    	if (xir.jmp.ca != 3'd0)	begin // ==0 was already done at ifetch
+	  	if (ir.jxx.lk != 2'd0) begin
+	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
+	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
+	  	end
+    	if (xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7)	begin // ==0,7 was already done at ifetch
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
-		    if (xir.jmp.ca == 3'd7)
-		    	ip.offs <= ip.offs + xJmptgt;
-		    else 
-		    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
-		  	if (ir.jxx.lk != 2'd0) begin
-		    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
-		    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
-		  	end
+	    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
     		// Selector changing?
     		if (caregfile[xir.jmp.ca].sel != ip.sel) begin
     			ip.sel <= caregfile[xir.jmp.ca].sel;
@@ -485,12 +581,12 @@ RUN:
     	end
   	end
   	if (xRts) begin
-  		// Selector changing?
   		if (xir.rts.lk != 2'd0) begin
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
 	    	ip.offs <= caregfile[{1'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
+	  		// Selector changing?
 	  		if (caregfile[xir.rts.lk].sel != ip.sel) begin
     			ip.sel <= caregfile[{1'b0,xir.rts.lk}].sel;
 	  			memreq.func <= MR_LOAD;
@@ -508,8 +604,8 @@ RUN:
       goto(MUL1);
     if (xIsDiv)
       goto(DIV1);
-    if (xFloat)
-      goto(FLOAT1);
+//    if (xFloat)
+//      goto(FLOAT1);
 
     if (xLoadr) begin
     	memreq.tid <= tid;
@@ -592,8 +688,10 @@ WAIT_MEM2:
 			memresp_fifo_rd <= FALSE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ) begin
-					res <= memresp.res;
-					upd_rf <= TRUE;
+					if (memreq.func2!=MR_LDDESC) begin
+						res <= memresp.res;
+						xrfwr <= TRUE;
+					end
 				end
 				goto (INVnRUN);
 			end
@@ -613,6 +711,68 @@ INVnRUN2:
     inv_x();
     goto(RUN);
   end
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Step1: setup operands and capture sign
+MUL1:
+  begin
+    if (xMul) mul_sign <= xa[$bits(Value)-1] ^ xb[$bits(Value)-1];
+    else if (xMuli) mul_sign <= xa[$bits(Value)-1] ^ imm[$bits(Value)-1];
+    else if (xMulsu) mul_sign <= xa[$bits(Value)-1];
+    else if (xMulsui) mul_sign <= xa[$bits(Value)-1];
+    else mul_sign <= 1'b0;  // MULU, MULUI
+    if (xMul) aa <= fnAbs(xa);
+    else if (xMuli) aa <= fnAbs(xa);
+    else if (xMulsu) aa <= fnAbs(xa);
+    else if (xMulsui) aa <= fnAbs(xa);
+    else aa <= xa;
+    if (xMul) bb <= fnAbs(xb);
+    else if (xMuli) bb <= fnAbs(imm);
+    else if (xMulsu) bb <= xb;
+    else if (xMulsui) bb <= imm;
+    else if (xMulu) bb <= xb;
+    else bb <= imm; // MULUI
+	// Now wait for the three stage pipeline to finish
+    call(DELAY4,MUL9);
+  end
+MUL9:
+  begin
+    mul_prod <= mul_sign ? -mul_prod1 : mul_prod1;
+    //upd_rf <= `TRUE;
+    goto(INVnRUN);
+    if (multovf & mexrout[5]) begin
+      ex_fault(FLT_OFL,0);
+    end
+  end
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+DIV1:
+  if (dvd_done) begin
+    //upd_rf <= `TRUE;
+    goto(INVnRUN);
+    if (dvByZr & mexrout[3]) begin
+      ex_fault(FLT_DBZ,0);
+    end
+  end
+
+FLOAT1:
+  if (fpdone) begin
+	  //upd_rf <= `TRUE;
+	  inv_x();
+	  goto(RUN);
+	  if (fpstatus[9]) begin  // GX status bit
+	      ex_fault(FLT_FLT,0);
+	  end
+  end
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+DELAY4:	goto(DELAY3);
+DELAY3:	goto(DELAY2);
+DELAY2:	goto(DELAY1);
+DELAY1:	return();
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -672,6 +832,24 @@ begin
 	state <= st;
 end
 endtask
+
+task call;
+input [5:0] st;
+input [5:0] rst;
+begin
+	state2 <= state1;
+	state1 <= rst;
+	state <= st;
+end
+endtask
+
+task return;
+begin
+	state <= state1;
+	state1 <= state2;
+end
+endtask
+
 
 task disassem;
 input Instruction ir;

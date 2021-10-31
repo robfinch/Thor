@@ -819,6 +819,22 @@ typedef struct packed
 	logic ldz;
 	logic [2:0] memsz;
 	logic multi_cycle;
+	logic mul;
+	logic muli;
+	logic mulu;
+	logic mului;
+	logic mulsu;
+	logic mulsui;
+	logic mulall;
+	logic mulalli;
+	logic div;
+	logic divi;
+	logic divu;
+	logic divui;
+	logic divsu;
+	logic divsui;
+	logic divall;
+	logic divalli;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -906,6 +922,11 @@ typedef struct packed
 	logic wr_fu;				// write to functional unit
 	logic [47:0] rob_q;
 } sReorderEntry;
+
+function Value fnAbs;
+input Value jj;
+fnAbs = jj[$bits(Value)-1] ? -jj : jj;
+endfunction
 
 // Detect if a source is automatically valid
 function Source1Valid;

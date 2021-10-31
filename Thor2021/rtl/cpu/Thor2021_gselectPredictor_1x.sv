@@ -37,7 +37,7 @@
 
 import Thor2021_pkg::*;
 
-module gselectPredictor(rst, clk, en, xisBranch, xip, takb, ip, predict_taken);
+module Thor2021_gselectPredictor(rst, clk, en, xisBranch, xip, takb, ip, predict_taken);
 input rst;
 input clk;
 input en;
@@ -61,13 +61,13 @@ initial begin
 	for (n = 0; n < 512; n = n + 1)
 		branch_history_table[n] = 3;
 end
-wire [8:0] bht_wa = {xip[8:2],gbl_branch_hist[2:1]};		// write address
+wire [8:0] bht_wa = {xip[7:1],gbl_branch_hist[2:1]};		// write address
 wire [1:0] bht_xbits = branch_history_table[bht_wa];
 reg [8:0] bht_ra;
 reg [1:0] bht_ibits;
 always_comb
 begin
-	bht_ra = {ip[8:2],gbl_branch_hist[2:1]};	// read address (IF stage)
+	bht_ra = {ip[7:1],gbl_branch_hist[2:1]};	// read address (IF stage)
 	bht_ibits = branch_history_table[bht_ra];
 	predict_taken = (bht_ibits==2'd0 || bht_ibits==2'd1) && en;
 end

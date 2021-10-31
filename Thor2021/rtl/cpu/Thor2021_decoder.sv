@@ -322,6 +322,45 @@ LDTX,LDTUX,STT:		deco.multi_cycle = TRUE;
 default:	deco.multi_cycle = FALSE;
 endcase
 
+deco.mul = FALSE;
+deco.mulu = FALSE;
+deco.mulsu = FALSE;
+deco.muli = FALSE;
+deco.mului = FALSE;
+deco.mulsui = FALSE;
+case(ir.any.opcode)
+R2:
+	case(ir.r2.func)
+	MUL,MULH:			deco.mul = TRUE;
+	MULU,MULUH		deco.mulu = TRUE;
+	MULSU,MULSUH:	deco.mulsu = TRUE;
+	default:	;
+	endcase
+MULI,MULIL:		deco.muli = TRUE;
+MULUI,MULUIL:	deco.mului = TRUE;
+default:	;
+endcase
+deco.mulall = deco.mul|deco.mulu|deco.mulsu|deco.muli|deco.mului|deco.mulsui;
+deco.mulalli = deco.muli|deco.mului|deco.mulsui;
+
+deco.div = FALSE;
+deco.divu = FALSE;
+deco.divsu = FALSE;
+deco.divi = FALSE;
+deco.divui = FALSE;
+deco.divsui = FALSE;
+case(ir.any.opcode)
+R2:
+	case(ir.r2.func)
+	DIV:	deco.div = TRUE;
+	DIVU:	deco.divu = TRUE;
+	DIVSU:	deco.divsu = TRUE;
+	endcase
+DIVI,DIVIL:	deco.divi = TRUE;
+endcase
+deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
+deco.divalli = deco.divi|deco.divui|deco.divsui;
+
 deco.is_cbranch = ir.jxx.ca==3'd7 && ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3;
 if (deco.jxx)
 	deco.jmptgt = {{44{ir.jxx.Tgthi[15]}},ir.jxx.Tgthi,ir.jxx.Tgtlo,1'b0};
