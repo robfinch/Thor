@@ -206,13 +206,24 @@ parameter XNOR		= 7'h02;
 parameter ORC			= 7'h03;
 parameter ADD			= 7'h04;
 parameter SUBF		= 7'h05;
+parameter MUL			= 7'h06;
 parameter AND			= 7'h08;
 parameter OR			= 7'h09;
 parameter XOR			= 7'h0A;
 parameter ANDC		= 7'h0B;
+parameter MULU		= 7'h0E;
+parameter MULH		= 7'h0F;
+parameter DIV			= 7'h10;
+parameter DIVU		= 7'h11;
+parameter DIVSU		= 7'h12;
+parameter PTRDIF	= 7'h14;
+parameter MULSU		= 7'h16;
+parameter CHK			= 7'h19;
 parameter BYTNDX	= 7'h1A;
 parameter WYDNDX	= 7'h1B;
 parameter UTF21NDX= 7'h1C;
+parameter MULSUH	= 7'h1D;
+parameter MULUH		= 7'h1E;
 parameter SLT			= 7'h20;
 parameter SGE			= 7'h21;
 parameter SLTU		= 7'h22;
@@ -222,20 +233,21 @@ parameter SNE			= 7'h27;
 parameter MIN			= 7'h28;
 parameter MAX			= 7'h29;
 parameter CMP			= 7'h2A;
+parameter CMPU		= 7'h2B;
+parameter CMOVNZ	= 7'h2D;
+parameter CLMUL		= 7'h2E;
+parameter CLMULH	= 7'h2F;
+parameter BMM			= 7'h30;
+parameter MUX			= 7'h34;
 parameter SLL			= 7'h40;
 parameter SRL			= 7'h41;
 parameter SRA			= 7'h42;
 parameter ROL			= 7'h43;
 parameter ROR			= 7'h44;
 
-// R3
-parameter PTRDIF	= 4'h1;
-parameter	CHK			= 4'h2;
-parameter MUX			= 4'h4;
-parameter CMOVNZ	= 4'h6;
-
 // OSR2
 parameter REX			= 7'h10;
+parameter RTI			= 7'h13;
 
 // VM
 parameter VMADD		= 5'h04;
@@ -256,8 +268,8 @@ parameter VMSRL0	= 5'h1E;
 parameter VMSRL1	= 5'h1F;
 
 // Cypto
-parameter SM4ED		= 4'hE;
-parameter SM4KS		= 4'hF;
+parameter SM4ED		= 7'h56;	// R2
+parameter SM4KS		= 7'h57;	// R2
 parameter SHA256SIG0	= 7'h30;
 parameter SHA256SIG1	= 7'h31;
 parameter SHA256SUM0	= 7'h32;
@@ -391,9 +403,11 @@ parameter FLT_KEY		= 8'h31;
 parameter FLT_WRV		= 8'h32;
 parameter FLT_RDV		= 8'h33;
 parameter FLT_SGB		= 8'h34;
+parameter FLT_PRIV	= 8'h35;
 parameter FLT_WD		= 8'h36;
 parameter FLT_UNIMP	= 8'h37;
 parameter FLT_PMA		= 8'h3D;
+parameter FLT_BRK		= 8'h3F;
 parameter FLT_NMI		= 8'hFE;
 
 parameter pL1CacheLines = 64;
@@ -647,6 +661,20 @@ typedef struct packed
 	logic [7:0] opcode;
 } rm_inst;
 
+typedef struct packed
+{
+	logic [15:0] pad;
+	logic [2:0] m;
+	logic z;
+	logic [2:0] op;
+	logic [3:0] pad;
+	logic [15:0] regno;
+	logic [5:0] Ra;
+	logic [5:0] Rt;
+	logic v;
+	logic [7:0] opcode;
+} csr_inst;
+
 typedef union packed
 {
 	bmapinst bmap;
@@ -666,6 +694,7 @@ typedef union packed
 	st_inst st;
 	stx_inst stx;
 	rm_inst rm;
+	csr_inst csr;
 	anyinst	any;
 } Instruction;
 
@@ -835,6 +864,9 @@ typedef struct packed
 	logic divsui;
 	logic divall;
 	logic divalli;
+	logic csr;
+	logic rti;
+	logic rex;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -926,6 +958,13 @@ typedef struct packed
 function Value fnAbs;
 input Value jj;
 fnAbs = jj[$bits(Value)-1] ? -jj : jj;
+endfunction
+
+function is_prefix;
+input [7:0] opc;
+	is_prefix = opc==EXI7 || opc==EXI23 || 
+		opc==8'h7C || opc==8'h7D || opc==8'h7E || opc==8'h7F ||	// EXI41
+		opc==EXI55 || opc==EXIM;
 endfunction
 
 // Detect if a source is automatically valid
