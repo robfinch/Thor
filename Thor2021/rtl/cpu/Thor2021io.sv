@@ -85,6 +85,7 @@ Address caregfile [0:7];
 
 // Instruction fetch stage vars
 reg ival;
+reg [15:0] icause;
 Instruction insn;
 wire advance_i;
 Address ip;
@@ -100,6 +101,7 @@ wire run;
 
 // Decode stage vars
 reg dval;
+reg [15:0] dcause;
 Instruction ir;
 Address dip;
 wire advance_d;
@@ -119,6 +121,7 @@ Value rfoa, rfob, rfoc;
 
 // Execute stage vars
 reg xval;
+reg [15:0] xcause;
 Instruction xir;
 Address xip;
 reg [3:0] xlen;
@@ -129,7 +132,8 @@ reg xpredict_taken;
 reg xJmp;
 reg xJxx;
 reg xdj;
-reg xRts;
+reg xRts, xRti;
+reg xRex;
 reg xIsMultiCycle;
 reg xLdz;
 reg xrfwr;
@@ -139,21 +143,54 @@ reg xMulsu,xMulsui;
 reg xIsMul,xIsDiv;
 reg xDiv,Divsu;
 reg xDivi;
+reg xCsr;
 MemoryRequest memreq;
 MemoryResponse memresp;
 reg memresp_fifo_rd;
 wire memresp_fifo_empty;
 wire memresp_fifo_v;
 reg [7:0] tid;
-Value res;
+Value res,res2;
+Value crypto_res;
 Address cares;
+
+// Writeback stage vars
+reg wval;
+Instruction wir;
+reg [15:0] wcause;
+wire advance_w;
+reg wrfwr;
+reg [5:0] wRt;
+reg wCsr;
+reg wRti;
+reg wRex;
+Value wa;
+Value wres;
+
 
 // CSRs
 reg [63:0] cr0;
 wire pe = cr0[0];				// protected mode enable
-wire dce = cr0[30];     // data cache enable
+wire dce;     					// data cache enable
 wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
+reg [63:0] tick;
+Address tvec [0:3];
+reg [15:0] cause [0:3];
+Address badaddr [0:3];
+reg [5:0] estep;
+reg [63:0] pmStack;
+wire [2:0] ilvl = pmStack[3:1];
+reg [63:0] plStack;
+Selector dbad [0:3];
+reg [63:0] dbcr;
+reg [31:0] status [0:3];
+wire mprv = status[3][17];
+wire uie = status[3][0];
+wire sie = status[3][1];
+wire hie = status[3][2];
+wire mie = status[3][3];
+wire die = status[3][4];
 reg [7:0] asid;
 Value gdt;
 reg [63:0] keys2 [0:3];
@@ -169,19 +206,33 @@ begin
 	keys[6] = keys2[2][19:0];
 	keys[7] = keys2[2][39:20];
 end
+reg [7:0] vl;
+Value sema;
+
+assign omode = pmStack[2:1];
+assign MachineMode = omode==2'b11;
+assign HypervisorMode = omode==2'b10;
+assign SupervisorMode = omode==2'b01;
+assign UserMode = omode==2'b00;
+assign memmode = mprv ? pmStack[6:5] : omode;
+wire MMachineMode = memmode==2'b11;
+assign MUserMode = memmode==2'b00;
 
 Value bf_out;
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Decode stage combinational logic
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 Thor2021_decoder udec (ir, xir, deco);
-
-Thor2021_eval_branch ube (xir, xa, xb, takb);
-
 
 always_comb
 if (Ra==6'd0 && (dAddi | dld | dst))
   rfoa = {VALUE_SIZE{1'b0}};
 else if (Ra==xRt)
   rfoa = res;
+else if (Ra==wRt)
+	rfoa = wres;
 else
   case(Ra)
   6'd63:  rfoa = sp [{ol,ilvl}];
@@ -193,6 +244,8 @@ if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
 else if (Rb==xRt)
   rfob = res;
+else if (Rb==wRt)
+	rfob = wres;
 else
   case(Rb)
   6'd63:  rfob = sp [{ol,ilvl}];
@@ -204,6 +257,8 @@ if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
 else if (Rc==xRt)
   rfoc = res;
+else if (Rc==wRt)
+	rfoc = wres;
 else
   case(Rc)
   6'd63:  rfoc = sp [{ol,ilvl}];
@@ -213,6 +268,11 @@ else
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Thor2021_eval_branch ube (xir, xa, xb, takb);
+
+wire [6:0] cntlz_out;
+cntlz64 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 
 wire [127:0] mul_prod1;
 reg [127:0] mul_prod;
@@ -261,38 +321,81 @@ Thor2021_bitfield ubf
 	.o(bf_out)
 );
 
+Thor2021_crypto ucrypto
+(
+	.ir(xir),
+	.m(xm),
+	.z(xz),
+	.a(xa),
+	.b(xb),
+	.c(xc),
+	.t(),
+	.o(crypto_res)
+);
+
+Value mux_out;
+integer n2;
+always_comb
+    for (n2 = 0; n2 < $bits(Value); n2 = n2 + 1)
+        mux_out[n2] = xa[n2] ? xb[n2] : xc[n2];
+
+Value csr_res;
+always_comb
+	tReadCSR (csr_res, xir.csr.regno);
+
 always_comb
 case(xir.any.opcode)
 R1:
+	case(xir.r1.func)
+	CNTLZ:	res2 = {57'd0,cntlz_out};
+	CNTLO:	res2 = {57'd0,cntlz_out};
+	default:	res2 = 64'd0;
+	endcase
 R2:
 	case(xir.r3.func)
-	ADD:	res = xa + xb + xc;
-	SUB:	res = xa - xb - xc;
-	AND:	res = xa & xb & xc;
-	OR:		res = xa | xb | xc;
-	XOR:	res = xa ^ xb ^ xc;
-	default:			res = 64'd0;
+	ADD:	res2 = xa + xb + xc;
+	SUB:	res2 = xa - xb;
+	AND:	res2 = xa & xb & xc;
+	OR:		res2 = xa | xb | xc;
+	XOR:	res2 = xa ^ xb ^ xc;
+	MUL:	res2 = mul_prod[63:0];
+	MULH:	res2 = mul_prod[127:64];
+	MULU:	res2 = mul_prod[63:0];
+	MULUH:	res2 = mul_prod[127:64];
+	MULSU:res2 = mul_prod[63:0];
+	DIV:	res2 = qo;
+	DIVU:	res2 = qo;
+	DIVSU:	res2 = qo;
+	MUX:	res2 = mux_out;
+	default:			res2 = 64'd0;
 	endcase
-BTFLD:	res = bf_out;
-ADD2R:				res = xa + xb;
-AND2R:				res = xa & xb;
-OR2R:					res = xa | xb;
-XOR2R:				res = xa ^ xb;
-ADDI,ADDIL:		res = xa + imm;
-SUBFI,SUBFIL:	res = imm - xa;
-ANDI,ANDIL:		res = xa & imm;
-ORI,ORIL:			res = xa | imm;
-XORI,XORIL:		res = xa ^ imm;
-CMPI,CMPIL:		res = $signed(xa) < $signed(imm) ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
-CMPUI,CMPIUL:	res = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
-SEQI,SEQIL:		res = xa == imm;
-SNEI,SNEIL:		res = xa != imm;
-SLTI,SLTIL:		res = $signed(xa) < $signed(imm);
-SGTI,SGTIL:		res = $signed(xa) > $signed(imm);
-SLTUI,SLTUIL:	res = xa < imm;
-SGTUI,SGTUIL:	res = xa > imm;
-default:			res = 64'd0;
+CSR:		res2 = csr_res;
+BTFLD:	res2 = bf_out;
+ADD2R:				res2 = xa + xb;
+AND2R:				res2 = xa & xb;
+OR2R:					res2 = xa | xb;
+XOR2R:				res2 = xa ^ xb;
+ADDI,ADDIL:		res2 = xa + imm;
+SUBFI,SUBFIL:	res2 = imm - xa;
+ANDI,ANDIL:		res2 = xa & imm;
+ORI,ORIL:			res2 = xa | imm;
+XORI,XORIL:		res2 = xa ^ imm;
+CMPI,CMPIL:		res2 = $signed(xa) < $signed(imm) ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
+CMPUI,CMPIUL:	res2 = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
+MULI,MULIL:		res2 = mul_prod[63:0];
+MULUI:MULUIL:	res2 = mul_prod[63:0];
+DIVI,DIVIL:		res2 = qo;
+SEQI,SEQIL:		res2 = xa == imm;
+SNEI,SNEIL:		res2 = xa != imm;
+SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
+SGTI,SGTIL:		res2 = $signed(xa) > $signed(imm);
+SLTUI,SLTUIL:	res2 = xa < imm;
+SGTUI,SGTUIL:	res2 = xa > imm;
+default:			res2 = 64'd0;
 endcase
+
+always_comb
+	res = res2|crypto_res;
 
 Thor20221_inslength uil(insn, ilen);
 
@@ -380,9 +483,10 @@ always_comb
 wire [63:0] siea = xa + {xb << xSc};
 
 assign run = ihit && (state==RUN);
-assign advance_x = !(xIsMultiCycle) & run;
-assign advance_d = (advance_x | ~xval) & run;
-assign advance_i = (advance_d | ~dval) & run;
+assign adcance_w = run;
+assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle;
+assign advance_d = (advance_x | ~xval);
+assign advance_i = (advance_d | ~dval);
 
 always_ff @(posedge clk_g)
 if (rst_i)
@@ -424,6 +528,11 @@ RUN:
 		dval <= ival;
 		ir <= insn;
 		dpredict_taken <= ipredict_taken;
+		dcause <= icause;
+		if (irq_i > pmStack[3:1] && gie && !is_prefix(insn.any.opcode))
+			icause <= 16'h8000|cause_i|(irq_i << 4'd8);
+		else if (insn.any.opcode==BRK)
+			icause <= FLT_BRK;
 	end
 	else begin
 		ip <= ip;
@@ -439,6 +548,7 @@ RUN:
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (advance_d) begin
 		xval <= dval;
+		xir <= ir;
 		xlen <= dlen;
 		xa <= rfoa;
 		xb <= rfob;
@@ -476,6 +586,10 @@ RUN:
 		xDiv <= deco.div;
 		xDivsu <= deco.divsu;
 		xDivi <= deco.divalli;
+		xCsr <= deco.csr;
+		xRti <= deco.rti;
+		xRex <= deco.rex;
+		xcause <= dcause;
 		xpredict_taken <= dpredict_taken;
 	end
 	else if (advance_x)
@@ -486,6 +600,15 @@ RUN:
   // If the execute stage has been invalidated it doesn't do anything. 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (xval) begin
+		wval <= xval;
+		wir <= xir;
+		wRt <= xRt;
+		wrfwr <= xrfwr;
+		wres <= res;
+		wCsr <= xCsr;
+		wRti <= xRti;
+		wRex <= xRex;
+		wa <= xa;
     if (xJxx) begin
     	if (xdj)
     		lc = lc - 2'd1;
@@ -669,8 +792,75 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
-		
 	end
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Writeback stage
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if (advance_w) begin
+		if (|wcause) begin
+			// IRQ level remains the same unless external IRQ present
+			if (wcause[15])
+				pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
+			else
+				pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
+			plStack <= {plStack[55:0],8'hFF};
+			cause[2'd3] <= wcause;
+			caregfile[3'd6] <= ip;
+			ip.sel <= tvec[2'd3].sel;
+			ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+			inv_i();
+			inv_d();
+			inv_x();
+			inv_w();
+		end
+		if (wval) begin
+	    if (wCsr)
+	      case(wir.csr.op)
+	      3'd1:   tWriteCsr(wa,wir.csr.regno);
+	      3'd2:   tSetbitCsr(wa,wir.csr.regno);
+	      3'd3:   tClrbitCsr(wa,wir.csr.regno);
+	      default:	;
+	      endcase
+			if (wRti) begin
+				pmStack <= {8'h37,pmStack[63:8]};
+				plStack <= {8'hFF,plStack[63:8]};
+				ip <= caregfile[3'd6];
+				inv_i();
+				inv_d();
+				inv_x();
+				inv_w();
+			end
+			if (wRex) begin
+				if (omode <= wir[10:9]) begin
+					pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
+					plStack <= {plStack[55:0],8'hFF};
+					cause[2'd3] <= FLT_PRIV;
+					caregfile[3'd6] <= ip;
+					ip.sel <= tvec[2'd3].sel;
+					ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+					inv_i();
+					inv_d();
+					inv_x();
+					inv_w();
+				end
+				else begin
+					omode <= wir[10:9];
+				end
+			end
+			// Register file update
+		  if (wrfwr) begin
+		    case(wRt)
+		    6'd63:  sp[{ol,ilvl}] <= {wres[63:3],3'h0};
+		    endcase
+		    regfile[wRt] <= wres;
+		    $display("regfile[%d] <= %h", wRt, wres);
+		    // Globally enable interrupts after first update of stack pointer.
+		    if (wRt==6'd63)
+		      gie <= TRUE;
+		  end
+		end
+  end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Wait for a response from the BIU.
@@ -688,10 +878,15 @@ WAIT_MEM2:
 			memresp_fifo_rd <= FALSE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ) begin
+					xrfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
 						res <= memresp.res;
 						xrfwr <= TRUE;
 					end
+				end
+				if (|memresp.cause) begin
+					xcause <= memresp.cause;
+					badAddr <= memresp.badAddr;
 				end
 				goto (INVnRUN);
 			end
@@ -775,31 +970,17 @@ DELAY2:	goto(DELAY1);
 DELAY1:	return();
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// If the state machine goes to an invalid state, restart.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 default:
 	goto (RESTART1);	
 endcase
 
-	update_regfile();
-
 end
 
-// The register file is updated outside of the state case statement.
-// It could be updated potentially on every clock cycle as long as
-// xrfwr is true.
-
-task update_regfile;
+task inv_i;
 begin
-  if (xrfwr & xval) begin
-    case(xRt)
-    6'd63:  sp[{ol,ilvl}] <= {res[63:3],3'h0};
-    endcase
-    regfile[xRt] <= res;
-    $display("regfile[%d] <= %h", xRt, res);
-    // Globally enable interrupts after first update of stack pointer.
-    if (xRt==6'd63)
-      gie <= TRUE;
-  end
+  ival <= INV;
 end
 endtask
 
@@ -812,7 +993,12 @@ endtask
 task inv_x;
 begin
   xval <= INV;
-  xRt2 <= 6'd0;
+end
+endtask
+
+task inv_w;
+begin
+  wval <= INV;
 end
 endtask
 
@@ -825,6 +1011,120 @@ begin
     ip <= nxt_ip;
 end
 endtask
+
+task ex_fault;
+input [15:0] c;
+begin
+	xcause <= c;
+	goto (RUN);
+end
+endtask
+
+// Important to use the correct assignment type for the following, otherwise
+// The read won't happen until the clock cycle.
+task tReadCSR;
+output Value res;
+input [15:0] regno;
+begin
+	if (regno[13:12] <= omode) begin
+		casez(regno[15:0])
+		CSR_SCRATCH:	res.val = scratch[regno[13:12]];
+		CSR_MHARTID: res.val = hartid_i;
+		CSR_MCR0:	res.val = cr0|(dce << 5'd30);
+		CSR_KEYTBL:	res.val = keytbl;
+		CSR_KEYS:	res.val = keys2[regno[1:0]];
+		CSR_SEMA: res.val = sema;
+		CSR_FSTAT:	res.val = fpscr;
+		CSR_ASID:	res.val = ASID;
+		CSR_MBADADDR:	res.val = badaddr[regno[13:12]];
+		CSR_TICK:	res.val = tick;
+		CSR_CAUSE:	res.val = cause[regno[13:12]];
+		CSR_MTVEC:
+			res.val = tvec[regno[2:0]];
+		CSR_MPMSTACK:	res.val = pmStack;
+		CSR_MVSTEP:	res.val = estep;
+		CSR_MVTMP:	res.val = vtmp;
+		CSR_TIME:	res.val = wc_time;
+		CSR_MSTATUS:	res.val = status[3];
+		CSR_MTCBPTR:	res.val = tcbptr;
+//		CSR_DSTUFF0:	res.val = stuff0;
+//		CSR_DSTUFF1:	res.val = stuff1;
+		CSR_MGDT:	res.val = gdt;
+		CSR_MLDT:	res.val = ldt;
+		default:	res.val = 64'd0;
+		endcase
+	end
+	else
+		res = 64'd0;
+end
+endtask
+
+task tWriteCSR;
+input Value val;
+input [15:0] regno;
+begin
+	if (regno[13:12] <= omode) begin
+		casez(regno[15:0])
+		CSR_SCRATCH:	scratch[regno[13:12]] <= val.val;
+		CSR_MCR0:		cr0 <= val.val;
+		CSR_SEMA:		sema <= val.val;
+		CSR_KEYTBL:	keytbl <= val.val;
+		CSR_KEYS:		keys2[regno[1:0]] <= val.val;
+		CSR_FSTAT:	fpscr <= val.val;
+		CSR_ASID: 	ASID <= val.val;
+		CSR_MBADADDR:	badaddr[regno[13:12]] <= val.val;
+		CSR_CAUSE:	cause[regno[13:12]] <= val.val;
+		CSR_MTVEC:
+			tvec[regno[1:0]] <= val.val;
+		CSR_MPMSTACK:	pmStack <= val.val;
+		CSR_MVSTEP:	estep <= val.val;
+		CSR_MVTMP:	begin new_vtmp <= val.val; ld_vtmp <= TRUE; end
+//		CSR_DSP:	dsp <= val.val;
+		CSR_MTIME:	begin wc_time_dat <= val.val; ld_time <= TRUE; end
+		CSR_MSTATUS:	status[3] <= val.val;
+		CSR_MTCBPTR:	tcbptr <= val.val;
+//		CSR_DSTUFF0:	stuff0 <= val.val;
+//		CSR_DSTUFF1:	stuff1 <= val.val;
+		CSR_MGDT:	gdt <= val.val;
+		CSR_MLDT:	ldt <= val.val;
+		default:	;
+		endcase
+	end
+end
+endtask
+
+task tSetbitCSR;
+input Value val;
+input [15:0] regno;
+begin
+	if (regno[13:12] <= omode) begin
+		casez(regno[15:0])
+		CSR_MCR0:			cr0[val.val[5:0]] <= 1'b1;
+		CSR_SEMA:			sema[val.val[5:0]] <= 1'b1;
+		CSR_MPMSTACK:	pmStack <= pmStack | val.val;
+		CSR_MSTATUS:	status[3] <= status[3] | val.val;
+		default:	;
+		endcase
+	end
+end
+endtask
+
+task tClrbitCSR;
+input Value val;
+input [15:0] regno;
+begin
+	if (regno[13:12] <= omode) begin
+		casez(regno[15:0])
+		CSR_MCR0:			cr0[val.val[5:0]] <= 1'b0;
+		CSR_SEMA:			sema[val.val[5:0]] <= 1'b0;
+		CSR_MPMSTACK:	pmStack <= pmStack & ~val.val;
+		CSR_MSTATUS:	status[3] <= status[3] & ~val.val;
+		default:	;
+		endcase
+	end
+end
+endtask
+
 
 task goto;
 input [5:0] st;
