@@ -69,7 +69,7 @@ input rb_i;
 output [5:0] state_o;
 output reg trigger_o;
 
-wire clk_g = clk_i;
+wire clk_g;
 
 reg [5:0] state, state1, state2;
 wire [1:0] omode;
@@ -128,6 +128,7 @@ reg [3:0] xlen;
 wire advance_x;
 reg [5:0] xRt,xRa,xRb,wRt,tRt;
 reg [2:0] xCat;
+wire takb;
 reg xpredict_taken;
 reg xJmp;
 reg xJxx;
@@ -175,6 +176,8 @@ wire dce;     					// data cache enable
 wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
 reg [63:0] tick;
+reg [63:0] wc_time;			// wall-clock time
+reg [63:0] mtimecmp;
 Address tvec [0:3];
 reg [15:0] cause [0:3];
 Address badaddr [0:3];
@@ -193,6 +196,7 @@ wire mie = status[3][3];
 wire die = status[3][4];
 reg [7:0] asid;
 Value gdt;
+Selector ldt;
 reg [63:0] keys2 [0:3];
 reg [19:0] keys [0:7];
 always_comb
@@ -482,6 +486,61 @@ always_comb
 
 wire [63:0] siea = xa + {xb << xSc};
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Timers
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+always @(posedge clk_g)
+if (rst_i)
+	tick <= 64'd0;
+else
+	tick <= tick + 2'd1;
+
+reg ld_time;
+reg wc_time_irq;
+reg [63:0] wc_time_dat;
+reg clr_wc_time_irq;
+always @(posedge wc_clk_i)
+if (rst_i) begin
+	wc_time <= 1'd0;
+	wc_time_irq <= 1'b0;
+end
+else begin
+	if (|ld_time)
+		wc_time <= wc_time_dat;
+	else begin
+		wc_time[31:0] <= wc_time[31:0] + 2'd1;
+		if (wc_time[31:0]==32'd99999999) begin
+			wc_time[31:0] <= 32'd0;
+			wc_time[63:32] <= wc_time[63:32] + 2'd1;
+		end
+	end
+	if (mtimecmp==wc_time)
+		wc_time_irq <= 1'b1;
+	if (clr_wc_time_irq)
+		wc_time_irq <= 1'b0;
+end
+
+wire pe_nmi;
+reg nmif;
+edge_det u17 (.rst(rst_i), .clk(clk_i), .ce(1'b1), .i(nmi_i), .pe(pe_nmi), .ne(), .ee() );
+
+reg wfi;
+reg set_wfi = 1'b0;
+always @(posedge wc_clk_i)
+if (rst_i)
+	wfi <= 1'b0;
+else begin
+	if (|irq_i|pe_nmi)
+		wfi <= 1'b0;
+	else if (set_wfi)
+		wfi <= 1'b1;
+end
+
+BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
+//assign clk_g = clk_i;
+
+
 assign run = ihit && (state==RUN);
 assign adcance_w = run;
 assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle;
@@ -489,12 +548,18 @@ assign advance_d = (advance_x | ~xval);
 assign advance_i = (advance_d | ~dval);
 
 always_ff @(posedge clk_g)
-if (rst_i)
+if (rst_i) begin
 	state <= RESTART1;
+	ld_time <= FALSE;
+end
 else begin
 	xrfwr <= FALSE;
 	xcarfwr <= FALSE;
 	memreq.wr <= FALSE;
+	if (ld_time==TRUE && wc_time_dat==wc_time)
+		ld_time <= FALSE;
+	if (clr_wc_time_irq && !wc_time_irq)
+		clr_wc_time_irq <= FALSE;
 case (state)
 RESTART1:
 	begin
@@ -531,14 +596,14 @@ RUN:
 		dcause <= icause;
 		if (irq_i > pmStack[3:1] && gie && !is_prefix(insn.any.opcode))
 			icause <= 16'h8000|cause_i|(irq_i << 4'd8);
+		else if (wc_time_irq)
+			icause <= 16'h8000|FLT_TMR;
 		else if (insn.any.opcode==BRK)
 			icause <= FLT_BRK;
 	end
+	// Wait for cache load
 	else begin
 		ip <= ip;
-		if (!ihit) begin
-			goto(LOAD_ICACHE1);
-		end
 	end	
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -978,6 +1043,7 @@ endcase
 
 end
 
+
 task inv_i;
 begin
   ival <= INV;
@@ -1039,8 +1105,18 @@ begin
 		CSR_MBADADDR:	res.val = badaddr[regno[13:12]];
 		CSR_TICK:	res.val = tick;
 		CSR_CAUSE:	res.val = cause[regno[13:12]];
-		CSR_MTVEC:
-			res.val = tvec[regno[2:0]];
+		CSR_MTVEC:	res.val = tvec[regno[1:0]];
+		CSR_MCA:
+			if (regno[3:1]==3'd7)
+				case(regno[0])
+				1'b0:	res.val = xip.offs;
+				1'b1:	res.val = xip.sel;
+				endcase
+			else
+				case(regno[0])
+				1'b0:	res.val = caregfile[regno[3:1]].offs;
+				1'b1:	res.val = caregfile[regno[3:1]].sel;
+				endcase
 		CSR_MPMSTACK:	res.val = pmStack;
 		CSR_MVSTEP:	res.val = estep;
 		CSR_MVTMP:	res.val = vtmp;
@@ -1074,19 +1150,35 @@ begin
 		CSR_ASID: 	ASID <= val.val;
 		CSR_MBADADDR:	badaddr[regno[13:12]] <= val.val;
 		CSR_CAUSE:	cause[regno[13:12]] <= val.val;
-		CSR_MTVEC:
-			tvec[regno[1:0]] <= val.val;
+		CSR_MTVEC:	tvec[regno[1:0]] <= val.val;
+		CSR_MCA:
+			if (regno[3:1] != 3'd7)
+				case(regno[0])
+				1'b0:	caregfile[regno[3:1]].offs = val.val;
+				1'b1:	caregfile[regno[3:1]].sel = val.val;
+				endcase
 		CSR_MPMSTACK:	pmStack <= val.val;
 		CSR_MVSTEP:	estep <= val.val;
 		CSR_MVTMP:	begin new_vtmp <= val.val; ld_vtmp <= TRUE; end
 //		CSR_DSP:	dsp <= val.val;
 		CSR_MTIME:	begin wc_time_dat <= val.val; ld_time <= TRUE; end
+		CSR_MTIMECMP:	begin clr_wc_time_irq <= TRUE; mtimecmp <= val.val; end
 		CSR_MSTATUS:	status[3] <= val.val;
 		CSR_MTCBPTR:	tcbptr <= val.val;
 //		CSR_DSTUFF0:	stuff0 <= val.val;
 //		CSR_DSTUFF1:	stuff1 <= val.val;
 		CSR_MGDT:	gdt <= val.val;
-		CSR_MLDT:	ldt <= val.val;
+		CSR_MLDT:	
+			if (ldt != val.val[31:0]) begin
+				ldt <= val.val[31:0];
+  			memreq.func <= MR_LOAD;
+  			memreq.func2 <= MR_LDDESC;
+  			memreq.adr <= val.val[31:0];
+  			memreq.seg <= val.val[23] ? 5'd17 : 5'd31;	// LDT or GDT
+  			memreq.dat <= 5'd17;		// update LDT descriptor cache
+  			memreq.wr <= TRUE;
+  			goto (WAIT_MEM1);
+			end
 		default:	;
 		endcase
 	end
