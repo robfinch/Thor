@@ -61,7 +61,7 @@ output idle;
 output dvByZr;
 reg dvByZr;
 
-reg Value aa,bb;
+Value aa,bb;
 reg so;
 reg [2:0] state;
 reg [7:0] cnt;
@@ -69,10 +69,10 @@ wire cnt_done = cnt==8'd0;
 assign done = state==DONE||state==DONE2||(state==IDLE && !ld);
 assign idle = state==IDLE;
 reg ce1;
-reg Value q;
+Value q;
 reg [WID:0] r;
 wire b0 = bb <= r;
-wire Value r1 = b0 ? r - bb : r;
+Value r1 = b0 ? r - bb : r;
 
 initial begin
   q = {$bits(Value){1'b0}};

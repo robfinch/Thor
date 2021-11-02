@@ -39,7 +39,7 @@ import Thor2021_pkg::*;
 
 module Thor20221_inslength(ir, o);
 input Instruction ir;
-output [3:0] o;
+output reg [3:0] o;
 
 always_comb
 casez(ir.any.opcode)
@@ -52,15 +52,15 @@ SUBFI:	o = 4'd4;
 MULI:		o = 4'd4;
 OSR2:		o = 4'd6;
 ANDI:		o = 4'd4;
-ORI			o = 4'd4;
-XORI		o = 4'd4;
+ORI:		o = 4'd4;
+XORI:		o = 4'd4;
 ADCI:		o = 4'd4;
 SBCFI:	o = 4'd4;
 MULUI:	o = 4'd4;
 CSR:		o = 4'd6;
 MULFI:	o = 4'd4;
 SEQI:		o = 4'd4;
-SNEI		o = 4'd4;
+SNEI:		o = 4'd4;
 SLTI:		o = 4'd4;
 SLTIL:	o = 4'd6;
 SGTIL:	o = 4'd6;
@@ -73,17 +73,17 @@ SGTUI:	o = 4'd6;
 8'h3?:	o = 4'd6;		// Decrement branches
 DIVI:		o = 4'd4;
 CPUID:	o = 4'd4;
-DIVIL		o = 4'd6;
+DIVIL:	o = 4'd6;
 MUX:		o = 4'd6;
 ADDIL:	o = 4'd6;
 CHKI:		o = 4'd6;
-MULIL		o = 4'd6;
+MULIL:	o = 4'd6;
 SNEIL:	o = 4'd6;
 ANDIL:	o = 4'd6;
 ORIL:		o = 4'd6;
 XORIL:	o = 4'd6;
 SEQIL:	o = 4'd6;
-BMAP:		o = 4'd6;
+//BMAP:		o = 4'd6;
 MULUIL:	o = 4'd6;
 DIVUI:	o = 4'd4;
 CMPI:		o = 4'd4;

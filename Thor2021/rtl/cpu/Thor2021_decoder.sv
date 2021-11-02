@@ -56,10 +56,10 @@ rfwr = FALSE;
 // Target register
 case(ir.any.opcode)
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	Rt = {4'd0,Rt[10:9]};
+	Rt = {4'd0,ir[10:9]};
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	Rt = {4'd0,Rt[10:9]};
-JMP,DJMP:			Rt = {4'd0,Rt[10:9]};
+	Rt = {4'd0,ir[10:9]};
+JMP,DJMP:			Rt = {4'd0,ir[10:9]};
 default:	Rt = ir[14:9];
 endcase
 // Rc
@@ -156,10 +156,10 @@ default:
 	imm = 64'd0;
 endcase
 casez(xir.any.opcode)
-EXI7:		imm = {34{xir[15]}},xir[15:9],ir[43:21]};
-EXI23:	imm = {18{xir[31]}},xir[31:9],ir[43:21]};
+EXI7:		imm = {{34{xir[15]}},xir[15:9],ir[43:21]};
+EXI23:	imm = {{18{xir[31]}},xir[31:9],ir[43:21]};
 EXI41:	imm = {xir[47:9],ir[43:21],xir[1:0]};
-default;	;
+default:	;
 endcase
 deco.rfwr = rfwr;
 deco.Ra = Ra;
@@ -189,7 +189,7 @@ R2:
 MULI,MULIL:	deco.mul = TRUE;
 MULUI,MULUIL:	deco.mul = TRUE;
 default:	deco.mul = FALSE;
-end
+endcase
 
 case(ir.any.opcode)
 R2:
@@ -204,7 +204,7 @@ endcase
 
 case(ir.any.opcode)
 F1,F2,F3:	deco.float = TRUE;
-default;	deco.float = FALSE;
+default:	deco.float = FALSE;
 endcase
 
 case(ir.any.opcode)
@@ -274,24 +274,24 @@ endcase
 
 case(ir.any.opcode)
 JMP,DJMP:	deco.jmp = TRUE;
-default: 	deco.jmp = FALSE;;
+default: 	deco.jmp = FALSE;
 endcase
 case(ir.any.opcode)
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.jxx = TRUE;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.jxx = TRUE;
-default: 	deco.jxx = FALSE;;
+default: 	deco.jxx = FALSE;
 endcase
 
 case(ir.any.opcode)
 DJMP:	deco.dj = TRUE;
-default: 	deco.dj = FALSE;;
+default: 	deco.dj = FALSE;
 endcase
 case(ir.any.opcode)
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.dj = TRUE;
-default: 	deco.dj = FALSE;;
+default: 	deco.dj = FALSE;
 endcase
 
 deco.rts = ir.any.opcode==RTS;
@@ -332,7 +332,7 @@ case(ir.any.opcode)
 R2:
 	case(ir.r2.func)
 	MUL,MULH:			deco.mul = TRUE;
-	MULU,MULUH		deco.mulu = TRUE;
+	MULU,MULUH:		deco.mulu = TRUE;
 	MULSU,MULSUH:	deco.mulsu = TRUE;
 	default:	;
 	endcase
@@ -361,7 +361,7 @@ endcase
 deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
 deco.divalli = deco.divi|deco.divui|deco.divsui;
 
-deco.is_cbranch = ir.jxx.ca==3'd7 && ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3;
+deco.is_cbranch = ir.jxx.Ca==3'd7 && ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3;
 if (deco.jxx)
 	deco.jmptgt = {{44{ir.jxx.Tgthi[15]}},ir.jxx.Tgthi,ir.jxx.Tgtlo,1'b0};
 else

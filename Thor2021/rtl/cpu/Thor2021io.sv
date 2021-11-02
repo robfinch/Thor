@@ -38,7 +38,7 @@
 
 import Thor2021_pkg::*;
 
-module Thor2021(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, irq_i, icause_i,
+module Thor2021(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, irq_i, icause_i,
 		vpa_o, vda_o, bte_o, cti_o, bok_i, cyc_o, stb_o, lock_o, ack_i,
     err_i, we_o, sel_o, adr_o, dat_i, dat_o, cr_o, sr_o, rb_i, state_o, trigger_o);
 input [63:0] hartid_i;
@@ -46,6 +46,7 @@ input rst_i;
 input clk_i;
 input clk2x_i;
 input clk2d_i;
+input wc_clk_i;
 input [2:0] irq_i;
 input [8:0] icause_i;
 output vpa_o;
@@ -72,6 +73,23 @@ output reg trigger_o;
 wire clk_g;
 
 reg [5:0] state, state1, state2;
+parameter RUN = 6'd1;
+parameter RESTART1 = 6'd2;
+parameter RESTART2 = 6'd3;
+parameter WAIT_MEM1 = 6'd4;
+parameter MUL1 = 6'd5;
+parameter DIV1 = 6'd6;
+parameter INVnRUN = 6'd7;
+parameter DELAY1 = 6'd8;
+parameter DELAY2 = 6'd9;
+parameter DELAY3 = 6'd10;
+parameter DELAY4 = 6'd11; 
+parameter WAIT_MEM2 = 6'd12;
+parameter INVnRUN2 = 6'd13;
+parameter MUL9 = 6'd14;
+parameter DELAY5 = 6'd15; 
+parameter DELAY6 = 6'd16; 
+
 wire [1:0] omode;
 wire [1:0] memmode;
 wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
@@ -81,7 +99,7 @@ Instruction mir,wir;
 Value regfile [0:63];
 Value sp [0:31];
 Value lc;
-Address caregfile [0:7];
+Address caregfile [0:15];
 
 // Instruction fetch stage vars
 reg ival;
@@ -90,7 +108,6 @@ Instruction insn;
 wire advance_i;
 Address ip;
 wire ipredict_taken;
-Address [7:0] caregfile;
 wire ihit;
 wire [639:0] ic_line;
 wire [3:0] ilen;
@@ -122,15 +139,19 @@ Value rfoa, rfob, rfoc;
 // Execute stage vars
 reg xval;
 reg [15:0] xcause;
+Address xbadAddr;
 Instruction xir;
 Address xip;
 reg [3:0] xlen;
 wire advance_x;
-reg [5:0] xRt,xRa,xRb,wRt,tRt;
+reg [5:0] xRt,xRa,xRb,xRc,wRt,tRt;
 reg [2:0] xCat;
+Value xa,xb,xc;
+Value imm;
+reg [2:0] xSc;
 wire takb;
 reg xpredict_taken;
-reg xJmp;
+reg xJmp, xJmptgt;
 reg xJxx;
 reg xdj;
 reg xRts, xRti;
@@ -140,10 +161,15 @@ reg xLdz;
 reg xrfwr;
 reg xcarfwr;
 reg xMul,xMuli;
+reg xMulu,xMului;
 reg xMulsu,xMulsui;
 reg xIsMul,xIsDiv;
-reg xDiv,Divsu;
+reg xDiv,xDivsu;
 reg xDivi;
+reg xLoadr, xLoadn;
+reg xStorer, xStoren;
+reg [2:0] xSeg;
+reg xMemsz;
 reg xCsr;
 MemoryRequest memreq;
 MemoryResponse memresp;
@@ -154,6 +180,7 @@ reg [7:0] tid;
 Value res,res2;
 Value crypto_res;
 Address cares;
+reg ld_vtmp;
 
 // Writeback stage vars
 reg wval;
@@ -175,13 +202,18 @@ wire pe = cr0[0];				// protected mode enable
 wire dce;     					// data cache enable
 wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
+Value scratch [0:3];
 reg [63:0] tick;
 reg [63:0] wc_time;			// wall-clock time
 reg [63:0] mtimecmp;
 Address tvec [0:3];
 reg [15:0] cause [0:3];
 Address badaddr [0:3];
+reg [63:0] mexrout;
 reg [5:0] estep;
+Value vtmp;							// temporary register used in processing vectors
+Value new_vtmp;
+reg [3:0] istk_depth;		// range: 0 to 8
 reg [63:0] pmStack;
 wire [2:0] ilvl = pmStack[3:1];
 reg [63:0] plStack;
@@ -197,6 +229,8 @@ wire die = status[3][4];
 reg [7:0] asid;
 Value gdt;
 Selector ldt;
+Selector keytbl;
+Selector tcbptr;
 reg [63:0] keys2 [0:3];
 reg [19:0] keys [0:7];
 always_comb
@@ -239,7 +273,7 @@ else if (Ra==wRt)
 	rfoa = wres;
 else
   case(Ra)
-  6'd63:  rfoa = sp [{ol,ilvl}];
+  6'd63:  rfoa = sp [{omode,ilvl}];
   default:    rfoa = regfile[Ra];
   endcase
 
@@ -252,7 +286,7 @@ else if (Rb==wRt)
 	rfob = wres;
 else
   case(Rb)
-  6'd63:  rfob = sp [{ol,ilvl}];
+  6'd63:  rfob = sp [{omode,ilvl}];
   default:    rfob = regfile[Rb];
   endcase
 
@@ -265,7 +299,7 @@ else if (Rc==wRt)
 	rfoc = wres;
 else
   case(Rc)
-  6'd63:  rfoc = sp [{ol,ilvl}];
+  6'd63:  rfoc = sp [{omode,ilvl}];
   default:    rfoc = regfile[Rc];
   endcase
 
@@ -286,10 +320,10 @@ Value aa, bb;
 // 6 stage pipeline
 Thor2021_multiplier umul
 (
-  .clk(clk_g),
-  .a(aa),
-  .b(bb),
-  .p(mul_prod1)
+  .CLK(clk_g),
+  .A(aa),
+  .B(bb),
+  .P(mul_prod1)
 );
 wire multovf = ((xMulu|xMului) ? mul_prod[127:64] != 64'd0 : mul_prod[127:64] != {64{mul_prod[63]}});
 
@@ -385,7 +419,7 @@ ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm;
 XORI,XORIL:		res2 = xa ^ imm;
 CMPI,CMPIL:		res2 = $signed(xa) < $signed(imm) ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
-CMPUI,CMPIUL:	res2 = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
+CMPUI,CMPUIL:	res2 = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
 MULI,MULIL:		res2 = mul_prod[63:0];
 MULUI:MULUIL:	res2 = mul_prod[63:0];
 DIVI,DIVIL:		res2 = qo;
@@ -540,6 +574,8 @@ end
 BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 //assign clk_g = clk_i;
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 assign run = ihit && (state==RUN);
 assign adcance_w = run;
@@ -568,6 +604,9 @@ RESTART1:
 		ip.offs <= 32'hFFFD0000;
 		ip.sel <= 32'hFF000007;				// entry 7 of the GDT
 		gie <= FALSE;
+		pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
+		plStack <= 64'hffffffffffffffff;	// PL = 255
+		istk_depth <= 4'd1;
 		goto(RESTART2);
 	end
 RESTART2:
@@ -575,6 +614,7 @@ RESTART2:
 		goto(RUN);
 	end
 RUN:
+	begin
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Instruction Fetch stage
   // We want decodes in the IFETCH stage to be fast so they don't appear
@@ -583,9 +623,9 @@ RUN:
 	if (advance_i) begin
 		ival <= VAL;
 		ip <= next_ip;
-		if (insn.jmp.ca==3'd0 && insn.any.opcode==JMP)
+		if (insn.jmp.Ca==3'd0 && insn.any.opcode==JMP)
 			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		else if (insn.jmp.ca==3'd7 && insn.any.opcode==JMP)
+		else if (insn.jmp.Ca==3'd7 && insn.any.opcode==JMP)
 			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (btbe & btb_hit)
 			ip <= btb_tgt;
@@ -595,7 +635,7 @@ RUN:
 		dpredict_taken <= ipredict_taken;
 		dcause <= icause;
 		if (irq_i > pmStack[3:1] && gie && !is_prefix(insn.any.opcode))
-			icause <= 16'h8000|cause_i|(irq_i << 4'd8);
+			icause <= 16'h8000|icause_i|(irq_i << 4'd8);
 		else if (wc_time_irq)
 			icause <= 16'h8000|FLT_TMR;
 		else if (insn.any.opcode==BRK)
@@ -703,18 +743,18 @@ RUN:
 			    ival <= INV;
 			    inv_d();
 			    inv_x();
-			    if (xir.jxx.ca == 3'd0)
+			    if (xir.jxx.Ca == 3'd0)
 			    	ip.offs <= xJmptgt;
-			    else if (xir.jxx.ca == 3'd7)
+			    else if (xir.jxx.Ca == 3'd7)
 			    	ip.offs <= ip.offs + xJmptgt;
 			    else
-			    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
-	    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7) begin
-	    			ip.sel <= caregfile[xir.jmp.ca].sel;
+			    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
+	    		if (caregfile[xir.jmp.Ca].sel != ip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
+	    			ip.sel <= caregfile[xir.jmp.Ca].sel;
 	    			memreq.func <= MR_LOAD;
 	    			memreq.func2 <= MR_LDDESC;
-	    			memreq.adr <= caregfile[xir.jmp.ca].sel;
-	    			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
+	    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
 	    			memreq.dat <= 5'd7;		// update CS descriptor cache
 	    			memreq.wr <= TRUE;
 	    			goto (WAIT_MEM1);
@@ -725,18 +765,18 @@ RUN:
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
-		    if (xir.jxx.ca == 3'd0)
+		    if (xir.jxx.Ca == 3'd0)
 		    	ip.offs <= xJmptgt;
-		    else if (xir.jxx.ca == 3'd7)
+		    else if (xir.jxx.Ca == 3'd7)
 		    	ip.offs <= ip.offs + xJmptgt;
 		    else
-		    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
-    		if (caregfile[xir.jmp.ca].sel != ip.sel && xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7) begin
-    			ip.sel <= caregfile[xir.jmp.ca].sel;
+		    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
+    		if (caregfile[xir.jmp.Ca].sel != ip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
+    			ip.sel <= caregfile[xir.jmp.Ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
-    			memreq.adr <= caregfile[xir.jmp.ca].sel;
-    			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
+    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
     			memreq.dat <= 5'd7;		// update CS descriptor cache
     			memreq.wr <= TRUE;
     			goto (WAIT_MEM1);
@@ -750,18 +790,18 @@ RUN:
 	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
 	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
 	  	end
-    	if (xir.jmp.ca != 3'd0 && xir.jmp.ca != 3'd7)	begin // ==0,7 was already done at ifetch
+    	if (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
-	    	ip.offs <= caregfile[xir.jmp.ca].offs + xJmptgt;
+	    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
     		// Selector changing?
-    		if (caregfile[xir.jmp.ca].sel != ip.sel) begin
-    			ip.sel <= caregfile[xir.jmp.ca].sel;
+    		if (caregfile[xir.jmp.Ca].sel != ip.sel) begin
+    			ip.sel <= caregfile[xir.jmp.Ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
-    			memreq.adr <= caregfile[xir.jmp.ca].sel;
-    			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
+    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
     			memreq.dat <= 5'd7;		// update CS descriptor cache
     			memreq.wr <= TRUE;
     			goto (WAIT_MEM1);
@@ -779,8 +819,8 @@ RUN:
     			ip.sel <= caregfile[{1'b0,xir.rts.lk}].sel;
 	  			memreq.func <= MR_LOAD;
 	  			memreq.func2 <= MR_LDDESC;
-	  			memreq.adr <= caregfile[xir.jmp.ca].sel;
-	  			memreq.seg <= caregfile[xir.jmp.ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	  			memreq.adr <= caregfile[xir.rts.lk].sel;
+	  			memreq.seg <= caregfile[xir.rts.lk].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
 	  			memreq.dat <= 5'd7;		// update CS descriptor cache
 	  			memreq.wr <= TRUE;
 	  			goto (WAIT_MEM1);
@@ -805,7 +845,7 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
     	endcase
-    	memreq.adr <= a + imm;
+    	memreq.adr <= xa + imm;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
@@ -871,7 +911,8 @@ RUN:
 				pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 			plStack <= {plStack[55:0],8'hFF};
 			cause[2'd3] <= wcause;
-			caregfile[3'd6] <= ip;
+			caregfile[4'h8+istk_depth] <= ip;
+			istk_depth <= istk_depth + 2'd1;
 			ip.sel <= tvec[2'd3].sel;
 			ip.offs <= tvec[2'd3].offs + {omode,6'h00};
 			inv_i();
@@ -879,22 +920,25 @@ RUN:
 			inv_x();
 			inv_w();
 		end
-		if (wval) begin
+		else if (wval) begin
 	    if (wCsr)
 	      case(wir.csr.op)
-	      3'd1:   tWriteCsr(wa,wir.csr.regno);
-	      3'd2:   tSetbitCsr(wa,wir.csr.regno);
-	      3'd3:   tClrbitCsr(wa,wir.csr.regno);
+	      3'd1:   tWriteCSR(wa,wir.csr.regno);
+	      3'd2:   tSetbitCSR(wa,wir.csr.regno);
+	      3'd3:   tClrbitCSR(wa,wir.csr.regno);
 	      default:	;
 	      endcase
 			if (wRti) begin
-				pmStack <= {8'h37,pmStack[63:8]};
-				plStack <= {8'hFF,plStack[63:8]};
-				ip <= caregfile[3'd6];
-				inv_i();
-				inv_d();
-				inv_x();
-				inv_w();
+				if (|istk_depth) begin
+					pmStack <= {8'h3E,pmStack[63:8]};
+					plStack <= {8'hFF,plStack[63:8]};
+					ip <= caregfile[4'h7+istk_depth];	// 8-1
+					istk_depth <= istk_depth - 2'd1;
+					inv_i();
+					inv_d();
+					inv_x();
+					inv_w();
+				end
 			end
 			if (wRex) begin
 				if (omode <= wir[10:9]) begin
@@ -910,13 +954,13 @@ RUN:
 					inv_w();
 				end
 				else begin
-					omode <= wir[10:9];
+					pmStack[2:1] <= wir[10:9];	// omode
 				end
 			end
 			// Register file update
 		  if (wrfwr) begin
 		    case(wRt)
-		    6'd63:  sp[{ol,ilvl}] <= {wres[63:3],3'h0};
+		    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
 		    endcase
 		    regfile[wRt] <= wres;
 		    $display("regfile[%d] <= %h", wRt, wres);
@@ -926,6 +970,7 @@ RUN:
 		  end
 		end
   end
+	end	// RUN
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Wait for a response from the BIU.
@@ -951,7 +996,7 @@ WAIT_MEM2:
 				end
 				if (|memresp.cause) begin
 					xcause <= memresp.cause;
-					badAddr <= memresp.badAddr;
+					xbadAddr <= memresp.badAddr;
 				end
 				goto (INVnRUN);
 			end
@@ -993,8 +1038,8 @@ MUL1:
     else if (xMulsui) bb <= imm;
     else if (xMulu) bb <= xb;
     else bb <= imm; // MULUI
-	// Now wait for the three stage pipeline to finish
-    call(DELAY4,MUL9);
+	// Now wait for the six stage pipeline to finish
+    call(DELAY6,MUL9);
   end
 MUL9:
   begin
@@ -1002,7 +1047,7 @@ MUL9:
     //upd_rf <= `TRUE;
     goto(INVnRUN);
     if (multovf & mexrout[5]) begin
-      ex_fault(FLT_OFL,0);
+      ex_fault(FLT_OFL);
     end
   end
 
@@ -1013,26 +1058,28 @@ DIV1:
     //upd_rf <= `TRUE;
     goto(INVnRUN);
     if (dvByZr & mexrout[3]) begin
-      ex_fault(FLT_DBZ,0);
+      ex_fault(FLT_DBZ);
     end
   end
-
+/*
 FLOAT1:
   if (fpdone) begin
 	  //upd_rf <= `TRUE;
 	  inv_x();
 	  goto(RUN);
 	  if (fpstatus[9]) begin  // GX status bit
-	      ex_fault(FLT_FLT,0);
+	      ex_fault(FLT_FLT);
 	  end
   end
-
+*/
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+DELAY6:	goto(DELAY5);
+DELAY5:	goto(DELAY4);
 DELAY4:	goto(DELAY3);
 DELAY3:	goto(DELAY2);
 DELAY2:	goto(DELAY1);
-DELAY1:	return();
+DELAY1:	sreturn();
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // If the state machine goes to an invalid state, restart.
@@ -1081,7 +1128,8 @@ endtask
 task ex_fault;
 input [15:0] c;
 begin
-	xcause <= c;
+	if (xcause==16'h0)
+		xcause <= c;
 	goto (RUN);
 end
 endtask
@@ -1094,40 +1142,41 @@ input [15:0] regno;
 begin
 	if (regno[13:12] <= omode) begin
 		casez(regno[15:0])
-		CSR_SCRATCH:	res.val = scratch[regno[13:12]];
-		CSR_MHARTID: res.val = hartid_i;
-		CSR_MCR0:	res.val = cr0|(dce << 5'd30);
-		CSR_KEYTBL:	res.val = keytbl;
-		CSR_KEYS:	res.val = keys2[regno[1:0]];
-		CSR_SEMA: res.val = sema;
-		CSR_FSTAT:	res.val = fpscr;
-		CSR_ASID:	res.val = ASID;
-		CSR_MBADADDR:	res.val = badaddr[regno[13:12]];
-		CSR_TICK:	res.val = tick;
-		CSR_CAUSE:	res.val = cause[regno[13:12]];
-		CSR_MTVEC:	res.val = tvec[regno[1:0]];
+		CSR_SCRATCH:	res = scratch[regno[13:12]];
+		CSR_MHARTID: res = hartid_i;
+		CSR_MCR0:	res = cr0|(dce << 5'd30);
+		CSR_KEYTBL:	res = keytbl;
+		CSR_KEYS:	res = keys2[regno[1:0]];
+		CSR_SEMA: res = sema;
+//		CSR_FSTAT:	res = fpscr;
+		CSR_ASID:	res = asid;
+		CSR_MBADADDR:	res = badaddr[regno[13:12]];
+		CSR_TICK:	res = tick;
+		CSR_CAUSE:	res = cause[regno[13:12]];
+		CSR_MTVEC:	res = tvec[regno[1:0]];
 		CSR_MCA:
-			if (regno[3:1]==3'd7)
+			if (regno[4:1]==4'd7)
 				case(regno[0])
-				1'b0:	res.val = xip.offs;
-				1'b1:	res.val = xip.sel;
+				1'b0:	res = xip.offs;
+				1'b1:	res = xip.sel;
 				endcase
 			else
 				case(regno[0])
-				1'b0:	res.val = caregfile[regno[3:1]].offs;
-				1'b1:	res.val = caregfile[regno[3:1]].sel;
+				1'b0:	res = caregfile[regno[4:1]].offs;
+				1'b1:	res = caregfile[regno[4:1]].sel;
 				endcase
-		CSR_MPMSTACK:	res.val = pmStack;
-		CSR_MVSTEP:	res.val = estep;
-		CSR_MVTMP:	res.val = vtmp;
-		CSR_TIME:	res.val = wc_time;
-		CSR_MSTATUS:	res.val = status[3];
-		CSR_MTCBPTR:	res.val = tcbptr;
-//		CSR_DSTUFF0:	res.val = stuff0;
-//		CSR_DSTUFF1:	res.val = stuff1;
-		CSR_MGDT:	res.val = gdt;
-		CSR_MLDT:	res.val = ldt;
-		default:	res.val = 64'd0;
+		CSR_MPLSTACK:	res = plStack;
+		CSR_MPMSTACK:	res = pmStack;
+		CSR_MVSTEP:	res = estep;
+		CSR_MVTMP:	res = vtmp;
+		CSR_TIME:	res = wc_time;
+		CSR_MSTATUS:	res = status[3];
+		CSR_MTCB:	res = tcbptr;
+//		CSR_DSTUFF0:	res = stuff0;
+//		CSR_DSTUFF1:	res = stuff1;
+		CSR_MGDT:	res = gdt;
+		CSR_MLDT:	res = ldt;
+		default:	res = 64'd0;
 		endcase
 	end
 	else
@@ -1141,40 +1190,41 @@ input [15:0] regno;
 begin
 	if (regno[13:12] <= omode) begin
 		casez(regno[15:0])
-		CSR_SCRATCH:	scratch[regno[13:12]] <= val.val;
-		CSR_MCR0:		cr0 <= val.val;
-		CSR_SEMA:		sema <= val.val;
-		CSR_KEYTBL:	keytbl <= val.val;
-		CSR_KEYS:		keys2[regno[1:0]] <= val.val;
-		CSR_FSTAT:	fpscr <= val.val;
-		CSR_ASID: 	ASID <= val.val;
-		CSR_MBADADDR:	badaddr[regno[13:12]] <= val.val;
-		CSR_CAUSE:	cause[regno[13:12]] <= val.val;
-		CSR_MTVEC:	tvec[regno[1:0]] <= val.val;
+		CSR_SCRATCH:	scratch[regno[13:12]] <= val;
+		CSR_MCR0:		cr0 <= val;
+		CSR_SEMA:		sema <= val;
+		CSR_KEYTBL:	keytbl <= val;
+		CSR_KEYS:		keys2[regno[1:0]] <= val;
+//		CSR_FSTAT:	fpscr <= val;
+		CSR_ASID: 	asid <= val;
+		CSR_MBADADDR:	badaddr[regno[13:12]] <= val;
+		CSR_CAUSE:	cause[regno[13:12]] <= val;
+		CSR_MTVEC:	tvec[regno[1:0]] <= val;
 		CSR_MCA:
-			if (regno[3:1] != 3'd7)
+			if (regno[4:1] != 4'd7)
 				case(regno[0])
-				1'b0:	caregfile[regno[3:1]].offs = val.val;
-				1'b1:	caregfile[regno[3:1]].sel = val.val;
+				1'b0:	caregfile[regno[4:1]].offs = val;
+				1'b1:	caregfile[regno[4:1]].sel = val;
 				endcase
-		CSR_MPMSTACK:	pmStack <= val.val;
-		CSR_MVSTEP:	estep <= val.val;
-		CSR_MVTMP:	begin new_vtmp <= val.val; ld_vtmp <= TRUE; end
-//		CSR_DSP:	dsp <= val.val;
-		CSR_MTIME:	begin wc_time_dat <= val.val; ld_time <= TRUE; end
-		CSR_MTIMECMP:	begin clr_wc_time_irq <= TRUE; mtimecmp <= val.val; end
-		CSR_MSTATUS:	status[3] <= val.val;
-		CSR_MTCBPTR:	tcbptr <= val.val;
-//		CSR_DSTUFF0:	stuff0 <= val.val;
-//		CSR_DSTUFF1:	stuff1 <= val.val;
-		CSR_MGDT:	gdt <= val.val;
+		CSR_MPLSTACK:	plStack <= val;
+		CSR_MPMSTACK:	pmStack <= val;
+		CSR_MVSTEP:	estep <= val;
+		CSR_MVTMP:	begin new_vtmp <= val; ld_vtmp <= TRUE; end
+//		CSR_DSP:	dsp <= val;
+		CSR_MTIME:	begin wc_time_dat <= val; ld_time <= TRUE; end
+		CSR_MTIMECMP:	begin clr_wc_time_irq <= TRUE; mtimecmp <= val; end
+		CSR_MSTATUS:	status[3] <= val;
+		CSR_MTCB:	tcbptr <= val;
+//		CSR_DSTUFF0:	stuff0 <= val;
+//		CSR_DSTUFF1:	stuff1 <= val;
+		CSR_MGDT:	gdt <= val;
 		CSR_MLDT:	
-			if (ldt != val.val[31:0]) begin
-				ldt <= val.val[31:0];
+			if (ldt != val[31:0]) begin
+				ldt <= val[31:0];
   			memreq.func <= MR_LOAD;
   			memreq.func2 <= MR_LDDESC;
-  			memreq.adr <= val.val[31:0];
-  			memreq.seg <= val.val[23] ? 5'd17 : 5'd31;	// LDT or GDT
+  			memreq.adr <= val[31:0];
+  			memreq.seg <= val[23] ? 5'd17 : 5'd31;	// LDT or GDT
   			memreq.dat <= 5'd17;		// update LDT descriptor cache
   			memreq.wr <= TRUE;
   			goto (WAIT_MEM1);
@@ -1191,10 +1241,10 @@ input [15:0] regno;
 begin
 	if (regno[13:12] <= omode) begin
 		casez(regno[15:0])
-		CSR_MCR0:			cr0[val.val[5:0]] <= 1'b1;
-		CSR_SEMA:			sema[val.val[5:0]] <= 1'b1;
-		CSR_MPMSTACK:	pmStack <= pmStack | val.val;
-		CSR_MSTATUS:	status[3] <= status[3] | val.val;
+		CSR_MCR0:			cr0[val[5:0]] <= 1'b1;
+		CSR_SEMA:			sema[val[5:0]] <= 1'b1;
+		CSR_MPMSTACK:	pmStack <= pmStack | val;
+		CSR_MSTATUS:	status[3] <= status[3] | val;
 		default:	;
 		endcase
 	end
@@ -1207,10 +1257,10 @@ input [15:0] regno;
 begin
 	if (regno[13:12] <= omode) begin
 		casez(regno[15:0])
-		CSR_MCR0:			cr0[val.val[5:0]] <= 1'b0;
-		CSR_SEMA:			sema[val.val[5:0]] <= 1'b0;
-		CSR_MPMSTACK:	pmStack <= pmStack & ~val.val;
-		CSR_MSTATUS:	status[3] <= status[3] & ~val.val;
+		CSR_MCR0:			cr0[val[5:0]] <= 1'b0;
+		CSR_SEMA:			sema[val[5:0]] <= 1'b0;
+		CSR_MPMSTACK:	pmStack <= pmStack & ~val;
+		CSR_MSTATUS:	status[3] <= status[3] & ~val;
 		default:	;
 		endcase
 	end
@@ -1235,7 +1285,7 @@ begin
 end
 endtask
 
-task return;
+task sreturn;
 begin
 	state <= state1;
 	state1 <= state2;

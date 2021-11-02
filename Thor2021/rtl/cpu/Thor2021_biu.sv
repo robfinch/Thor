@@ -84,7 +84,7 @@ output reg cr_o;
 input rb_i;
 
 output reg dce;							// data cache enable
-input [20:0] keys [0:7];
+input [19:0] keys [0:7];
 input [2:0] arange;
 input [63:0] gdt;
 input MemSegDesc ldt;
@@ -190,8 +190,8 @@ always_comb
 
 reg [7:-1] ealow;
 wire [3:0] segsel = ea >> ({arange,3'b0} + 4'd8);
-wire [3:0] ea_acr = pe ? desc_out[3:0] : 4'hF;
-wire [3:0] pc_acr = cs[3:0];
+wire [3:0] ea_acr = pe ? desc_out[15:12] : 4'hF;
+wire [3:0] pc_acr = cs_desc.acr[15:12];
 
 reg [63:0] sel;
 reg [63:0] nsel;
@@ -307,7 +307,7 @@ MemoryRequestFifo uififo1
   .clk(clk),      // input wire clk
   .srst(rst),    // input wire srst
   .din(fifoToCtrl_i),      // input wire [197 : 0] din
-  .wr_en(fifoToCtrl_i.fifo_wr),  // input wire wr_en
+  .wr_en(fifoToCtrl_i.wr),  // input wire wr_en
   .rd_en(memreq_rd & ~pev),  // input wire rd_en
   .dout(imemreq),    // output wire [197 : 0] dout
   .full(fifoToCtrl_full_o),  // output wire full
@@ -333,7 +333,7 @@ MemoryResponseFifo uofifo1
   .clk(clk),      // input wire clk
   .srst(rst),    // input wire srst
   .din(memresp),      // input wire [197 : 0] din
-  .wr_en(memresp.fifo_wr),  // input wire wr_en
+  .wr_en(memresp.wr),  // input wire wr_en
   .rd_en(fifoFromCtrl_rd),  // input wire rd_en
   .dout(fifoFromCtrl_o),    // output wire [197 : 0] dout
   .full(),    // output wire full
@@ -372,6 +372,7 @@ reg [639:0] ici;		// Must be a multiple of 128 bits wide for shifting.
 reg [AWID-7:0] ic_tag;
 reg [AWID-7:0] prev_ic_tag = 0;
 
+// 640 wide x 512 deep
 icache_blkmem uicm (
   .clka(clk),    // input wire clka
   .ena(1'b1),      // input wire ena
@@ -701,10 +702,8 @@ if (rst) begin
 	ici <= 512'd0;
 	dci <= 640'd0;
 	memreq_rd <= FALSE;
-	memresp.fifo_wr <= FALSE;
+	memresp.wr <= FALSE;
 	memresp.res <= 128'd0;
-	memresp.ret <= FALSE;
-	memresp.call <= FALSE;
 	memresp.ldcs <= FALSE;
 	desc_index <= 4'd0;
 	goto (MEMORY_INIT);
@@ -713,7 +712,7 @@ else begin
 	inext <= FALSE;
 	ic_update <= 1'b0;
 //	memreq_rd <= FALSE;
-	memresp.fifo_wr <= FALSE;
+	memresp.wr <= FALSE;
 	dcache_wr <= FALSE;
 	tlbwr <= FALSE;
 	wr_desc <= FALSE;
@@ -758,11 +757,8 @@ else begin
 		begin
 			memresp.cause <= {8'h00,FLT_NONE};
 			memresp.badAddr <= 33'd0;
-			memresp.ret <= FALSE;
-			memresp.jali <= memreq.func==M_JALI;
-			memresp.call <= memreq.func==M_CALL;
 			memresp.ldcs <= FALSE;
-			memresp.mtsel <= memreq.func==MR_LOAD && memreq.func2 == LDDESC;
+			memresp.mtsel <= memreq.func==MR_LOAD && memreq.func2 == MR_LDDESC;
 			ealow <= ea[7:0];
 			// Detect cache controller commands
   		case(memreq.func)
@@ -781,7 +777,7 @@ else begin
 						memresp.step <= memreq.step;
 						memresp.res <= memreq.adr;
 				    memresp.cmt <= TRUE;
-						memresp.fifo_wr <= TRUE;
+						memresp.wr <= TRUE;
 						memresp.res <= 128'd0;
 						goto (MEMORY1);
 					end
@@ -791,13 +787,13 @@ else begin
 						// Global descriptor table descriptor is loaded with a flat model
 						// based at address 0h on reset and is not modifiable.
 						if (memreq.adr[23]) begin	// table indicator
-							tEA({memreq.adr[22:0],5'd0})
+							tEA({memreq.adr[22:0],5'd0});
 		      		xlaten <= TRUE;
 		      	end
 		      	// Global descriptor table is located at an absolute physical 
 		      	// address which is not mapped.
 						else begin
-							tEA({gdt,12'd0} + {memreq.adr[22:0],5'd0})
+							tEA({gdt,12'd0} + {memreq.adr[22:0],5'd0});
 		      		xlaten <= FALSE;
 						end
 			    	daccess <= TRUE;
@@ -812,7 +808,7 @@ else begin
 							memresp.step <= memreq.step;
 							memresp.res <= memreq.adr;
 					    memresp.cmt <= TRUE;
-							memresp.fifo_wr <= TRUE;
+							memresp.wr <= TRUE;
 							memresp.res <= 128'd0;
 							memresp.badAddr <= memreq.adr;
 			    		memresp.cause <= FLT_SGB;
@@ -823,7 +819,7 @@ else begin
 	    		  	tEA(ea);
 		      		xlaten <= TRUE;
 		      		// Setup proper select lines
-				      sel <= {32'h0,memreq.sel} << ea[3:-1];
+				      sel <= {32'h0,memreq.sel} << ea[3:0];
 				  		goto (MEMORY3);
 			  		end
 					end
@@ -835,7 +831,7 @@ else begin
 						memresp.step <= memreq.step;
 						memresp.res <= memreq.adr;
 				    memresp.cmt <= TRUE;
-						memresp.fifo_wr <= TRUE;
+						memresp.wr <= TRUE;
 						memresp.res <= 128'd0;
 						memresp.badAddr <= memreq.adr;
 		    		memresp.cause <= FLT_SGB;
@@ -846,7 +842,7 @@ else begin
 	    		  tEA(ea);
 	      		xlaten <= TRUE;
 	      		// Setup proper select lines
-			      sel <= {32'h0,memreq.sel} << ea[3:-1];
+			      sel <= {32'h0,memreq.sel} << ea[3:0];
 			  		goto (MEMORY3);
 		  		end
 				end
@@ -863,7 +859,7 @@ else begin
 						dce <= FALSE;
 			    memresp.cmt <= TRUE;
 					memresp.tid <= memreq.tid;
-					memresp.fifo_wr <= TRUE;
+					memresp.wr <= TRUE;
 					memresp.res <= 128'd0;
 					ret();
 				end
@@ -886,7 +882,7 @@ else begin
 						memresp.step <= memreq.step;
 						memresp.res <= memreq.adr;
 				    memresp.cmt <= TRUE;
-						memresp.fifo_wr <= TRUE;
+						memresp.wr <= TRUE;
 						memresp.res <= 128'd0;
 						memresp.badAddr <= memreq.adr;
 			    	memresp.cause <= FLT_SGB;
@@ -897,9 +893,9 @@ else begin
 	    		  tEA(ea);
 	      		xlaten <= TRUE;
 	      		// Setup proper select lines
-			      sel <= zero_data ? 32'h0003 << ea[3:-1] : {32'h0,memreq.sel} << ea[3:-1];
+			      sel <= zero_data ? 32'h0003 << ea[3:0] : {32'h0,memreq.sel} << ea[3:0];
 			      // Shift output data into position
-	    		  dat <= zero_data ? 256'd0 : {128'd0,memreq.dat} << {ea[3:-1],2'b0};
+	    		  dat <= zero_data ? 256'd0 : {128'd0,memreq.dat} << {ea[3:0],3'b0};
 			  		goto (MEMORY3);
 		  		end
 				end
@@ -934,7 +930,7 @@ else begin
       	memresp.cause <= {8'h00,FLT_NONE};
       	memresp.cmt <= TRUE;
       	memresp.res <= io_keys[adr_o[12:2]];
-      	memresp.fifo_wr <= TRUE;
+      	memresp.wr <= TRUE;
       	if (memreq.func==MR_STORE) begin
       		io_keys[adr_o[12:2]] <= memreq.dat[19:0];
       	end
@@ -948,7 +944,7 @@ else begin
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 		  memresp.badAddr <= ea;
-		  memresp.fifo_wr <= TRUE;
+		  memresp.wr <= TRUE;
 			memresp.res <= 128'd0;
 		  ret();
 		end
@@ -1050,7 +1046,7 @@ else begin
 					  			memresp.step <= memreq.step;
 					    	 	memresp.cmt <= TRUE;
 		  						memresp.tid <= memreq.tid;
-		  						memresp.fifo_wr <= TRUE;
+		  						memresp.wr <= TRUE;
 									memresp.res <= {127'd0,rb_i};
 						    	ret();
 					    	end
@@ -1064,7 +1060,7 @@ else begin
 				  			memresp.step <= memreq.step;
 					    	memresp.cmt <= TRUE;
 				  			memresp.tid <= memreq.tid;
-				  			memresp.fifo_wr <= TRUE;
+				  			memresp.wr <= TRUE;
 								memresp.res <= {127'd0,rb_i};
 					    	ret();
 				      end
@@ -1179,7 +1175,7 @@ else begin
 				  			memresp.step <= memreq.step;
 				    	 	memresp.cmt <= TRUE;
 				  			memresp.tid <= memreq.tid;
-				  			memresp.fifo_wr <= TRUE;
+				  			memresp.wr <= TRUE;
 								memresp.res <= {127'd0,rb_i};
 					    	ret();
 				    	end
@@ -1193,7 +1189,7 @@ else begin
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
 			  			memresp.tid <= memreq.tid;
-			  			memresp.fifo_wr <= TRUE;
+			  			memresp.wr <= TRUE;
 							memresp.res <= {127'd0,rb_i};
 			    	ret();
 			      end
@@ -1213,7 +1209,7 @@ else begin
 			memresp.step <= memreq.step;
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
-			memresp.fifo_wr <= TRUE;
+			memresp.wr <= TRUE;
 			sr_o <= LOW;
 	    case(memreq.func)
 	    MR_LOAD:
@@ -1263,7 +1259,6 @@ else begin
 		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
 		    	default:	memresp.res <= 128'h0;
 		    	endcase
-		    	memresp.jali <= TRUE;
 		    end
 //    	RTS2:	begin memresp.res <= datis[63:0]; memresp.ret <= TRUE; end
 	    default:  ;
@@ -1281,7 +1276,7 @@ else begin
 	    memresp.res <= tlbdato;
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
-			memresp.fifo_wr <= TRUE;
+			memresp.wr <= TRUE;
 	   	ret();
 		end
 
@@ -1540,7 +1535,7 @@ begin
   memresp.cause <= {8'h80,FLT_TLBMISS};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
-  memresp.fifo_wr <= TRUE;
+  memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
 	goto (MEMORY1);
 end

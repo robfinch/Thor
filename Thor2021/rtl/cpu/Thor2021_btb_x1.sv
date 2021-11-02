@@ -52,6 +52,8 @@ output hit;
 input Address nip;
 
 integer n;
+reg [9:0] radr;
+
 
 (* ram_style="block" *)
 BTBEntry mem [0:1023];
@@ -64,13 +66,13 @@ end
 
 always_ff @(posedge clk)
 begin
-  if (wr) #1 mem[pc[10:1]].tgtadr <= wtgt;
-  if (wr) #1 mem[pc[10:1]].insadr <= wip;
-  if (wr) #1 mem[pc[10:1]].v <= takb;
+  if (wr) mem[wip[10:1]].tgtadr <= wtgt;
+  if (wr) mem[wip[10:1]].insadr <= wip;
+  if (wr) mem[wip[10:1]].v <= takb;
 end
 
 always_ff @(posedge rclk)
-  #1 radr <= pc[10:1];
+  radr <= ip[10:1];
 assign hit = mem[radr].insadr==ip && mem[radr].v;
 assign btgt = hit ? mem[radr].tgtadr : nip;
 
