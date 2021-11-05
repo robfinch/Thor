@@ -6,6 +6,9 @@ char *cpuname="Thor";
 int bitsperbyte=8;
 int bytespertaddr=8;
 int abits=32;
+static taddr sdreg = 61;
+static taddr sd2reg = 60;
+static taddr sd3reg = 59;
 
 mnemonic mnemonics[]={
 	"abs",	{OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},	// ToDo: fix with NEXT?
@@ -110,6 +113,8 @@ mnemonic mnemonics[]={
 	"com",	{OP_REG,OP_REG,0,0,0}, {R3II,CPU_ALL,0,0x1417F00000AALL,6},
 
 	"cpuid", {OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x41LL,4},
+	
+	"csrrw", {OP_REG,OP_REG,OP_IMM,0,0}, {CSR,CPU_ALL,0,0x02000000000FLL,6},
 
 	"dbeq",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000036LL,6},
 	"dbeq",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000036LL,6},
@@ -202,6 +207,7 @@ mnemonic mnemonics[]={
 	"jne",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_CAREGIND,0}, {JL,CPU_ALL,0,0x000000000027LL,6},
 	"jne",	{OP_REG,OP_REG|OP_IMM7,OP_CAREGIND,0,0}, {J,CPU_ALL,0,0x000000000027LL,6},
 
+	"jmp",	{OP_CAREGIND,0,0,0,0}, {J2,CPU_ALL,0,0x00000020LL,6},
 	"jmp",	{OP_IMM,0,0,0,0}, {J2,CPU_ALL,0,0x00000020LL,6},
 	"jsr",	{OP_LK,OP_IMM,0,0,0}, {JL2,CPU_ALL,0,0x00000020LL,6},
 	"jsr",	{OP_IMM,0,0,0,0}, {J2,CPU_ALL,0,0x00000220LL,6},
@@ -227,6 +233,10 @@ mnemonic mnemonics[]={
 	"ldwu",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x83LL,6},	
 	"ldwu",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB3LL,6},	
 
+	"lea",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x86LL,6,0x8A,4},
+	"lea",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x8ALL,6},	
+	"lea",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xBALL,6},	
+
 	"max",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x520000000002LL,6},	// 3r
 	"memdb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF9,2},
 	"memsb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF8,2},
@@ -234,6 +244,7 @@ mnemonic mnemonics[]={
 	"mfsel",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	// 3r
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	// 3r
 
+	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 	"move",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A10F00000AALL,6},
 	"movsxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A11F00000AALL,6},
@@ -303,6 +314,10 @@ mnemonic mnemonics[]={
 	"resetq",	{OP_NEXT,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x180000000007LL,6},	// 3r
 
 	"revbit",	{OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x50000001LL,4},
+
+	"ret",	{OP_LK,OP_IMM,OP_IMM,0,0}, {RTS,CPU_ALL,0,0x000000F2LL, 4},
+	"ret",	{OP_LK,0,0,0,0}, {RTS,CPU_ALL,0,0x000000F2LL, 4},
+	"ret",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x000002F2LL, 4},
 
 	"rex",	{OP_IMM,OP_REG,0,0,0},{REX,CPU_ALL,0,0x200000000007LL,6},	// 3r
 
@@ -467,8 +482,51 @@ static int is_identchar(unsigned char ch)
 static int is_reg(char *p, char **ep)
 {
 	int rg = -1;
-
+	
 	*ep = p;
+	// SP
+	if ((p[0]=='s' || p[0]=='S') && (p[1]=='p' || p[1]=='P') && !is_identchar((unsigned char)p[2])) {
+		*ep = &p[2];
+		return (63);
+	}
+	// FP
+	if ((p[0]=='f' || p[0]=='F') && (p[1]=='p' || p[1]=='P') && !is_identchar((unsigned char)p[2])) {
+		*ep = &p[2];
+		return (62);
+	}
+	// GP
+	if ((p[0]=='g' || p[0]=='G') && (p[1]=='p' || p[1]=='P') && !is_identchar((unsigned char)p[2])) {
+		*ep = &p[2];
+		return (61);
+	}
+	// Argument registers 0 to 9
+	if (*p == 'a' || *p=='A') {
+		if (isdigit((unsigned char)p[1]) && !is_identchar((unsigned char)p[2])) {
+			rg = p[1]-'0' + 1;	// 1,2
+			if (rg > 2)					// 21 to 28
+				rg += 18;
+			*ep = &p[2];
+			return (rg);
+		}
+	}
+	// Temporary registers 0 to 9
+	if (*p == 't' || *p=='T') {
+		if (isdigit((unsigned char)p[1]) && !is_identchar((unsigned char)p[2])) {
+			rg = p[1]-'0' + 3;	// 3 to 10
+			if (rg > 10)
+				rg += 19;					// 29,30
+			*ep = &p[2];
+			return (rg);
+		}
+	}
+	// Register vars 0 to 9
+	if (*p == 's' || *p=='S') {
+		if (isdigit((unsigned char)p[1]) && !is_identchar((unsigned char)p[2])) {
+			rg = p[1]-'0' + 11;	// 11 to 20
+			*ep = &p[2];
+			return (rg);
+		}
+	}
 	if (*p != 'r' && *p != 'R') {
 		return (-1);
 	}
@@ -699,7 +757,11 @@ int parse_operand(char *p,int len,operand *op,int requires)
     		cpu_error(17);
     	}
     }
-    tree=parse_expr(&p);
+    if (*p == '[') {
+    	tree = number_expr((taddr)0);
+    }
+    else
+    	tree=parse_expr(&p);
     if(!tree)
       return (PO_NOMATCH);
    	op->type = OP_IMM;
@@ -808,6 +870,15 @@ operand *new_operand()
   nw->type=-1;
   return nw;
 }
+
+static void fix_reloctype(dblock *db,int rtype)
+{
+  rlist *rl;
+
+  for (rl=db->relocs; rl!=NULL; rl=rl->next)
+    rl->type = rtype;
+}
+
 
 static int get_reloc_type(operand *op)
 {
@@ -1007,7 +1078,10 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
         	}
         	break;
         default:
-		      general_error(38);  /* illegal relocation */
+			      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           0,64,0,0xffffffffffffffffLL);
+//		      general_error(38);  /* illegal relocation */
+					;
       	}
       }
     }
@@ -1151,6 +1225,12 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 				}
 			}
 		}
+		else if (mnemo->ext.format == CSR) {
+			isize = 6;
+			if (insn) {
+				*insn = *insn | ((val & 0xffffLL) << 21LL);
+			}
+		}
 		else {
 			if (op->type & OP_IMM11)
 				isize = 4;
@@ -1197,7 +1277,11 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 		}
 	}
 	else {
-		if (abits < 24) {
+		if (mnemo->ext.format==CSR) {
+			isize = 6;
+			cpu_error(2);
+		}
+		else if (abits < 24) {
 			isize = 6;
 			if (insn)
 				*insn = *insn | ((val & 0x7fffffLL) << 21LL);
@@ -1395,6 +1479,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
   operand op;
 	char selector = -1;
 	int constexpr;
+	int reg;
 
 	isize = mnemo->ext.len;
   if (insn != NULL) {
@@ -1442,6 +1527,16 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 //          cpu_error(2);  /* constant integer expression required */
         }
     }
+
+    if (db!=NULL && op.type==OP_REGIND && op.attr==REL_NONE) {
+      if (eval_expr(op.basereg,&reg,sec,pc)) {
+        if (reg == sdreg)  /* is it a small data reference? */
+          fix_reloctype(db,REL_SD);
+//        else if (reg == sd2reg)  /* EABI small data 2 */
+//          fix_reloctype(db,REL_PPCEABI_SDA2);
+      }
+    }
+
 
 		if (op.type==OP_REG) {
 			eval_reg(insn, &op, mnemo, i);
@@ -1656,8 +1751,8 @@ dblock *eval_data(operand *op,size_t bitsize,section *sec,taddr pc)
 
   if ((bitsize & 7) || bitsize > 64)
     cpu_error(9,bitsize);  /* data size not supported */
-  if (!OP_DATA(op->type))
-    ierror(0);
+//  if (!OP_DATA(op->type))
+//    ierror(0);
 
   db->size = bitsize >> 3;
   db->data = mymalloc(db->size);
@@ -1720,10 +1815,45 @@ int cpu_args(char *p)
   return (0);
 }
 
+static taddr read_sdreg(char **s,taddr def)
+{
+  expr *tree;
+  taddr val = def;
+
+  *s = skip(*s);
+  tree = parse_expr(s);
+  simplify_expr(tree);
+  if (tree->type==NUM && tree->c.val>=0 && tree->c.val<=63)
+    val = tree->c.val;
+  else
+    cpu_error(13);  /* not a valid register */
+  free_expr(tree);
+  return val;
+}
+
+
 /* parse cpu-specific directives; return pointer to end of
    cpu-specific text */
-char *parse_cpu_special(char *s)
+char *parse_cpu_special(char *start)
 {
-  /* no specials */
-  return s;
+  char *name=start,*s=start;
+
+  if (ISIDSTART(*s)) {
+    s++;
+    while (ISIDCHAR(*s))
+      s++;
+    if (s-name==6 && !strncmp(name,".sdreg",6)) {
+      sdreg = read_sdreg(&s,sdreg);
+      return s;
+    }
+    else if (s-name==7 && !strncmp(name,".sd2reg",7)) {
+      sd2reg = read_sdreg(&s,sd2reg);
+      return s;
+    }
+    else if (s-name==7 && !strncmp(name,".sd3reg",7)) {
+      sd3reg = read_sdreg(&s,sd3reg);
+      return s;
+    }
+  }
+  return start;
 }
