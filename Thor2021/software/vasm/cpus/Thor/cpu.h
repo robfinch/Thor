@@ -73,9 +73,9 @@ typedef struct {
 #define OP_NEXT			-1
 
 /* supersets of other operands */
-#define OP_IMM			OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78
-#define OP_REGIND		OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78
-#define OP_MEM      OP_REGIND|OP_SCNDX
+#define OP_IMM			(OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78)
+#define OP_REGIND		(OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78)
+#define OP_MEM      (OP_REGIND|OP_SCNDX)
 #define OP_ALL      0x3fffffff
 
 #define OP_ISMEM(x) ((((x) & OP_MEM)!=0)
@@ -131,6 +131,10 @@ typedef struct {
 #define R1		29
 #define DIRECT	30
 #define CSR		31
+#define B3		32
+#define BL3		33
+#define J3		34
+#define JL3		35
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)
