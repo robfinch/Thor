@@ -1,0 +1,22 @@
+F00:0001       	.text
+F00:0002       	.global _DEFCAT
+F00:0003       _DEFCAT:
+F00:0004       	rts		lk2
+               S01:00000000:  F2 04
+F00:0005       
+
+
+Sections:
+S01  .text
+
+
+Sources:
+F00  DEFCAT.r64
+
+
+Symbols:
+_DEFCAT LAB (0x0) UNUSED EXPORT sec=.text 
+__VASM EXPR(0=0x0) INTERNAL 
+__MSDOSFS EXPR(0=0x0) INTERNAL 
+
+There have been no errors.

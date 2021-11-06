@@ -1,0 +1,4 @@
+	.text
+	.global _DEFCAT
+_DEFCAT:
+	rts		lk2

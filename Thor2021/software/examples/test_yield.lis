@@ -1,0 +1,86 @@
+     1	int Astack[1024];
+     2	int Bstack[1024];
+     3	
+     4	int coroutine B();
+     5	
+     6	int coroutine(Astack + 1024) A()
+     7	{
+     8	forever {
+     9	yield B();
+    10	}
+    11	return (0);
+ *** error 57: W Forever Infinite loop
+    12	}
+    13	
+
+
+*** local symbol table ***
+
+
+
+
+    14	int coroutine(Bstack + 1024) B()
+    15	{
+    16	forever {
+    17	yield A();
+    18	}
+    19	}
+    20	
+
+
+*** local symbol table ***
+
+
+
+
+    21	int main()
+    22	{
+    23	int x;
+    24	
+    25	x = A();
+    26	return (x);
+    27	}
+    28	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =004000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _A         =004000   -    Global      Coroutine returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+29 _B         =004000   -    Global      Coroutine returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+13 _Astack    =000000   -    Global      Array of Long
+13 _Bstack    =002000   -    Global      Array of Long
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
