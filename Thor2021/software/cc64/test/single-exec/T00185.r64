@@ -1,0 +1,110 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  
+	data
+	align	8
+
+_Array[80]:
+
+	dco	12,34,56,78,90
+	dco	123,456,789,8642,9753
+	code
+	align	16
+ 
+	data
+	align	8
+
+_Array2[80]:
+
+	dco	12,34,56,78,90
+	dco	123,456,789,8642,9753;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; for (Count = 0; Count < 10; Count++)
+  mov      $s0,$x0
+  bge      $s0,#10,.C00020
+.C00019:
+; printf("%d: %d\n", Count, Array[Count]);
+  sub      $sp,$sp,#24
+  lea      $t4,T00185_1[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $s0,8[$sp]
+  sll      $t4,$s0,#3
+  lea      $t5,-88[$fp]
+  base     $t5,$t5,#10
+  ldo      $t4,[$t4+$t5]
+  sto      $t4,16[$sp]
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+  add      $s0,$s0,#1
+  blt      $s0,#10,.C00019
+.C00020:
+; for (Count = 0; Count < 10; Count++)
+  mov      $s0,$x0
+  bge      $s0,#10,.C00023
+.C00022:
+; printf("%d: %d\n", Count, Array2[Count]);
+  sub      $sp,$sp,#24
+  lea      $t4,T00185_2[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $s0,8[$sp]
+  sll      $t4,$s0,#3
+  lea      $t5,-168[$fp]
+  base     $t5,$t5,#10
+  ldo      $t4,[$t4+$t5]
+  sto      $t4,16[$sp]
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+.C00024:
+  add      $s0,$s0,#1
+  blt      $s0,#10,.C00022
+.C00023:
+; return 0;
+  mov      $a0,$x0
+.C00018:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00185_1[16]: ; %d: %d
+
+	dcw	37,100,58,32,37,100,10,0
+T00185_2[16]: ; %d: %d
+
+	dcw	37,100,58,32,37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

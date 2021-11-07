@@ -1,0 +1,60 @@
+     1	
+     2	int main(int x)
+     3	{
+     4	float:16	flt16;		// half precision
+     5	float:32	flt32;		// single
+     6	float:40	flt40;		// basic uses this
+     7	float:64	flt64;		// double
+     8	float:80	flt80;		// extended double
+     9	float:96	flt96;		// triple
+    10	float:128	flt128;		// quad
+    11	float flt;					// assumes double precision
+    12	int:8		abyte;
+    13	int:16 	achar;
+    14	int:32	ashort;
+    15	int:64	aint;
+    16	int:128	aint128;
+    17	int aint;						// assumes 64-bit
+    18	char:8	achar;
+    19	char:16 achar;
+    20	char		achar;			// assumes 16-bit
+    21	return (x+flt);
+    22	}
+    23	
+
+
+*** local symbol table ***
+
+9 _flt16     =fffffff8   -    Auto        Double
+9 _flt32     =fffffff0   -    Auto        Double
+9 _flt40     =ffffffe8   -    Auto        Double
+9 _flt64     =ffffffe0   -    Auto        Double
+9 _flt80     =ffffffd8   -    Auto        Double
+9 _flt96     =ffffffd0   -    Auto        Double
+9 _flt128    =ffffffc8   -    Auto        Double
+9 _flt       =ffffffc0   -    Auto        Double
+7 _abyte     =ffffffbf   -    Auto        Long
+7 _achar     =ffffffb6   -    Auto        Long
+7 _ashort    =ffffffac   -    Auto        Long
+7 _aint      =ffffffa0   -    Auto        Long
+7 _aint128   =ffffff90   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

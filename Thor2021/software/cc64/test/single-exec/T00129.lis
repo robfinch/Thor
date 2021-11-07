@@ -1,0 +1,65 @@
+     1	typedef struct s s;
+     2	
+     3	struct s {
+     4	struct s1 {
+     5	int s;
+     6	struct s2 {
+     7	int s;
+     8	} s1;
+     9	} s;
+    10	} s2;
+    11	
+    12	
+    13	int
+    14	main(void)
+    15	{
+    16	goto s;
+    17	struct s s;
+    18	{
+    19	int s;
+    20	return s;
+    21	}
+    22	return s.s.s + s.s.s1.s;
+    23	s:
+    24	{
+    25	return 0;
+    26	}
+    27	return 1;
+    28	}
+    29	
+
+
+*** local symbol table ***
+
+31 _s         =000001   -    Label
+40 _s         =fffffff0   -    Auto        struct _s 
+7 _s         =ffffffe8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+40 _s2        =000000   -    Global      struct _s 
+29 _main      =000010   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+40 __noname_var0 =000000   1   struct _s 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _s         =000000   -    Type        struct _s 
+    41 _s         =000000   -    Member      struct _s1 
+41 _s1        =000000   -    Type        struct _s1 
+    7 _s         =000000   -    Member      Long
+    42 _s1        =000008   -    Member      struct _s2 
+42 _s2        =000000   -    Type        struct _s2 
+    7 _s         =000000   -    Member      Long

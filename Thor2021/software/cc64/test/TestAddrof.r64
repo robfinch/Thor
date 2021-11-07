@@ -1,0 +1,64 @@
+   	bss
+	align	8
+	align	8
+	dw	$FFF020000000000E
+public bss __noname_var0:
+	fill.b	108,0x00                    
+
+endpublic
+   	align	8
+	align	8
+	dw	$FFF020000000000F
+public bss __noname_var1:
+	fill.b	120,0x00                    
+
+endpublic
+ 	align	8
+	align	8
+	dw	$FFF020000000000F
+public bss _var:
+	fill.b	120,0x00                    
+
+endpublic
+ 	align	8
+	align	8
+	dw	$FFF0200000000078
+public bss _vara:
+	fill.b	960,0x00                    
+
+endpublic
+  	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #32
+  lea      $gp,__data_start
+; return ch = in64(&vara[ndx]);
+  ldo      $t2,16[$fp]
+  sll      $t1,$t2,#3
+  lea      $t2,_vara[$gp]
+  add      $t0,$t1,$t2
+  push     $t0
+  bal      $ra,TestAddrof_in64
+  mov      $t0,$a0
+  stw      $t0,-2[$fp]
+  ldo      $a0,-2[$fp]
+TestAddrof_5:
+TestAddrof_8:
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_main
+;	global	_vara
+;	global	__noname_var0
+;	global	__noname_var1
+	extern	TestAddrof_in64
+;	global	_var

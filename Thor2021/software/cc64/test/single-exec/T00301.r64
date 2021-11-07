@@ -1,0 +1,174 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   
+	data
+	align	8
+
+	code
+	align	16
+  
+	data
+	align	8
+
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00041
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; try {
+  ldi      $t4,#.C00044
+  sto      $t4,8[$fp]
+; printf("In try");
+  lea      $t4,T00301_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+; try {
+  ldi      $t4,#.C00046
+  sto      $t4,8[$fp]
+; printf("try again");
+  lea      $t4,T00301_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+  ldi      $t4,#.C00044
+  sto      $t4,8[$fp]
+; printf("after throw");
+  lea      $t4,T00301_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+  ldi      $t4,#.C00041
+  sto      $t4,8[$fp]
+; try {
+  ldi      $t4,#.C00056
+  sto      $t4,8[$fp]
+; printf("try 2");
+  lea      $t4,T00301_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+; x = x + 1;
+  ldo      $t5,-8[$fp]
+  add      $t4,$t5,#1
+  sto      $t4,-8[$fp]
+; if (y == 0)
+  ldo      $t4,-16[$fp]
+  bnez     $t4,.C00057
+; throw ("Divide by zero");
+  lea      $t4,T00301_9[$gp1]
+  base     $t4,$t4,#12
+  mov      $a0,$t4
+  ldi      $a1,#8197
+  bra      .C00056
+.C00057:
+; x =x / y;
+  ldo      $t5,-8[$fp]
+  ldo      $t6,-16[$fp]
+  div      $t4,$t5,$t6
+  sto      $t4,-8[$fp]
+  ldi      $t4,#.C00041
+  sto      $t4,8[$fp]
+  bra      .C00059
+.C00056:
+; catch(char *str) {
+  sne      $t4,$a1,#8197
+  bnez     $t4,.C00060
+  sto      $a0,-48[$fp]
+; printf(str);
+  ldo      $t4,-48[$fp]
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+  bra      .C00059
+.C00060:
+  bra      .C00041
+.C00059:
+; return (x + y);
+  ldo      $t5,-8[$fp]
+  ldo      $t6,-16[$fp]
+  add      $a0,$t5,$t6
+.C00042:
+  leave    #104
+.C00041:
+; printf("In default catch.");
+  lea      $t4,T00301_10[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00042
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00301_1[14]: ; In try
+
+	dcw	73,110,32,116,114,121,0
+T00301_2[20]: ; try again
+
+	dcw	116,114,121,32,97,103,97,105
+	dcw	110,0
+T00301_3[24]: ; caught char
+
+	dcw	99,97,117,103,104,116,32,99
+	dcw	104,97,114,0
+T00301_4[24]: ; after throw
+
+	dcw	97,102,116,101,114,32,116,104
+	dcw	114,111,119,0
+T00301_5[20]: ; catch int
+
+	dcw	99,97,116,99,104,32,105,110
+	dcw	116,0
+T00301_6[6]: ; %c
+
+	dcw	37,99,0
+T00301_7[20]: ; catch all
+
+	dcw	99,97,116,99,104,32,97,108
+	dcw	108,0
+T00301_8[12]: ; try 2
+
+	dcw	116,114,121,32,50,0
+T00301_9[30]: ; Divide by zero
+
+	dcw	68,105,118,105,100,101,32,98
+	dcw	121,32,122,101,114,111,0
+T00301_10[36]: ; In default catch.
+
+	dcw	73,110,32,100,101,102,97,117
+	dcw	108,116,32,99,97,116,99,104
+	dcw	46,0
+;--}
+	.extern	_printf

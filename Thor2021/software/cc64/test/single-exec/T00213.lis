@@ -1,0 +1,293 @@
+     1	
+     2	extern int printf (const char *, ...);
+     3	static void kb_wait_1(void)
+     4	{
+     5	unsigned long timeout = 2;
+     6	do {
+     7	
+     8	(1 ?
+     9	printf("timeout=%ld\n", timeout) :
+    10	({
+    11	int i = 1;
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 7: E Identifier expected
+ *** error 6: E Bad punctuation
+    12	while (1)
+    13	while (i--)
+    14	some_label:
+    15	printf("error\n");
+    16	goto some_label;
+    17	})
+ *** error 20: E Expression expected
+ *** error 21: E While/Until expected
+    18	);
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+    19	timeout--;
+
+
+*** local symbol table ***
+
+31 _some_label =000003   -    Label
+19 _timeout   =fffffff8   -    Auto        
+7 _i         =fffffff0   -    Auto        Long
+
+
+
+    20	} while (timeout);
+    21	}
+    22	
+    23	static int global;
+    24	
+    25	static void foo(int i)
+    26	{
+    27	global+=i;
+    28	printf ("g=%d\n", global);
+    29	}
+    30	
+
+
+*** local symbol table ***
+
+
+
+
+    31	static int check(void)
+    32	{
+    33	printf ("check %d\n", global);
+    34	return 1;
+    35	}
+    36	
+
+
+*** local symbol table ***
+
+
+
+
+    37	static void dowhile(void)
+    38	{
+    39	do {
+    40	foo(1);
+    41	if (global == 1) {
+    42	continue;
+    43	} else if (global == 2) {
+    44	continue;
+    45	}
+    46	
+    47	break;
+    48	} while (check());
+    49	}
+    50	
+
+
+*** local symbol table ***
+
+
+
+
+    51	int main (void)
+    52	{
+    53	int i = 1;
+    54	kb_wait_1();
+    55	
+    56	
+    57	if (0) {
+    58	yeah:
+    59	printf ("yeah\n");
+    60	} else {
+    61	printf ("boo\n");
+    62	}
+    63	if (i--)
+    64	goto yeah;
+    65	
+    66	
+    67	i = 1;
+    68	if (0) {
+    69	while (i--) {
+    70	printf ("once\n");
+    71	enterloop:
+    72	printf ("twice\n");
+    73	}
+    74	}
+    75	if (i >= 0)
+    76	goto enterloop;
+    77	
+    78	
+    79	i = ({
+    80	int j = 1;
+ *** error 6: E Bad punctuation
+ *** error 17: E LValue required
+ *** error 6: E Bad punctuation
+    81	if (0) {
+    82	while (j--) {
+    83	printf ("SEonce\n");
+    84	enterexprloop:
+    85	printf ("SEtwice\n");
+    86	}
+    87	}
+    88	if (j >= 0)
+    89	goto enterexprloop;
+
+
+*** local symbol table ***
+
+31 _yeah      =00004b   -    Label
+31 _enterloop =00004f   -    Label
+31 _enterexprloop =000052   -    Label
+7 _i         =fffffff8   -    Auto        Long
+7 _j         =fffffff0   -    Auto        Long
+
+
+
+    90	j; });
+    91	
+    92	
+    93	i = 1;
+    94	if (0) {
+    95	for (i = 1; i--;) {
+ *** error 6: E Bad punctuation
+    96	printf ("once2\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+    97	enterloop2:
+    98	printf ("twice2\n");
+ *** error 38: E Integer constant required.
+    99	}
+   100	}
+   101	if (i > 0)
+ *** error 6: E Bad punctuation
+   102	goto enterloop2;
+   103	
+   104	i = 1;
+   105	if (0) {
+   106	do {
+   107	printf ("once3\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+   108	enterloop3:
+   109	printf ("twice3\n");
+ *** error 38: E Integer constant required.
+   110	} while (i--);
+ *** error 6: E Bad punctuation
+   111	}
+   112	if (i > 0)
+ *** error 6: E Bad punctuation
+   113	goto enterloop3;
+   114	
+   115	
+   116	i = 41;
+   117	switch (i) {
+   118	if (0) {
+   119	printf ("error\n");
+   120	case 42:
+   121	printf ("error2\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+   122	case 41:
+   123	printf ("caseok\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+   124	}
+   125	}
+   126	
+   127	i = 41;
+   128	switch (i) {
+   129	if (0) {
+   130	printf ("error3\n");
+   131	default:
+   132	printf ("caseok2\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+   133	break;
+   134	case 42:
+   135	printf ("error4\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+   136	}
+   137	}
+   138	
+   139	dowhile();
+   140	
+   141	return 0;
+   142	}
+   143	
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000010   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -24
+		Stkspc: 24
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _dowhile   =000034   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _dowhile   =000078   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _check     =000028   -    Static      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		7 _timeout   =000000   -    Global      Long
+7 _enterloop2 =000028   -    Global      Long
+7 _enterloop3 =000040   -    Global      Long
+29 _foo       =00001c   -    Static      Function returning 
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __autonew  =000000   -    
+7 _i         =000010   -    Global      Long
+29 _kb_wait_1 =000001   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		7 _global    =00001b   -    Static      Long
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _printf    =000028   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

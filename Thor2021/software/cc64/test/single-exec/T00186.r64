@@ -1,0 +1,80 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00014
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  lea      $t4,-200[$fp]
+  base     $t4,$t4,#10
+  mov      $s1,$t4
+; for (Count = 1; Count <= 20; Count++)
+  ldi      $s0,#1
+  slt      $t4,#20,$s0
+  bne      $t4,$x0,.C00017
+.C00016:
+; sprintf(Buf, "->%02d<-\n", Count);
+  sub      $sp,$sp,#24
+  sto      $s1,0[$sp]
+  lea      $t4,T00186_1[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,8[$sp]
+  sto      $s0,16[$sp]
+  bal      $ra,_sprintf
+; printf("%s", Buf);
+  lea      $t4,T00186_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s1
+  bal      $ra,_printf
+  add      $s0,$s0,#1
+  sge      $t4,#20,$s0
+  bne      $t4,$x0,.C00016
+.C00017:
+; return 0;
+  mov      $a0,$x0
+.C00015:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00014:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00015
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00186_1[20]: ; ->%02d<-
+
+	dcw	45,62,37,48,50,100,60,45
+	dcw	10,0
+T00186_2[6]: ; %s
+
+	dcw	37,115,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

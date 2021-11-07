@@ -1,0 +1,284 @@
+     1	
+     2	extern __int32 DBGAttr;
+     3	extern void DBGClearScreen();
+     4	extern void DBGHomeCursor();
+     5	extern void putch(register char);
+     6	extern int printf(char *, ...);
+     7	extern pascal int prtflt(register float, register int, register int, register char);
+     8	extern void ramtest();
+     9	extern void FloatTest();
+    10	extern void DBGDisplayString(register char *p);
+    11	extern void puthex(register int num);
+    12	
+    13	static naked inline int GetButton()
+    14	{
+    15		asm {
+    16			lb		r1,BUTTONS
+    17		}
+    18	}
+    19	
+
+
+*** local symbol table ***
+
+
+
+
+    20	void BIOSMain()
+    21	{
+    22		float pi = 3.1415926535897932384626;
+    23		// 400921FB54442D18 
+    24		float a,b;
+    25		int btn;
+    26		int seln=0;
+    27	
+    28		DBGAttr = 0x087FC00;//0b0000_1000_0111_1111_1100_0000_0000;
+    29		DBGClearScreen();
+    30		DBGHomeCursor();
+    31		DBGDisplayString("  FT64 Bios Started\r\n");
+    32		DBGDisplayString("  Menu\r\n  up = ramtest\r\n  left = float test\r\n  right=TinyBasic\r\n");
+    33		forever {
+    34			//0b0000_1000_0111_1111_1100_0000_0000;
+    35			//0b1111_1111_1000_0100_0000_0000_0000;
+    36			btn = GetButton();
+    37			switch(btn) {
+    38			case 8:
+    39				while(GetButton());
+    40				ramtest();
+    41				break;
+    42			case 2:
+    43				while(GetButton());
+    44				FloatTest();
+    45				break;
+    46			case 1:
+    47				while(GetButton());
+    48				asm {
+    49					jmp	TinyBasicDSD9
+    50				};
+    51				break;
+    52			}
+    53		}
+    54	}
+ *** error 57: W Forever Infinite loop
+    55	
+
+
+*** local symbol table ***
+
+_pi        =fffffff8   -    Auto        Double
+_a         =fffffff0   -    Auto        Double
+_b         =ffffffe8   -    Auto        Double
+_btn       =ffffffe0   -    Auto        Long
+_seln      =ffffffd8   -    Auto        Long
+
+
+
+    56	static naked inline int GetEPC()
+    57	{
+    58		asm {
+    59			csrrd	r1,#$40,r0
+    60		}
+    61	}
+    62	
+
+
+*** local symbol table ***
+
+
+
+
+    63	static naked inline int GetBadAddr()
+    64	{
+    65		asm {
+    66			csrrd	r1,#7,r0
+    67			sh		r1,$FFDC0080
+    68		}
+    69	}
+    70	
+
+
+*** local symbol table ***
+
+
+
+
+    71	static naked inline void SetPCHNDX(register int nn)
+    72	{
+    73		asm {
+    74			csrrw	r0,#$101,r18
+    75		}
+    76	}
+    77	
+
+
+*** local symbol table ***
+
+
+
+
+    78	static naked inline int ReadPCHIST()
+    79	{
+    80		asm {
+    81			csrrd	r1,#$100,r0
+    82		}
+    83	}
+    84	
+
+
+*** local symbol table ***
+
+
+
+
+    85	void interrupt BTNCIRQHandler()
+    86	{
+    87		int nn;
+    88	
+    89		asm {
+    90			ldi		r1,#30
+    91			sh		r1,PIC_ESR
+    92		}
+    93		DBGDisplayString("\r\nPC History:\r\n");
+    94		for (nn = 63; nn >= 0; nn--) {
+    95			SetPCHNDX(nn);
+    96			puthex(ReadPCHIST());
+    97			putch(' ');
+    98		}
+    99	}
+   100	
+
+
+*** local symbol table ***
+
+_nn        =fffffff8   -    Auto        Long
+
+
+
+   101	void interrupt DBERout()
+   102	{
+   103		int nn;
+   104	
+   105		DBGDisplayString("\r\nDatabus error: ");
+   106		puthex(GetEPC());
+   107		putch(' ');
+   108		puthex(GetBadAddr());
+   109		putch(' ');
+   110		for (nn = 63; nn >= 0; nn--) {
+   111			SetPCHNDX(nn);
+   112			puthex(ReadPCHIST());
+   113			putch(' ');
+   114		}
+   115		forever {}
+   116	}
+ *** error 57: W Forever Infinite loop
+   117	
+
+
+*** local symbol table ***
+
+_nn        =fffffff8   -    Auto        Long
+
+
+
+   118	void interrupt IBERout()
+   119	{
+   120		int nn;
+   121	
+   122		DBGDisplayString("\r\nInstruction Bus Error:\r\n");
+   123		DBGDisplayString("PC History:\r\n");
+   124		for (nn = 63; nn >= 0; nn--) {
+   125			SetPCHNDX(nn);
+   126			puthex(ReadPCHIST());
+   127			putch(' ');
+   128		}
+   129		forever {}
+   130	}
+ *** error 57: W Forever Infinite loop
+   131	
+
+
+*** local symbol table ***
+
+_nn        =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+_GetBadAddr =000019   -    Static      Function returning Long
+		Parameters:
+			Type array:
+   
+_BIOSMain  =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+_BTNCIRQHandler =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+_DBGHomeCursor =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   
+_SetPCHNDX =00001a   -    Static      Function returning 
+		Parameters:
+			Type array:
+   017 
+_GetEPC    =000018   -    Static      Function returning Long
+		Parameters:
+			Type array:
+   
+_ramtest   =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   
+_DBGClearScreen =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   
+_DBGDisplayString =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   022 
+_putch     =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   015 
+_ReadPCHIST =00001b   -    Static      Function returning Long
+		Parameters:
+			Type array:
+   
+_DBGAttr   =000000   -    External    
+_DBERout   =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+_IBERout   =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+_printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   022 044 
+_FloatTest =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   
+_prtflt    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   019 017 017 015 
+_GetButton =000000   -    Static      Function returning Long
+		Parameters:
+			Type array:
+   
+_puthex    =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   017 
+
+ *** structures and unions ***
+

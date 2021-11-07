@@ -1,0 +1,106 @@
+     1	
+     2	
+     3	
+     4	
+     5	
+     6	
+     7	
+     8	
+     9	typedef unsigned short _Wchart;
+    10	
+    11	typedef int _Ptrdifft;
+    12	typedef unsigned int _Sizet;
+    13	
+    14	extern int _Setjmp(int *);
+    15	
+    16	
+    17	
+    18	
+    19	
+    20	
+    21	
+    22	
+    23	
+    24	
+    25	typedef _Sizet size_t;
+    26	typedef struct {
+    27	unsigned long _Off;	/* system dependent */
+    28	} fpos_t;
+    29	typedef struct {
+    30	unsigned short _Mode;
+    31	short _Handle;
+    32	unsigned char *_Buf, *_Bend, *_Next;
+    33	unsigned char *_Rend, *_Rsave, *_Wend;
+    34	unsigned char _Back[2], _Cbuf, _Nback;
+    35	char *_Tmpnam;
+    36	} FILE;
+    37	
+    38	void clearerr(FILE *);
+    39	int fclose(FILE *);
+    40	int feof(FILE *);
+    41	int ferror(FILE *);
+    42	int fflush(FILE *);
+    43	int fgetc(FILE *);
+    44	int fgetpos(FILE *, fpos_t *);
+    45	char *fgets(char *, int, FILE *);
+    46	FILE *fopen(const char *, const char *);
+    47	int fprintf(FILE *, const char *, ...);
+    48	int fputc(int, FILE *);
+    49	int fputs(const char *, FILE *);
+    50	size_t fread(void *, size_t, size_t, FILE *);
+    51	FILE *freopen(const char *, const char *, FILE *);
+    52	int fscanf(FILE *, const char *, ...);
+    53	int fseek(FILE *, long, int);
+    54	int fsetpos(FILE *, const fpos_t *);
+    55	long ftell(FILE *);
+    56	size_t fwrite(const void *, size_t, size_t, FILE *);
+    57	int getc(FILE *);
+    58	int getchar(void);
+    59	char *gets(char *);
+    60	void perror(const char *);
+    61	int printf(const char *, ...);
+    62	int putc(int, FILE *);
+    63	int putchar(int);
+    64	int puts(const char *);
+    65	int remove(const char *);
+    66	int rename(const char *, const char *);
+    67	void rewind(FILE *);
+    68	int scanf(const char *, ...);
+    69	void setbuf(FILE *, char *);
+    70	int setvbuf(FILE *, char *, int, size_t);
+    71	int sprintf(char *, const char *, ...);
+    72	int sscanf(const char *, const char *, ...);
+    73	FILE *tmpfile(void);
+    74	char *tmpnam(char *);
+    75	int ungetc(int, FILE *);
+    76	int vfprintf(FILE *, const char *, char *);
+    77	int vprintf(const char *, char *);
+    78	int vsprintf(char *, const char *, char *);
+    79	long _Fgpos(FILE *, fpos_t *);
+    80	int _Fspos(FILE *, const fpos_t *, long, int);
+    81	extern FILE *_Files[16];
+    82	
+    83	
+    84	
+    85	
+    86	static int debug, nfailed = 0;
+    87	
+    88	static void check (const char *s, int arg1, int shift)
+    89	{
+    90	int failed = arg1 != shift;
+    91	if (debug || failed)
+    92	printf ("%s %d %d\n", s, arg1, shift);
+    93	nfailed += failed;
+    94	}
+    95	
+
+
+*** local symbol table ***
+
+7 _failed    =fffffff8   -    Auto        Long
+
+
+
+    96	int main (int argc, char **argv)
+    97	{
+    98	debug = argc > 1;

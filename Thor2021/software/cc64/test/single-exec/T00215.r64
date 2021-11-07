@@ -1,0 +1,427 @@
+
+;{++
+     
+	code
+	align	16
+ ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_1
+	.align 16
+():
+  enter    #16
+  ldi      $t4,#.C00018
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00020:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00022
+  lea      $t4,T00215_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+  bra      .C00023
+.C00022:
+; while (1)
+  ldi      $t4,#1
+  beqz     $t4,.C00025
+.C00024:
+; printf("error\n");
+  lea      $t4,T00215_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  ldi      $t4,#1
+  sne      $t4,$t4,$x0
+  bne      $t4,$x0,.C00024
+.C00025:
+.C00023:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00020
+.C00019:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00018:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00019
+.. 
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_2
+	.align 16
+():
+  enter    #8
+  ldi      $t4,#.C00044
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00046:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00048
+  lea      $t4,T00215_27[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+  bra      .C00049
+.C00048:
+; printf("error\n");
+  lea      $t4,T00215_28[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+.C00049:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00046
+.C00045:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00044:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00045
+.. 
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_2_1
+	.align 16
+():
+  enter    #8
+  ldi      $t4,#.C00070
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00072:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00074
+  lea      $t4,T00215_54[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+  bra      .C00075
+.C00074:
+.C00076:
+; printf("error\n");
+  lea      $t4,T00215_55[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+;} while (1);
+  ldi      $t4,#1
+  sne      $t4,$t4,$x0
+  bne      $t4,$x0,.C00076
+.C00075:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00072
+.C00071:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00070:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00071
+.. 
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_2_2
+	.align 16
+():
+  enter    #8
+  ldi      $t4,#.C00094
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00096:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00098
+  lea      $t4,T00215_79[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+  bra      .C00099
+.C00098:
+; printf("error\n");
+  lea      $t4,T00215_81[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+; goto label;
+  bra      .C00080
+.C00099:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00096
+.C00095:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00094:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00095
+.. 
+
+    ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_3
+	.align 16
+():
+  enter    #16
+  ldi      $t4,#.C00115
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00117:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00119
+  lea      $t4,T00215_101[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+  bra      .C00120
+.C00119:
+; int i = 1;
+  ldi      $s1,#1
+; goto label;
+  bra      .C00102
+.C00120:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00117
+.C00116:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #104
+.C00115:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00116
+.. 
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_kb_wait_4
+	.align 16
+():
+  enter    #16
+  ldi      $t4,#.C00152
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; unsigned long timeout = 2;
+  ldi      $s0,#2
+.C00154:
+; if (1) printf("timeout=%ld\n", timeout);
+  ldi      $t4,#1
+  beqz     $t4,.C00156
+  lea      $t4,T00215_122[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  jal      $ra,[$s1]
+  bra      .C00157
+.C00156:
+; case 2:
+  beq      $s0,#2,.C00168
+; case 1:
+  beq      $s0,#1,.C00169
+; break;
+  bra      .C00170
+.C00157:
+; timeout--;
+  sub      $s0,$s0,#1
+;} while (timeout);
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00154
+.C00153:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #104
+.C00152:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00153
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00182
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; printf("begin\n");
+  lea      $t4,T00215_172[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+; kb_wait_1();
+  bal      $ra,_kb_wait_1
+; kb_wait_2();
+  bal      $ra,_kb_wait_2
+; kb_wait_2_1();
+  bal      $ra,_kb_wait_2_1
+; kb_wait_2_2();
+  bal      $ra,_kb_wait_2_2
+; kb_wait_3();
+  bal      $ra,_kb_wait_3
+; kb_wait_4();
+  bal      $ra,_kb_wait_4
+; printf("end\n");
+  lea      $t4,T00215_173[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+; return 0;
+  mov      $a0,$x0
+.C00183:
+  leave    #96
+.C00182:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00183
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00215_2[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_3[14]: ; error
+
+	dcw	101,114,114,111,114,10,0
+T00215_27[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_28[14]: ; error
+
+	dcw	101,114,114,111,114,10,0
+T00215_54[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_55[14]: ; error
+
+	dcw	101,114,114,111,114,10,0
+T00215_79[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_81[14]: ; error
+
+	dcw	101,114,114,111,114,10,0
+T00215_101[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_122[26]: ; timeout=%ld
+
+	dcw	116,105,109,101,111,117,116,61
+	dcw	37,108,100,10,0
+T00215_123[26]: ; timeout is 2
+
+	dcw	116,105,109,101,111,117,116,32
+	dcw	105,115,32,50,0
+T00215_124[26]: ; timeout is 1
+
+	dcw	116,105,109,101,111,117,116,32
+	dcw	105,115,32,49,0
+T00215_125[28]: ; timeout is 0?
+
+	dcw	116,105,109,101,111,117,116,32
+	dcw	105,115,32,48,63,0
+T00215_172[14]: ; begin
+
+	dcw	98,101,103,105,110,10,0
+T00215_173[10]: ; end
+
+	dcw	101,110,100,10,0
+;--}
+	.extern	_printf

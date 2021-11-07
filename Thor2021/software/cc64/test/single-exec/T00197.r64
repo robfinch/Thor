@@ -1,0 +1,171 @@
+
+;{++
+                                                                                                                                                  
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	align	2
+
+T00197_1[8]: ; _fred
+
+	dco	1234 
+	align	2
+
+T00197_2[8]: ; _joe
+
+	fill.b	8,0x00                    
+ 
+	code
+	align	16
+
+	.global _henry
+	.align 16
+
+;.func _henry
+
+ 
+	data
+	align	2
+
+T00197_3[8]: ; _fred
+
+	dco	4567
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+_henry():
+  enter    #16
+  ldi      $t4,#.C00013
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  lea      $s0,T00197_1[$gp]
+; printf("%d\n", fred);
+  lea      $t4,T00197_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  bal      $ra,_printf
+; fred++;
+  ldo      $t4,[$s0]
+  add      $t4,$t4,#1
+  sto      $t4,[$s0]
+.C00014:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00013:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00014
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00027
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00000E00
+  lea      $s0,T00197_1[$gp]
+  ldi      $s1,#_henry
+  ldi      $s2,#_printf
+; printf("%d\n", fred);
+  lea      $t4,T00197_15[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  jal      $ra,[$s2]
+; henry();
+  jal      $ra,[$s1]
+  jal      $ra,[$s1]
+  jal      $ra,[$s1]
+  jal      $ra,[$s1]
+; printf("%d\n", fred);
+  lea      $t4,T00197_16[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  jal      $ra,[$s2]
+; fred = 8901;
+  ldi      $t4,#8901
+  sto      $t4,[$s0]
+; joe = 2345;
+  ldi      $t4,#2345
+  sto      $t4,T00197_2[$gp]
+; printf("%d\n", fred);
+  lea      $t4,T00197_17[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", joe);
+  lea      $t4,T00197_18[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00197_2[$gp]
+  push     $t4
+  jal      $ra,[$s2]
+; return 0;
+  mov      $a0,$x0
+.C00028:
+  ldm      [$sp],#$00000E00
+  leave    #96
+.C00027:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00028
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00197_4[8]: ; %d
+
+	dcw	37,100,10,0
+T00197_15[8]: ; %d
+
+	dcw	37,100,10,0
+T00197_16[8]: ; %d
+
+	dcw	37,100,10,0
+T00197_17[8]: ; %d
+
+	dcw	37,100,10,0
+T00197_18[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

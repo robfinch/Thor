@@ -1,0 +1,65 @@
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _min:
+; if (a < 0)
+  bge      $a0,$x0,TestMinMax_13
+; throw 21;
+  ldi      $a0,#21
+  ldi      $a1,#7
+  brk      #239
+TestMinMax_13:
+; return a < b ? a : b;
+  bge      $a0,$a1,TestMinMax_15
+TestMinMax_15:
+  mov      $a0,$a1
+TestMinMax_12:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _max:
+  bge      $a1,$a0,TestMinMax_27
+TestMinMax_27:
+  mov      $a0,$a1
+TestMinMax_26:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _minu:
+  bge      $a0,$a1,TestMinMax_39
+TestMinMax_39:
+  mov      $a0,$a1
+TestMinMax_38:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	rodata
+	align	16
+;	global	_amin
+;	global	_minu
+;	global	_min
+;	global	_max

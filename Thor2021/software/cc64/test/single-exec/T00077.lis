@@ -1,0 +1,91 @@
+     1	int
+     2	foo(int x[100])
+     3	{
+     4	int y[100];
+     5	int *p;
+     6	
+     7	y[0] = 2000;
+     8	
+     9	if(x[0] != 1000)
+    10	{
+    11	return 1;
+    12	}
+    13	
+    14	p = x;
+    15	
+    16	if(p[0] != 1000)
+    17	{
+    18	return 2;
+    19	}
+    20	
+    21	p = y;
+    22	
+    23	if(p[0] != 2000)
+    24	{
+    25	return 3;
+    26	}
+    27	
+    28	if(sizeof(x) != sizeof(void*))
+    29	{
+    30	return 4;
+    31	}
+    32	
+    33	if(sizeof(y) <= sizeof(x))
+    34	{
+    35	return 5;
+    36	}
+    37	
+    38	return 0;
+    39	}
+    40	
+
+
+*** local symbol table ***
+
+13 _y         =fffffce0   -    Auto        Array of Long
+13 _p         =fffffcd8   -    Auto        Pointer to Long
+
+
+
+    41	int
+    42	main()
+    43	{
+    44	int x[100];
+    45	x[0] = 1000;
+    46	
+    47	return foo(x);
+    48	}
+    49	
+
+
+*** local symbol table ***
+
+13 _x         =fffffce0   -    Auto        Array of Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _foo       =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

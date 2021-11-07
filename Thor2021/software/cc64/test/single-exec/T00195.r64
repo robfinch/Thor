@@ -1,0 +1,108 @@
+
+;{++
+                                                                                                                                                    
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	bss
+	align	8
+
+public bss __noname_var0[16]:
+
+	fill.b	16,0x00                    
+
+endpublic
+ 
+	align	8
+
+public bss _point_array[1600]:
+
+	fill.b	1600,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00012
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; int my_point = 10;
+  ldi      $s0,#10
+; point_array[my_point].x = 12.34;
+  sll      $t4,$s0,#4
+  lea      $t5,_point_array[$gp]
+  ldo      $t6,T00195_1[$gp1]
+  sto      $t6,[$t4+$t5]
+; point_array[my_point].y = 56.78;
+  sll      $t5,$s0,#4
+  lea      $t6,_point_array[$gp]
+  add      $t4,$t5,$t6
+  ldo      $t5,T00195_2[$gp1]
+  sto      $t5,8[$t4]
+; printf("%f, %f\n", point_array[my_point].x, point_array[my_point].y);
+  sub      $sp,$sp,#24
+  lea      $t4,T00195_3[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sll      $t4,$s0,#4
+  lea      $t5,_point_array[$gp]
+  ldo      $t4,[$t4+$t5]
+  sto      $t4,8[$sp]
+  sll      $t5,$s0,#4
+  lea      $t6,_point_array[$gp]
+  add      $t4,$t5,$t6
+  ldo      $t4,8[$t4]
+  sto      $t4,16[$sp]
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+; return 0;
+  mov      $a0,$x0
+.C00013:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00012:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00013
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00195_2[16]:
+	dct	0x0A3D70A3,0x404C63D7
+T00195_1[16]:
+	dct	0x7AE147AE,0x4028AE14
+	align	8
+
+
+T00195_3[16]: ; %f, %f
+
+	dcw	37,102,44,32,37,102,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

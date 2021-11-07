@@ -1,0 +1,125 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; printf("Hello world\n");
+  lea      $t4,T00132_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; for (Count = -5; Count <= 5; Count++)
+  ldi      $s0,#-5
+  slt      $t4,#5,$s0
+  bne      $t4,$x0,.C00022
+.C00021:
+; printf("Count = %d\n", Count);
+  lea      $t4,T00132_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  sge      $t4,#5,$s0
+  bne      $t4,$x0,.C00021
+.C00022:
+; printf("String 'hello', 'there' is '%s', '%s'\n", "hello", "there");
+  sub      $sp,$sp,#24
+  lea      $t4,T00132_3[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  lea      $t4,T00132_4[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,8[$sp]
+  lea      $t4,T00132_5[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,16[$sp]
+  jal      $ra,[$s1]
+; printf("Character 'A' is '%c'\n", 65);
+  lea      $t4,T00132_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#65
+  push     $t4
+  jal      $ra,[$s1]
+; printf("Character 'a' is '%c'\n", 'a');
+  lea      $t4,T00132_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#97
+  push     $t4
+  jal      $ra,[$s1]
+; return 0;
+  mov      $a0,$x0
+.C00020:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00132_1[26]: ; Hello world
+
+	dcw	72,101,108,108,111,32,119,111
+	dcw	114,108,100,10,0
+T00132_2[24]: ; Count = %d
+
+	dcw	67,111,117,110,116,32,61,32
+	dcw	37,100,10,0
+T00132_3[78]: ; String 'hello', 'there' is '%s', '%s'
+
+	dcw	83,116,114,105,110,103,32,39
+	dcw	104,101,108,108,111,39,44,32
+	dcw	39,116,104,101,114,101,39,32
+	dcw	105,115,32,39,37,115,39,44
+	dcw	32,39,37,115,39,10,0
+T00132_4[12]: ; hello
+
+	dcw	104,101,108,108,111,0
+T00132_5[12]: ; there
+
+	dcw	116,104,101,114,101,0
+T00132_6[46]: ; Character 'A' is '%c'
+
+	dcw	67,104,97,114,97,99,116,101
+	dcw	114,32,39,65,39,32,105,115
+	dcw	32,39,37,99,39,10,0
+T00132_7[46]: ; Character 'a' is '%c'
+
+	dcw	67,104,97,114,97,99,116,101
+	dcw	114,32,39,97,39,32,105,115
+	dcw	32,39,37,99,39,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

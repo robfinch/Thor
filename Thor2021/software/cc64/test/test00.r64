@@ -1,0 +1,69 @@
+    	bss
+	align	8
+	align	8
+	dw	$FFF0200000000001
+public bss _globa:
+	fill.b	8,0x00                    
+
+endpublic
+  	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _test0:
+; globa.m = ss + globa.l[0] + globa.l[1] + aaa;
+  lea      $t0,_globa[$gp]
+  ldwu     $t4,_globa[$gp]
+  add      $t3,$t4,#34
+  lea      $t4,_globa[$gp]
+  ldwu     $t4,4[$t4]
+  add      $t2,$t3,$t4
+  add      $t1,$t2,$a0
+  stw      $t1,4[$t0]
+; return globa.m;
+  lea      $t0,_globa[$gp]
+  ldwu     $a0,4[$t0]
+test00_8:
+  ret    
+endpublic
+
+   	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _test00:
+  link     #48
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldo      $s0,16[$fp]
+; int ss = 34;
+  ldi      $s1,#34
+; a->m = ss + a->l[0] + a->l[1] + aaa;
+  ldwu     $t3,[$s0]
+  add      $t2,$t3,$s1
+  ldwu     $t3,4[$s0]
+  add      $t1,$t2,$t3
+  ldo      $t2,24[$fp]
+  add      $t0,$t1,$t2
+  stw      $t0,4[$s0]
+; return a->m;
+  ldwu     $a0,4[$s0]
+test00_16:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_test0
+;	global	_globa
+;	global	_test00

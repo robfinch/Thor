@@ -1,0 +1,29 @@
+      	code
+	align	16
+  	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #56
+  sto      $s0,0[$sp]
+  lea      $s0,-16[$fp]
+; aaa = bbb;
+  lea      $t0,-32[$fp]
+  mov      $a0,$s0
+  mov      $a1,$t0
+  ldi      $a2,#16
+  bal      $ra,__aacpy
+; return (aaa.abc);
+  ldo      $a0,[$s0]
+TestAssign_8:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_main

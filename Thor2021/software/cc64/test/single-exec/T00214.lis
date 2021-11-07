@@ -1,0 +1,195 @@
+     1	
+     2	extern int printf (const char *, ...);
+     3	typedef unsigned long size_t;
+     4	
+     5	size_t _brk_start, _brk_end;
+     6	void * extend_brk(size_t size, size_t align)
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+     7	{
+     8	size_t mask = align - 1;
+ *** error 6: E Bad punctuation
+ *** error 38: E Integer constant required.
+     9	void *ret = 0;
+    10	
+    11	do {
+    12	if (__builtin_expect(!!(_brk_start == 0), 0))
+ *** error 6: E Bad punctuation
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+    13	do {
+    14	printf("wrong1\n");
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+    15	} while (0);
+    16	} while (0);
+    17	_brk_end = (_brk_end + mask) & ~mask;
+ *** error 38: E Integer constant required.
+    18	ret = (void *)_brk_end;
+ *** error 38: E Integer constant required.
+    19	_brk_end += size;
+ *** error 6: E Bad punctuation
+    20	
+    21	return ret;
+    22	}
+    23	
+    24	static void get_args (int a, int b)
+    25	{
+    26	if (a != 1)
+    27	printf("wrong2\n");
+    28	else
+    29	printf("okay\n");
+    30	}
+    31	
+
+
+*** local symbol table ***
+
+
+
+
+    32	void bla(void)
+    33	{
+    34	int __ret = 42;
+    35	({
+    36	if (__builtin_expect(!!(0), 0)) {
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+    37	if (__builtin_expect(!!__ret, 0))
+    38	printf("wrong3\n");
+    39	int x = !!(__ret);
+    40	}
+    41	__ret;
+
+
+*** local symbol table ***
+
+7 ___ret     =fffffff8   -    Auto        Long
+7 _x         =fffffff0   -    Auto        Long
+
+
+
+    42	});
+    43	get_args(!!__ret, sizeof(__ret));
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+    44	}
+    45	
+    46	_Bool chk(unsigned long addr, unsigned long limit, unsigned long size)
+ *** error 6: E Bad punctuation
+    47	{
+    48	_Bool ret;
+    49	
+    50	if (0)
+    51	ret = 0 != (!!(addr > limit - size));
+ *** error 38: E Integer constant required.
+ *** error 6: E Bad punctuation
+ *** error 4: E Undefined symbol
+    52	}
+    53	
+    54	int main()
+    55	{
+    56	void *r;
+    57	_brk_start = 1024;
+    58	_brk_end = 1024;
+    59	r = extend_brk (4096, 16);
+    60	if (!r)
+    61	printf("wrong4\n");
+    62	else
+    63	printf("okay\n");
+    64	bla();
+    65	return 0;
+    66	}
+    67	
+
+
+*** local symbol table ***
+
+13 _r         =fffffff8   -    Auto        Pointer to 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000080   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+19 _mask      =000018   -    Global      
+19 _size      =000070   -    Global      
+28 __delete   =000000   -    
+7 ___ret     =000050   -    Global      Long
+19 _limit     =000068   -    Global      
+29 _extend_brk =000018   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   019 019 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		19 __brk_start =000008   -    Global      
+29 _bla       =000050   -    Global      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		19 __brk_end  =000010   -    Global      
+7 _chk       =000060   -    Global      Long
+13 _ret       =000020   -    Global      Pointer to 
+29 _get_args  =000001   -    Static      Function returning 
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _get_args  =000050   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __autonew  =000000   -    
+19 _size_t    =000000   1   
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _printf    =000030   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 ___builtin_expect =000028   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

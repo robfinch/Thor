@@ -1,0 +1,42 @@
+     1	struct S { int a; int b; };
+     2	struct S s = {1, 2};
+     3	
+     4	int
+     5	main()
+     6	{
+     7	if(s.a != 1)
+     8	return 1;
+     9	if(s.b != 2)
+    10	return 2;
+    11	return 0;
+    12	}
+    13	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000020   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _S 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+40 _s         =000010   -    Global      struct _S 
+
+ *** structures and unions ***
+
+40 _S         =000000   -    Type        struct _S 
+    7 _a         =000000   -    Member      Long
+    7 _b         =000008   -    Member      Long

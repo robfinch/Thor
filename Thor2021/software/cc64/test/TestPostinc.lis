@@ -1,0 +1,46 @@
+     1	extern char *func();
+     2	
+     3	int TestPostinc(char *s1, char *s2)
+     4	{
+     5	int x;
+     6	
+     7	*s1++ = *s2++ = *s1++;
+ *** error 18: E Dereference
+     8	x = func()++;
+ *** error 17: E LValue required
+     9	return (x);
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+29 _func      =000000   -    External    Function returning Char
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _TestPostinc =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 005 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		
+ *** structures and unions ***
+

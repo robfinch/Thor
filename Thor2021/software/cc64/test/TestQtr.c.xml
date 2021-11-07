@@ -1,0 +1,781 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EA48(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 00CD49E0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EAF8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 00CD49E0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EBA8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 00CD49E0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 12 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 126 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 337 341 342 345 346 349 350 351 357 362 367 368 369 370 371 372 373 374 375 391 }<Find>_int</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_TestQtr</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_TestQtr|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _TestQtr
+****************************
+****************************
+<Find>_int</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(71)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Find>_qtr</Find>
+<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_qtr|CDE</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_qtr</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_qtr</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_qtr into 0098EC68
+Insert _qtr into 0098EC68<Find>_qtr</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_qtr:Match</Find>
+</BuildParameterList>
+Set false
+Set true1
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_TestQtr</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_TestQtr</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_TestQtr into 00CD49E0
+<BuildSignature>E<TypenoToChars>ABCD:HAAA</TypenoToChars>:_TestQtrHAAA</BuildSignature>Insert _TestQtr into 00CD49E0Insert into global table
+<Find>_TestQtr</Find>
+At insert:
+Type array:
+   007 
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _TestQtr
+***********************************
+***********************************
+***********************************
+A<BuildParameterList>Function parameter list already processed.<ParseParmDecls>
+A(50)</ParseParmDecls>
+B<BuildSignature>:_TestQtr</BuildSignature><Find>_TestQtr:Match</Find>
+CDEG<Parse function body>:_TestQtr|
+<Find>_if</Find>
+Bb<GenerateMonadic>ABCD</GenerateMonadic>
+C<Parse><ParseIf><Find>_IsNullPointer</Find>
+<Nameref>GSearchfor:_IsNullPointer|
+<gsearch2> for: |_IsNullPointer|
+Looking in statement table
+<Find>_IsNullPointer</Find>
+Looking in function's symbol table
+<Find>_IsNullPointer</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>_IsNullPointer</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_IsNullPointer</Find>
+</gsearch2>
+
+<gsearch2> for: |TestQtr_IsNullPointer|
+Looking in statement table
+<Find>TestQtr_IsNullPointer</Find>
+Looking in function's symbol table
+<Find>TestQtr_IsNullPointer</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>TestQtr_IsNullPointer</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>TestQtr_IsNullPointer</Find>
+</gsearch2>
+<nameref2>
+A:0:TestQtr_IsNullPointer<Find>_qtr</Find>
+<ArgumentList><Nameref>GSearchfor:_qtr|
+<gsearch2> for: |_qtr|
+Looking in statement table
+<Find>_qtr</Find>
+Looking in function's symbol table
+<Find>_qtr</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>_qtr:Match</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_qtrIsEqual:T2sp is not null
+Type array:
+   
+tp:00A104A0 <Deref></Deref>deref tp:00A104A0 </nameref2>
+</Nameref>
+007 lastst=53</ArgumentList>
+Insert at nameref
+Type array:
+   
+Insert TestQtr_IsNullPointer into 00CD49E0Insert into global table
+<Find>TestQtr_IsNullPointer</Find>
+At insert:
+Type array:
+   
+<BuildSignature>E:TestQtr_IsNullPointer</BuildSignature></nameref2>
+</Nameref>
+<Parse><Find>_if</Find>
+<Parse><ParseIf><Find>_qtr</Find>
+<Nameref>GSearchfor:_qtr|
+<gsearch2> for: |_qtr|
+Looking in statement table
+<Find>_qtr</Find>
+Looking in outer statement table
+<Find>_qtr</Find>
+Looking in function's symbol table
+<Find>_qtr</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>_qtr:Match</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_qtrIsEqual:T2sp is not null
+Type array:
+   
+tp:00A104A0 <Deref></Deref>deref tp:00A104A0 </nameref2>
+</Nameref>
+<Deref></Deref><Parse><Find>_return</Find>
+<Parse></Parse></ParseIf></Parse></ParseIf></Parse>Returning EOF from NextToken.
+D<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:1 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 135: ???
+rg: 0
+  Node:0
+  nodetype: 53: ???
+  rg: 0
+    Node:0
+    nodetype: 50: ???
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 169: en_ref
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 137: en_eq
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 169: en_ref
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+  Node:0
+  nodetype: 156: ???
+  rg: 0
+    Node:0
+    nodetype: 156: ???
+    rg: 0
+      Node:0
+      nodetype: 156: ???
+      rg: 0
+        Node:0
+        nodetype: 156: ???
+        rg: 0
+          Node:0
+          nodetype: 156: ???
+          rg: 0
+            Node:0
+            nodetype: 106: ???
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+            Node:0
+            nodetype: 106: ???
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+          Node:0
+          nodetype: 106: ???
+          rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+        Node:0
+        nodetype: 106: ???
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+      Node:0
+      nodetype: 106: ???
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 13: ???
+    rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+<Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><Statement__Scan></Statement__Scan>{/if}</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><Statement__Scan></Statement__Scan>{/if}</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><CSETable>For _TestQtr
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 4   2   1   0   10   _qtr   
+1: 1   1   0   0   -1   
+2: 1   1   1   0   -1   TestQtr_IsNullPointer   
+3: 0   1   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |TestQtr_IsNullPointer|
+Looking in statement table
+<Find>TestQtr_IsNullPointer</Find>
+Looking in function's symbol table
+<Find>TestQtr_IsNullPointer</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>TestQtr_IsNullPointer</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>TestQtr_IsNullPointer:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs><GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:2 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 135: ???
+rg: 0
+  Node:0
+  nodetype: 53: ???
+  rg: 0
+    Node:0
+    nodetype: 50: ???
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 169: en_ref
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 137: en_eq
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 169: en_ref
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+<CSETable>For _TestQtr
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 4   2   1   0   10   _qtr   
+1: 1   1   0   0   -1   
+2: 1   1   1   0   -1   TestQtr_IsNullPointer   
+3: 0   1   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+===== After Update =====Statement
+Statement
+Statement
+Node:0
+nodetype: 135: ???
+rg: 0
+  Node:0
+  nodetype: 53: ???
+  rg: 0
+    Node:0
+    nodetype: 50: ???
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 56: en_regvar
+      rg: 10
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 137: en_eq
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 56: en_regvar
+    rg: 10
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+              Node:0
+              nodetype: 37: en_icon
+              rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+            Node:0
+            nodetype: 37: en_icon
+            rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+      Node:0
+      nodetype: 37: en_icon
+      rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |TestQtr_IsNullPointer|
+Looking in statement table
+<Find>TestQtr_IsNullPointer</Find>
+Looking in function's symbol table
+<Find>TestQtr_IsNullPointer</Find>
+Searching method/class:_TestQtr|0021E0A8
+Looking at params 0098EC68
+<Find>TestQtr_IsNullPointer</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>TestQtr_IsNullPointer:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs>E_TestQtr: 4 basic blocks
+----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ }----- Compute Live Vars -----
+2: g20 g30  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+1: g4 g5 g10  || k4 k5 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 30 }----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k1 k4 k10 k29 k30 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 29 30 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+2: g20 g30  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+1: g4 g5 g10  || k4 k5 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 30 }----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k1 k4 k10 k29 k30 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 29 30 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+2: g20 g30  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+1: g4 g5 g10  || k4 k5 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 30 }----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k1 k4 k10 k29 k30 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 29 30 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+2: g20 g30  || 
+Edges to: - - - - Live Out - - - -{ 20 30 }----- Compute Live Vars -----
+1: g4 g5 g10  || k4 k5 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 30 }----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k1 k4 k10 k29 k30 
+Edges to: - - - - Live Out - - - -{ 4 5 10 20 29 30 }<table style="width:100%">
+<tr><td>0: </td><td>vi4 </td><td>vi5 </td><td>vi10 </td><td>vi20 </td><td>vi29 </td><td>vi30 </td><td> || </td><td>vo4 </td><td>vo5 </td><td>vo10 </td><td>vo20 </td><td>vo29 </td><td>vo30 </td></tr>
+<tr><td>1: </td><td>vi4 </td><td>vi5 </td><td>vi10 </td><td>vi20 </td><td>vi30 </td><td></td><td> || </td><td>vo4 </td><td>vo5 </td><td>vo10 </td><td>vo20 </td><td>vo30 </td><td></td></tr>
+<tr><td>2: </td><td>vi20 </td><td>vi30 </td><td></td><td></td><td></td><td></td><td> || </td><td>vo20 </td><td>vo30 </td><td></td><td></td><td></td><td></td></tr>
+<tr><td>3: </td><td>vi20 </td><td>vi30 </td><td></td><td></td><td></td><td></td><td> || </td><td>vo20 </td><td>vo30 </td><td></td><td></td><td></td><td></td></tr>
+<tr><td>4: </td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r30: { 0 1 2 3 }
+Visited r29: { 0 1 2 3 }
+Visited r20: { 0 1 2 3 }
+Visited r10: { 0 1 2 3 }
+Visited r5: { 0 1 2 3 }
+Visited r4: { 0 1 2 3 }
+<VarForests>0
+Var30: 2 trees
+<Tree>0 Color:-12851 { 3 }</Tree>
+<Tree>1 Color:-12851 { 0 1 2 }</Tree>
+<Forest>{ 0 1 2 3 }</Forest>
+Var29: 1 trees
+<Tree>2 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var20: 2 trees
+<Tree>3 Color:-12851 { 3 }</Tree>
+<Tree>4 Color:-12851 { 0 1 2 }</Tree>
+<Forest>{ 0 1 2 3 }</Forest>
+Var10: 1 trees
+<Tree>5 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+Var5: 1 trees
+<Tree>6 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+Var4: 1 trees
+<Tree>7 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+</VarForests>
+<Paths>
+0: { 0 2 }
+1: { 0 1 2 }
+</Paths>
+</ParseFunctionBody>
+<FuncSummary>
+</FuncSummary>
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

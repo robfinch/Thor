@@ -1,0 +1,76 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #48
+  ldi      $t4,#.C00012
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00003E00
+  ldi      $s4,#_printf
+; int a;
+  ldi      $s0,#64
+; a = 42;
+  ldi      $s1,#42
+; printf("%d\n", a);
+  lea      $t4,T00056_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s1
+  jal      $ra,[$s4]
+; printf("%d\n", b);
+  lea      $t4,T00056_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  jal      $ra,[$s4]
+; printf("%d, %d\n", c, d);
+  sub      $sp,$sp,#24
+  lea      $t4,T00056_3[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  jal      $ra,[$s4]
+; return 0;
+  mov      $a0,$x0
+.C00013:
+  ldm      [$sp],#$00003E00
+  leave    #96
+.C00012:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00013
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00056_1[8]: ; %d
+
+	dcw	37,100,10,0
+T00056_2[8]: ; %d
+
+	dcw	37,100,10,0
+T00056_3[16]: ; %d, %d
+
+	dcw	37,100,44,32,37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

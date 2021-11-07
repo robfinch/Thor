@@ -1,0 +1,75 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #40
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00001E00
+  lea      $t4,-16[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; p = arr;
+  mov      $s3,$s0
+; q = &arr[1][3];
+  add      $t5,$s0,#8
+  add      $s1,$t5,#6
+; arr[1][3] = 2;
+  add      $t4,$s0,#8
+  stw      #2,6[$t4]
+; if (arr[1][3] != 2)
+  add      $t4,$s0,#8
+  ldw      $t4,6[$t4]
+  beq      $t4,#2,.C00019
+; return 1;
+  ldi      $a0,#1
+.C00018:
+  ldm      [$sp],#$00001E00
+  leave    #96
+.C00019:
+; if (p[1][3] != 2)
+  ldo      $t4,2[$s3]
+  mov      $t5,$t4
+  srl      $t6,$t5,#3
+  and      $t6,$t6,#1
+  beq      $t6,#2,.C00021
+; return 1;
+  ldi      $a0,#1
+  bra      .C00018
+.C00021:
+; if (*q != 2)
+  ldw      $t4,[$s1]
+  beq      $t4,#2,.C00023
+; return 1;
+  ldi      $a0,#1
+  bra      .C00018
+.C00023:
+; return 1;
+  ldi      $a0,#1
+  bra      .C00018
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+
+	rodata
+	align	16
+
+;--}

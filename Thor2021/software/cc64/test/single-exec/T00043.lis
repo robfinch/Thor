@@ -1,0 +1,52 @@
+     1	struct s {
+     2	int x;
+     3	struct {
+     4	int y;
+     5	int z;
+     6	} nest;
+     7	};
+     8	
+     9	int
+    10	main() {
+    11	struct s v;
+    12	v.x = 1;
+    13	v.nest.y = 2;
+    14	v.nest.z = 3;
+    15	if (v.x + v.nest.y + v.nest.z != 6)
+    16	return 1;
+    17	return 0;
+    18	}
+    19	
+    20	
+
+
+*** local symbol table ***
+
+40 _v         =ffffffe8   -    Auto        struct _s 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000018   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _s 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _s         =000000   -    Type        struct _s 
+    7 _x         =000000   -    Member      Long
+    41 _nest      =000008   -    Member      struct __noname_tag0 
+41 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _y         =000000   -    Member      Long
+    7 _z         =000008   -    Member      Long

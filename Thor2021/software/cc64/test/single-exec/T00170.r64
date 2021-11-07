@@ -1,0 +1,272 @@
+
+;{++
+                                                                                                                                                  
+	bss
+	align	2
+
+public bss __noname_var0[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	bss
+	align	2
+
+public bss __noname_var1[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+    
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	bss
+	align	8
+
+public bss __noname_var2[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+   
+	align	2
+
+public bss __noname_var3[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+    
+	data
+	align	8
+
+	fill.b	3,0x00                    
+
+	bss
+	align	8
+
+public bss __noname_var4[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+  
+	code
+	align	16
+
+	.global _should_compile
+	.align 16
+
+;.func _should_compile
+
+;====================================================
+; Basic Block 0
+;====================================================
+_should_compile():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  ldi      $t4,#_it_real_fn
+.C00010:
+  leave    #104
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+  
+	.global _it_real_fn
+	.align 16
+
+;.func _it_real_fn
+
+;====================================================
+; Basic Block 0
+;====================================================
+_it_real_fn():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  ldi      $a0,#1
+.C00020:
+  leave    #104
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_deref_uintptr
+	.align 16
+():
+  enter    #0
+  ldi      $t4,#.C00030
+  sto      $t4,32[$fp]
+  ldo      $t4,16[$fp]
+  ldo      $a0,[$t4]
+.C00031:
+  leave    #104
+.C00030:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00031
+.. 
+
+ 
+	bss
+	align	2
+
+public bss __noname_var5[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  
+	data
+	align	8
+
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00044
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; enum fred frod;
+  ldi      $t4,#1
+; printf("%d %d %d %d %d %d %d %d\n", a, b, c, d, e, f, g, h);
+  sub      $sp,$sp,#72
+  lea      $t4,T00170_32[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $x0,8[$sp]
+  ldi      $t4,#1
+  sto      $t4,16[$sp]
+  ldi      $t4,#2
+  sto      $t4,24[$sp]
+  ldi      $t4,#3
+  sto      $t4,32[$sp]
+  ldi      $t4,#54
+  sto      $t4,40[$sp]
+  ldi      $t4,#73
+  sto      $t4,48[$sp]
+  ldi      $t4,#74
+  sto      $t4,56[$sp]
+  ldi      $t4,#75
+  sto      $t4,64[$sp]
+  jal      $ra,[$s1]
+; frod = 12;
+  ldi      $s0,#12
+; printf("%d\n", frod);
+  lea      $t4,T00170_33[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  jal      $ra,[$s1]
+; frod = e;
+  ldi      $s0,#54
+; printf("%d\n", frod);
+  lea      $t4,T00170_34[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  jal      $ra,[$s1]
+; printf ("enum to int: %u\n", deref_uintptr(&epos));
+  lea      $t4,T00170_35[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,-3[$fp]
+  base     $t4,$t4,#10
+  push     $t4
+  bal      $ra,_deref_uintptr
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  push     $t4
+  jal      $ra,[$s1]
+; return 0;
+  mov      $a0,$x0
+.C00045:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00044:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00045
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00170_32[50]: ; %d %d %d %d %d %d %d %d
+
+	dcw	37,100,32,37,100,32,37,100
+	dcw	32,37,100,32,37,100,32,37
+	dcw	100,32,37,100,32,37,100,10
+	dcw	0
+T00170_33[8]: ; %d
+
+	dcw	37,100,10,0
+T00170_34[8]: ; %d
+
+	dcw	37,100,10,0
+T00170_35[34]: ; enum to int: %u
+
+	dcw	101,110,117,109,32,116,111,32
+	dcw	105,110,116,58,32,37,117,10
+	dcw	0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

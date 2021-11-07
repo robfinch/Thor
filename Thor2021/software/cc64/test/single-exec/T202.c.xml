@@ -1,0 +1,80 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 00AAC870(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 00DE6CA0()
+Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   006 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 00AAC910(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 00DE6CA0()
+Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   006 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 00AAC9B0(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 00DE6CA0()
+Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   012 
+Instructions not in outcode table.
+{ 3 5 6 8 10 12 13 14 16 17 20 22 25 27 33 39 40 41 43 44 45 54 63 64 65 74 75 79 80 89 90 91 113 114 115 116 117 118 119 120 122 127 133 134 147 150 151 152 153 161 162 189 190 191 192 193 194 212 215 217 222 223 224 225 227 232 234 236 239 240 263 264 267 269 270 275 276 279 282 289 290 297 305 306 307 333 337 338 341 342 345 346 347 353 358 363 364 365 366 367 368 369 370 371 387 }Returning EOF from NextToken.
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

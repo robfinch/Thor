@@ -1,0 +1,120 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _f
+	.align 16
+
+;.func _f
+
+;====================================================
+; Basic Block 0
+;====================================================
+_f():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  ldi      $a0,#100
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00031
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  ldi      $s0,#_f
+; if (f() > 1000)
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  sge      $t5,#1000,$t4
+  bne      $t5,$x0,.C00033
+; return 1;
+  ldi      $a0,#1
+.C00032:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00033:
+; if (f() >= 1000)
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  slt      $t5,$t4,#1000
+  bne      $t5,$x0,.C00035
+; return 1;
+  ldi      $a0,#1
+  bra      .C00032
+.C00035:
+; if (1000 < f())
+  ldi      $t4,#1000
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  bge      $t4,$t5,.C00037
+; return 1;
+  ldi      $a0,#1
+  bra      .C00032
+.C00037:
+; if (1000 <= f())
+  ldi      $t4,#1000
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  blt      $t5,$t4,.C00039
+; return 1;
+  ldi      $a0,#1
+  bra      .C00032
+.C00039:
+; if (1000 == f())
+  ldi      $t4,#1000
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  bne      $t4,$t5,.C00041
+; return 1;
+  ldi      $a0,#1
+  bra      .C00032
+.C00041:
+; if (100 != f())
+  ldi      $t4,#100
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  beq      $t4,$t5,.C00043
+; return 1;
+  ldi      $a0,#1
+  bra      .C00032
+.C00043:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00032
+.C00031:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00032
+.. 
+
+
+	rodata
+	align	16
+
+;--}

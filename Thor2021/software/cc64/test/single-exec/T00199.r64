@@ -1,0 +1,207 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _fred
+	.align 16
+
+;.func _fred
+
+;====================================================
+; Basic Block 0
+;====================================================
+_fred():
+  enter    #16
+  ldi      $t4,#.C00013
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  ldi      $s0,#_printf
+; printf("In fred()\n");
+  lea      $t4,T00199_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+; goto done;
+  bra      .C00002
+.C00014:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00013:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00014
+.. 
+
+ 
+	.global _joe
+	.align 16
+
+;.func _joe
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_joe():
+  enter    #16
+  ldi      $t4,#.C00028
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s0,#_printf
+; int b = 5678;
+  ldi      $t4,#5678
+  sto      $t4,-8[$fp]
+; printf("In joe()\n");
+  lea      $t4,T00199_15[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+; int c = 1234;
+  ldi      $s1,#1234
+; printf("c = %d\n", c);
+  lea      $t4,T00199_16[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s1
+  jal      $ra,[$s0]
+; goto outer;
+  bra      .C00017
+.C00029:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00028:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00029
+.. 
+
+ 
+	.global _henry
+	.align 16
+
+;.func _henry
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_henry():
+  enter    #16
+  ldi      $t4,#.C00042
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; printf("In henry()\n");
+  lea      $t4,T00199_30[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,_printf
+; goto inner;
+  bra      .C00031
+.C00043:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00042:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00043
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00052
+  sto      $t4,32[$fp]
+; fred();
+  bal      $ra,_fred
+; joe();
+  bal      $ra,_joe
+; henry();
+  bal      $ra,_henry
+; return 0;
+  mov      $a0,$x0
+.C00053:
+  leave    #96
+.C00052:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00053
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00199_1[22]: ; In fred()
+
+	dcw	73,110,32,102,114,101,100,40
+	dcw	41,10,0
+T00199_3[22]: ; In middle
+
+	dcw	73,110,32,109,105,100,100,108
+	dcw	101,10,0
+T00199_4[16]: ; At end
+
+	dcw	65,116,32,101,110,100,10,0
+T00199_15[20]: ; In joe()
+
+	dcw	73,110,32,106,111,101,40,41
+	dcw	10,0
+T00199_16[16]: ; c = %d
+
+	dcw	99,32,61,32,37,100,10,0
+T00199_18[14]: ; uh-oh
+
+	dcw	117,104,45,111,104,10,0
+T00199_19[12]: ; done
+
+	dcw	100,111,110,101,10,0
+T00199_30[24]: ; In henry()
+
+	dcw	73,110,32,104,101,110,114,121
+	dcw	40,41,10,0
+T00199_32[16]: ; b = %d
+
+	dcw	98,32,61,32,37,100,10,0
+T00199_33[12]: ; done
+
+	dcw	100,111,110,101,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

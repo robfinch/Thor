@@ -1,0 +1,42 @@
+     1	
+     2	char s[] = "a" "b" "c";
+     3	
+     4	int
+     5	main()
+     6	{
+     7	if (s[0] != 'a')
+     8	return 1;
+     9	if (s[1] != 'b')
+    10	return 2;
+    11	if (s[2] != 'c')
+    12	return 3;
+    13	if (s[3] != '\0')
+    14	return 4;
+    15	return 0;
+    16	}
+    17	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+13 _s         =000000   -    Global      Array of Char
+
+ *** structures and unions ***
+

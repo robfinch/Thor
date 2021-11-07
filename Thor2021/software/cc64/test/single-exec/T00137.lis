@@ -1,0 +1,35 @@
+     1	
+     2	int
+     3	main(void)
+     4	{
+     5	char *p;
+     6	p = "hello"  " is better than bye";
+     7	
+     8	return (*p == 'h') ? 0 : 1;
+     9	}
+    10	
+
+
+*** local symbol table ***
+
+13 _p         =fffffff8   -    Auto        Pointer to Char
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

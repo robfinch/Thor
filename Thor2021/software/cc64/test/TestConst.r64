@@ -1,0 +1,46 @@
+ 	data
+	align	2
+public data _a:
+	dco	31351931521954931
+endpublic
+ 
+	align	2
+public data _b:
+	dco	31351931521954931
+endpublic
+  
+	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestConst:
+  link     #32
+  lea      $gp1,__rodata_start
+; if (*ptr==(('o' << 48) | ('b' << 40) | ('j' << 32) | ('e' << 24) | ('c' << 16) | ('t' << 8) | 's'))
+  ldo      $t0,-8[$fp]
+  sne      $t1,$t0,#31351931521954931
+  bne      $t1,$x0,TestConst_12
+; printf("hello");
+  lea      $t0,TestConst_1[$gp1]
+  push     $t0
+  bal      $ra,TestConst_printf
+TestConst_12:
+TestConst_8:
+TestConst_11:
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestConst_1:	; hello
+	dcw	104,101,108,108,111,0
+;	global	_TestConst
+	extern	TestConst_printf
+;	global	_a
+;	global	_b

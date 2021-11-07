@@ -1,0 +1,69 @@
+
+;{++
+ 
+	data
+	align	8
+
+public data _a[24]:
+
+	dco	0,1,2
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00015
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; if (a[0] != 0)
+  ldo      $t4,_a[$gp]
+  beqz     $t4,.C00017
+; return 1;
+  ldi      $a0,#1
+.C00016:
+  leave    #96
+.C00017:
+; if (a[1] != 1)
+  lea      $t4,_a[$gp]
+  ldo      $t4,8[$t4]
+  beq      $t4,#1,.C00019
+; return 2;
+  ldi      $a0,#2
+  bra      .C00016
+.C00019:
+; if (a[2] != 2)
+  lea      $t4,_a[$gp]
+  ldo      $t4,16[$t4]
+  beq      $t4,#2,.C00021
+; return 3;
+  ldi      $a0,#3
+  bra      .C00016
+.C00021:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00016
+.C00015:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00016
+.. 
+
+
+	rodata
+	align	16
+
+;--}

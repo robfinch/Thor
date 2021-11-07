@@ -1,0 +1,134 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _zero
+	.align 16
+
+;.func _zero
+
+;====================================================
+; Basic Block 0
+;====================================================
+_zero():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  mov      $a0,$x0
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+   
+	bss
+	align	8
+
+public bss _s[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _anon
+	.align 16
+
+;.func _anon
+
+;====================================================
+; Basic Block 0
+;====================================================
+_anon():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $a0,_s[$gp]
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+   
+	.global _go
+	.align 16
+
+;.func _go
+
+;====================================================
+; Basic Block 0
+;====================================================
+_go():
+  enter    #0
+  ldi      $t4,#.C00029
+  sto      $t4,32[$fp]
+  ldi      $a0,#_anon
+.C00030:
+  leave    #96
+.C00029:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00030
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00039
+  sto      $t4,32[$fp]
+  bal      $ra,_go
+  mov      $t4,$a0
+  jal      $ra,[$t4]
+  mov      $t4,$a0
+  ldo      $t4,[$t4]
+  jal      $ra,[$t4]
+  mov      $t4,$a0
+  mov      $a0,$t4
+.C00040:
+  leave    #96
+.C00039:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00040
+.. 
+
+
+	rodata
+	align	16
+
+;--}

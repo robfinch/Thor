@@ -1,0 +1,43 @@
+     1	typedef struct {
+     2	int abc;
+     3	int cdf;
+     4	} ABC;
+     5	
+     6	int main(int aa, int bb)
+     7	{
+     8	ABC aaa;
+     9	ABC bbb;
+    10	aaa = bbb;
+    11	return (aaa.abc);
+    12	}
+    13	
+
+
+*** local symbol table ***
+
+40 _aaa       =fffffff0   -    Auto        struct __noname_tag0 
+40 _bbb       =ffffffe0   -    Auto        struct __noname_tag0 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000010   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: -16
+		Tmpbot: -24
+		Stkspc: 24
+		28 __new      =000000   -    
+40 _ABC       =000000   1   struct __noname_tag0 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _abc       =000000   -    Member      Long
+    7 _cdf       =000008   -    Member      Long

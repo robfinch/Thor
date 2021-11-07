@@ -1,0 +1,104 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00021
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  lea      $t4,-16[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; arr[0] = 2;
+  sto      #2,[$s0]
+; arr[1] = 3;
+  sto      #3,8[$s0]
+; p = &arr[0];
+  mov      $s1,$s0
+; if(*(p++) != 2)
+  add      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#2,.C00023
+; return 1;
+  ldi      $a0,#1
+.C00022:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00023:
+; if(*(p++) != 3)
+  add      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#3,.C00025
+; return 2;
+  ldi      $a0,#2
+  bra      .C00022
+.C00025:
+; p = &arr[1];
+  add      $s1,$s0,#8
+; if(*(p--) != 3)
+  sub      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#3,.C00027
+; return 1;
+  ldi      $a0,#1
+  bra      .C00022
+.C00027:
+; if(*(p--) != 2)
+  sub      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#2,.C00029
+; return 2;
+  ldi      $a0,#2
+  bra      .C00022
+.C00029:
+; p = &arr[0];
+  mov      $s1,$s0
+; if(*(++p) != 3)
+  add      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#3,.C00031
+; return 1;
+  ldi      $a0,#1
+  bra      .C00022
+.C00031:
+; p = &arr[1];
+  add      $s1,$s0,#8
+; if(*(--p) != 2)
+  sub      $s1,$s1,#8
+  ldo      $t4,[$s1]
+  beq      $t4,#2,.C00033
+; return 1;
+  ldi      $a0,#1
+  bra      .C00022
+.C00033:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00022
+.C00021:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00022
+.. 
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,94 @@
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestRotate:
+  link     #48
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldo      $s0,24[$fp]
+  ldo      $s1,16[$fp]
+  sll      $t1,$s1,$s0
+  ldi      $t4,#16
+  sub      $t3,$t4,$s0
+  sra      $t2,$s1,$t3
+  or       $a0,$t1,$t2
+TestRotate_8:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestRotate2:
+  sll      $t1,$a0,$a1
+  ldi      $t4,#16
+  sub      $t3,$t4,$a1
+  sra      $t2,$a0,$t3
+  or       $a0,$t1,$t2
+TestRotate_16:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestRotate3:
+  sll      $t1,$a0,$a1
+  ldi      $t4,#16
+  sub      $t3,$t4,$a1
+  sra      $t2,$a0,$t3
+  or       $a0,$t1,$t2
+TestRotate_24:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestRotate4:
+  rol      $a0,$a0,$a1
+TestRotate_29:
+TestRotate_32:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestRotate5:
+  ror      $a0,$a0,$a1
+TestRotate_40:
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestRotate
+;	global	_TestRotate2
+;	global	_TestRotate3
+;	global	_TestRotate4
+;	global	_TestRotate5

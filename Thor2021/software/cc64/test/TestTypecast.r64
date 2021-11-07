@@ -1,0 +1,25 @@
+  	data
+	align	8
+public data _TestTypecast:
+dco _UnknownFn4
+endpublic
+	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestTypecast_func:
+; return (int *)21;
+  ldi      $a0,#21
+TestTypecast_10:
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestTypecast_1:	; UnknownFn3
+TestTypecast_2:	; UnknownFn6
+;	global	_TestTypecast

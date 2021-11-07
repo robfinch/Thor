@@ -1,0 +1,70 @@
+     1	struct S1 {
+     2	int a;
+     3	int b;
+     4	};
+     5	struct S2 {
+     6	struct S1 s1;
+     7	struct S1 *ps1;
+     8	int arr[2];
+     9	};
+    10	struct S1 gs1 = { .a = 1, 2 };
+    11	struct S2 *s = &(struct S2) {
+    12	{.b = 2, .a = 1},
+    13	&gs1,
+    14	{[0] = 1,  1+1}
+ *** error 6: E Bad punctuation
+    15	};
+    16	
+    17	int
+    18	main()
+    19	{
+    20	if(s->s1.a != 1)
+    21	return 1;
+    22	if(s->s1.b != 2)
+    23	return 2;
+    24	if(s->ps1->a != 1)
+    25	return 3;
+    26	if(s->ps1->b != 2)
+    27	return 4;
+    28	if(s->arr[0] != 1)
+    29	return 5;
+    30	if(s->arr[1] != 2)
+    31	return 6;
+    32	return 0;
+    33	}
+    34	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000050   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _S1 
+41 __noname_var1 =000010   -    Global      struct _S2 
+28 __delete   =000000   -    
+40 _gs1       =000038   -    Global      struct _S1 
+28 __autonew  =000000   -    
+13 _s         =000048   -    Global      Pointer to struct _S2 
+
+ *** structures and unions ***
+
+40 _S1        =000000   -    Type        struct _S1 
+    7 _a         =000000   -    Member      Long
+    7 _b         =000008   -    Member      Long
+41 _S2        =000000   -    Type        struct _S2 
+    40 _s1        =000000   -    Member      struct _S1 
+    13 _ps1       =000010   -    Member      Pointer to struct _S1 
+    13 _arr       =000018   -    Member      Array of Long

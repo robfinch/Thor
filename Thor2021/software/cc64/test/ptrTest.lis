@@ -1,0 +1,37 @@
+     1	typedef struct {
+     2		int *a;
+     3		int *b;
+     4	} ABStruct;
+     5	
+     6	char *ptrTest(ABStruct *ab)
+     7	{
+     8		ABStruct p;
+     9		
+    10		p.a = ab->a;
+    11		p.b = ab->b;
+    12		return (&p->a);
+ *** error 14: E No pointer
+    13	}
+
+
+*** local symbol table ***
+
+_p         =fffffff0   -    Auto        struct <no name> 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+_ptrTest   =000010   -    Global      Function returning Pointer to Char
+		Parameters:
+			Type array:
+   024 
+Stack Space:
+		Argbot: -16
+		Tmpbot: -16
+		Stkspc: 16
+		_ABStruct  =000000   1   struct <no name> 
+
+ *** structures and unions ***
+

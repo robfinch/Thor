@@ -1,0 +1,167 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _zero
+	.align 16
+
+;.func _zero
+
+;====================================================
+; Basic Block 0
+;====================================================
+_zero():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  mov      $a0,$x0
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _one
+	.align 16
+
+;.func _one
+
+;====================================================
+; Basic Block 0
+;====================================================
+_one():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  ldi      $a0,#1
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00045
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+; x = zero();
+  bal      $ra,_zero
+  mov      $t4,$a0
+  mov      $s0,$t4
+; y = ++x;
+  add      $s0,$s0,#1
+  mov      $s1,$s0
+; if (x != 1)
+  beq      $s0,#1,.C00047
+; return 1;
+  ldi      $a0,#1
+.C00046:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00047:
+; if (y != 1)
+  beq      $s1,#1,.C00049
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00049:
+; x = one();
+  bal      $ra,_one
+  mov      $t4,$a0
+  mov      $s0,$t4
+; y = --x;
+  sub      $s0,$s0,#1
+  mov      $s1,$s0
+; if (x != 0)
+  beqz     $s0,.C00051
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00051:
+; if (y != 0)
+  beqz     $s1,.C00053
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00053:
+; x = zero();
+  bal      $ra,_zero
+  mov      $t4,$a0
+  mov      $s1,$t4
+; y = x++;
+  add      $s0,$s0,#1
+; if (x != 1)
+  beq      $s0,#1,.C00055
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00055:
+; if (y != 0)
+  beqz     $s1,.C00057
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00057:
+; x = one();
+  bal      $ra,_one
+  mov      $t4,$a0
+  mov      $s1,$t4
+; y = x--;
+  sub      $s0,$s0,#1
+; if (x != 0)
+  beqz     $s0,.C00059
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00059:
+; if (y != 1)
+  beq      $s1,#1,.C00061
+; return 1;
+  ldi      $a0,#1
+  bra      .C00046
+.C00061:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00046
+.C00045:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00046
+.. 
+
+
+	rodata
+	align	16
+
+;--}

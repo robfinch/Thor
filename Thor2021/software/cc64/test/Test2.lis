@@ -1,0 +1,74 @@
+     1	int ary[20][45];
+     2	
+     3	int main(int argc, char **argv)
+     4	{
+     5	int x, y, z;
+     6	
+     7	for (y = 0; y < argc; y++) {
+     8	for (z = 0; z < 45; z++)
+     9	ary[y][z] = rand();
+    10	}
+    11	for (x = 0; x < 10; x++)  {
+    12	printf("Hello World!");
+    13	}
+    14	naked switch(argc) {
+ *** error 12: E Illegal class
+    15	case 1:	printf("One"); break;
+    16	case 2:	printf("Two"); break;
+    17	case 3:	printf("Three"); break;
+    18	}
+    19	exit(0);
+    20	}
+    21	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+7 _y         =fffffff0   -    Auto        Long
+7 _z         =ffffffe8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =001c20   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 005 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -40
+		Stkspc: 40
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+13 _ary       =000000   -    Global      Array of Array of Long
+28 __autonew  =000000   -    
+29 Test2_printf =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 Test2_rand =000000   -    External    Function returning Short
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 Test2_exit =000000   -    External    Function returning Short
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

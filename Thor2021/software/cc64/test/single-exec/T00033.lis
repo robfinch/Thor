@@ -1,0 +1,87 @@
+     1	int g;
+     2	
+     3	int
+     4	effect()
+     5	{
+     6	g = 1;
+     7	return 1;
+     8	}
+     9	
+
+
+*** local symbol table ***
+
+
+
+
+    10	int
+    11	main()
+    12	{
+    13	int x;
+    14	
+    15	g = 0;
+    16	x = 0;
+    17	if(x && effect())
+    18	return 1;
+    19	if(g)
+    20	return 2;
+    21	x = 1;
+    22	if(x && effect()) {
+    23	if(g != 1)
+    24	return 3;
+    25	} else {
+    26	return 4;
+    27	}
+    28	g = 0;
+    29	x = 1;
+    30	if(x || effect()) {
+    31	if(g)
+    32	return 5;
+    33	} else {
+    34	return 6;
+    35	}
+    36	x = 0;
+    37	if(x || effect()) {
+    38	if(g != 1)
+    39	return 7;
+    40	} else {
+    41	return 8;
+    42	}
+    43	return 0;
+    44	}
+    45	
+    46	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+7 _g         =000000   -    Global      Long
+29 _effect    =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+

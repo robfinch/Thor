@@ -1,0 +1,454 @@
+
+;{++
+                                                                                                                                                             
+	data
+	align	8
+                                                                                                       
+	bss
+	align	8
+
+public bss _A[32]:
+
+	fill.b	32,0x00                    
+
+endpublic
+
+	align	8
+
+public bss _B[32]:
+
+	fill.b	32,0x00                    
+
+endpublic
+
+	align	8
+
+public bss _C[32]:
+
+	fill.b	32,0x00                    
+
+endpublic
+      
+	code
+	align	16
+
+	.global _PrintAll
+	.align 16
+
+;.func _PrintAll
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_PrintAll():
+  enter    #24
+  ldi      $t4,#.C00028
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; printf("A: ");
+  lea      $t4,T00181_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; for(i=0;i<4;i++)printf(" %d ",A[i]);
+  mov      $s0,$x0
+  bge      $s0,#4,.C00031
+.C00030:
+  lea      $t4,T00181_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sll      $t4,$s0,#3
+  lea      $t5,_A[$gp]
+  ldo      $t4,[$t4+$t5]
+  push     $t4
+  jal      $ra,[$s1]
+.C00032:
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00030
+.C00031:
+; printf("\n");
+  lea      $t4,T00181_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; printf("B: ");
+  lea      $t4,T00181_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; for(i=0;i<4;i++)printf(" %d ",B[i]);
+  mov      $s0,$x0
+  bge      $s0,#4,.C00034
+.C00033:
+  lea      $t4,T00181_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sll      $t4,$s0,#3
+  lea      $t5,_B[$gp]
+  ldo      $t4,[$t4+$t5]
+  push     $t4
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00033
+.C00034:
+; printf("\n");
+  lea      $t4,T00181_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; printf("C: ");
+  lea      $t4,T00181_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; for(i=0;i<4;i++)printf(" %d ",C[i]);
+  mov      $s0,$x0
+  bge      $s0,#4,.C00037
+.C00036:
+  lea      $t4,T00181_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sll      $t4,$s0,#3
+  lea      $t5,_C[$gp]
+  ldo      $t4,[$t4+$t5]
+  push     $t4
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00036
+.C00037:
+; printf("\n");
+  lea      $t4,T00181_9[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; printf("------------------------------------------\n");
+  lea      $t4,T00181_10[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+.C00029:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00028:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00029
+.. 
+
+   
+	.global _Move
+	.align 16
+
+;.func _Move
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_Move():
+  enter    #32
+  ldi      $t4,#.C00067
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00001E00
+  ldo      $s2,16[$fp]
+  ldo      $s3,24[$fp]
+; int i = 0, j = 0;
+  mov      $s0,$x0
+  mov      $s1,$x0
+; while (i<4 && (source[i])==0) i++;
+  slt      $t4,$s0,#4
+  sll      $t6,$s0,#3
+  ldo      $t6,[$t6+$s2]
+  seq      $t5,$t6,$x0
+  and      $t6,$t4,$t5
+  beqz     $t6,.C00070
+.C00069:
+  add      $s0,$s0,#1
+  slt      $t4,$s0,#4
+  sll      $t6,$s0,#3
+  ldo      $t6,[$t6+$s2]
+  seq      $t5,$t6,$x0
+  and      $t6,$t4,$t5
+  bnez     $t6,.C00069
+.C00070:
+; while (j<4 && (dest[j])==0) j++;
+  slt      $t4,$s1,#4
+  sll      $t6,$s1,#3
+  ldo      $t6,[$t6+$s3]
+  seq      $t5,$t6,$x0
+  and      $t6,$t4,$t5
+  beqz     $t6,.C00080
+.C00079:
+  add      $s1,$s1,#1
+  slt      $t4,$s1,#4
+  sll      $t6,$s1,#3
+  ldo      $t6,[$t6+$s3]
+  seq      $t5,$t6,$x0
+  and      $t6,$t4,$t5
+  bnez     $t6,.C00079
+.C00080:
+; dest[j-1] = source[i];
+  sub      $t5,$s1,#1
+  sll      $t4,$t5,#3
+  sll      $t5,$s0,#3
+  ldo      $t6,[$t5+$s2]
+  sto      $t6,[$t4+$s3]
+; source[i] = 0;
+  sll      $t4,$s0,#3
+  sto      $x0,[$t4+$s2]
+; PrintAll();       /* Print configuration after each move. */
+  bal      $ra,_PrintAll
+; return dest[j-1];
+  sub      $t5,$s1,#1
+  sll      $t4,$t5,#3
+  ldo      $a0,[$t4+$s3]
+.C00068:
+  ldm      [$sp],#$00001E00
+  leave    #112
+.C00067:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00068
+.. 
+
+     
+	.global _Hanoi
+	.align 16
+
+;.func _Hanoi
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_Hanoi():
+  enter    #32
+  ldi      $t4,#.C00099
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00001E00
+  ldo      $s0,32[$fp]
+  ldo      $s1,24[$fp]
+  ldo      $s2,16[$fp]
+  ldo      $s3,40[$fp]
+; if(n==1){
+  bne      $s2,#1,.C00101
+; Move(source,dest);
+  push     $s1,$s0
+  bal      $ra,_Move
+  add      $sp,$sp,#8
+.C00100:
+  ldm      [$sp],#$00001E00
+  leave    #128
+.C00101:
+; Hanoi(n-1,source,spare,dest);
+  sub      $sp,$sp,#32
+  sub      $t4,$s2,#1
+  sto      $t4,0[$sp]
+  sto      $s1,8[$sp]
+  sto      $s3,16[$sp]
+  sto      $s0,24[$sp]
+  bal      $ra,_Hanoi
+  add      $sp,$sp,#8
+; Move(source,dest);
+  push     $s1,$s0
+  bal      $ra,_Move
+  add      $sp,$sp,#8
+; Hanoi(n-1,spare,dest,source);
+  sub      $sp,$sp,#32
+  sub      $t4,$s2,#1
+  sto      $t4,0[$sp]
+  sto      $s3,8[$sp]
+  sto      $s0,16[$sp]
+  sto      $s1,24[$sp]
+  bal      $ra,_Hanoi
+  add      $sp,$sp,#8
+; return;
+  bra      .C00100
+.C00099:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00100
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00123
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; for(i=0;i<4;i++)A[i]=i+1;
+  mov      $s0,$x0
+  bge      $s0,#4,.C00126
+.C00125:
+  sll      $t4,$s0,#3
+  lea      $t5,_A[$gp]
+  add      $t6,$s0,#1
+  sto      $t6,[$t4+$t5]
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00125
+.C00126:
+; for(i=0;i<4;i++)B[i]=0;
+  mov      $s0,$x0
+  bge      $s0,#4,.C00129
+.C00128:
+  sll      $t4,$s0,#3
+  lea      $t5,_B[$gp]
+  sto      $x0,[$t4+$t5]
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00128
+.C00129:
+; for(i=0;i<4;i++)C[i]=0;
+  mov      $s0,$x0
+  bge      $s0,#4,.C00132
+.C00131:
+  sll      $t4,$s0,#3
+  lea      $t5,_C[$gp]
+  sto      $x0,[$t4+$t5]
+  add      $s0,$s0,#1
+  blt      $s0,#4,.C00131
+.C00132:
+; printf("Solution of Tower of Hanoi Problem with %d Disks\n\n",4);
+  lea      $t4,T00181_103[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#4
+  push     $t4
+  jal      $ra,[$s1]
+; printf("Starting state:\n");
+  lea      $t4,T00181_104[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; PrintAll();
+  bal      $ra,_PrintAll
+; printf("\n\nSubsequent states:\n\n");
+  lea      $t4,T00181_105[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; Hanoi(4,A,B,C);
+  sub      $sp,$sp,#32
+  ldi      $t4,#4
+  sto      $t4,0[$sp]
+  lea      $t4,_A[$gp]
+  sto      $t4,8[$sp]
+  lea      $t4,_B[$gp]
+  sto      $t4,16[$sp]
+  lea      $t4,_C[$gp]
+  sto      $t4,24[$sp]
+  bal      $ra,_Hanoi
+  add      $sp,$sp,#8
+; return 0;
+  mov      $a0,$x0
+.C00124:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00123:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00124
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00181_1[8]: ; A: 
+
+	dcw	65,58,32,0
+T00181_2[10]: ;  %d 
+
+	dcw	32,37,100,32,0
+T00181_3[4]:
+
+	dcw	10,0
+T00181_4[8]: ; B: 
+
+	dcw	66,58,32,0
+T00181_5[10]: ;  %d 
+
+	dcw	32,37,100,32,0
+T00181_6[4]:
+
+	dcw	10,0
+T00181_7[8]: ; C: 
+
+	dcw	67,58,32,0
+T00181_8[10]: ;  %d 
+
+	dcw	32,37,100,32,0
+T00181_9[4]:
+
+	dcw	10,0
+T00181_10[88]: ; ------------------------------------------
+
+	dcw	45,45,45,45,45,45,45,45
+	dcw	45,45,45,45,45,45,45,45
+	dcw	45,45,45,45,45,45,45,45
+	dcw	45,45,45,45,45,45,45,45
+	dcw	45,45,45,45,45,45,45,45
+	dcw	45,45,10,0
+T00181_103[102]: ; Solution of Tower of Hanoi Problem with %d Disks
+
+	dcw	83,111,108,117,116,105,111,110
+	dcw	32,111,102,32,84,111,119,101
+	dcw	114,32,111,102,32,72,97,110
+	dcw	111,105,32,80,114,111,98,108
+	dcw	101,109,32,119,105,116,104,32
+	dcw	37,100,32,68,105,115,107,115
+	dcw	10,10,0
+T00181_104[34]: ; Starting state:
+
+	dcw	83,116,97,114,116,105,110,103
+	dcw	32,115,116,97,116,101,58,10
+	dcw	0
+T00181_105[46]: ; Subsequent states:
+
+	dcw	10,10,83,117,98,115,101,113
+	dcw	117,101,110,116,32,115,116,97
+	dcw	116,101,115,58,10,10,0
+;--}
+	.extern	__Mbxlen
+	.extern	__Setjmp
+	.extern	__Wcxtomb
+	.extern	__Mbxtowc
+	.extern	__Files
+	.extern	__Randseed
+	.extern	__Mbcurmax

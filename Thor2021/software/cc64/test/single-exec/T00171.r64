@@ -1,0 +1,112 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #32
+  ldi      $t4,#.C00018
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00000E00
+  ldi      $s1,#_printf
+; a = 42;
+  ldi      $t4,#42
+  sto      $t4,-8[$fp]
+; b = &a;
+  lea      $t4,-8[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; c = (void *)0;
+  mov      $s2,$x0
+; printf("%d\n", *b);
+  lea      $t4,T00171_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  jal      $ra,[$s1]
+; if (b == (void *)0)
+  bnez     $s0,.C00020
+; printf("b is NULL\n");
+  lea      $t4,T00171_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  bra      .C00021
+.C00020:
+; printf("b is not NULL\n");
+  lea      $t4,T00171_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+.C00021:
+; if (c == (void *)0)
+  bnez     $s2,.C00022
+; printf("c is NULL\n");
+  lea      $t4,T00171_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  bra      .C00023
+.C00022:
+; printf("c is not NULL\n");
+  lea      $t4,T00171_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+.C00023:
+; return 0;
+  mov      $a0,$x0
+.C00019:
+  ldm      [$sp],#$00000E00
+  leave    #96
+.C00018:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00019
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00171_1[8]: ; %d
+
+	dcw	37,100,10,0
+T00171_2[22]: ; b is NULL
+
+	dcw	98,32,105,115,32,78,85,76
+	dcw	76,10,0
+T00171_3[30]: ; b is not NULL
+
+	dcw	98,32,105,115,32,110,111,116
+	dcw	32,78,85,76,76,10,0
+T00171_4[22]: ; c is NULL
+
+	dcw	99,32,105,115,32,78,85,76
+	dcw	76,10,0
+T00171_5[30]: ; c is not NULL
+
+	dcw	99,32,105,115,32,110,111,116
+	dcw	32,78,85,76,76,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

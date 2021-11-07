@@ -1,0 +1,1318 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EA48(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 00CD49E0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EAF8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 00CD49E0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EBA8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 00CD49E0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 12 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 125 127 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 337 341 342 345 346 349 350 351 357 362 367 368 369 370 371 372 373 374 375 391 }<Find>_int</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_main</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_main|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _main
+****************************
+****************************
+<Find>_int</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(71)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_argc</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_argc|CDE</ParsePrefixId><ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_argc</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_argc</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_argc into 0098EC68
+Insert _argc into 0098EC68<Find>_argc</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+E<Find>_char</Find>
+A(85)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Declaration_ParsePrefix>(12)
+**<Find>_argv</Find>
+<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_argv|CDE</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_argv</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_argv</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 5
+***Inserting:_argv into 0098EC68
+Insert _argv into 0098EC68<Find>_argv</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_argc:Match</Find>
+<Find>_argv:Match</Find>
+</BuildParameterList>
+Set false
+Set true1
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_main into 00CD49E0
+<BuildSignature>E<TypenoToChars>ABCD:HAAA</TypenoToChars><TypenoToChars>ABCD:FAAA</TypenoToChars>:_mainHAAAFAAA</BuildSignature>Insert _main into 00CD49E0Insert into global table
+<Find>_main</Find>
+At insert:
+Type array:
+   007 005 
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _main
+***********************************
+***********************************
+***********************************
+A<BuildParameterList>Function parameter list already processed.<ParseParmDecls>
+A(50)</ParseParmDecls>
+B<BuildSignature>:_main</BuildSignature><Find>_main:Match</Find>
+CDEG<Parse function body>:_main|
+<Find>_int</Find>
+Bb<GenerateMonadic>ABCD</GenerateMonadic>
+C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_x</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_x|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_x</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_x</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_x into 0173C798
+Insert _x into 0173C798<Find>_x</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_for</Find>
+</declare>
+<Parse><Find>_x</Find>
+<Nameref>GSearchfor:_x|
+<gsearch2> for: |_x|
+Looking in statement table
+<Find>_x:Match</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_xIsEqual:T2sp is not null
+Type array:
+   
+tp:00A10550 <Deref></Deref>deref tp:00A10550 </nameref2>
+</Nameref>
+<Find>_x</Find>
+<Nameref>GSearchfor:_x|
+<gsearch2> for: |_x|
+Looking in statement table
+<Find>_x:Match</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_xIsEqual:T2sp is not null
+Type array:
+   
+tp:00A10550 <Deref></Deref>deref tp:00A10550 </nameref2>
+</Nameref>
+<Find>_x</Find>
+<Nameref>GSearchfor:_x|
+<gsearch2> for: |_x|
+Looking in statement table
+<Find>_x:Match</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_xIsEqual:T2sp is not null
+Type array:
+   
+tp:00A10550 <Deref></Deref>deref tp:00A10550 </nameref2>
+</Nameref>
+<Parse><Find>_printf</Find>
+Found _printf
+<Find>_printf</Find>
+<Find>_printf</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in function's symbol table
+<Find>_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_printf</Find>
+</gsearch2>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf</Find>
+</gsearch2>
+<nameref2>
+A:0:Test1_printf<ArgumentList>013 lastst=53</ArgumentList>
+Insert at nameref
+Type array:
+   
+Insert Test1_printf into 00CD49E0Insert into global table
+<Find>Test1_printf</Find>
+At insert:
+Type array:
+   
+<BuildSignature>E:Test1_printf</BuildSignature></nameref2>
+</Nameref>
+</ParseExpression>
+</Parse><Find>_switch</Find>
+</Parse><Parse><Find>_argc</Find>
+<Nameref>GSearchfor:_argc|
+<gsearch2> for: |_argc|
+Looking in statement table
+<Find>_argc</Find>
+Looking in outer statement table
+<Find>_argc</Find>
+Looking in outer statement table
+<Find>_argc</Find>
+Looking in function's symbol table
+<Find>_argc</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_argc:Match</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_argcIsEqual:T2sp is not null
+Type array:
+   
+tp:00A104A0 <Deref></Deref>deref tp:00A104A0 </nameref2>
+</Nameref>
+<Find>_case</Find>
+<Parse><OptConst2></OptConst2><Find>_printf</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in function's symbol table
+<Find>_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_printf</Find>
+</gsearch2>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:Test1_printfIsEqual:T2sp is not null
+Type array:
+   
+tp:00F21E28 deref tp:00F21E28 </nameref2>
+</Nameref>
+tp2->type=29<ArgumentList>013 lastst=53</ArgumentList>
+Type array:
+   013 
+Got Type: 29openpa calling gsearch2<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EE68(Test1_printf)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+<BuildSignature>:Test1_printf</BuildSignature>Insert Test1_printf into 00CD49E0Insert into global table
+<Find>Test1_printf:MatchIsEqual:T3:Exact matchType array:
+   013 
+Type array:
+   013 
+IsEqual:F2IsEqual:T3Got direct function Test1_printf <Find>_break</Find>
+</ParseExpression>
+</Parse></Parse><Parse><Find>_case</Find>
+</Parse><Parse><OptConst2></OptConst2><Find>_printf</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in function's symbol table
+<Find>_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_printf</Find>
+</gsearch2>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:Test1_printfIsEqual:F1sp is not null
+Type array:
+   
+tp:00A105A8 deref tp:00A105A8 </nameref2>
+</Nameref>
+tp2->type=29<ArgumentList>013 lastst=53</ArgumentList>
+Type array:
+   013 
+Got Type: 29openpa calling gsearch2Got direct function Test1_printf <Find>_break</Find>
+</ParseExpression>
+</Parse></Parse><Parse><Find>_case</Find>
+</Parse><Parse><OptConst2></OptConst2><Find>_printf</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in outer statement table
+<Find>_printf</Find>
+Looking in function's symbol table
+<Find>_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_printf</Find>
+</gsearch2>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in outer statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:Test1_printfIsEqual:F1sp is not null
+Type array:
+   
+tp:00A105A8 deref tp:00A105A8 </nameref2>
+</Nameref>
+tp2->type=29<ArgumentList>013 lastst=53</ArgumentList>
+Type array:
+   013 
+Got Type: 29openpa calling gsearch2Got direct function Test1_printf <Find>_break</Find>
+</ParseExpression>
+</Parse></Parse><Parse></Parse><Find>_exit</Find>
+</Parse>Found _exit
+<Find>_exit</Find>
+<Find>_exit</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_exit|
+<gsearch2> for: |_exit|
+Looking in statement table
+<Find>_exit</Find>
+Looking in outer statement table
+<Find>_exit</Find>
+Looking in outer statement table
+<Find>_exit</Find>
+Looking in function's symbol table
+<Find>_exit</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_exit</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>_exit</Find>
+</gsearch2>
+
+<gsearch2> for: |Test1_exit|
+Looking in statement table
+<Find>Test1_exit</Find>
+Looking in outer statement table
+<Find>Test1_exit</Find>
+Looking in outer statement table
+<Find>Test1_exit</Find>
+Looking in function's symbol table
+<Find>Test1_exit</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_exit</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_exit</Find>
+</gsearch2>
+<nameref2>
+A:0:Test1_exit<ArgumentList>007 lastst=53</ArgumentList>
+Insert at nameref
+Type array:
+   
+Insert Test1_exit into 00CD49E0Insert into global table
+<Find>Test1_exit</Find>
+At insert:
+Type array:
+   
+<BuildSignature>E:Test1_exit</BuildSignature></nameref2>
+</Nameref>
+</ParseExpression>
+</Parse>Returning EOF from NextToken.
+D<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:1 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Node:0
+nodetype: 139: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+Statement
+<Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B<OptConst></OptConst><OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><OptConst></OptConst>B<OptConst></OptConst><Statement__Scan>B<Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan>BB<Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan>BB<Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan>B</Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 24   12   7   0   10   _x   
+1: 4   4   4   0   11   Test1_printf   
+2: 2   1   0   0   -1   _argc   
+3: 1   1   0   0   -1      
+4: 1   1   1   0   -1   Test1_exit   
+5: 1   1   0   0   -1      
+6: 1   1   0   0   -1      
+7: 1   1   0   0   -1      
+8: 0   6   1   0   -1      
+9: 0   1   0   0   -1      
+10: 0   5   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_printf|
+Looking in statement table
+<Find>Test1_printf</Find>
+Looking in function's symbol table
+<Find>Test1_printf</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_printf</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_printf:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_exit|
+Looking in statement table
+<Find>Test1_exit</Find>
+Looking in function's symbol table
+<Find>Test1_exit</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_exit</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_exit:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs><GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:2 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Node:0
+nodetype: 139: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+Statement
+<CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 24   12   7   0   10   _x   
+1: 4   4   4   0   11   Test1_printf   
+2: 2   1   0   0   -1   _argc   
+3: 1   1   0   0   -1      
+4: 1   1   1   0   -1   Test1_exit   
+5: 1   1   0   0   -1      
+6: 1   1   0   0   -1      
+7: 1   1   0   0   -1      
+8: 0   6   1   0   -1      
+9: 0   1   0   0   -1      
+10: 0   5   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+===== After Update =====Statement
+Statement
+Statement
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 10
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Node:0
+nodetype: 139: ???
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 10
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 37: en_icon
+  rg: 0
+Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 11
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+Node:0
+nodetype: 56: en_regvar
+rg: 10
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 11
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 11
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 11
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 43: ???
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+Statement
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |Test1_exit|
+Looking in statement table
+<Find>Test1_exit</Find>
+Looking in function's symbol table
+<Find>Test1_exit</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>Test1_exit</Find>
+Looking at class members 00A10480
+Looking at global symbols
+<Find>Test1_exit:Match</Find>
+Found in global symbol table
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateZeradic>ABCD</GenerateZeradic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs>E_main: 12 basic blocks
+----- Compute Live Vars -----
+11: g30  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+10: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+9: g4 g5  || k5 
+Edges to: - - - - Live Out - - - -{ 1 2 4 5 11 27 30 }----- Compute Live Vars -----
+8:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+7: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+6: g4  || 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 30 }----- Compute Live Vars -----
+5:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+4: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+3: g4 g29  || k4 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 29 30 }----- Compute Live Vars -----
+2: g10  || k10 
+Edges to: - - - - Live Out - - - -{ 4 10 29 30 }----- Compute Live Vars -----
+1: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 10 11 27 30 }----- Compute Live Vars -----
+0: g10 g11 g30  || k11 k27 k29 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 10 11 27 30 }----- Compute Live Vars -----
+11: g30  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+10: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+9: g4 g5  || k5 
+Edges to: - - - - Live Out - - - -{ 1 2 4 5 11 27 30 }----- Compute Live Vars -----
+8:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+7: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+6: g4  || 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 30 }----- Compute Live Vars -----
+5:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+4: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+3: g4 g29  || k4 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 29 30 }----- Compute Live Vars -----
+2: g10  || k10 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+1: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+0: g10 g11 g30  || k11 k27 k29 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 10 11 27 30 }----- Compute Live Vars -----
+11: g30  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+10: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+9: g4 g5  || k5 
+Edges to: - - - - Live Out - - - -{ 1 2 4 5 11 27 30 }----- Compute Live Vars -----
+8:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+7: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+6: g4  || 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 30 }----- Compute Live Vars -----
+5:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+4: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+3: g4 g29  || k4 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 29 30 }----- Compute Live Vars -----
+2: g10  || k10 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+1: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+0: g10 g11 g30  || k11 k27 k29 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 10 11 27 29 30 }----- Compute Live Vars -----
+11: g30  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+10: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+9: g4 g5  || k5 
+Edges to: - - - - Live Out - - - -{ 1 2 4 5 11 27 30 }----- Compute Live Vars -----
+8:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+7: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+6: g4  || 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 30 }----- Compute Live Vars -----
+5:  || 
+Edges to: - - - - Live Out - - - -{ 30 }----- Compute Live Vars -----
+4: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 11 27 30 }----- Compute Live Vars -----
+3: g4 g29  || k4 
+Edges to: - - - - Live Out - - - -{ 1 2 4 11 27 29 30 }----- Compute Live Vars -----
+2: g10  || k10 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+1: g1 g2 g11 g27 g30  || k1 k2 k4 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 4 10 11 27 29 30 }----- Compute Live Vars -----
+0: g10 g11 g30  || k11 k27 k29 k30 
+Edges to: - - - - Live Out - - - -{ 1 2 10 11 27 29 30 }<table style="width:100%">
+<tr><td>0: </td><td>vi1 </td><td>vi2 </td><td>vi10 </td><td>vi11 </td><td>vi30 </td><td></td><td></td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo10 </td><td>vo11 </td><td>vo27 </td><td>vo29 </td><td>vo30 </td><td></td></tr>
+<tr><td>1: </td><td>vi1 </td><td>vi2 </td><td>vi10 </td><td>vi11 </td><td>vi27 </td><td>vi29 </td><td>vi30 </td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo4 </td><td>vo10 </td><td>vo11 </td><td>vo27 </td><td>vo29 </td><td>vo30 </td></tr>
+<tr><td>2: </td><td>vi1 </td><td>vi2 </td><td>vi4 </td><td>vi10 </td><td>vi11 </td><td>vi27 </td><td>vi29 </td><td>vi30 </td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo4 </td><td>vo10 </td><td>vo11 </td><td>vo27 </td><td>vo29 </td><td>vo30 </td></tr>
+<tr><td>3: </td><td>vi1 </td><td>vi2 </td><td>vi4 </td><td>vi11 </td><td>vi27 </td><td>vi29 </td><td>vi30 </td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo4 </td><td>vo11 </td><td>vo27 </td><td>vo29 </td><td>vo30 </td><td></td></tr>
+<tr><td>4: </td><td>vi1 </td><td>vi2 </td><td>vi11 </td><td>vi27 </td><td>vi30 </td><td></td><td></td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo11 </td><td>vo27 </td><td>vo30 </td><td></td><td></td><td></td></tr>
+<tr><td>5: </td><td>vi30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>6: </td><td>vi1 </td><td>vi2 </td><td>vi4 </td><td>vi11 </td><td>vi27 </td><td>vi30 </td><td></td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo4 </td><td>vo11 </td><td>vo27 </td><td>vo30 </td><td></td><td></td></tr>
+<tr><td>7: </td><td>vi1 </td><td>vi2 </td><td>vi11 </td><td>vi27 </td><td>vi30 </td><td></td><td></td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo11 </td><td>vo27 </td><td>vo30 </td><td></td><td></td><td></td></tr>
+<tr><td>8: </td><td>vi30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>9: </td><td>vi1 </td><td>vi2 </td><td>vi4 </td><td>vi5 </td><td>vi11 </td><td>vi27 </td><td>vi30 </td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo4 </td><td>vo5 </td><td>vo11 </td><td>vo27 </td><td>vo30 </td><td></td></tr>
+<tr><td>10: </td><td>vi1 </td><td>vi2 </td><td>vi11 </td><td>vi27 </td><td>vi30 </td><td></td><td></td><td></td><td> || </td><td>vo1 </td><td>vo2 </td><td>vo11 </td><td>vo27 </td><td>vo30 </td><td></td><td></td><td></td></tr>
+<tr><td>11: </td><td>vi30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo30 </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>12: </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r5: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r4: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r30: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r29: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r27: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r11: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r10: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r2: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+Visited r1: { 0 1 2 3 4 5 6 7 8 9 10 11 }
+<VarForests>0
+Var5: 1 trees
+<Tree>0 Color:-12851 { 9 }</Tree>
+<Forest>{ 9 }</Forest>
+Var4: 4 trees
+<Tree>1 Color:-12851 { 1 2 }</Tree>
+<Tree>2 Color:-12851 { 3 }</Tree>
+<Tree>3 Color:-12851 { 6 }</Tree>
+<Tree>4 Color:-12851 { 9 }</Tree>
+<Forest>{ 1 2 3 6 9 }</Forest>
+Var30: 1 trees
+<Tree>5 Color:-12851 { 0 1 2 3 4 5 6 7 8 9 10 11 }</Tree>
+<Forest>{ 0 1 2 3 4 5 6 7 8 9 10 11 }</Forest>
+Var29: 2 trees
+<Tree>6 Color:-12851 { 0 1 2 }</Tree>
+<Tree>7 Color:-12851 { 3 }</Tree>
+<Forest>{ 0 1 2 3 }</Forest>
+Var27: 4 trees
+<Tree>8 Color:-12851 { 0 1 2 }</Tree>
+<Tree>9 Color:-12851 { 3 4 }</Tree>
+<Tree>10 Color:-12851 { 6 7 }</Tree>
+<Tree>11 Color:-12851 { 9 10 }</Tree>
+<Forest>{ 0 1 2 3 4 6 7 9 10 }</Forest>
+Var11: 4 trees
+<Tree>12 Color:-12851 { 0 1 2 }</Tree>
+<Tree>13 Color:-12851 { 3 4 }</Tree>
+<Tree>14 Color:-12851 { 6 7 }</Tree>
+<Tree>15 Color:-12851 { 9 10 }</Tree>
+<Forest>{ 0 1 2 3 4 6 7 9 10 }</Forest>
+Var10: 1 trees
+<Tree>16 Color:-12851 { 0 1 2 }</Tree>
+<Forest>{ 0 1 2 }</Forest>
+Var2: 4 trees
+<Tree>17 Color:-12851 { 0 1 2 }</Tree>
+<Tree>18 Color:-12851 { 3 4 }</Tree>
+<Tree>19 Color:-12851 { 6 7 }</Tree>
+<Tree>20 Color:-12851 { 9 10 }</Tree>
+<Forest>{ 0 1 2 3 4 6 7 9 10 }</Forest>
+Var1: 4 trees
+<Tree>21 Color:-12851 { 0 1 2 }</Tree>
+<Tree>22 Color:-12851 { 3 4 }</Tree>
+<Tree>23 Color:-12851 { 6 7 }</Tree>
+<Tree>24 Color:-12851 { 9 10 }</Tree>
+<Forest>{ 0 1 2 3 4 6 7 9 10 }</Forest>
+</VarForests>
+<Paths>
+0: { 0 1 2 11 }
+1: { 0 1 2 3 4 5 11 }
+</Paths>
+</ParseFunctionBody>
+<FuncSummary>
+</FuncSummary>
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+....</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

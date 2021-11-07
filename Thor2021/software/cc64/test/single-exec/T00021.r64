@@ -1,0 +1,72 @@
+
+;{++
+   
+	code
+	align	16
+
+	.global _foo
+	.align 16
+
+;.func _foo
+
+;====================================================
+; Basic Block 0
+;====================================================
+_foo():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  ldo      $t6,16[$fp]
+  add      $t5,$t6,#2
+  ldo      $t6,24[$fp]
+  sub      $a0,$t5,$t6
+.C00010:
+  leave    #112
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  ldi      $t4,#1
+  push     $t4
+  ldi      $t4,#3
+  push     $t4
+  bal      $ra,_foo
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  mov      $a0,$t4
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+;--}

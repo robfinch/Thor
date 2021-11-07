@@ -1,0 +1,80 @@
+     1	struct foo {
+     2	int i, j, k;
+     3	char *p;
+     4	float v;
+     5	};
+     6	
+     7	int
+     8	f1(struct foo f, struct foo *p, int n, ...)
+     9	{
+    10	if (f.i != p->i)
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+    11	return 0;
+ *** error 6: E Bad punctuation
+    12	return p->j + n;
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+
+
+
+    15	int
+    16	main(void)
+    17	{
+    18	struct foo f;
+    19	
+    20	f.i = f.j = 1;
+    21	f1(f, &f, 2);
+    22	f1(f, &f, 2, 1, f, &f);
+    23	
+    24	return 0;
+    25	}
+    26	
+
+
+*** local symbol table ***
+
+40 _f         =ffffffd8   -    Auto        struct _foo 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000028   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _foo 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _f1        =000028   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   040 007 039 
+Stack Space:
+		Argbot: -40
+		Tmpbot: -56
+		Stkspc: 56
+		
+ *** structures and unions ***
+
+40 _foo       =000000   -    Type        struct _foo 
+    7 _i         =000000   -    Member      Long
+    7 _j         =000008   -    Member      Long
+    7 _k         =000010   -    Member      Long
+    13 _p         =000028   -    Auto        Pointer to Char
+    9 _v         =000020   -    Member      Double

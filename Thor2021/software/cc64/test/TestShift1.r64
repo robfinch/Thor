@@ -1,0 +1,29 @@
+ 	data
+	align	2
+public data _b:
+	dco	262144
+endpublic
+  
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestShift1:
+  link     #32
+  lea      $gp,__data_start
+  ldo      $t1,16[$fp]
+  ldo      $t2,_b[$gp]
+  add      $a0,$t1,$t2
+TestShift1_8:
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestShift1
+;	global	_b

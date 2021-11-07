@@ -1,0 +1,83 @@
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+T00220_16:
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00220_1[$gp1]
+  sto      $t0,0[$sp]
+  sto      $x0,8[$sp]
+  call     _printf
+;     printf("\n");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00220_2[$gp1]
+  sto      $t0,0[$sp]
+  call     _printf
+;     return 0;
+  mov      $a0,$x0
+T00220_10:
+T00220_13:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+T00220_1:	; %04X 
+T00220_2:
+	extern	_getc
+;	global	_main
+	extern	_gets
+	extern	_putc
+	extern	_puts
+	extern	__Setjmp
+	extern	_getchar
+	extern	_freopen
+	extern	_tmpfile
+	extern	_putchar
+	extern	_fgetpos
+	extern	_fprintf
+	extern	_setvbuf
+	extern	_fread
+	extern	_fsetpos
+	extern	_sprintf
+	extern	_fgetc
+	extern	_vprintf
+	extern	_scanf
+	extern	_fseek
+	extern	_ftell
+	extern	_fopen
+	extern	_fgets
+	extern	_fputc
+	extern	_fputs
+	extern	_clearerr
+	extern	__Files
+	extern	__Fgpos
+	extern	__Fspos
+	extern	_vfprintf
+	extern	_fscanf
+	extern	_rename
+	extern	_fclose
+	extern	_vsprintf
+	extern	_sscanf
+	extern	_ungetc
+	extern	_fflush
+	extern	_rewind
+	extern	_setbuf
+	extern	_tmpnam
+	extern	_remove
+	extern	_ferror
+	extern	_fwrite
+	extern	_printf
+	extern	_perror
+	extern	_feof

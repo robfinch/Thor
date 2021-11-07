@@ -1,0 +1,145 @@
+
+;{++
+                                                                                                                                                  
+	bss
+	align	2
+
+public bss __noname_var0[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00018
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  ldi      $s0,#_printf
+; printf("a=%d\n", a);
+  lea      $t4,T00198_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$x0
+  jal      $ra,[$s0]
+; printf("b=%d\n", b);
+  lea      $t4,T00198_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#1
+  push     $t4
+  jal      $ra,[$s0]
+; printf("c=%d\n", c);
+  lea      $t4,T00198_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#2
+  push     $t4
+  jal      $ra,[$s0]
+; printf("e=%d\n", e);
+  lea      $t4,T00198_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$x0
+  jal      $ra,[$s0]
+; printf("f=%d\n", f);
+  lea      $t4,T00198_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#1
+  push     $t4
+  jal      $ra,[$s0]
+; printf("g=%d\n", g);
+  lea      $t4,T00198_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#2
+  push     $t4
+  jal      $ra,[$s0]
+; printf("i=%d\n", i);
+  lea      $t4,T00198_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$x0
+  jal      $ra,[$s0]
+; printf("j=%d\n", j);
+  lea      $t4,T00198_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#1
+  push     $t4
+  jal      $ra,[$s0]
+; printf("k=%d\n", k);
+  lea      $t4,T00198_9[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#2
+  push     $t4
+  jal      $ra,[$s0]
+; return 0;
+  mov      $a0,$x0
+.C00019:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00018:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00019
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00198_1[12]: ; a=%d
+
+	dcw	97,61,37,100,10,0
+T00198_2[12]: ; b=%d
+
+	dcw	98,61,37,100,10,0
+T00198_3[12]: ; c=%d
+
+	dcw	99,61,37,100,10,0
+T00198_4[12]: ; e=%d
+
+	dcw	101,61,37,100,10,0
+T00198_5[12]: ; f=%d
+
+	dcw	102,61,37,100,10,0
+T00198_6[12]: ; g=%d
+
+	dcw	103,61,37,100,10,0
+T00198_7[12]: ; i=%d
+
+	dcw	105,61,37,100,10,0
+T00198_8[12]: ; j=%d
+
+	dcw	106,61,37,100,10,0
+T00198_9[12]: ; k=%d
+
+	dcw	107,61,37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

@@ -1,0 +1,94 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #32
+  ldi      $t4,#.C00025
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00000E00
+; i = i ? 0 : 0l;
+  beqz     $s0,.C00027
+  ldi      $t5,#0
+  bra      .C00028
+.C00027:
+  ldi      $t5,#0
+.C00028:
+  mov      $s0,$t5
+; p = i ? (void *) 0 : 0;
+  beqz     $s0,.C00029
+  ldi      $t5,#0
+  bra      .C00030
+.C00029:
+  ldi      $t5,#0
+.C00030:
+  mov      $s2,$t5
+; p = i ? 0 : (void *) 0;
+  beqz     $s0,.C00031
+  ldi      $t5,#0
+  bra      .C00032
+.C00031:
+  ldi      $t5,#0
+.C00032:
+  mov      $s2,$t5
+; p = i ? 0 : (const void *) 0;
+  beqz     $s0,.C00033
+  ldi      $t5,#0
+  bra      .C00034
+.C00033:
+  ldi      $t5,#0
+.C00034:
+  mov      $s2,$t5
+; q = i ? 0 : p;
+  beqz     $s0,.C00035
+  ldi      $t5,#0
+.C00035:
+  mov      $s1,$s2
+; q = i ? p : 0;
+  beqz     $s0,.C00037
+  bra      .C00038
+.C00037:
+  ldi      $t5,#0
+.C00038:
+  mov      $s1,$t5
+; q = i ? q : 0;
+  beqz     $s0,.C00039
+  bra      .C00040
+.C00039:
+  ldi      $t5,#0
+.C00040:
+  mov      $s1,$t5
+; q = i ? 0 : q;
+  beqz     $s0,.C00041
+  ldi      $t5,#0
+.C00041:
+; return (int) q;
+  mov      $a0,$x0
+.C00026:
+  ldm      [$sp],#$00000E00
+  leave    #104
+.C00025:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00026
+.. 
+
+
+	rodata
+	align	16
+
+;--}

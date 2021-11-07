@@ -1,0 +1,39 @@
+   	code
+	align	16
+   	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestCompl:
+  link     #72
+  stm      [$sp],#$00003E00
+  ldo      $s0,16[$fp]
+  ldo      $s1,24[$fp]
+; x = ~((y=(a & b)));
+  nand     $s3,$s0,$s1
+; x = ~(a & b);
+  nand     $t0,$s0,$s1
+; y = !(a && b);
+  sne      $t1,$s0,$x0
+  sne      $t2,$s1,$x0
+  and      $t1,$t1,$t2
+  not      $s2,$s0
+; z = (a || b);
+  sne      $t0,$s0,$x0
+  sne      $t1,$s1,$x0
+  and      $t0,$t0,$t1
+  mov      $s4,$s0
+; return x+y+z;
+  add      $t1,$s3,$s2
+  add      $a0,$t1,$s4
+TestCompl_10:
+  ldm      [$sp],#$00003E00
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestCompl

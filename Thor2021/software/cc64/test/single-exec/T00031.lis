@@ -1,0 +1,105 @@
+     1	int
+     2	zero()
+     3	{
+     4	return 0;
+     5	}
+     6	
+
+
+*** local symbol table ***
+
+
+
+
+     7	int
+     8	one()
+     9	{
+    10	return 1;
+    11	}
+    12	
+
+
+*** local symbol table ***
+
+
+
+
+    13	int
+    14	main()
+    15	{
+    16	int x;
+    17	int y;
+    18	
+    19	x = zero();
+    20	y = ++x;
+    21	if (x != 1)
+    22	return 1;
+    23	if (y != 1)
+    24	return 1;
+    25	
+    26	x = one();
+    27	y = --x;
+    28	if (x != 0)
+    29	return 1;
+    30	if (y != 0)
+    31	return 1;
+    32	
+    33	x = zero();
+    34	y = x++;
+    35	if (x != 1)
+    36	return 1;
+    37	if (y != 0)
+    38	return 1;
+    39	
+    40	x = one();
+    41	y = x--;
+    42	if (x != 0)
+    43	return 1;
+    44	if (y != 1)
+    45	return 1;
+    46	
+    47	return 0;
+    48	}
+    49	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+7 _y         =fffffff0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+29 _zero      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __delete   =000000   -    
+29 _one       =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

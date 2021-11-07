@@ -1,0 +1,302 @@
+
+;{++
+                                                                                                                                                                                                                 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00033
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  ldi      $s0,#_printf
+; float a = 12.34 + 56.78;
+  ldo      $t4,T00174_25[$gp]
+  sto      $t4,-8[$fp]
+; printf("%f\n", a);
+  lea      $t4,T00174_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", 12.34 + 56.78);
+  lea      $t4,T00174_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_25[$gp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", 12.34 - 56.78);
+  lea      $t4,T00174_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_26[$gp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", 12.34 * 56.78);
+  lea      $t4,T00174_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_27[$gp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", 12.34 / 56.78);
+  lea      $t4,T00174_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_28[$gp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%d %d %d %d %d %d\n", 12.34 < 56.78, 12.34 <= 56.78, 12.34 == 56.78, 12.34 >= 56.78, 12.34 > 56.78, 12.34 != 56.78);
+  sub      $sp,$sp,#56
+  lea      $t4,T00174_8[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldi      $t4,#1
+  sto      $t4,8[$sp]
+  ldi      $t4,#1
+  sto      $t4,16[$sp]
+  ldi      $t4,#0
+  sto      $t4,24[$sp]
+  ldi      $t4,#0
+  sto      $t4,32[$sp]
+  ldi      $t4,#0
+  sto      $t4,40[$sp]
+  ldi      $t4,#1
+  sto      $t4,48[$sp]
+  jal      $ra,[$s0]
+; printf("%d %d %d %d %d %d\n", 12.34 < 12.34, 12.34 <= 12.34, 12.34 == 12.34, 12.34 >= 12.34, 12.34 > 12.34, 12.34 != 12.34);
+  sub      $sp,$sp,#56
+  lea      $t4,T00174_9[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldi      $t4,#0
+  sto      $t4,8[$sp]
+  ldi      $t4,#1
+  sto      $t4,16[$sp]
+  ldi      $t4,#1
+  sto      $t4,24[$sp]
+  ldi      $t4,#1
+  sto      $t4,32[$sp]
+  ldi      $t4,#0
+  sto      $t4,40[$sp]
+  ldi      $t4,#0
+  sto      $t4,48[$sp]
+  jal      $ra,[$s0]
+; printf("%d %d %d %d %d %d\n", 56.78 < 12.34, 56.78 <= 12.34, 56.78 == 12.34, 56.78 >= 12.34, 56.78 > 12.34, 56.78 != 12.34);
+  sub      $sp,$sp,#56
+  lea      $t4,T00174_10[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldi      $t4,#0
+  sto      $t4,8[$sp]
+  ldi      $t4,#0
+  sto      $t4,16[$sp]
+  ldi      $t4,#0
+  sto      $t4,24[$sp]
+  ldi      $t4,#1
+  sto      $t4,32[$sp]
+  ldi      $t4,#1
+  sto      $t4,40[$sp]
+  ldi      $t4,#1
+  sto      $t4,48[$sp]
+  jal      $ra,[$s0]
+; a = 12.34;
+  ldo      $t4,T00174_1[$gp1]
+  sto      $t4,-8[$fp]
+; a += 56.78;
+  ldo      $t4,T00174_2[$gp1]
+  ldo      $t5,-8[$fp]
+  fadd     $t5,$t5,$t4
+  sto      $t5,-8[$fp]
+; printf("%f\n", a);
+  lea      $t4,T00174_11[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; a = 12.34;
+  ldo      $t4,T00174_1[$gp1]
+  sto      $t4,-8[$fp]
+; a -= 56.78;
+  ldo      $t4,T00174_2[$gp1]
+  ldo      $t5,-8[$fp]
+  fsub     $t5,$t5,$t4
+  sto      $t5,-8[$fp]
+; printf("%f\n", a);
+  lea      $t4,T00174_12[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; a = 12.34;
+  ldo      $t4,T00174_1[$gp1]
+  sto      $t4,-8[$fp]
+; a *= 56.78;
+  ldo      $t4,T00174_2[$gp1]
+  fmul.d   -8[$fp],-8[$fp],$t4
+; printf("%f\n", a);
+  lea      $t4,T00174_13[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; a = 12.34;
+  ldo      $t4,T00174_1[$gp1]
+  sto      $t4,-8[$fp]
+; a /= 56.78;
+  ldo      $t5,T00174_2[$gp1]
+; printf("%f\n", a);
+  lea      $t4,T00174_14[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", +12.34);
+  lea      $t4,T00174_15[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_1[$gp1]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", -12.34);
+  lea      $t4,T00174_16[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,T00174_17[$gp1]
+  push     $t4
+  jal      $ra,[$s0]
+; a = 2;
+  ldo      $t4,T00174_29[$gp]
+  sto      $t4,-8[$fp]
+; printf("%f\n", a);
+  lea      $t4,T00174_18[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("%f\n", _Sin(2, 0));
+  lea      $t4,T00174_19[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#2
+  push     $t4,$x0
+  bal      $ra,__Sin
+  add      $sp,$sp,#8
+  push     $a0
+  jal      $ra,[$s0]
+; return 0;
+  mov      $a0,$x0
+.C00034:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00033:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00034
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00174_29[0]:
+
+T00174_28[8]:
+	dct	0x8F8E0597,0x3FCBD178
+T00174_27[8]:
+	dct	0x5460AA64,0x4085E552
+T00174_26[8]:
+	dct	0x7AE147AE,0x4028AE14
+T00174_25[8]:
+	dct	0x147AE147,0x405147AE
+T00174_17[8]:
+	dct	0x7AE147AE,0xC028AE14
+T00174_2[16]:
+	dct	0x0A3D70A3,0x404C63D7
+T00174_1[16]:
+	dct	0x7AE147AE,0x4028AE14
+	align	8
+
+
+T00174_3[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_4[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_5[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_6[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_7[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_8[38]: ; %d %d %d %d %d %d
+
+	dcw	37,100,32,37,100,32,37,100
+	dcw	32,37,100,32,37,100,32,37
+	dcw	100,10,0
+T00174_9[38]: ; %d %d %d %d %d %d
+
+	dcw	37,100,32,37,100,32,37,100
+	dcw	32,37,100,32,37,100,32,37
+	dcw	100,10,0
+T00174_10[38]: ; %d %d %d %d %d %d
+
+	dcw	37,100,32,37,100,32,37,100
+	dcw	32,37,100,32,37,100,32,37
+	dcw	100,10,0
+T00174_11[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_12[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_13[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_14[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_15[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_16[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_18[8]: ; %f
+
+	dcw	37,102,10,0
+T00174_19[8]: ; %f
+
+	dcw	37,102,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Hugeval
+	.extern	__Files

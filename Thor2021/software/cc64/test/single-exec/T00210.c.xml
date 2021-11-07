@@ -1,0 +1,978 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614DD8(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 01A09BE0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614EC8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 01A09BE0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614FB8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 01A09BE0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 123 124 125 126 127 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 350 354 355 358 359 362 363 364 370 375 380 381 382 383 385 386 387 388 414 }<Find>_typedef</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<Find>_unsigned</Find>
+<Find>_short</Find>
+<Find>_uint16_t</Find>
+<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_uint16_t|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_uint16_t</Find>
+hh1</FindSymbol>
+DGH<FindSymbol><Find>_uint16_t</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 18
+***Inserting:_uint16_t into 01A09BE0
+Insert _uint16_t into 01A09BE0Insert into global table
+<Find>_uint16_t</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_typedef</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<Find>_unsigned</Find>
+<Find>_char</Find>
+<TYP__Make>
+</TYP__Make>
+<Find>_uint8_t</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_uint8_t|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_uint8_t</Find>
+hh1</FindSymbol>
+DGH<FindSymbol><Find>_uint8_t</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 17
+***Inserting:_uint8_t into 01A09BE0
+Insert _uint8_t into 01A09BE0Insert into global table
+<Find>_uint8_t</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_typedef</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<Find>_union</Find>
+<Find>_Unaligned16a</Find>
+<Find>_Unaligned16a</Find>
+Insert into tagtable:_Unaligned16a|
+<Find>_Unaligned16a</Find>
+At insert:
+Type array:
+   
+Insert into tagtable:_Unaligned16a|
+<Find>_Unaligned16a:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+<Find>_uint16_t</Find>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_uint16_t<Find>_uint16_t</Find>
+<Find>_uint16_t</Find>
+<Find>_uint16_t:Match</Find>
+Actually found type.
+<Find>_u</Find>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_u|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_u</Find>
+hh1</FindSymbol>
+DEGHInsert _u into 016C5898<Find>_u</Find>
+At insert:
+Type array:
+   
+<Find>_uint8_t</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_uint8_t<Find>_uint8_t</Find>
+<Find>_uint8_t</Find>
+<Find>_uint8_t:Match</Find>
+Actually found type.
+<Find>_b</Find>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_b|CDE</ParsePrefixId><ParseDeclSuffix>
+[<TYP__Make>
+</TYP__Make>
+<OptConst2></OptConst2>Setting array size:4
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_b</Find>
+hh1</FindSymbol>
+DEGHInsert _b into 016C5898<Find>_b</Find>
+At insert:
+Type array:
+   
+</declare>
+<Find>___attribute__</Find>
+<Find>_packed</Find>
+<Find>_Unaligned16a</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_Unaligned16a|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_Unaligned16a</Find>
+hh1</FindSymbol>
+DGH<FindSymbol><Find>_Unaligned16a</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 25
+***Inserting:_Unaligned16a into 01A09BE0
+Insert _Unaligned16a into 01A09BE0Insert into global table
+<Find>_Unaligned16a</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_typedef</Find>
+<TYP__Copy>
+ACD<CopySymbolTable>
+ABEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _u into 016C5968<Find>_u:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _b into 016C5968<Find>_b:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+D</CopySymbolTable>
+</TYP__Copy>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<Find>_union</Find>
+<Find>___attribute__</Find>
+<Find>_packed</Find>
+<Find>_Unaligned16b</Find>
+<Find>_Unaligned16b</Find>
+<Find>_Unaligned16b</Find>
+<Find>_Unaligned16b</Find>
+Insert into tagtable:_Unaligned16b|
+<Find>_Unaligned16b</Find>
+<Find>_Unaligned16b</Find>
+<Find>_Unaligned16b</Find>
+At insert:
+Type array:
+   
+Insert into tagtable:_Unaligned16b|
+<Find>_Unaligned16b:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+<Find>_uint16_t</Find>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_uint16_t<Find>_uint16_t</Find>
+<Find>_uint16_t</Find>
+<Find>_uint16_t</Find>
+<Find>_uint16_t</Find>
+<Find>_uint16_t:Match</Find>
+Actually found type.
+<Find>_u</Find>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_u|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_u</Find>
+hh1</FindSymbol>
+DEGHInsert _u into 016C59D0<Find>_u</Find>
+At insert:
+Type array:
+   
+<Find>_uint8_t</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_uint8_t<Find>_uint8_t</Find>
+<Find>_uint8_t</Find>
+<Find>_uint8_t</Find>
+<Find>_uint8_t</Find>
+<Find>_uint8_t:Match</Find>
+Actually found type.
+<Find>_b</Find>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_b|CDE</ParsePrefixId><ParseDeclSuffix>
+[<TYP__Make>
+</TYP__Make>
+<OptConst2></OptConst2>Setting array size:4
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_b</Find>
+hh1</FindSymbol>
+DEGHInsert _b into 016C59D0<Find>_b</Find>
+At insert:
+Type array:
+   
+</declare>
+<Find>_Unaligned16b</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_Unaligned16b|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_Unaligned16b</Find>
+hh1</FindSymbol>
+DGH<FindSymbol><Find>_Unaligned16b</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 25
+***Inserting:_Unaligned16b into 01A09BE0
+Insert _Unaligned16b into 01A09BE0Insert into global table
+<Find>_Unaligned16b</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_extern</Find>
+<TYP__Copy>
+ACD<CopySymbolTable>
+ABEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _u into 016C5AA0<Find>_u:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _b into 016C5AA0<Find>_b:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+D</CopySymbolTable>
+</TYP__Copy>
+</declare>
+<Find>_void</Find>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_foo</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_foo|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _foo
+****************************
+****************************
+<Find>_void</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(84)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(53)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 28
+***Inserting:_p0 into 016150C8
+Insert _p0 into 016150C8<Find>_p0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_p0:Match</Find>
+</BuildParameterList>
+Set false
+<Find>___attribute__</Find>
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_foo</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_foo</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_foo into 01A09BE0
+<BuildSignature>E<TypenoToChars>ABCD:3AAA</TypenoToChars>:_foo3AAA</BuildSignature>Insert _foo into 01A09BE0Insert into global table
+<Find>_foo</Find>
+At insert:
+Type array:
+   028 
+</DoInsert>
+JKb<Declaration_ParsePrefix>(52)
+(<Find>_stdcall</Find>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_stdcall<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<TYP__Make>
+</TYP__Make>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_stdcall|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_stdcall</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_stdcall</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_stdcall into 01A09BE0
+Insert _stdcall into 01A09BE0Insert into global table
+<Find>_stdcall</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_stdcall:Match</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_stdcall:Match</Find>
+hh1</FindSymbol>
+klJK</declare>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Find>_void</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>___attribute__</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(166)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C</declare>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Find>_stdcall</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<ParseId>_stdcall<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall</Find>
+<Find>_stdcall:Match</Find>
+Actually found type.
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_stdcall|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_stdcall:Match</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_stdcall:Match</Find>
+hh1</FindSymbol>
+klJK<Find>_foo</Find>
+<Find>_void</Find>
+</declare>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Find>_int</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>___attribute__</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(166)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C</declare>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Find>___noinline__</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<ParseId>___noinline__<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<TYP__Make>
+</TYP__Make>
+</ParseId></ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|___noinline__|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>___noinline__</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>___noinline__</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:___noinline__ into 01A09BE0
+Insert ___noinline__ into 01A09BE0Insert into global table
+<Find>___noinline__</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_actual_function</Find>
+<Find>_return</Find>
+</declare>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+<Find>_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<Find>_int</Find>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_printf</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_printf|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _printf
+****************************
+****************************
+<Find>_const</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(120)C<declare>
+A<ParseSpecifier>
+A<Find>_char</Find>
+<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<TYP__Make>
+</TYP__Make>
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 13
+***Inserting:_p0 into 016152A8
+Insert _p0 into 016152A8<Find>_p0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(63)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(53)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p1</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p1</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 39
+***Inserting:_p1 into 016152A8
+Insert _p1 into 016152A8<Find>_p1</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_p0:Match</Find>
+<Find>_p1:Match</Find>
+</BuildParameterList>
+Set false
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_printf</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_printf</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_printf into 01A09BE0
+<BuildSignature>E<TypenoToChars>ABCD:NAAA</TypenoToChars><TypenoToChars>ABCD:HBAA</TypenoToChars>:_printfNAAAHBAA</BuildSignature>Insert _printf into 01A09BE0Insert into global table
+<Find>_printf</Find>
+At insert:
+Type array:
+   013 039 
+</DoInsert>
+JK<Find>_int</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_main</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_main|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _main
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 30
+***Inserting:_main into 01A09BE0
+<BuildSignature>E:_main</BuildSignature>Insert _main into 01A09BE0Insert into global table
+<Find>_main</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _main
+***********************************
+***********************************
+***********************************
+A<BuildParameterList><ParseParmDecls>
+A(50)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_main</BuildSignature><Find>_main:Match</Find>
+CDEG<Parse function body>:_main|
+<Find>_void</Find>
+<GenerateMonadic>ABCD</GenerateMonadic>
+BbC<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Find>_function_pointer</Find>
+<TYP__Make>
+</TYP__Make>
+I<ParsePrefixId>B|_function_pointer|CDE</ParsePrefixId><ParseDeclSuffix>
+=</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_function_pointer</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_function_pointer</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 13
+***Inserting:_function_pointer into 0268B0E0
+Insert _function_pointer into 0268B0E0<Find>_function_pointer</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Deref></Deref><Find>_actual_function</Find>
+<Nameref>GSearchfor:_actual_function|
+<gsearch2> for: |_actual_function|
+Looking in statement table
+<Find>_actual_function</Find>
+Looking in function's symbol table
+<Find>_actual_function</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>_actual_function</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>_actual_function</Find>
+Looking at enums
+</gsearch2>
+
+<gsearch2> for: |_actual_function|
+Looking in statement table
+<Find>_actual_function</Find>
+Looking in function's symbol table
+<Find>_actual_function</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>_actual_function</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>_actual_function</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:0:_actual_functionUndefined symbol2 in nameref
+returning nullptr2</nameref2>
+</Nameref>
+</declare>
+<Parse><Find>_int</Find>
+</Parse><declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_a</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_a|CDE</ParsePrefixId><ParseDeclSuffix>
+=</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_a</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_a</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_a into 0268B0E0
+Insert _a into 0268B0E0<Find>_a</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Deref></Deref><Find>___attribute__</Find>
+pnode is NULL
+pnode is NULL
+</declare>
+<Parse><ParseExpression>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__</Find>
+<Find>___noinline__:Match</Find>
+<Nameref>GSearchfor:___noinline__|
+<gsearch2> for: |___noinline__|
+Looking in statement table
+<Find>___noinline__</Find>
+Looking in function's symbol table
+<Find>___noinline__</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>___noinline__</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>___noinline__:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:___noinline__IsEqual:T2sp is not null
+Type array:
+   
+tp:016C5D40 <Deref></Deref>deref tp:016C5D40 </nameref2>
+</Nameref>
+<Find>_int</Find>
+</ParseExpression>
+</Parse><declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(52)
+(<declare>
+A<ParseSpecifier>
+A</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<TYP__Make>
+</TYP__Make>
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p1</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p1</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 13
+***Inserting:_p1 into 0268B0E0
+Insert _p1 into 0268B0E0<Find>_p1</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+<Find>_void</Find>
+<ParseParmDecls>
+A(84)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(53)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 28
+***Inserting:_p0 into 01CA16A0
+Insert _p0 into 01CA16A0<Find>_p0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 13
+***Inserting:_p0 into 0268B0E0
+Insert _p0 into 0268B0E0<Find>_p0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+<Parse><ParseExpression>
+<Find>_function_pointer</Find>
+</ParseExpression>
+</Parse>Found _function_pointer
+<Find>_function_pointer</Find>
+<Find>_function_pointer</Find>
+<Find>_function_pointer</Find>
+<Find>_function_pointer</Find>
+<Find>_function_pointer</Find>
+<Find>_function_pointer</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_function_pointer|
+<gsearch2> for: |_function_pointer|
+Looking in statement table
+<Find>_function_pointer:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_function_pointer</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>_function_pointer</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>_function_pointer</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_function_pointerIsEqual:T2sp is not null
+Type array:
+   
+tp:016C60E8 <Deref></Deref>deref tp:016C60E8 </nameref2>
+</Nameref>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+pnode is NULL
+<Find>_printf</Find>
+</ParseExpression>
+</Parse>Found _printf
+<Find>_printf</Find>
+<Find>_printf</Find>
+<Find>_printf</Find>
+<Find>_printf</Find>
+<Find>_printf</Find>
+<Find>_printf:Match</Find>
+sp okay sc=5
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+<Find>_printf</Find>
+Looking in function's symbol table
+<Find>_printf</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>_printf</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>_printf:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_printfIsEqual:F1sp is not null
+Type array:
+   
+tp:016C5E10 deref tp:016C5E10 </nameref2>
+</Nameref>
+tp2->type=29<ArgumentList>013 <Find>_a</Find>
+<Nameref>GSearchfor:_a|
+<gsearch2> for: |_a|
+Looking in statement table
+<Find>_a:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_a</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615398
+<Find>_a</Find>
+Looking at class members 016C6050
+Looking at global symbols
+<Find>_a</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_aIsEqual:T2sp is not null
+Type array:
+   
+tp:016C6150 <Deref></Deref>deref tp:016C6150 </nameref2>
+</Nameref>
+007 lastst=53</ArgumentList>
+Type array:
+   013 007 
+Got Type: 29openpa calling gsearch2Got direct function _printf <Find>_int</Find>
+</ParseExpression>
+</Parse><declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_b</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_b|CDE</ParsePrefixId><ParseDeclSuffix>
+=</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_b</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_b</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_b into 0268B0E0
+Insert _b into 0268B0E0<Find>_b</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Deref></Deref><Find>_int</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<Declaration_ParsePrefix>(52)
+(<Find>___attribute__</Find>
+<declare>
+A<ParseSpecifier>
+A</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(166)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p1hh1</FindSymbol>
+DEGHNull pointer at insert
+E Compiler: null pointer encountered</compile>
+<Dumplits>
+.</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

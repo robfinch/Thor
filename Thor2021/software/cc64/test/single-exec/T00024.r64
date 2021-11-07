@@ -1,0 +1,57 @@
+
+;{++
+    
+	bss
+	align	8
+
+public bss _v[16]:
+
+	fill.b	16,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; v.x = 1;
+  sto      #1,_v[$gp]
+; v.y = 2;
+  lea      $t4,_v[$gp]
+  sto      #2,8[$t4]
+; return 3 - v.x - v.y;
+  ldi      $t6,#3
+  ldo      $t7,_v[$gp]
+  sub      $t5,$t6,$t7
+  lea      $t6,_v[$gp]
+  ldo      $t6,8[$t6]
+  sub      $a0,$t5,$t6
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,5876 @@
+<title>C64D Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+___int32</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_DBGAttr</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_DBGAttr|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_DBGAttr</Find>
+hh1kIIbIcinsert type: 5
+***Inserting:_DBGAttr into 01427310
+<BuildSignature>:_DBGAttr</BuildSignature>Insert _DBGAttr into 01427310()
+Insert into global table
+</Find>
+_DBGAttr</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_extern</Find>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_DBGClearScreen</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_DBGClearScreen|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _DBGClearScreen
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q Set false
+</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_DBGClearScreen</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_DBGClearScreen into 01427310
+<BuildSignature>:_DBGClearScreen</BuildSignature>Insert _DBGClearScreen into 01427310()
+Insert into global table
+</Find>
+_DBGClearScreen</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_extern</Find>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_DBGHomeCursor</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_DBGHomeCursor|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _DBGHomeCursor
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q Set false
+</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_DBGHomeCursor</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_DBGHomeCursor into 01427310
+<BuildSignature>:_DBGHomeCursor</BuildSignature>Insert _DBGHomeCursor into 01427310()
+Insert into global table
+</Find>
+_DBGHomeCursor</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_extern</Find>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_putch</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_putch|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _putch
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_putch)
+Type array:
+   
+Proto types(_putch)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_putch</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_putch into 01427310
+<BuildSignature>:_putch</BuildSignature>Insert _putch into 01427310()
+Insert into global table
+</Find>
+_putch</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _putch
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_char</Find>
+EA(75)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(49)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p0</Find>
+hh1kIIbIcinsert type: 15
+***Inserting:_p0 into 0143783C
+<BuildSignature>:_p0</BuildSignature>Insert _p0 into 0143783C(_putch)
+</Find>
+_p0</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_p0Match
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_putch</BuildSignature></Find>
+_putchMatch
+</Find>
+CDEeF</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</Find>
+_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+_int</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_printf</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_printf|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _printf
+****************************
+****************************
+</Find>
+_char</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_printf)
+Type array:
+   
+Proto types(_printf)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_printf</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_printf into 01427310
+<BuildSignature>:_printf</BuildSignature>Insert _printf into 01427310()
+Insert into global table
+</Find>
+_printf</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _printf
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(75)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+<ParseDeclPrefix>(39)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_p0</Find>
+hh1kIIbIcinsert type: 22
+***Inserting:_p0 into 014379FC
+<BuildSignature>:_p0</BuildSignature>Insert _p0 into 014379FC(_printf)
+</Find>
+_p0</Find>
+At insert:
+Type array:
+   
+JKEA(57)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(49)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p1</Find>
+hh1kIIbIcinsert type: 44
+***Inserting:_p1 into 014379FC
+<BuildSignature>:_p1</BuildSignature>Insert _p1 into 014379FC(_printf)
+</Find>
+_p1</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_p0Match
+</Find>
+</Find>
+_p1Match
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_printf</BuildSignature></Find>
+_printfMatch
+</Find>
+CDEeF</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</Find>
+_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+_pascal</Find>
+</Find>
+_int</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_prtflt</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_prtflt|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _prtflt
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_prtflt)
+Type array:
+   
+Proto types(_prtflt)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_prtflt</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_prtflt into 01427310
+<BuildSignature>:_prtflt</BuildSignature>Insert _prtflt into 01427310()
+Insert into global table
+</Find>
+_prtflt</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _prtflt
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_float</Find>
+EA(76)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Copy>
+ACD<CopySymbolTable>
+A</CopySymbolTable>
+</TYP__Copy>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(39)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p0</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_p0 into 01437C9C
+<BuildSignature>:_p0</BuildSignature>Insert _p0 into 01437C9C(_prtflt)
+</Find>
+_p0</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_register</Find>
+EA(87)</Find>
+_int</Find>
+EA(63)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(39)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p1</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_p1 into 01437C9C
+<BuildSignature>:_p1</BuildSignature>Insert _p1 into 01437C9C(_prtflt)
+</Find>
+_p1</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_register</Find>
+EA(87)</Find>
+_int</Find>
+EA(63)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(39)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p2</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_p2 into 01437C9C
+<BuildSignature>:_p2</BuildSignature>Insert _p2 into 01437C9C(_prtflt)
+</Find>
+_p2</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_register</Find>
+EA(87)</Find>
+_char</Find>
+EA(75)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(49)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+CDEGH</Find>
+_p3</Find>
+hh1kIIbIcinsert type: 15
+***Inserting:_p3 into 01437C9C
+<BuildSignature>:_p3</BuildSignature>Insert _p3 into 01437C9C(_prtflt)
+</Find>
+_p3</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_p0Match
+</Find>
+</Find>
+_p1Match
+</Find>
+</Find>
+_p2Match
+</Find>
+</Find>
+_p3Match
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_prtflt</BuildSignature></Find>
+_prtfltMatch
+</Find>
+CDEeF</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</Find>
+_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_ramtest</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ramtest|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _ramtest
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q Set false
+</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_ramtest</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_ramtest into 01427310
+<BuildSignature>:_ramtest</BuildSignature>Insert _ramtest into 01427310()
+Insert into global table
+</Find>
+_ramtest</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_extern</Find>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_FloatTest</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_FloatTest|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _FloatTest
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q Set false
+</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_FloatTest</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_FloatTest into 01427310
+<BuildSignature>:_FloatTest</BuildSignature>Insert _FloatTest into 01427310()
+Insert into global table
+</Find>
+_FloatTest</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_extern</Find>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_DBGDisplayString</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_DBGDisplayString|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _DBGDisplayString
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_DBGDisplayString)
+Type array:
+   
+Proto types(_DBGDisplayString)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_DBGDisplayString</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_DBGDisplayString into 01427310
+<BuildSignature>:_DBGDisplayString</BuildSignature>Insert _DBGDisplayString into 01427310()
+Insert into global table
+</Find>
+_DBGDisplayString</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _DBGDisplayString
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_char</Find>
+EA(75)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_p</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_p|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_p</Find>
+hh1kIIbIcinsert type: 22
+***Inserting:_p into 014382BC
+<BuildSignature>:_p</BuildSignature>Insert _p into 014382BC(_DBGDisplayString)
+</Find>
+_p</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_pMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_DBGDisplayString</BuildSignature></Find>
+_DBGDisplayStringMatch
+</Find>
+CDEeF</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</Find>
+_extern</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+_void</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_puthex</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_puthex|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _puthex
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_puthex)
+Type array:
+   
+Proto types(_puthex)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_puthex</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_puthex into 01427310
+<BuildSignature>:_puthex</BuildSignature>Insert _puthex into 01427310()
+Insert into global table
+</Find>
+_puthex</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _puthex
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_int</Find>
+EA(63)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_num</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_num|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_num</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_num into 0143847C
+<BuildSignature>:_num</BuildSignature>Insert _num into 0143847C(_puthex)
+</Find>
+_num</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_numMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_puthex</BuildSignature></Find>
+_puthexMatch
+</Find>
+CDEeF</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</Find>
+_static</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+</Find>
+_naked</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_inline</Find>
+</Find>
+_int</Find>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_GetButton</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_GetButton|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _GetButton
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_GetButton</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_GetButton into 01427310
+<BuildSignature>:_GetButton</BuildSignature>Insert _GetButton into 01427310()
+Insert into global table
+</Find>
+_GetButton</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _GetButton
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_GetButton</BuildSignature></Find>
+_GetButtonMatch
+</Find>
+CDEG<Parse function body>:_GetButton|
+</Find>
+_asm</Find>
+BbC<Parse></Parse><Parse></Find>
+_void</Find>
+D</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_BIOSMain</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_BIOSMain|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _BIOSMain
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_BIOSMain</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_BIOSMain into 01427310
+<BuildSignature>:_BIOSMain</BuildSignature>Insert _BIOSMain into 01427310()
+Insert into global table
+</Find>
+_BIOSMain</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _BIOSMain
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_BIOSMain</BuildSignature></Find>
+_BIOSMainMatch
+</Find>
+CDEG<Parse function body>:_BIOSMain|
+</Find>
+_float</Find>
+BbEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Copy>
+ACD<CopySymbolTable>
+A</CopySymbolTable>
+</TYP__Copy>
+</Find>
+_pi</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_pi|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_pi</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_pi into 00E4DA40
+<BuildSignature>:_pi</BuildSignature>Insert _pi into 00E4DA40()
+</Find>
+_pi</Find>
+At insert:
+Type array:
+   
+JK<Nameref>
+GSearchfor:_pi|
+<gsearch2> for: |_pi|
+Looking in statement table
+</Find>
+_piMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_piIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A190 <Deref></Deref>deref tp:01ED3230 </nameref2>
+</Nameref>
+</Find>
+_float</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Copy>
+ACD<CopySymbolTable>
+A</CopySymbolTable>
+</TYP__Copy>
+</Find>
+_a</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_a|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_a</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_a into 00E4DA40
+<BuildSignature>:_a</BuildSignature>Insert _a into 00E4DA40()
+</Find>
+_a</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_b</Find>
+b<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_b|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_b</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_b into 00E4DA40
+<BuildSignature>:_b</BuildSignature>Insert _b into 00E4DA40()
+</Find>
+_b</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_btn</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_btn|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_btn</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_btn into 00E4DA40
+<BuildSignature>:_btn</BuildSignature>Insert _btn into 00E4DA40()
+</Find>
+_btn</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_seln</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_seln|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_seln</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_seln into 00E4DA40
+<BuildSignature>:_seln</BuildSignature>Insert _seln into 00E4DA40()
+</Find>
+_seln</Find>
+At insert:
+Type array:
+   
+JK<Nameref>
+GSearchfor:_seln|
+<gsearch2> for: |_seln|
+Looking in statement table
+</Find>
+_selnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_selnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A244 <Deref></Deref>deref tp:01B2A244 </nameref2>
+</Nameref>
+</Find>
+_DBGAttr</Find>
+Found _DBGAttr
+</Find>
+_DBGAttr</Find>
+</Find>
+_DBGAttrMatch
+</Find>
+sp okay sc=4
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGAttr|
+<gsearch2> for: |_DBGAttr|
+Looking in statement table
+</Find>
+_DBGAttr</Find>
+Looking in function's symbol table
+</Find>
+_DBGAttr</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGAttr</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGAttrMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGAttrIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2995C <Deref></Deref>deref tp:01B2995C </nameref2>
+</Nameref>
+</Find>
+_DBGClearScreen</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGClearScreen|
+<gsearch2> for: |_DBGClearScreen|
+Looking in statement table
+</Find>
+_DBGClearScreen</Find>
+Looking in function's symbol table
+</Find>
+_DBGClearScreen</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGClearScreen</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGClearScreenMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGClearScreenIsEqual:T2sp is not null
+Type array:
+   
+tp:01B299D4 deref tp:01B299D4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 34openpa calling gsearch2<FindRising>_DBGClearScreen 
+</Find>
+_DBGClearScreen</Find>
+</FindRising>
+<gsearch2> for: |_DBGClearScreen|
+Looking in statement table
+</Find>
+_DBGClearScreen</Find>
+Looking in function's symbol table
+</Find>
+_DBGClearScreen</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGClearScreen</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGClearScreenMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGClearScreen </Find>
+_DBGHomeCursor</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGHomeCursor|
+<gsearch2> for: |_DBGHomeCursor|
+Looking in statement table
+</Find>
+_DBGHomeCursor</Find>
+Looking in function's symbol table
+</Find>
+_DBGHomeCursor</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGHomeCursor</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGHomeCursorMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGHomeCursorIsEqual:T2sp is not null
+Type array:
+   
+tp:01B29A4C deref tp:01B29A4C </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 34openpa calling gsearch2<FindRising>_DBGHomeCursor 
+</Find>
+_DBGHomeCursor</Find>
+</FindRising>
+<gsearch2> for: |_DBGHomeCursor|
+Looking in statement table
+</Find>
+_DBGHomeCursor</Find>
+Looking in function's symbol table
+</Find>
+_DBGHomeCursor</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGHomeCursor</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGHomeCursorMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGHomeCursor </Find>
+_DBGDisplayString</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_DBGDisplayString</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_forever</Find>
+</ParseExpression>
+</Parse><Parse><Parse></Find>
+_btn</Find>
+Found _btn
+</Find>
+_btn</Find>
+</Find>
+_btn</Find>
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_btn|
+<gsearch2> for: |_btn|
+Looking in statement table
+</Find>
+_btn</Find>
+Looking in outer statement table
+</Find>
+_btnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_btnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A208 <Deref></Deref>deref tp:01B2A208 </nameref2>
+</Nameref>
+</Find>
+_GetButton</Find>
+<Nameref>
+GSearchfor:_GetButton|
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetButtonIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetButton</BuildSignature>tp:01B2A0DC deref tp:01B2A0DC </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetButton 
+</Find>
+_GetButton</Find>
+</FindRising>
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetButton </Find>
+_switch</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_btn</Find>
+</Find>
+_btn</Find>
+</Find>
+_btn</Find>
+<Nameref>
+GSearchfor:_btn|
+<gsearch2> for: |_btn|
+Looking in statement table
+</Find>
+_btn</Find>
+Looking in outer statement table
+</Find>
+_btnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_btnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A208 <Deref></Deref>deref tp:01B2A208 </nameref2>
+</Nameref>
+</Find>
+_case</Find>
+</Find>
+_while</Find>
+<Parse></Find>
+_GetButton</Find>
+<Nameref>
+GSearchfor:_GetButton|
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetButtonIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetButton</BuildSignature>tp:01B2A0DC deref tp:01B2A0DC </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetButton 
+</Find>
+_GetButton</Find>
+</FindRising>
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetButton <Parse></Find>
+_ramtest</Find>
+</Parse></Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_ramtest|
+<gsearch2> for: |_ramtest|
+Looking in statement table
+</Find>
+_ramtest</Find>
+Looking in outer statement table
+</Find>
+_ramtest</Find>
+Looking in function's symbol table
+</Find>
+_ramtest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_ramtest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_ramtestMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_ramtestIsEqual:T2sp is not null
+Type array:
+   
+tp:01B29E0C deref tp:01B29E0C </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 34openpa calling gsearch2<FindRising>_ramtest 
+</Find>
+_ramtest</Find>
+</FindRising>
+<gsearch2> for: |_ramtest|
+Looking in statement table
+</Find>
+_ramtest</Find>
+Looking in outer statement table
+</Find>
+_ramtest</Find>
+Looking in function's symbol table
+</Find>
+_ramtest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_ramtest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_ramtestMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _ramtest </Find>
+_break</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_case</Find>
+</Parse></Find>
+_while</Find>
+<Parse></Find>
+_GetButton</Find>
+<Nameref>
+GSearchfor:_GetButton|
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetButtonIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetButton</BuildSignature>tp:01B2A0DC deref tp:01B2A0DC </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetButton 
+</Find>
+_GetButton</Find>
+</FindRising>
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetButton <Parse></Find>
+_FloatTest</Find>
+</Parse></Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_FloatTest|
+<gsearch2> for: |_FloatTest|
+Looking in statement table
+</Find>
+_FloatTest</Find>
+Looking in outer statement table
+</Find>
+_FloatTest</Find>
+Looking in function's symbol table
+</Find>
+_FloatTest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_FloatTest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_FloatTestMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_FloatTestIsEqual:T2sp is not null
+Type array:
+   
+tp:01B29E84 deref tp:01B29E84 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 34openpa calling gsearch2<FindRising>_FloatTest 
+</Find>
+_FloatTest</Find>
+</FindRising>
+<gsearch2> for: |_FloatTest|
+Looking in statement table
+</Find>
+_FloatTest</Find>
+Looking in outer statement table
+</Find>
+_FloatTest</Find>
+Looking in function's symbol table
+</Find>
+_FloatTest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_FloatTest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_FloatTestMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _FloatTest </Find>
+_break</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_case</Find>
+</Parse></Find>
+_while</Find>
+<Parse></Find>
+_GetButton</Find>
+<Nameref>
+GSearchfor:_GetButton|
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetButtonIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetButton</BuildSignature>tp:01B2A0DC deref tp:01B2A0DC </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetButton 
+</Find>
+_GetButton</Find>
+</FindRising>
+<gsearch2> for: |_GetButton|
+Looking in statement table
+</Find>
+_GetButton</Find>
+Looking in outer statement table
+</Find>
+_GetButton</Find>
+Looking in function's symbol table
+</Find>
+_GetButton</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_GetButton</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_GetButtonMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetButton <Parse></Find>
+_asm</Find>
+</Parse></Parse><Parse></Parse><Parse><Parse></Find>
+_break</Find>
+</Parse><Parse></Parse></Parse></Parse></Find>
+_static</Find>
+DEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+0: 2  0   0   -1   
+
+1: 1  0   0   -1   
+
+2: 1  0   0   -1   
+
+3: 1  1   0   -1   
+
+4: 1  0   0   -1   
+
+5: 1  0   0   -1   
+
+6: 1  0   0   -1   
+
+7: 1  0   0   -1   
+
+8: 2  2   0   -1   
+
+9: 1  1   0   -1   
+
+10: 1  0   0   -1   
+
+11: 1  1   0   -1   
+
+12: 7  7   0   11   
+
+13: 0  0   0   -1   
+
+14: 0  0   0   -1   
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGClearScreen|
+Looking in statement table
+</Find>
+_DBGClearScreen</Find>
+Looking in function's symbol table
+</Find>
+_DBGClearScreen</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGClearScreen</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGClearScreenMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGHomeCursor|
+Looking in statement table
+</Find>
+_DBGHomeCursor</Find>
+Looking in function's symbol table
+</Find>
+_DBGHomeCursor</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGHomeCursor</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGHomeCursorMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ramtest|
+Looking in statement table
+</Find>
+_ramtest</Find>
+Looking in function's symbol table
+</Find>
+_ramtest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_ramtest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_ramtestMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ramtest|
+Looking in statement table
+</Find>
+_ramtest</Find>
+Looking in function's symbol table
+</Find>
+_ramtest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_ramtest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_ramtestMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ramtest|
+Looking in statement table
+</Find>
+_ramtest</Find>
+Looking in function's symbol table
+</Find>
+_ramtest</Find>
+Searching method/class:_BIOSMain|014386D0
+Looking at params 0143871C
+</Find>
+_ramtest</Find>
+Looking at class members 01B2A174
+Looking at global symbols
+</Find>
+_ramtestMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+<GenerateZeradic>
+
+ABCD</GenerateZeradic>
+
+E</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</Find>
+_naked</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_inline</Find>
+</Find>
+_int</Find>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_GetEPC</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_GetEPC|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _GetEPC
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_GetEPC</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_GetEPC into 01427310
+<BuildSignature>:_GetEPC</BuildSignature>Insert _GetEPC into 01427310()
+Insert into global table
+</Find>
+_GetEPC</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _GetEPC
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_GetEPC</BuildSignature></Find>
+_GetEPCMatch
+</Find>
+CDEG<Parse function body>:_GetEPC|
+</Find>
+_asm</Find>
+BbC<Parse></Parse><Parse></Find>
+_static</Find>
+D</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</Find>
+_naked</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_inline</Find>
+</Find>
+_int</Find>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_GetBadAddr</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_GetBadAddr|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _GetBadAddr
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_GetBadAddr</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_GetBadAddr into 01427310
+<BuildSignature>:_GetBadAddr</BuildSignature>Insert _GetBadAddr into 01427310()
+Insert into global table
+</Find>
+_GetBadAddr</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _GetBadAddr
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_GetBadAddr</BuildSignature></Find>
+_GetBadAddrMatch
+</Find>
+CDEG<Parse function body>:_GetBadAddr|
+</Find>
+_asm</Find>
+BbC<Parse></Parse><Parse></Find>
+_static</Find>
+D</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</Find>
+_naked</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_inline</Find>
+</Find>
+_void</Find>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_SetPCHNDX</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_SetPCHNDX|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _SetPCHNDX
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_SetPCHNDX)
+Type array:
+   
+Proto types(_SetPCHNDX)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_SetPCHNDX</Find>
+hh1h2ikIIbIcinsert type: 34
+***Inserting:_SetPCHNDX into 01427310
+<BuildSignature>:_SetPCHNDX</BuildSignature>Insert _SetPCHNDX into 01427310()
+Insert into global table
+</Find>
+_SetPCHNDX</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _SetPCHNDX
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_int</Find>
+EA(63)CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_nn</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_nn|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_nn</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_nn into 01438E1C
+<BuildSignature>:_nn</BuildSignature>Insert _nn into 01438E1C(_SetPCHNDX)
+</Find>
+_nn</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_nnMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_SetPCHNDX</BuildSignature></Find>
+_SetPCHNDXMatch
+</Find>
+CDEG<Parse function body>:_SetPCHNDX|
+</Find>
+_asm</Find>
+BbC<Parse></Parse><Parse></Find>
+_static</Find>
+D</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</Find>
+_naked</Find>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_inline</Find>
+</Find>
+_int</Find>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_ReadPCHIST</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ReadPCHIST|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _ReadPCHIST
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_ReadPCHIST</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_ReadPCHIST into 01427310
+<BuildSignature>:_ReadPCHIST</BuildSignature>Insert _ReadPCHIST into 01427310()
+Insert into global table
+</Find>
+_ReadPCHIST</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _ReadPCHIST
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_ReadPCHIST</BuildSignature></Find>
+_ReadPCHISTMatch
+</Find>
+CDEG<Parse function body>:_ReadPCHIST|
+</Find>
+_asm</Find>
+BbC<Parse></Parse><Parse></Find>
+_void</Find>
+D</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_interrupt</Find>
+</Find>
+_BTNCIRQHandler</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_BTNCIRQHandler|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _BTNCIRQHandler
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_BTNCIRQHandler</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_BTNCIRQHandler into 01427310
+<BuildSignature>:_BTNCIRQHandler</BuildSignature>Insert _BTNCIRQHandler into 01427310()
+Insert into global table
+</Find>
+_BTNCIRQHandler</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _BTNCIRQHandler
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_BTNCIRQHandler</BuildSignature></Find>
+_BTNCIRQHandlerMatch
+</Find>
+CDEG<Parse function body>:_BTNCIRQHandler|
+</Find>
+_int</Find>
+BbEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_nn</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_nn|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_nn</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_nn into 00E66028
+<BuildSignature>:_nn</BuildSignature>Insert _nn into 00E66028()
+</Find>
+_nn</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_asm</Find>
+<Parse></Parse><Parse></Find>
+_DBGDisplayString</Find>
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in outer statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in outer statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_for</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A604 <Deref></Deref>deref tp:01B2A604 </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A604 <Deref></Deref>deref tp:01B2A604 </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A604 <Deref></Deref>deref tp:01B2A604 </nameref2>
+</Nameref>
+<Parse></Find>
+_SetPCHNDX</Find>
+Found _SetPCHNDX
+</Find>
+_SetPCHNDX</Find>
+</Find>
+_SetPCHNDXMatch
+</Find>
+sp okay sc=0
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_SetPCHNDX|
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_SetPCHNDXIsEqual:F1sp is not null
+Type array:
+   
+<BuildSignature>:_SetPCHNDX</BuildSignature>tp:01B2A460 deref tp:01B2A460 </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_nn</Find>
+<ArgumentList><Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A604 <Deref></Deref>deref tp:01B2A604 </nameref2>
+</Nameref>
+017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_SetPCHNDX 
+</Find>
+_SetPCHNDX</Find>
+</FindRising>
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _SetPCHNDX </Find>
+_puthex</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_puthex|
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_puthex</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_puthexIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29FEC deref tp:01B29FEC </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_ReadPCHIST</Find>
+<ArgumentList><Nameref>
+GSearchfor:_ReadPCHIST|
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_ReadPCHISTIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_ReadPCHIST</BuildSignature>tp:01B2A550 deref tp:01B2A550 </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_ReadPCHIST 
+</Find>
+_ReadPCHIST</Find>
+</FindRising>
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _ReadPCHIST 017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_puthex 
+</Find>
+_puthex</Find>
+</FindRising>
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_puthex</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_puthexMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _puthex </Find>
+_putch</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_putch|
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_putch</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_putchIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29AC4 deref tp:01B29AC4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>015 lastst=49</ArgumentList>
+Type array:
+   015 
+Got Type: 34openpa calling gsearch2<FindRising>_putch 
+</Find>
+_putch</Find>
+</FindRising>
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_putch</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_putchMatch
+IsEqual:T3Exact matchType array:
+   015 
+Type array:
+   015 
+Found in global symbol table
+</gsearch2>
+Got direct function _putch </ParseExpression>
+</Parse></Parse></Find>
+_void</Find>
+DEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+0: 6  0   0   11   
+
+1: 1  0   0   -1   
+
+2: 1  1   0   -1   
+
+3: 2  0   0   -1   
+
+4: 2  0   0   -1   
+
+5: 1  1   0   -1   
+
+6: 1  1   0   -1   
+
+7: 1  1   0   -1   
+
+8: 1  1   0   -1   
+
+9: 1  0   0   -1   
+
+10: 1  0   0   -1   
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_puthex</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_BTNCIRQHandler|01439070
+Looking at params 014390BC
+</Find>
+_putch</Find>
+Looking at class members 01B2A5E8
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+<GenerateZeradic>
+
+ABCD</GenerateZeradic>
+
+E</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_interrupt</Find>
+</Find>
+_DBERout</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_DBERout|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _DBERout
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_DBERout</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_DBERout into 01427310
+<BuildSignature>:_DBERout</BuildSignature>Insert _DBERout into 01427310()
+Insert into global table
+</Find>
+_DBERout</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _DBERout
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_DBERout</BuildSignature></Find>
+_DBERoutMatch
+</Find>
+CDEG<Parse function body>:_DBERout|
+</Find>
+_int</Find>
+BbEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_nn</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_nn|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_nn</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_nn into 00E7A4F0
+<BuildSignature>:_nn</BuildSignature>Insert _nn into 00E7A4F0()
+</Find>
+_nn</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_DBGDisplayString</Find>
+Found _DBGDisplayString
+</Find>
+_DBGDisplayString</Find>
+</Find>
+_DBGDisplayStringMatch
+</Find>
+sp okay sc=4
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_puthex</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_puthex|
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_puthexIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29FEC deref tp:01B29FEC </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_GetEPC</Find>
+<ArgumentList><Nameref>
+GSearchfor:_GetEPC|
+<gsearch2> for: |_GetEPC|
+Looking in statement table
+</Find>
+_GetEPC</Find>
+Looking in function's symbol table
+</Find>
+_GetEPC</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetEPC</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetEPCMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetEPCIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetEPC</BuildSignature>tp:01B2A2F8 deref tp:01B2A2F8 </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetEPC 
+</Find>
+_GetEPC</Find>
+</FindRising>
+<gsearch2> for: |_GetEPC|
+Looking in statement table
+</Find>
+_GetEPC</Find>
+Looking in function's symbol table
+</Find>
+_GetEPC</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetEPC</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetEPCMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetEPC 017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_puthex 
+</Find>
+_puthex</Find>
+</FindRising>
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _puthex </Find>
+_putch</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_putch|
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_putchIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29AC4 deref tp:01B29AC4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>015 lastst=49</ArgumentList>
+Type array:
+   015 
+Got Type: 34openpa calling gsearch2<FindRising>_putch 
+</Find>
+_putch</Find>
+</FindRising>
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+IsEqual:T3Exact matchType array:
+   015 
+Type array:
+   015 
+Found in global symbol table
+</gsearch2>
+Got direct function _putch </Find>
+_puthex</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_puthex|
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_puthexIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29FEC deref tp:01B29FEC </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_GetBadAddr</Find>
+<ArgumentList><Nameref>
+GSearchfor:_GetBadAddr|
+<gsearch2> for: |_GetBadAddr|
+Looking in statement table
+</Find>
+_GetBadAddr</Find>
+Looking in function's symbol table
+</Find>
+_GetBadAddr</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetBadAddr</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetBadAddrMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_GetBadAddrIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_GetBadAddr</BuildSignature>tp:01B2A3AC deref tp:01B2A3AC </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_GetBadAddr 
+</Find>
+_GetBadAddr</Find>
+</FindRising>
+<gsearch2> for: |_GetBadAddr|
+Looking in statement table
+</Find>
+_GetBadAddr</Find>
+Looking in function's symbol table
+</Find>
+_GetBadAddr</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetBadAddr</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetBadAddrMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _GetBadAddr 017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_puthex 
+</Find>
+_puthex</Find>
+</FindRising>
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _puthex </Find>
+_putch</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_putch|
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_putchIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29AC4 deref tp:01B29AC4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>015 lastst=49</ArgumentList>
+Type array:
+   015 
+Got Type: 34openpa calling gsearch2<FindRising>_putch 
+</Find>
+_putch</Find>
+</FindRising>
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+IsEqual:T3Exact matchType array:
+   015 
+Type array:
+   015 
+Found in global symbol table
+</gsearch2>
+Got direct function _putch </Find>
+_for</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A6B8 <Deref></Deref>deref tp:01B2A6B8 </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A6B8 <Deref></Deref>deref tp:01B2A6B8 </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A6B8 <Deref></Deref>deref tp:01B2A6B8 </nameref2>
+</Nameref>
+<Parse></Find>
+_SetPCHNDX</Find>
+Found _SetPCHNDX
+</Find>
+_SetPCHNDX</Find>
+</Find>
+_SetPCHNDXMatch
+</Find>
+sp okay sc=0
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_SetPCHNDX|
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_SetPCHNDXIsEqual:F1sp is not null
+Type array:
+   
+<BuildSignature>:_SetPCHNDX</BuildSignature>tp:01B2A460 deref tp:01B2A460 </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_nn</Find>
+<ArgumentList><Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A6B8 <Deref></Deref>deref tp:01B2A6B8 </nameref2>
+</Nameref>
+017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_SetPCHNDX 
+</Find>
+_SetPCHNDX</Find>
+</FindRising>
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _SetPCHNDX </Find>
+_puthex</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_puthex|
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_puthexIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29FEC deref tp:01B29FEC </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_ReadPCHIST</Find>
+<ArgumentList><Nameref>
+GSearchfor:_ReadPCHIST|
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_ReadPCHISTIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_ReadPCHIST</BuildSignature>tp:01B2A550 deref tp:01B2A550 </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_ReadPCHIST 
+</Find>
+_ReadPCHIST</Find>
+</FindRising>
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _ReadPCHIST 017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_puthex 
+</Find>
+_puthex</Find>
+</FindRising>
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _puthex </Find>
+_putch</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_putch|
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_putchIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29AC4 deref tp:01B29AC4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>015 lastst=49</ArgumentList>
+Type array:
+   015 
+Got Type: 34openpa calling gsearch2<FindRising>_putch 
+</Find>
+_putch</Find>
+</FindRising>
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+IsEqual:T3Exact matchType array:
+   015 
+Type array:
+   015 
+Found in global symbol table
+</gsearch2>
+Got direct function _putch </ParseExpression>
+</Parse></Find>
+_forever</Find>
+</Parse><Parse><Parse></Parse></Find>
+_void</Find>
+DEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+0: 6  0   0   11   
+
+1: 1  0   0   -1   
+
+2: 1  1   0   -1   
+
+3: 3  3   0   -1   
+
+4: 3  0   0   -1   
+
+5: 1  1   0   -1   
+
+6: 3  3   0   -1   
+
+7: 1  1   0   -1   
+
+8: 2  0   0   -1   
+
+9: 2  0   0   -1   
+
+10: 1  1   0   -1   
+
+11: 1  1   0   -1   
+
+12: 1  0   0   -1   
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_GetEPC|
+Looking in statement table
+</Find>
+_GetEPC</Find>
+Looking in function's symbol table
+</Find>
+_GetEPC</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetEPC</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetEPCMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_GetBadAddr|
+Looking in statement table
+</Find>
+_GetBadAddr</Find>
+Looking in function's symbol table
+</Find>
+_GetBadAddr</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_GetBadAddr</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_GetBadAddrMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_DBERout|01439230
+Looking at params 0143927C
+</Find>
+_putch</Find>
+Looking at class members 01B2A69C
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+<GenerateZeradic>
+
+ABCD</GenerateZeradic>
+
+E</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+Enter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_interrupt</Find>
+</Find>
+_IBERout</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_IBERout|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _IBERout
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_IBERout</Find>
+hh1h2ikIIbIcinsert type: 35
+***Inserting:_IBERout into 01427310
+<BuildSignature>:_IBERout</BuildSignature>Insert _IBERout into 01427310()
+Insert into global table
+</Find>
+_IBERout</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _IBERout
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(46)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_IBERout</BuildSignature></Find>
+_IBERoutMatch
+</Find>
+CDEG<Parse function body>:_IBERout|
+</Find>
+_int</Find>
+BbEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+CEnter declare()
+
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_nn</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_nn|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_nn</Find>
+hh1kIIbIcinsert type: 17
+***Inserting:_nn into 00E901B8
+<BuildSignature>:_nn</BuildSignature>Insert _nn into 00E901B8()
+</Find>
+_nn</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_DBGDisplayString</Find>
+Found _DBGDisplayString
+</Find>
+_DBGDisplayString</Find>
+</Find>
+_DBGDisplayStringMatch
+</Find>
+sp okay sc=4
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_DBGDisplayString</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_DBGDisplayString|
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_DBGDisplayStringIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29EFC deref tp:01B29EFC </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>022 lastst=49</ArgumentList>
+Type array:
+   022 
+Got Type: 34openpa calling gsearch2<FindRising>_DBGDisplayString 
+</Find>
+_DBGDisplayString</Find>
+</FindRising>
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+IsEqual:T3Exact matchType array:
+   022 
+Type array:
+   022 
+Found in global symbol table
+</gsearch2>
+Got direct function _DBGDisplayString </Find>
+_for</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A76C <Deref></Deref>deref tp:01B2A76C </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A76C <Deref></Deref>deref tp:01B2A76C </nameref2>
+</Nameref>
+</Find>
+_nn</Find>
+<Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A76C <Deref></Deref>deref tp:01B2A76C </nameref2>
+</Nameref>
+<Parse></Find>
+_SetPCHNDX</Find>
+Found _SetPCHNDX
+</Find>
+_SetPCHNDX</Find>
+</Find>
+_SetPCHNDXMatch
+</Find>
+sp okay sc=0
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_SetPCHNDX|
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_SetPCHNDXIsEqual:F1sp is not null
+Type array:
+   
+<BuildSignature>:_SetPCHNDX</BuildSignature>tp:01B2A460 deref tp:01B2A460 </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_nn</Find>
+<ArgumentList><Nameref>
+GSearchfor:_nn|
+<gsearch2> for: |_nn|
+Looking in statement table
+</Find>
+_nn</Find>
+Looking in outer statement table
+</Find>
+_nnMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_nnIsEqual:T2sp is not null
+Type array:
+   
+tp:01B2A76C <Deref></Deref>deref tp:01B2A76C </nameref2>
+</Nameref>
+017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_SetPCHNDX 
+</Find>
+_SetPCHNDX</Find>
+</FindRising>
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in outer statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _SetPCHNDX </Find>
+_puthex</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_puthex|
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_puthexIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29FEC deref tp:01B29FEC </nameref2>
+</Nameref>
+tp2->type=34</Find>
+_ReadPCHIST</Find>
+<ArgumentList><Nameref>
+GSearchfor:_ReadPCHIST|
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_ReadPCHISTIsEqual:T2sp is not null
+Type array:
+   
+<BuildSignature>:_ReadPCHIST</BuildSignature>tp:01B2A550 deref tp:01B2A550 </nameref2>
+</Nameref>
+tp2->type=35<ArgumentList></ArgumentList>
+Type array:
+   
+Got Type: 35openpa calling gsearch2<FindRising>_ReadPCHIST 
+</Find>
+_ReadPCHIST</Find>
+</FindRising>
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in outer statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+IsEqual:T3Exact matchType array:
+   
+Type array:
+   
+Found in global symbol table
+</gsearch2>
+Got direct function _ReadPCHIST 017 lastst=49</ArgumentList>
+Type array:
+   017 
+Got Type: 34openpa calling gsearch2<FindRising>_puthex 
+</Find>
+_puthex</Find>
+</FindRising>
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in outer statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_puthexMatch
+IsEqual:T3Exact matchType array:
+   017 
+Type array:
+   017 
+Found in global symbol table
+</gsearch2>
+Got direct function _puthex </Find>
+_putch</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_putch|
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_putch</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+<nameref2>
+A:1:_putchIsEqual:F1sp is not null
+Type array:
+   
+tp:01B29AC4 deref tp:01B29AC4 </nameref2>
+</Nameref>
+tp2->type=34<ArgumentList>015 lastst=49</ArgumentList>
+Type array:
+   015 
+Got Type: 34openpa calling gsearch2<FindRising>_putch 
+</Find>
+_putch</Find>
+</FindRising>
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in outer statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_putch</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_putchMatch
+IsEqual:T3Exact matchType array:
+   015 
+Type array:
+   015 
+Found in global symbol table
+</gsearch2>
+Got direct function _putch </ParseExpression>
+</Parse></Find>
+_forever</Find>
+</Parse><Parse><Parse></Parse>Returning EOF from NextToken.
+DEnter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+0: 6  0   0   11   
+
+1: 1  0   0   -1   
+
+2: 1  0   0   -1   
+
+3: 2  2   0   -1   
+
+4: 2  0   0   -1   
+
+5: 2  0   0   -1   
+
+6: 1  1   0   -1   
+
+7: 1  1   0   -1   
+
+8: 1  1   0   -1   
+
+9: 1  1   0   -1   
+
+10: 1  0   0   -1   
+
+11: 1  0   0   -1   
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_DBGDisplayString|
+Looking in statement table
+</Find>
+_DBGDisplayString</Find>
+Looking in function's symbol table
+</Find>
+_DBGDisplayString</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_DBGDisplayString</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_DBGDisplayStringMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_SetPCHNDX|
+Looking in statement table
+</Find>
+_SetPCHNDX</Find>
+Looking in function's symbol table
+</Find>
+_SetPCHNDX</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_SetPCHNDX</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_SetPCHNDXMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_puthex|
+Looking in statement table
+</Find>
+_puthex</Find>
+Looking in function's symbol table
+</Find>
+_puthex</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_puthex</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_puthexMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_ReadPCHIST|
+Looking in statement table
+</Find>
+_ReadPCHIST</Find>
+Looking in function's symbol table
+</Find>
+_ReadPCHIST</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_ReadPCHIST</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_ReadPCHISTMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+N Uses DUses Void Reg
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+
+<gsearch2> for: |_putch|
+Looking in statement table
+</Find>
+_putch</Find>
+Looking in function's symbol table
+</Find>
+_putch</Find>
+Searching method/class:_IBERout|014393F0
+Looking at params 0143943C
+</Find>
+_putch</Find>
+Looking at class members 01B2A750
+Looking at global symbols
+</Find>
+_putchMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+Enter GenerateMonadic
+
+ABCDLeave GenerateMonadic
+
+<GenerateZeradic>
+
+ABCD</GenerateZeradic>
+
+E</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+......</Dumplits>
+Enter summary
+Leave summary
+<closefiles>
+ABC</closefiles>
+Next on command line (1).
+Exiting

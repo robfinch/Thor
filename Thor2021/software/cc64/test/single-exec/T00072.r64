@@ -1,0 +1,59 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  lea      $t4,-16[$fp]
+  base     $t4,$t4,#10
+  mov      $s1,$t4
+; p = &arr[0];
+  mov      $s0,$s1
+; p += 1;
+  add      $s0,$s0,#8
+; *p = 123;
+  ldi      $t4,#123
+  sto      $t4,[$s0]
+; if(arr[1] != 123)
+  ldo      $t4,8[$s1]
+  seq      $t5,$t4,#123
+  bne      $t5,$x0,.C00013
+; return 1;
+  ldi      $a0,#1
+.C00012:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00013:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00012
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+;--}

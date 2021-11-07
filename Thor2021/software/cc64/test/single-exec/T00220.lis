@@ -1,0 +1,510 @@
+     1	// this file contains BMP chars encoded in UTF-8
+     2	/* stdio.h standard header */
+     3	/* yvals.h values header -- UNIX 680X0 version */
+     4			/* errno properties */
+     5			/* float properties */
+     6			/* integer properties */
+     7	typedef unsigned short _Wchart;
+     8			/* pointer properties */
+     9	typedef int _Ptrdifft;
+    10	typedef unsigned int _Sizet;
+    11			/* setjmp properties */
+    12	extern int _Setjmp(int *);
+    13			/* signal properties */
+    14			/* stdio properties */
+    15			/* stdlib properties */
+    16			/* storage alignment properties */
+    17			/* time properties */
+    18			/* macros */
+    19			/* type definitions */
+    20	typedef _Sizet size_t;
+    21	typedef struct {
+    22		unsigned long _Off;	/* system dependent */
+    23		} fpos_t;
+    24	typedef struct {
+    25		unsigned short _Mode;
+    26		short _Handle;
+    27		unsigned char *_Buf, *_Bend, *_Next;
+    28		unsigned char *_Rend, *_Rsave, *_Wend;
+    29		unsigned char _Back[2], _Cbuf, _Nback;
+    30		char *_Tmpnam;
+    31		} FILE;
+    32			/* declarations */
+    33	void clearerr(FILE *);
+    34	int fclose(FILE *);
+    35	int feof(FILE *);
+    36	int ferror(FILE *);
+    37	int fflush(FILE *);
+    38	int fgetc(FILE *);
+    39	int fgetpos(FILE *, fpos_t *);
+    40	char *fgets(char *, int, FILE *);
+    41	FILE *fopen(const char *, const char *);
+    42	int fprintf(FILE *, const char *, ...);
+    43	int fputc(int, FILE *);
+    44	int fputs(const char *, FILE *);
+    45	size_t fread(void *, size_t, size_t, FILE *);
+    46	FILE *freopen(const char *, const char *, FILE *);
+    47	int fscanf(FILE *, const char *, ...);
+    48	int fseek(FILE *, long, int);
+    49	int fsetpos(FILE *, const fpos_t *);
+    50	long ftell(FILE *);
+    51	size_t fwrite(const void *, size_t, size_t, FILE *);
+    52	int getc(FILE *);
+    53	int getchar(void);
+    54	char *gets(char *);
+    55	void perror(const char *);
+    56	int printf(const char *, ...);
+    57	int putc(int, FILE *);
+    58	int putchar(int);
+    59	int puts(const char *);
+    60	int remove(const char *);
+    61	int rename(const char *, const char *);
+    62	void rewind(FILE *);
+    63	int scanf(const char *, ...);
+    64	void setbuf(FILE *, char *);
+    65	int setvbuf(FILE *, char *, int, size_t);
+    66	int sprintf(char *, const char *, ...);
+    67	int sscanf(const char *, const char *, ...);
+    68	FILE *tmpfile(void);
+    69	char *tmpnam(char *);
+    70	int ungetc(int, FILE *);
+    71	int vfprintf(FILE *, const char *, char *);
+    72	int vprintf(const char *, char *);
+    73	int vsprintf(char *, const char *, char *);
+    74	long _Fgpos(FILE *, fpos_t *);
+    75	int _Fspos(FILE *, const fpos_t *, long, int);
+    76	extern FILE *_Files[16];
+    77			/* macro overrides */
+    78	
+    79	int main()
+    80	{
+    81	    wchar_t s[] = L"hello$$你好¢¢世界€€world";
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+    82	    wchar_t *p;
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+    83	    for (p = s; *p; p++) printf("%04X ", (unsigned) *p);
+ *** error 1000: (null)
+ *** error 1000: (null)
+ *** error 1000: (null)
+ *** error 7: E Identifier expected
+ *** error 7: E Identifier expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 7: E Identifier expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+    84	    printf("\n");
+    85	    return 0;
+    86	}
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+6 __Ptrdifft =000004   1   Long
+27 _getc      =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _main      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		26 __new      =000000   -    Static      
+27 _gets      =00006c   -    External    Function returning Pointer to Char
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _putc      =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   006 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		16 __Wchart   =000000   1   
+27 _puts      =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		26 __delete   =000000   -    Static      
+27 __Setjmp   =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _getchar   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   026 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _freopen   =00006c   -    External    Function returning Pointer to struct <no name> 
+		Parameters:
+			Type array:
+   012 012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _tmpfile   =00006c   -    External    Function returning Pointer to struct <no name> 
+		Parameters:
+			Type array:
+   026 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _putchar   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   006 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fgetpos   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fprintf   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _setvbuf   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 006 017 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fread     =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 017 017 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fsetpos   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _sprintf   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fgetc     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _vprintf   =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _scanf     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fseek     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 006 006 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _ftell     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fopen     =00006c   -    External    Function returning Pointer to struct <no name> 
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fgets     =00006c   -    External    Function returning Pointer to Char
+		Parameters:
+			Type array:
+   012 006 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		39 _FILE      =000024   1   struct <no name> 
+27 _fputc     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   006 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fputs     =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _clearerr  =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		12 __Files    =000000   -    External    Array of Pointer to struct <no name> 
+27 __Fgpos    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		26 __autonew  =000000   -    Static      
+27 __Fspos    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 006 006 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		17 __Sizet    =00000c   1   
+27 _vfprintf  =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fscanf    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _rename    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fclose    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _vsprintf  =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _sscanf    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _ungetc    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   006 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fflush    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _rewind    =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _setbuf    =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		38 _fpos_t    =00001c   1   struct <no name> 
+27 _tmpnam    =00006c   -    External    Function returning Pointer to Char
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		17 _size_t    =000014   1   
+27 _remove    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _ferror    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _fwrite    =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 017 017 012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _printf    =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 037 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _perror    =00006c   -    External    Function returning 
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		27 _feof      =00006c   -    External    Function returning Long
+		Parameters:
+			Type array:
+   012 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

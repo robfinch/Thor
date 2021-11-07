@@ -1,0 +1,3967 @@
+	data
+	align	8
+	align	8
+	dw	$FFF0200000000001
+public data _s1:
+	dcw	67,48,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000001
+public data _s2:
+	dcw	67,49,50,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _s3:
+	dcw	67,51,52,53,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _s4:
+	dcw	67,54,55,56,57,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _s5:
+	dcw	67,97,98,99,100,101,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _s6:
+	dcw	67,102,103,104,105,106,107,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _s7:
+	dcw	67,108,109,110,111,112,113,114
+	dcw	0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _s8:
+	dcw	67,115,116,117,118,119,120,121
+	dcw	122,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _s9:
+	dcw	67,65,66,67,68,69,70,71
+	dcw	72,73,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _s10:
+	dcw	67,74,75,76,77,78,79,80
+	dcw	81,82,83,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _s11:
+	dcw	67,84,85,86,87,88,89,90
+	dcw	48,49,50,51,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _s12:
+	dcw	67,52,53,54,55,56,57,97
+	dcw	98,99,100,101,102,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _s13:
+	dcw	67,103,104,105,106,107,108,109
+	dcw	110,111,112,113,114,115,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _s14:
+	dcw	67,116,117,118,119,120,121,122
+	dcw	65,66,67,68,69,70,71,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000005
+public data _s15:
+	dcw	67,72,73,74,75,76,77,78
+	dcw	79,80,81,82,83,84,85,86
+	dcw	0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000005
+public data _s16:
+	dcw	67,87,88,89,90,48,49,50
+	dcw	51,52,53,54,55,56,57,97
+	dcw	98,0
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000005
+public data _s17:
+	dcw	67,99,100,101,102,103,104,105
+	dcw	106,107,108,109,110,111,112,113
+	dcw	114,115,0
+endpublic
+
+	align	8
+	fill.b	2,0x00
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _hfa11:
+
+	align 2
+	dct	0x33333333,0x40263333
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _hfa12:
+
+	align 2
+	dct	0x33333333,0x40283333
+	align 2
+	dct	0x66666666,0x40286666
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _hfa13:
+
+	align 2
+	dct	0x33333333,0x402A3333
+	align 2
+	dct	0x66666666,0x402A6666
+	align 2
+	dct	0x99999999,0x402A9999
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _hfa14:
+
+	align 2
+	dct	0x33333333,0x402C3333
+	align 2
+	dct	0x66666666,0x402C6666
+	align 2
+	dct	0x99999999,0x402C9999
+	align 2
+	dct	0xCCCCCCCC,0x402CCCCC
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000001
+public data _hfa21:
+
+	align 2
+	dct	0x99999999,0x40351999
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _hfa22:
+
+	align 2
+	dct	0x99999999,0x40361999
+	align 2
+	dct	0x33333333,0x40363333
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _hfa23:
+
+	align 2
+	dct	0x99999999,0x40371999
+	align 2
+	dct	0x33333333,0x40373333
+	align 2
+	dct	0xCCCCCCCC,0x40374CCC
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _hfa24:
+
+	align 2
+	dct	0x99999999,0x40381999
+	align 2
+	dct	0x33333333,0x40383333
+	align 2
+	dct	0xCCCCCCCC,0x40384CCC
+	align 2
+	dct	0x66666666,0x40386666
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000001
+public data _hfa31:
+
+	align 2
+	dct	0x99999999,0x403F1999
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public data _hfa32:
+
+	align 2
+	dct	0xCCCCCCCC,0x40400CCC
+	align 2
+	dct	0x99999999,0x40401999
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _hfa33:
+
+	align 2
+	dct	0xCCCCCCCC,0x40408CCC
+	align 2
+	dct	0x99999999,0x40409999
+	align 2
+	dct	0x66666666,0x4040A666
+endpublic
+
+	align	8
+	align	8
+	dw	$FFF0200000000004
+public data _hfa34:
+
+	align 2
+	dct	0xCCCCCCCC,0x40410CCC
+	align 2
+	dct	0x99999999,0x40411999
+	align 2
+	dct	0x66666666,0x40412666
+	align 2
+	dct	0x33333333,0x40413333
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s1:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_31[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_36:
+T00204_39:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s2:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_40[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_45:
+T00204_48:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s3:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_49[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_54:
+T00204_57:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s4:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_58[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_63:
+T00204_66:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s5:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_67[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_72:
+T00204_75:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s6:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_76[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_81:
+T00204_84:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s7:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_85[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_90:
+T00204_93:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s8:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_94[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_99:
+T00204_102:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s9:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_103[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_108:
+T00204_111:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s10:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_112[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_117:
+T00204_120:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s11:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_121[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_126:
+T00204_129:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s12:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_130[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_135:
+T00204_138:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s13:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_139[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_144:
+T00204_147:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s14:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_148[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_153:
+T00204_156:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s15:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_157[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_162:
+T00204_165:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s16:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_166[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_171:
+T00204_174:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_s17:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_175[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_180:
+T00204_183:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa11:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_184[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_189:
+T00204_192:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa12:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_193[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s0,8[$sp]
+  sto      $s0,16[$sp]
+  call     _printf
+T00204_198:
+T00204_201:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa13:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#32
+  lea      $t0,T00204_202[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  call     _printf
+T00204_207:
+T00204_210:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa14:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_211[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  ldo      $t0,24[$s0]
+  sto      $t0,32[$sp]
+  call     _printf
+T00204_216:
+T00204_219:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa21:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_220[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_225:
+T00204_228:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa22:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_229[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s0,8[$sp]
+  sto      $s0,16[$sp]
+  call     _printf
+T00204_234:
+T00204_237:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa23:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#32
+  lea      $t0,T00204_238[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  call     _printf
+T00204_243:
+T00204_246:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa24:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_247[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  ldo      $t0,24[$s0]
+  sto      $t0,32[$sp]
+  call     _printf
+T00204_252:
+T00204_255:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa31:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_256[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_261:
+T00204_264:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa32:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_265[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s0,8[$sp]
+  sto      $s0,16[$sp]
+  call     _printf
+T00204_270:
+T00204_273:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa33:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#32
+  lea      $t0,T00204_274[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  call     _printf
+T00204_279:
+T00204_282:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa_hfa34:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_283[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,8[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,16[$sp]
+  ldo      $t0,16[$s0]
+  sto      $t0,24[$sp]
+  ldo      $t0,24[$s0]
+  sto      $t0,32[$sp]
+  call     _printf
+T00204_288:
+T00204_291:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa1:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_292[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,48[$fp]
+  sto      $t0,16[$sp]
+  lea      $t0,72[$fp]
+  sto      $t0,24[$sp]
+  lea      $t0,96[$fp]
+  sto      $t0,32[$sp]
+  lea      $t0,120[$fp]
+  sto      $t0,40[$sp]
+  lea      $t0,144[$fp]
+  sto      $t0,48[$sp]
+  call     _printf
+T00204_297:
+T00204_300:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #56
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa2:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_301[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,56[$fp]
+  sto      $t0,16[$sp]
+  lea      $t0,80[$fp]
+  sto      $t0,24[$sp]
+  lea      $t0,104[$fp]
+  sto      $t0,32[$sp]
+  lea      $t0,128[$fp]
+  sto      $t0,40[$sp]
+  lea      $t0,160[$fp]
+  sto      $t0,48[$sp]
+  call     _printf
+T00204_306:
+T00204_309:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #56
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa3:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_310[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s1]
+  sto      $t0,8[$sp]
+  ldo      $t0,24[$s1]
+  sto      $t0,16[$sp]
+  ldo      $t0,[$s2]
+  sto      $t0,24[$sp]
+  ldo      $t0,16[$s2]
+  sto      $t0,32[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,40[$sp]
+  ldo      $t0,8[$s0]
+  sto      $t0,48[$sp]
+  call     _printf
+T00204_315:
+T00204_318:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #32
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fa4:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#80
+  lea      $t0,T00204_319[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,32[$fp]
+  sto      $t0,8[$sp]
+  ldo      $t0,[$s1]
+  sto      $t0,16[$sp]
+  ldo      $t0,24[$s1]
+  sto      $t0,24[$sp]
+  lea      $t0,72[$fp]
+  sto      $t0,32[$sp]
+  ldo      $t0,[$s2]
+  sto      $t0,40[$sp]
+  ldo      $t0,24[$s2]
+  sto      $t0,48[$sp]
+  lea      $t0,112[$fp]
+  sto      $t0,56[$sp]
+  ldo      $t0,[$s0]
+  sto      $t0,64[$sp]
+  ldo      $t0,24[$s0]
+  sto      $t0,72[$sp]
+  call     _printf
+T00204_324:
+T00204_327:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #56
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _arg:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+;     printf("Arguments:\n");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_328[$gp1]
+  sto      $t0,0[$sp]
+  call     _printf
+;     fa_s1(s1);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s1[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s1
+;     fa_s2(s2);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s2[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s2
+;     fa_s3(s3);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s3[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s3
+;     fa_s4(s4);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s4[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s4
+;     fa_s5(s5);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s5[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s5
+;     fa_s6(s6);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s6[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s6
+;     fa_s7(s7);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s7[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s7
+;     fa_s8(s8);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s8[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s8
+;     fa_s9(s9);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s9[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s9
+;     fa_s10(s10);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s10[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s10
+;     fa_s11(s11);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s11[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s11
+;     fa_s12(s12);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s12[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s12
+;     fa_s13(s13);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s13[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s13
+;     fa_s14(s14);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s14[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s14
+;     fa_s15(s15);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s15[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s15
+;     fa_s16(s16);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s16[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s16
+;     fa_s17(s17);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_s17[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_s17
+;     fa_hfa11(hfa11);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa11
+;     fa_hfa12(hfa12);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa12
+;     fa_hfa13(hfa13);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa13
+;     fa_hfa14(hfa14);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa14
+;     fa_hfa21(hfa21);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa21
+;     fa_hfa22(hfa22);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa22
+;     fa_hfa23(hfa23);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa23
+;     fa_hfa24(hfa24);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa24
+;     fa_hfa31(hfa31);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa31
+;     fa_hfa32(hfa32);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa32
+;     fa_hfa33(hfa33);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa33
+;     fa_hfa34(hfa34);
+  gcsub    $sp,$sp,#8
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,0[$sp]
+  call     _fa_hfa34
+;     fa1(s8, s9, s10, s11, s12, s13);
+  gcsub    $sp,$sp,#48
+  lea      $t0,_s8[$gp]
+  sto      $t0,0[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_s10[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_s11[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_s12[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_s13[$gp]
+  sto      $t0,40[$sp]
+  call     _fa1
+;     fa2(s9, s10, s11, s12, s13, s14);
+  gcsub    $sp,$sp,#48
+  lea      $t0,_s9[$gp]
+  sto      $t0,0[$sp]
+  lea      $t0,_s10[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_s11[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_s12[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_s13[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_s14[$gp]
+  sto      $t0,40[$sp]
+  call     _fa2
+;     fa3(hfa14, hfa23, hfa32);
+  gcsub    $sp,$sp,#24
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,16[$sp]
+  call     _fa3
+;     fa4(s1, hfa14, s2, hfa24, s3, hfa34);
+  gcsub    $sp,$sp,#48
+  lea      $t0,_s1[$gp]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_s2[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_s3[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,40[$sp]
+  call     _fa4
+T00204_333:
+T00204_336:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s1:
+  lea      $a0,_s1[$gp]
+T00204_344:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s2:
+  lea      $a0,_s2[$gp]
+T00204_352:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s3:
+  lea      $a0,_s3[$gp]
+T00204_360:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s4:
+  lea      $a0,_s4[$gp]
+T00204_368:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s5:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s5[$gp]
+  ldi      $t1,#10
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_373:
+T00204_376:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s6:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s6[$gp]
+  ldi      $t1,#12
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_381:
+T00204_384:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s7:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s7[$gp]
+  ldi      $t1,#14
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_389:
+T00204_392:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s8:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s8[$gp]
+  ldi      $t1,#16
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_397:
+T00204_400:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s9:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s9[$gp]
+  ldi      $t1,#18
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_405:
+T00204_408:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s10:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s10[$gp]
+  ldi      $t1,#20
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_413:
+T00204_416:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s11:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s11[$gp]
+  ldi      $t1,#22
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_421:
+T00204_424:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s12:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s12[$gp]
+  ldi      $t1,#24
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_429:
+T00204_432:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s13:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s13[$gp]
+  ldi      $t1,#26
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_437:
+T00204_440:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s14:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s14[$gp]
+  ldi      $t1,#28
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_445:
+T00204_448:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s15:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s15[$gp]
+  ldi      $t1,#30
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_453:
+T00204_456:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s16:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s16[$gp]
+  ldi      $t1,#32
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_461:
+T00204_464:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_s17:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_s17[$gp]
+  ldi      $t1,#34
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_469:
+T00204_472:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa11:
+  lea      $a0,_hfa11[$gp]
+T00204_480:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa12:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa12[$gp]
+  ldi      $t1,#16
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_485:
+T00204_488:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa13:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa13[$gp]
+  ldi      $t1,#24
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_493:
+T00204_496:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa14:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa14[$gp]
+  ldi      $t1,#32
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_501:
+T00204_504:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa21:
+  lea      $a0,_hfa21[$gp]
+T00204_512:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa22:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa22[$gp]
+  ldi      $t1,#16
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_517:
+T00204_520:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa23:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa23[$gp]
+  ldi      $t1,#24
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_525:
+T00204_528:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa24:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa24[$gp]
+  ldi      $t1,#32
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_533:
+T00204_536:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa31:
+  lea      $a0,_hfa31[$gp]
+T00204_544:
+  rtl      #0
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa32:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa32[$gp]
+  ldi      $t1,#16
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_549:
+T00204_552:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa33:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa33[$gp]
+  ldi      $t1,#24
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_557:
+T00204_560:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _fr_hfa34:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $t0,_hfa34[$gp]
+  ldi      $t1,#32
+  sub      $sp,$sp,#24
+  sto      $x1,[$sp]
+  sto      $t0,8[$sp]
+  sto      $t1,16[$sp]
+  call     __aacpy
+T00204_565:
+T00204_568:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  rtl      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _ret:
+  gcsub    $sp,$sp,#16
+  sto      $fp,[$sp]
+  sto      $ra,8[$sp]
+  mov      $fp,$sp
+  gcsub    $sp,$sp,#336
+  lea      $gp1,__rodata_start
+;     struct s1 t1 = fr_s1();
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s1
+  mov      $t0,$a0
+  ldo      $t1,[$t0]
+  sto      $t1,[$s2]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s2
+  mov      $t0,$a0
+  ldo      $t1,[$t0]
+  sto      $t1,[$s3]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s3
+  mov      $t0,$a0
+  ldo      $t1,[$t0]
+  sto      $t1,[$s5]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s4
+  mov      $t0,$a0
+  ldo      $t1,[$t0]
+  sto      $t1,[$s7]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s5
+  mov      $t0,$a0
+  mov      $a0,$s9
+  mov      $a1,$t0
+  ldi      $a2,#-1
+  call     __aacpy
+  lea      $t0,-42[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s6
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-56[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s7
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-72[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s8
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-90[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s9
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-110[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s10
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-132[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s11
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  lea      $t0,-156[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s12
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s13
+  mov      $t0,$a0
+  mov      $a0,$s8
+  mov      $a1,$t0
+  call     __aacpy
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s14
+  mov      $t0,$a0
+  mov      $a0,$s6
+  mov      $a1,$t0
+  call     __aacpy
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s15
+  mov      $t0,$a0
+  mov      $a0,$s4
+  mov      $a1,$t0
+  call     __aacpy
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s16
+  mov      $t0,$a0
+  mov      $a0,$s1
+  mov      $a1,$t0
+  call     __aacpy
+  lea      $t0,-306[$fp]
+  sto      $t0,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_s17
+  ldo      $t0,-336[$fp]
+  mov      $t1,$a0
+  mov      $a0,$t0
+  mov      $a1,$t1
+  call     __aacpy
+;     printf("Return values:\n");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_569[$gp1]
+  sto      $t0,0[$sp]
+  call     _printf
+;     printf("%.1s\n", t1.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_570[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s2,8[$sp]
+  call     _printf
+;     printf("%.2s\n", t2.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_571[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s3,8[$sp]
+  call     _printf
+;     printf("%.3s\n", t3.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_572[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s5,8[$sp]
+  call     _printf
+;     printf("%.4s\n", t4.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_573[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s7,8[$sp]
+  call     _printf
+;     printf("%.5s\n", t5.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_574[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s9,8[$sp]
+  call     _printf
+;     printf("%.6s\n", t6.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_575[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-42[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.7s\n", t7.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_576[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-56[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.8s\n", t8.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_577[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-72[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.9s\n", t9.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_578[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-90[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.10s\n", t10.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_579[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-110[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.11s\n", t11.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_580[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-132[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.12s\n", t12.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_581[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-156[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.13s\n", t13.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_582[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s8,8[$sp]
+  call     _printf
+;     printf("%.14s\n", t14.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_583[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s6,8[$sp]
+  call     _printf
+;     printf("%.15s\n", t15.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_584[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s4,8[$sp]
+  call     _printf
+;     printf("%.16s\n", t16.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_585[$gp1]
+  sto      $t0,0[$sp]
+  sto      $s1,8[$sp]
+  call     _printf
+;     printf("%.17s\n", t17.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_586[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-306[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.1f\n", fr_hfa11().a);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_587[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa11
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.1f %.1f\n", fr_hfa12().a, fr_hfa12().b);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_588[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa12
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa12
+;     printf("%.1f %.1f\n", fr_hfa13().a, fr_hfa13().c);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_589[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa13
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa13
+;     printf("%.1f %.1f\n", fr_hfa14().a, fr_hfa14().d);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_590[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa14
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa14
+;     printf("%.1f\n", fr_hfa21().a);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_591[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa21
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.1f %.1f\n", fr_hfa22().a, fr_hfa22().b);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_592[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa22
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa22
+;     printf("%.1f %.1f\n", fr_hfa23().a, fr_hfa23().c);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_593[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa23
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa23
+;     printf("%.1f %.1f\n", fr_hfa24().a, fr_hfa24().d);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_594[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa24
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa24
+;     printf("%.1Lf\n", fr_hfa31().a);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_595[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa31
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+;     printf("%.1Lf %.1Lf\n", fr_hfa32().a, fr_hfa32().b);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_596[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa32
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa32
+;     printf("%.1Lf %.1Lf\n", fr_hfa33().a, fr_hfa33().c);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_597[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa33
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa33
+;     printf("%.1Lf %.1Lf\n", fr_hfa34().a, fr_hfa34().d);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_598[$gp1]
+  sto      $t0,0[$sp]
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa34
+  mov      $t0,$a0
+  sto      $t0,8[$sp]
+  call     _printf
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  jal      _fr_hfa34
+T00204_603:
+T00204_606:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ldo      $ra,8[$sp]
+  ret      #24
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _match:
+;     const char *p = *s;
+  ldo      $t0,[$s2]
+  sto      $t0,[$s2]
+;     for (p = *s; *f && *f == *p; f++, p++)
+  ldo      $t0,[$s2]
+  sto      $t0,[$s0]
+  ldw      $t0,[$s1]
+  tst      $cr0,$t0
+  ldw      $t0,[$s1]
+  tst      $cr0,$t0
+  ldw      $t0,[$s1]
+  ldw      $t1,[$s0]
+  seq.and   $cr0,$t0,$t1
+  bf       $cr0,T00204_625
+T00204_624:
+;         ;
+  add      $s1,$s1,#2
+  add      $s0,$s0,#2
+  ldw      $t0,[$s1]
+  tst      $cr0,$t0
+  ldw      $t0,[$s1]
+  tst      $cr0,$t0
+  ldw      $t0,[$s1]
+  ldw      $t1,[$s0]
+  seq.and   $cr0,$t0,$t1
+  bt       $cr0,T00204_624
+T00204_625:
+;     if (!*f) {
+  ldw      $t0,[$s1]
+  tst      $cr0,$t0
+  bt       $cr0,T00204_631
+;         *s = p - 1;
+  sub      $t0,$s0,#2
+  sto      $t0,[$s2]
+;         return 1;
+  ldi      $a0,#1
+T00204_623:
+  rtl      #0
+T00204_631:
+;     return 0;
+  mov      $a0,$x0
+  bra      T00204_623
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _myprintf:
+  gcsub    $sp,$sp,#16
+  sto      $fp,[$sp]
+  sto      $ra,8[$sp]
+  mov      $fp,$sp
+  gcsub    $sp,$sp,#328
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+;     (void)((ap) = (__int8 *)&(format) + (sizeof (format) + (7U) & ~(7U)));
+  ldo      $t3,[$s3]
+  add      $t2,$t3,#7
+  and      $t1,$t2,#-8
+  add      $s1,$s3,$t1
+;     for (s = format; *s; s++) {
+  ldo      $t0,[$s3]
+  sto      $t0,[$s0]
+  ldw      $t0,[$s0]
+  tst      $cr0,$t0
+  bf       $cr0,T00204_705
+T00204_704:
+;         if (match(&s, "%7s")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_633[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_707
+;             struct s7 t7 = (*(struct s7 *)(((ap) += (sizeof (struct s7) + (7U) & ~(7U))) - (sizeof (struct s7) + (0U) & ~(0U))));
+  lea      $t0,-30[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.7s", t7.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_634[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-30[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+  bra      T00204_708
+T00204_707:
+;         else if (match(&s, "%9s")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_635[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_709
+;             struct s9 t9 = (*(struct s9 *)(((ap) += (sizeof (struct s9) + (7U) & ~(7U))) - (sizeof (struct s9) + (0U) & ~(0U))));
+  lea      $t0,-48[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.9s", t9.x);
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_636[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,-48[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+  bra      T00204_710
+T00204_709:
+;         else if (match(&s, "%hfa11")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_637[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_711
+;             struct hfa11 x = (*(struct hfa11 *)(((ap) += (sizeof (struct hfa11) + (7U) & ~(7U))) - (sizeof (struct hfa11) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  ldo      $t1,[$t0]
+  sto      $t1,[$s6]
+;             printf("%.1f,%.1f", x.a, x.a);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_638[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s6]
+  sto      $t0,8[$sp]
+  ldo      $t0,[$s6]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_712
+T00204_711:
+;         else if (match(&s, "%hfa12")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_639[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_713
+;             struct hfa12 x = (*(struct hfa12 *)(((ap) += (sizeof (struct hfa12) + (7U) & ~(7U))) - (sizeof (struct hfa12) + (0U) & ~(0U))));
+  lea      $t0,-72[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.b);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_640[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-72[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-72[$fp]
+  ldo      $t0,8[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_714
+T00204_713:
+;         else if (match(&s, "%hfa13")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_641[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_715
+;             struct hfa13 x = (*(struct hfa13 *)(((ap) += (sizeof (struct hfa13) + (7U) & ~(7U))) - (sizeof (struct hfa13) + (0U) & ~(0U))));
+  lea      $t0,-96[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.c);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_642[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-96[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-96[$fp]
+  ldo      $t0,16[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_716
+T00204_715:
+;         else if (match(&s, "%hfa14")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_643[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_717
+;             struct hfa14 x = (*(struct hfa14 *)(((ap) += (sizeof (struct hfa14) + (7U) & ~(7U))) - (sizeof (struct hfa14) + (0U) & ~(0U))));
+  lea      $t0,-128[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.d);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_644[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-128[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-128[$fp]
+  ldo      $t0,24[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_718
+T00204_717:
+;         else if (match(&s, "%hfa21")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_645[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_719
+;             struct hfa21 x = (*(struct hfa21 *)(((ap) += (sizeof (struct hfa21) + (7U) & ~(7U))) - (sizeof (struct hfa21) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  ldo      $t1,[$t0]
+  sto      $t1,[$s5]
+;             printf("%.1f,%.1f", x.a, x.a);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_646[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s5]
+  sto      $t0,8[$sp]
+  ldo      $t0,[$s5]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_720
+T00204_719:
+;         else if (match(&s, "%hfa22")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_647[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_721
+;             struct hfa22 x = (*(struct hfa22 *)(((ap) += (sizeof (struct hfa22) + (7U) & ~(7U))) - (sizeof (struct hfa22) + (0U) & ~(0U))));
+  lea      $t0,-152[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.b);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_648[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-152[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-152[$fp]
+  ldo      $t0,8[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_722
+T00204_721:
+;         else if (match(&s, "%hfa23")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_649[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_723
+;             struct hfa23 x = (*(struct hfa23 *)(((ap) += (sizeof (struct hfa23) + (7U) & ~(7U))) - (sizeof (struct hfa23) + (0U) & ~(0U))));
+  lea      $t0,-176[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.c);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_650[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-176[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-176[$fp]
+  ldo      $t0,16[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_724
+T00204_723:
+;         else if (match(&s, "%hfa24")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_651[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_725
+;             struct hfa24 x = (*(struct hfa24 *)(((ap) += (sizeof (struct hfa24) + (7U) & ~(7U))) - (sizeof (struct hfa24) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  mov      $a0,$s8
+  mov      $a1,$t0
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1f,%.1f", x.a, x.d);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_652[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s8]
+  sto      $t0,8[$sp]
+  ldo      $t0,24[$s8]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_726
+T00204_725:
+;         else if (match(&s, "%hfa31")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_653[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_727
+;             struct hfa31 x = (*(struct hfa31 *)(((ap) += (sizeof (struct hfa31) + (7U) & ~(7U))) - (sizeof (struct hfa31) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  ldo      $t1,[$t0]
+  sto      $t1,[$s4]
+;             printf("%.1Lf,%.1Lf", x.a, x.a);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_654[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s4]
+  sto      $t0,8[$sp]
+  ldo      $t0,[$s4]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_728
+T00204_727:
+;         else if (match(&s, "%hfa32")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_655[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_729
+;             struct hfa32 x = (*(struct hfa32 *)(((ap) += (sizeof (struct hfa32) + (7U) & ~(7U))) - (sizeof (struct hfa32) + (0U) & ~(0U))));
+  lea      $t0,-232[$fp]
+  ldi      $t3,#7
+  and      $t2,$s2,#-8
+  add      $s1,$s1,$t2
+  ldi      $t3,#0
+  and      $t2,$s2,#-1
+  sub      $t1,$s1,$t2
+  mov      $a0,$t0
+  mov      $a1,$t1
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1Lf,%.1Lf", x.a, x.b);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_656[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,-232[$fp]
+  sto      $t0,8[$sp]
+  lea      $t0,-232[$fp]
+  ldo      $t0,8[$t0]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_730
+T00204_729:
+;         else if (match(&s, "%hfa33")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_657[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_731
+;             struct hfa33 x = (*(struct hfa33 *)(((ap) += (sizeof (struct hfa33) + (7U) & ~(7U))) - (sizeof (struct hfa33) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  mov      $a0,$s7
+  mov      $a1,$t0
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1Lf,%.1Lf", x.a, x.c);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_658[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s7]
+  sto      $t0,8[$sp]
+  ldo      $t0,16[$s7]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_732
+T00204_731:
+;         else if (match(&s, "%hfa34")) {
+  gcsub    $sp,$sp,#16
+  sto      $s0,0[$sp]
+  lea      $t0,T00204_659[$gp1]
+  sto      $t0,8[$sp]
+  jal      _match
+  mov      $t0,$a0
+  tst      $cr0,$t0
+  bf       $cr0,T00204_733
+;             struct hfa34 x = (*(struct hfa34 *)(((ap) += (sizeof (struct hfa34) + (7U) & ~(7U))) - (sizeof (struct hfa34) + (0U) & ~(0U))));
+  ldi      $t2,#7
+  and      $t1,$s2,#-8
+  add      $s1,$s1,$t1
+  ldi      $t2,#0
+  and      $t1,$s2,#-1
+  sub      $t0,$s1,$t1
+  mov      $a0,$s9
+  mov      $a1,$t0
+  ldi      $a2,#8
+  call     __aacpy
+;             printf("%.1Lf,%.1Lf", x.a, x.d);
+  gcsub    $sp,$sp,#24
+  lea      $t0,T00204_660[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,[$s9]
+  sto      $t0,8[$sp]
+  ldo      $t0,24[$s9]
+  sto      $t0,16[$sp]
+  call     _printf
+  bra      T00204_734
+T00204_733:
+;             (_Files[1]->_Next < _Files[1]->_Wend ? (*_Files[1]->_Next++ = *s) : (putchar)(*s));
+  lea      $t0,__Files[$gp]
+  lea      $t1,__Files[$gp]
+  ldo      $t1,48[$t1]
+  sgeu     $t0,$t1
+  bt       T00204_735
+  lea      $t1,__Files[$gp]
+  ldo      $t1,24[$t1]
+  ldo      $t2,[$s0]
+  stw      $t2,[$gp]
+  lea      $t2,__Files[$gp]
+  ldo      $t3,24[$t2]
+  add      $t3,$t3,#2
+  sto      $t3,24[$t2]
+  bra      T00204_736
+T00204_735:
+  sto      $t0,-328[$fp]
+  sto      $t1,-336[$fp]
+  gcsub    $sp,$sp,#8
+  ldw      $t2,[$s0]
+  sto      $t2,0[$sp]
+  call     _putchar
+  ldo      $t1,-336[$fp]
+  ldo      $t0,-328[$fp]
+T00204_736:
+T00204_734:
+T00204_732:
+T00204_730:
+T00204_728:
+T00204_726:
+T00204_724:
+T00204_722:
+T00204_720:
+T00204_718:
+T00204_716:
+T00204_714:
+T00204_712:
+T00204_710:
+T00204_708:
+  ldo      $t0,[$s0]
+  add      $t0,$t0,#2
+  sto      $t0,[$s0]
+  ldw      $t0,[$s0]
+  tst      $cr0,$t0
+  bt       $cr0,T00204_704
+T00204_705:
+;     (_Files[1]->_Next < _Files[1]->_Wend ? (*_Files[1]->_Next++ = '\n') : (putchar)('\n'));
+  lea      $t0,__Files[$gp]
+  lea      $t1,__Files[$gp]
+  ldo      $t1,48[$t1]
+  sgeu     $t0,$t1
+  bt       T00204_737
+  lea      $t1,__Files[$gp]
+  ldo      $t1,24[$t1]
+  ldi      $t2,#10
+  ;empty   $t2,$t2
+  stw      $t2,[$gp]
+  lea      $t2,__Files[$gp]
+  ldo      $t3,24[$t2]
+  add      $t3,$t3,#2
+  sto      $t3,24[$t2]
+  bra      T00204_738
+T00204_737:
+  sto      $t0,-328[$fp]
+  sto      $t1,-336[$fp]
+  gcsub    $sp,$sp,#8
+  sto      $t2,0[$sp]
+  call     _putchar
+  ldo      $t1,-336[$fp]
+  ldo      $t0,-328[$fp]
+T00204_738:
+T00204_700:
+T00204_703:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ldo      $ra,8[$sp]
+  ret      #32
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _stdarg:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+;     printf("stdarg:\n");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_739[$gp1]
+  sto      $t0,0[$sp]
+  call     _printf
+;     myprintf("%9s %9s %9s %9s %9s %9s", s9, s9, s9, s9, s9, s9);
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_740[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,40[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,48[$sp]
+  call     _myprintf
+;     myprintf("%7s %9s %9s %9s %9s %9s", s7, s9, s9, s9, s9, s9);
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_741[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_s7[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,40[$sp]
+  lea      $t0,_s9[$gp]
+  sto      $t0,48[$sp]
+  call     _myprintf
+;     myprintf("HFA long double:");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_742[$gp1]
+  sto      $t0,0[$sp]
+  call     _myprintf
+;     myprintf("%hfa34 %hfa34 %hfa34 %hfa34", hfa34, hfa34, hfa34, hfa34);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_743[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa33 %hfa34 %hfa34 %hfa34", hfa33, hfa34, hfa34, hfa34);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_744[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa32 %hfa34 %hfa34 %hfa34", hfa32, hfa34, hfa34, hfa34);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_745[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa31 %hfa34 %hfa34 %hfa34", hfa31, hfa34, hfa34, hfa34);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_746[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa32 %hfa33 %hfa33 %hfa33 %hfa33",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_747[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa31 %hfa33 %hfa33 %hfa33 %hfa33",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_748[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa33 %hfa33 %hfa33 %hfa33",
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_749[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa34 %hfa32 %hfa32 %hfa32 %hfa32",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_750[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa33 %hfa32 %hfa32 %hfa32 %hfa32",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_751[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa33[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa34 %hfa32 %hfa31 %hfa31 %hfa31 %hfa31",
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_752[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa34[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa32[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,40[$sp]
+  lea      $t0,_hfa31[$gp]
+  sto      $t0,48[$sp]
+  call     _myprintf
+;     myprintf("HFA double:");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_753[$gp1]
+  sto      $t0,0[$sp]
+  call     _myprintf
+;     myprintf("%hfa24 %hfa24 %hfa24 %hfa24", hfa24, hfa24, hfa24, hfa24);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_754[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa23 %hfa24 %hfa24 %hfa24", hfa23, hfa24, hfa24, hfa24);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_755[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa22 %hfa24 %hfa24 %hfa24", hfa22, hfa24, hfa24, hfa24);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_756[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa21 %hfa24 %hfa24 %hfa24", hfa21, hfa24, hfa24, hfa24);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_757[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa22 %hfa23 %hfa23 %hfa23 %hfa23",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_758[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa21 %hfa23 %hfa23 %hfa23 %hfa23",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_759[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa23 %hfa23 %hfa23 %hfa23",
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_760[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa24 %hfa22 %hfa22 %hfa22 %hfa22",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_761[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa23 %hfa22 %hfa22 %hfa22 %hfa22",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_762[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa23[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa24 %hfa22 %hfa21 %hfa21 %hfa21 %hfa21",
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_763[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa24[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa22[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,40[$sp]
+  lea      $t0,_hfa21[$gp]
+  sto      $t0,48[$sp]
+  call     _myprintf
+;     myprintf("HFA float:");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_764[$gp1]
+  sto      $t0,0[$sp]
+  call     _myprintf
+;     myprintf("%hfa14 %hfa14 %hfa14 %hfa14", hfa14, hfa14, hfa14, hfa14);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_765[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa13 %hfa14 %hfa14 %hfa14", hfa13, hfa14, hfa14, hfa14);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_766[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa12 %hfa14 %hfa14 %hfa14", hfa12, hfa14, hfa14, hfa14);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_767[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa11 %hfa14 %hfa14 %hfa14", hfa11, hfa14, hfa14, hfa14);
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_768[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa12 %hfa13 %hfa13 %hfa13 %hfa13",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_769[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa11 %hfa13 %hfa13 %hfa13 %hfa13",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_770[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa13 %hfa13 %hfa13 %hfa13",
+  gcsub    $sp,$sp,#40
+  lea      $t0,T00204_771[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,32[$sp]
+  call     _myprintf
+;     myprintf("%hfa14 %hfa12 %hfa12 %hfa12 %hfa12",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_772[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa13 %hfa12 %hfa12 %hfa12 %hfa12",
+  gcsub    $sp,$sp,#48
+  lea      $t0,T00204_773[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa13[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,40[$sp]
+  call     _myprintf
+;     myprintf("%hfa14 %hfa12 %hfa11 %hfa11 %hfa11 %hfa11",
+  gcsub    $sp,$sp,#56
+  lea      $t0,T00204_774[$gp1]
+  sto      $t0,0[$sp]
+  lea      $t0,_hfa14[$gp]
+  sto      $t0,8[$sp]
+  lea      $t0,_hfa12[$gp]
+  sto      $t0,16[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,24[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,32[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,40[$sp]
+  lea      $t0,_hfa11[$gp]
+  sto      $t0,48[$sp]
+  call     _myprintf
+T00204_779:
+T00204_782:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _pll:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+  gcsub    $sp,$sp,#16
+  lea      $t0,T00204_783[$gp1]
+  sto      $t0,0[$sp]
+  ldo      $t0,40[$fp]
+  sto      $t0,8[$sp]
+  call     _printf
+T00204_788:
+T00204_791:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #24
+endpublic
+
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _movi:
+  gcsub    $sp,$sp,#8
+  sto      $fp,[$sp]
+  mov      $fp,$sp
+  lea      $gp1,__rodata_start
+;     printf("MOVI:\n");
+  gcsub    $sp,$sp,#8
+  lea      $t0,T00204_792[$gp1]
+  sto      $t0,0[$sp]
+  call     _printf
+;     pll(0);
+  gcsub    $sp,$sp,#8
+  sto      $x0,0[$sp]
+  call     _pll
+;     pll(0xabcd);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#43981
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd0000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2882338816
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd00000000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#188896956645376
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd000000000000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6067193122998190080
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffabcd);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#4294945741
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2882404351
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffffffffffabcd);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-21555
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffffffabcdffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-1412562945
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffabcdffffffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-92573725097985
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdffffffffffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6066911648021479425
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xaaaaaaaa);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2863311530
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x5555555555555555);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#6148914691236517205
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x77777777);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2004318071
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x3333333333333333);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#3689348814741910323
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xf8f8f8f8);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#4177066232
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x1e1e1e1e1e1e1e1e);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2170205185142300190
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x3f803f80);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#1065369472
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x01ff01ff01ff01ff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#143835907860922879
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x007fffc0);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#8388544
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x03fff80003fff800);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#288221580125796352
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0x0007fffffffffe00);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2251799813684736
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd1234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#2882343476
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd00001234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#188896956650036
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd000000001234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6067193122998185420
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd12340000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#188897262043136
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd000012340000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6067193122692792320
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd123400000000);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6067173108450590720
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffffffabcd1234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-1412623820
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffabcdffff1234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-92573725158860
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdffffffff1234);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6066911648021540300
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffabcd1234ffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-92577714601985
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdffff1234ffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6066911652010983425
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcd1234ffffffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6067173104155623425
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xffffef0123456789);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-18686810953847
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdef012345ffff);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6066930334832394241
+  sto      $t0,0[$sp]
+  call     _pll
+;     pll(0xabcdef0123456789);
+  gcsub    $sp,$sp,#8
+  ldi      $t0,#-6066930334832433271
+  sto      $t0,0[$sp]
+  call     _pll
+T00204_797:
+T00204_800:
+  mov      $sp,$fp
+  ldo      $fp,[$sp]
+  ret      #16
+endpublic
+
+	data
+	align	2
+T00204_801:	; T00204_addip0
+	fill.b	8,0x00
+	align	2
+T00204_802:	; T00204_sublp0
+	fill.b	8,0x00
+	align	2
+T00204_803:	; T00204_addip123
+	fill.b	8,0x00
+	align	2
+T00204_804:	; T00204_addlm123
+	fill.b	8,0x00
+	align	2
+T00204_805:	; T00204_sublp4095
+	fill.b	8,0x00
+	align	2
+T00204_806:	; T00204_subim503808
+	fill.b	8,0x00
+	align	2
+T00204_807:	; T00204_addp12345
+	fill.b	8,0x00
+	align	2
+T00204_808:	; T00204_subp12345
+	fill.b	8,0x00
+	align	2
+T00204_809:	; T00204_mvni
+	fill.b	8,0x00
+	align	2
+T00204_810:	; T00204_negl
+	fill.b	8,0x00
+	align	2
+T00204_811:	; T00204_rsbi123
+	fill.b	8,0x00
+	align	2
+T00204_812:	; T00204_rsbl123
+	fill.b	8,0x00
+	align	2
+T00204_813:	; T00204_andi0
+	fill.b	8,0x00
+	align	2
+T00204_814:	; T00204_andlm1
+	fill.b	8,0x00
+	align	2
+T00204_815:	; T00204_orrl0
+	fill.b	8,0x00
+	align	2
+T00204_816:	; T00204_orrim1
+	fill.b	8,0x00
+	align	2
+T00204_817:	; T00204_eori0
+	fill.b	8,0x00
+	align	2
+T00204_818:	; T00204_eorlm1
+	fill.b	8,0x00
+	align	2
+T00204_819:	; T00204_and0xf0
+	fill.b	8,0x00
+	align	2
+T00204_820:	; T00204_orr0xf0
+	fill.b	8,0x00
+	align	2
+T00204_821:	; T00204_eor0xf0
+	fill.b	8,0x00
+	align	2
+T00204_822:	; T00204_lsli0
+	fill.b	8,0x00
+	align	2
+T00204_823:	; T00204_lsri0
+	fill.b	8,0x00
+	align	2
+T00204_824:	; T00204_asrl0
+	fill.b	8,0x00
+	align	2
+T00204_825:	; T00204_lsli1
+	fill.b	8,0x00
+	align	2
+T00204_826:	; T00204_lsli31
+	fill.b	8,0x00
+	align	2
+T00204_827:	; T00204_lsll1
+	fill.b	8,0x00
+	align	2
+T00204_828:	; T00204_lsll63
+	fill.b	8,0x00
+	align	2
+T00204_829:	; T00204_lsri1
+	fill.b	8,0x00
+	align	2
+T00204_830:	; T00204_lsri31
+	fill.b	8,0x00
+	align	2
+T00204_831:	; T00204_lsrl1
+	fill.b	8,0x00
+	align	2
+T00204_832:	; T00204_lsrl63
+	fill.b	8,0x00
+	align	2
+T00204_833:	; T00204_asri1
+	fill.b	8,0x00
+	align	2
+T00204_834:	; T00204_asri31
+	fill.b	8,0x00
+	align	2
+T00204_835:	; T00204_asrl1
+	fill.b	8,0x00
+	align	2
+T00204_836:	; T00204_asrl63
+	fill.b	8,0x00
+	code
+	align	16
+	code
+	align	16

@@ -1,0 +1,7 @@
+  	code
+	align	16
+ 	code
+	align	16
+	rodata
+	align	16
+;	global	_main

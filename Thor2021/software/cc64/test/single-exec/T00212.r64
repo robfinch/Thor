@@ -1,0 +1,48 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+.C00011:
+  leave    #96
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00212_1[50]: ; KO no __*LP*__ defined.
+
+	dcw	75,79,32,110,111,32,95,95
+	dcw	42,76,80,42,95,95,32,100
+	dcw	101,102,105,110,101,100,46,10
+	dcw	0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

@@ -1,0 +1,66 @@
+     1	struct A
+     2	{
+     3	unsigned  char l[2];
+     4	unsigned  char m;
+     5	unsigned  char n;
+     6	} globa;
+     7	
+     8	int test0( register int aaa )
+     9	{
+    10	int ss = 34;
+    11	globa.m = ss + globa.l[0] + globa.l[1] + aaa;
+    12	return globa.m;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+7 _ss        =fffffff8   -    Auto        Long
+
+
+
+    15	int test00( struct A *a, int aaa )
+    16	{
+    17	int ss = 34;
+    18	a->m = ss + a->l[0] + a->l[1] + aaa;
+    19	return a->m;
+    20	}
+
+
+*** local symbol table ***
+
+7 _ss        =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _test0     =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		40 _globa     =000000   -    Global      struct _A 
+29 _test00    =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _A         =000000   -    Type        struct _A 
+    13 _l         =000000   -    Member      Array of Char
+    17 _m         =000004   -    Member      Char
+    17 _n         =000006   -    Member      Char

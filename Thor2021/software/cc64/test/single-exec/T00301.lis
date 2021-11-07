@@ -1,0 +1,76 @@
+     1	
+     2	
+     3	try int main(int argc)
+     4	{
+     5	int x, y;
+     6	
+     7	try {
+     8	printf("In try");
+     9	try {
+    10	printf("try again");
+    11	}
+    12	catch (char ch) {
+    13	printf("caught char");
+    14	}
+    15	printf("after throw");
+    16	}
+    17	catch (int erc) {
+    18	printf("catch int");
+    19	}
+    20	catch (char ch) {
+    21	printf("%c", ch);
+    22	}
+    23	catch (...) {
+    24	printf("catch all");
+    25	}
+    26	try {
+    27	printf("try 2");
+    28	x = x + 1;
+    29	if (y == 0)
+    30	throw ("Divide by zero");
+    31	x =x / y;
+    32	}
+    33	catch(char *str) {
+    34	printf(str);
+    35	}
+    36	return (x + y);
+    37	}
+    38	catch (...)
+    39	{
+    40	printf("In default catch.");
+    41	}
+    42	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+7 _y         =fffffff0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: -8
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

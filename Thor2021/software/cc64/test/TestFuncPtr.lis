@@ -1,0 +1,45 @@
+     1	extern int (*ExecAddress)();
+     2	typedef struct _tag
+     3	{
+     4	int var;
+     5	int (*fptr)(int);
+     6	} Tag;
+     7	
+     8	void TestFuncptr()
+     9	{
+    10	Tag *ag;
+    11	
+    12	(*ExecAddress)();
+    13	(*(ag->fptr))(21);
+    14	}
+    15	
+
+
+*** local symbol table ***
+
+40 _ag        =fffffff0   -    Auto        struct __tag 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+40 _Tag       =000000   1   struct __tag 
+13 _ExecAddress =000000   -    External    Pointer to Function returning Long
+28 __autonew  =000000   -    
+29 _TestFuncptr =000010   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+
+40 __tag      =000000   -    Type        struct __tag 
+    7 _var       =000000   -    Member      Long
+    13 _fptr      =000008   -    Member      Pointer to Function returning Long

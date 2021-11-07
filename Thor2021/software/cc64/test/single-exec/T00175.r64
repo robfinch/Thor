@@ -1,0 +1,248 @@
+
+;{++
+                                                                                                                                                   
+	code
+	align	16
+
+	.global _charfunc
+	.align 16
+
+;.func _charfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_charfunc():
+  enter    #8
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00175_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldw      $t4,16[$fp]
+  push     $t4
+  bal      $ra,_printf
+.C00011:
+  leave    #104
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+  
+	.global _intfunc
+	.align 16
+
+;.func _intfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_intfunc():
+  enter    #0
+  ldi      $t4,#.C00021
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00175_12[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,16[$fp]
+  push     $t4
+  bal      $ra,_printf
+.C00022:
+  leave    #104
+.C00021:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00022
+.. 
+
+  
+	.global _floatfunc
+	.align 16
+
+;.func _floatfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_floatfunc():
+  enter    #0
+  ldi      $t4,#.C00032
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00175_23[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,16[$fp]
+  push     $t4
+  bal      $ra,_printf
+.C00033:
+  leave    #104
+.C00032:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00033
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+   
+	data
+	align	8
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #56
+  ldi      $t4,#.C00049
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$0000FE00
+  ldi      $s3,#_printf
+  ldi      $s4,#_charfunc
+  ldi      $s5,#_floatfunc
+  ldi      $s6,#_intfunc
+; charfunc('a');
+  ldo      $t4,T00175_44[$gp]
+  sto      $t4,-32[$fp]
+  ldo      $t4,T00175_45[$gp]
+  sto      $t4,-40[$fp]
+  ldi      $t4,#97
+  push     $t4
+  jal      $ra,[$s4]
+; charfunc(98);
+  ldi      $t4,#98
+  push     $t4
+  jal      $ra,[$s4]
+; charfunc(99.0);
+  ldo      $t4,T00175_34[$gp1]
+  push     $t4
+  jal      $ra,[$s4]
+; intfunc('a');
+  ldi      $t4,#97
+  push     $t4
+  jal      $ra,[$s6]
+; intfunc(98);
+  ldi      $t4,#98
+  push     $t4
+  jal      $ra,[$s6]
+; intfunc(99.0);
+  ldo      $t4,T00175_34[$gp1]
+  push     $t4
+  jal      $ra,[$s6]
+; floatfunc('a');
+  ldi      $t4,#97
+  push     $t4
+  jal      $ra,[$s5]
+; floatfunc(98);
+  ldi      $t4,#98
+  push     $t4
+  jal      $ra,[$s5]
+; floatfunc(99.0);
+  ldo      $t4,T00175_34[$gp1]
+  push     $t4
+  jal      $ra,[$s5]
+; printf("%d %d\n", b, c);
+  sub      $sp,$sp,#24
+  lea      $t4,T00175_36[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldw      $t4,-4[$fp]
+  sto      $t4,16[$sp]
+  jal      $ra,[$s3]
+; printf("%d %d\n", d, e);
+  sub      $sp,$sp,#24
+  lea      $t4,T00175_37[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  jal      $ra,[$s3]
+; printf("%f %f\n", f, g);
+  sub      $sp,$sp,#24
+  lea      $t4,T00175_38[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldo      $t4,-32[$fp]
+  sto      $t4,8[$sp]
+  ldo      $t4,-40[$fp]
+  sto      $t4,16[$sp]
+  jal      $ra,[$s3]
+; return 0;
+  mov      $a0,$x0
+.C00050:
+  ldm      [$sp],#$0000FE00
+  leave    #96
+.C00049:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00050
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00175_45[0]:
+
+T00175_44[0]:
+
+T00175_35[16]:
+	dct	0x00000000,0x40584000
+T00175_34[16]:
+	dct	0x00000000,0x4058C000
+	align	8
+
+
+T00175_1[20]: ; char: %c
+
+	dcw	99,104,97,114,58,32,37,99
+	dcw	10,0
+T00175_12[18]: ; int: %d
+
+	dcw	105,110,116,58,32,37,100,10
+	dcw	0
+T00175_23[22]: ; float: %f
+
+	dcw	102,108,111,97,116,58,32,37
+	dcw	102,10,0
+T00175_36[14]: ; %d %d
+
+	dcw	37,100,32,37,100,10,0
+T00175_37[14]: ; %d %d
+
+	dcw	37,100,32,37,100,10,0
+T00175_38[14]: ; %f %f
+
+	dcw	37,102,32,37,102,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

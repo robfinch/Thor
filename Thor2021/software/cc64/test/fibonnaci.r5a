@@ -1,0 +1,76 @@
+
+;{++
+ 
+	bss
+	align	8
+
+.global _nums:
+
+	fill.b	240,0x00                    
+ 
+	code
+	align	16
+
+	.global _main
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main:
+  subi     $sp,$sp,32
+  sd       $fp,[$sp]
+  mv       $fp,$sp
+  subi     $sp,$sp,32
+  la       $gp,__data_start
+  sd       $s0,0[$sp]
+  sd       $s1,8[$sp]
+  sd       $s2,16[$sp]
+  sd       $s3,24[$sp]
+; c1 = 0;
+  mv       $s3,$x0
+; c2 = 1;
+  li       $s1,1
+; for (n = 0; n < 23; n = n + 1) {
+  mv       $s0,$x0
+  li       $t5,23
+  bge      $s0,$t5,.C00017
+.C00016:
+; if (n < 1) {
+  li       $t5,1
+  bge      $s0,$t5,.C00019
+; nums[0] = 1;
+  li       $t5,1
+  sd       $t5,_nums[$gp]
+; c = 1;
+  li       $s2,1
+  bra      .C00020
+.C00019:
+; nums[n] = c;
+  slli     $t5,$s0,3
+  la       $t6,_nums[$gp]
+  add      $t5,$t5,$t6
+  sd       $s2,0[$t5]
+; c = c1 + c2;
+  add      $s2,$s3,$s1
+; c1 = c2;
+  mv       $s3,$s1
+; c2 = c;
+  mv       $s1,$s2
+.C00020:
+  addi     $s0,$s0,1
+  li       $t5,23
+  blt      $s0,$t5,.C00016
+.C00017:
+.C00015:
+  ld       $s0,0[$sp]
+  ld       $s1,8[$sp]
+  ld       $s2,16[$sp]
+  ld       $s3,24[$sp]
+  mv       $sp,$fp
+  ld       $fp,[$sp]
+  ret    
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,1755 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614DD8(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 01A09BE0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614EC8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 01A09BE0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614FB8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 01A09BE0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 123 124 125 127 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 350 354 355 358 359 362 363 364 370 375 380 381 382 383 385 386 387 388 414 }<Find>_struct</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<Find>_foo</Find>
+<Find>_foo</Find>
+Insert into tagtable:_foo|
+<Find>_foo</Find>
+At insert:
+Type array:
+   
+Insert into tagtable:_foo|
+<Find>_foo:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+Insert into tagtable:_foo|
+<Find>_foo:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+<Find>_int</Find>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_i</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_i|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_i</Find>
+hh1</FindSymbol>
+DEGHInsert _i into 016C57C8<Find>_i</Find>
+At insert:
+Type array:
+   
+<Find>_j</Find>
+b<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_j|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_j</Find>
+hh1</FindSymbol>
+DEGHInsert _j into 016C57C8<Find>_j</Find>
+At insert:
+Type array:
+   
+<Find>_k</Find>
+b<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_k|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_k</Find>
+hh1</FindSymbol>
+DEGHInsert _k into 016C57C8<Find>_k</Find>
+At insert:
+Type array:
+   
+<Find>_char</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Find>_p</Find>
+<TYP__Make>
+</TYP__Make>
+I<ParsePrefixId>B|_p|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_p</Find>
+hh1</FindSymbol>
+DEGHInsert _p into 016C57C8<Find>_p</Find>
+At insert:
+Type array:
+   
+<Find>_float</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_v</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_v|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_v</Find>
+hh1</FindSymbol>
+DEGHInsert _v into 016C57C8<Find>_v</Find>
+At insert:
+Type array:
+   
+</declare>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(45)
+;</ParseDeclPrefix>
+C<FindSymbol><Find>__noname_var0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>__noname_var0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 24
+***Inserting:__noname_var0 into 01A09BE0
+Insert __noname_var0 into 01A09BE0Insert into global table
+<Find>__noname_var0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_int</Find>
+<TYP__Copy>
+ACD<CopySymbolTable>
+ABEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _i into 016C59D0<Find>_i:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _j into 016C59D0<Find>_j:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _k into 016C59D0<Find>_k:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _p into 016C59D0<Find>_p:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _v into 016C59D0<Find>_v:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+D</CopySymbolTable>
+</TYP__Copy>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_f1</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_f1|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _f1
+****************************
+****************************
+<Find>_struct</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(89)C<declare>
+A<ParseSpecifier>
+A<Find>_foo</Find>
+<Find>_foo:Match</Find>
+<Find>_f</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_f|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_f</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_f</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 24
+***Inserting:_f into 016150C8
+Insert _f into 016150C8<Find>_f</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<TYP__Copy>
+ACD<CopySymbolTable>
+ABEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _i into 016C5B08<Find>_i:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _j into 016C5B08<Find>_j:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _k into 016C5B08<Find>_k:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _p into 016C5B08<Find>_p:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _v into 016C5B08<Find>_v:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+D</CopySymbolTable>
+</TYP__Copy>
+</declare>
+E<Find>_struct</Find>
+A(89)C<declare>
+A<ParseSpecifier>
+A<Find>_foo</Find>
+<Find>_foo:Match</Find>
+Insert into tagtable:_foo|
+<Find>_foo:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Find>_p</Find>
+<TYP__Make>
+</TYP__Make>
+I<ParsePrefixId>B|_p|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_p</Find>
+<Find>_p:Match</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p</Find>
+<Find>_p:Match</Find>
+hh1</FindSymbol>
+klJK</declare>
+E<Find>_int</Find>
+A(71)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_n</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_n|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_n</Find>
+<Find>_n</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_n</Find>
+<Find>_n</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_n into 016150C8
+Insert _n into 016150C8<Find>_n</Find>
+<Find>_n</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(63)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(53)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p3</Find>
+<Find>_p3</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p3</Find>
+<Find>_p3</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 39
+***Inserting:_p3 into 016150C8
+Insert _p3 into 016150C8<Find>_p3</Find>
+<Find>_p3</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_f:Match</Find>
+<Find>_p</Find>
+<Find>_p:Match</Find>
+<Find>_n:Match</Find>
+<Find>_p3:Match</Find>
+</BuildParameterList>
+Set false
+Set true1
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_f1</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_f1</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_f1 into 01A09BE0
+<BuildSignature>E<TypenoToChars>ABCD:IBAA</TypenoToChars><TypenoToChars>ABCD:HAAA</TypenoToChars><TypenoToChars>ABCD:HBAA</TypenoToChars>:_f1IBAAHAAAHBAA</BuildSignature>Insert _f1 into 01A09BE0Insert into global table
+<Find>_f1</Find>
+At insert:
+Type array:
+   040 007 039 
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _f1
+***********************************
+***********************************
+***********************************
+A<BuildParameterList>Function parameter list already processed.<ParseParmDecls>
+A(50)</ParseParmDecls>
+B<BuildSignature>:_f1</BuildSignature><Find>_f1:Match</Find>
+CDEG<Parse function body>:_f1|
+<Find>_if</Find>
+<GenerateMonadic>ABCD</GenerateMonadic>
+BbC<Parse><ParseIf><Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f</Find>
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_f:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5AD0 deref tp:016C5AD0 </nameref2>
+</Nameref>
+<Find>_i</Find>
+dot search: 016C5B08
+<FindRising>_i 
+<Find>_i:Match</Find>
+</FindRising><FindRisingMatch>_i type 7 <FindRising>_i 
+<Find>_i:Match</Find>
+</FindRising>Found method:</FindRisingMatch>
+tp1->type:7tp1->type:7<Deref></Deref>tp1->type:7B<Find>_p</Find>
+<Nameref>GSearchfor:_p|
+<gsearch2> for: |_p|
+Looking in statement table
+<Find>_p</Find>
+Looking in function's symbol table
+<Find>_p</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_p</Find>
+<Find>_p:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_p</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_pIsEqual:T2sp is not null
+Type array:
+   
+tp:016C58C8 <Deref></Deref>deref tp:016C58C8 </nameref2>
+</Nameref>
+<Find>_i</Find>
+dot search: 016C5900
+<FindRising>_i 
+<Find>_i</Find>
+</FindRising><FindRising>_i 
+<Find>_i</Find>
+</FindRising>Nomember1<Parse><ParseExpression>
+<Nameref>GSearchfor:_i|
+<gsearch2> for: |_i|
+Looking in statement table
+<Find>_i</Find>
+Looking in function's symbol table
+<Find>_i</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_i</Find>
+<Find>_i:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_i</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_iIsEqual:T2sp is not null
+Type array:
+   
+tp:016C57F8 <Deref></Deref>deref tp:016C57F8 </nameref2>
+</Nameref>
+</ParseExpression>
+</Parse></ParseIf></Parse><Parse><ParseExpression>
+<Find>_return</Find>
+</ParseExpression>
+</Parse><Parse><Find>_return</Find>
+</Parse><Parse><Find>_p</Find>
+<Nameref>GSearchfor:_p|
+<gsearch2> for: |_p|
+Looking in statement table
+<Find>_p</Find>
+Looking in function's symbol table
+<Find>_p</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_p</Find>
+<Find>_p:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_p</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_pIsEqual:T2sp is not null
+Type array:
+   
+tp:016C58C8 <Deref></Deref>deref tp:016C58C8 </nameref2>
+</Nameref>
+<Find>_j</Find>
+dot search: 016C5900
+<FindRising>_j 
+<Find>_j</Find>
+</FindRising><FindRising>_j 
+<Find>_j</Find>
+</FindRising>Nomember1</Parse>Found _j
+<Find>_j</Find>
+<Find>_j:Match</Find>
+Found in tagtablesp okay sc=8
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_j|
+<gsearch2> for: |_j|
+Looking in statement table
+<Find>_j</Find>
+Looking in function's symbol table
+<Find>_j</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_j</Find>
+<Find>_j:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_j</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_jIsEqual:T2sp is not null
+Type array:
+   
+tp:016C57F8 <Deref></Deref>deref tp:016C57F8 </nameref2>
+</Nameref>
+<Find>_n</Find>
+<Nameref>GSearchfor:_n|
+<gsearch2> for: |_n|
+Looking in statement table
+<Find>_n</Find>
+Looking in function's symbol table
+<Find>_n</Find>
+Searching method/class:_f1|00DE6940
+Looking at params 016150C8
+<Find>_n:Match</Find>
+Found as parameter
+Looking at class members 016C5AA0
+Looking at global symbols
+<Find>_n</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_nIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5BA0 <Deref></Deref>deref tp:016C5BA0 </nameref2>
+</Nameref>
+</ParseExpression>
+</Parse><Find>_int</Find>
+D<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:1 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 138: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 48: ???
+  rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+st_expr
+Node:0
+nodetype: 61: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 48: ???
+    rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+<Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>{/if}BE<OptConst></OptConst>eBE<OptConst></OptConst>eBE<OptConst></OptConst>eBE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><CSETable>For _f1
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 4   2   1   0   10   _p   
+1: 2   1   0   0   -1   _i   
+2: 2   1   0   0   -1   _n   
+3: 2   1   0   0   -1   _j   
+4: 2   1   0   0   -1   _i   
+5: 0   1   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs><GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:2 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 138: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 48: ???
+  rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+st_expr
+Node:0
+nodetype: 61: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 48: ???
+    rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+<CSETable>For _f1
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 4   2   1   0   10   _p   
+1: 2   1   0   0   -1   _i   
+2: 2   1   0   0   -1   _n   
+3: 2   1   0   0   -1   _j   
+4: 2   1   0   0   -1   _i   
+5: 0   1   0   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+===== After Update =====Statement
+Statement
+Statement
+Node:0
+nodetype: 138: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 56: en_regvar
+  rg: 10
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 48: ???
+  rg: 0
+Statement
+st_expr
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Node:0
+nodetype: 56: en_regvar
+rg: 10
+  Node:0
+  nodetype: 45: en_autocon
+  rg: 0
+st_expr
+Node:0
+nodetype: 61: ???
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 48: ???
+    rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+Statement
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs>E_f1: 2 basic blocks
+----- Compute Live Vars -----
+1: g4 g20 g29 g30  || k0 k4 k10 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 30 }----- Compute Live Vars -----
+0: g4 g10 g29 g30  || k0 k4 k10 
+Edges to: - - - - Live Out - - - -{ 4 10 20 29 30 }----- Compute Live Vars -----
+1: g4 g20 g29 g30  || k0 k4 k10 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 30 }----- Compute Live Vars -----
+0: g4 g10 g29 g30  || k0 k4 k10 
+Edges to: - - - - Live Out - - - -{ 4 10 20 29 30 }----- Compute Live Vars -----
+1: g4 g20 g29 g30  || k0 k4 k10 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 30 }----- Compute Live Vars -----
+0: g4 g10 g29 g30  || k0 k4 k10 
+Edges to: - - - - Live Out - - - -{ 4 10 20 29 30 }<table style="width:100%">
+<tr><td>0: </td><td>vi4 </td><td>vi10 </td><td>vi20 </td><td>vi29 </td><td>vi30 </td><td> || </td><td>vo4 </td><td>vo10 </td><td>vo20 </td><td>vo29 </td><td>vo30 </td></tr>
+<tr><td>1: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td>vi30 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td>vo30 </td><td></td></tr>
+<tr><td>2: </td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r30: { 0 1 }
+Visited r29: { 0 1 }
+Visited r20: { 0 1 }
+Visited r10: { 0 1 }
+Visited r4: { 0 1 }
+<VarForests>0
+Var30: 1 trees
+<Tree>0 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+Var29: 1 trees
+<Tree>1 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+Var20: 1 trees
+<Tree>2 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+Var10: 1 trees
+<Tree>3 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var4: 1 trees
+<Tree>4 Color:-12851 { 0 1 }</Tree>
+<Forest>{ 0 1 }</Forest>
+</VarForests>
+<Paths>
+0: { 0 1 }
+</Paths>
+</ParseFunctionBody>
+<FuncSummary>
+</FuncSummary>
+F</ParseFunction>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_main</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_main|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _main
+****************************
+****************************
+<Find>_void</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(84)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(53)
+D<ParseDeclSuffix>
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+C<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_p0</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 28
+***Inserting:_p0 into 01615488
+Insert _p0 into 01615488<Find>_p0</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_p0:Match</Find>
+</BuildParameterList>
+Set false
+Set true1
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_main into 01A09BE0
+<BuildSignature>E<TypenoToChars>ABCD:3AAA</TypenoToChars>:_main3AAA</BuildSignature>Insert _main into 01A09BE0Insert into global table
+<Find>_main</Find>
+At insert:
+Type array:
+   028 
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _main
+***********************************
+***********************************
+***********************************
+A<BuildParameterList>Function parameter list already processed.<ParseParmDecls>
+A(50)</ParseParmDecls>
+B<BuildSignature>:_main</BuildSignature><Find>_main:Match</Find>
+CDEG<Parse function body>:_main|
+<Find>_struct</Find>
+<GenerateMonadic>ABCD</GenerateMonadic>
+BbC<declare>
+A<ParseSpecifier>
+A<Find>_foo</Find>
+<Find>_foo:Match</Find>
+<Find>_f</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_f|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_f</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_f</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 24
+***Inserting:_f into 020FF1E0
+Insert _f into 020FF1E0<Find>_f</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_f</Find>
+<TYP__Copy>
+ACD<CopySymbolTable>
+ABEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _i into 016C5DE0<Find>_i:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _j into 016C5DE0<Find>_j:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _k into 016C5DE0<Find>_k:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _p into 016C5DE0<Find>_p:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+DBEnter SYM::Copy
+ALeave SYM::Copy
+CInsert _v into 016C5DE0<Find>_v:MatchIsEqual:T2:Exact matchType array:
+   
+Type array:
+   
+D</CopySymbolTable>
+</TYP__Copy>
+</declare>
+Found _f
+<Find>_f</Find>
+<Find>_f</Find>
+<Find>_f</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+<Find>_i</Find>
+dot search: 016C5DE0
+<FindRising>_i 
+<Find>_i:Match</Find>
+</FindRising><FindRisingMatch>_i type 7 <FindRising>_i 
+<Find>_i:Match</Find>
+</FindRising>Found method:</FindRisingMatch>
+tp1->type:7tp1->type:7<Deref></Deref>tp1->type:7B<Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+<Find>_j</Find>
+dot search: 016C5DE0
+<FindRising>_j 
+<Find>_j:Match</Find>
+</FindRising><FindRisingMatch>_j type 7 <FindRising>_j 
+<Find>_j:Match</Find>
+</FindRising>Found method:</FindRisingMatch>
+tp1->type:7tp1->type:7<Deref></Deref>tp1->type:7B<Find>_f1</Find>
+</ParseExpression>
+</Parse>Found _f1
+<Find>_f1</Find>
+<Find>_f1</Find>
+<Find>_f1:Match</Find>
+sp okay sc=3
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_f1|
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_f1IsEqual:F1sp is not null
+Type array:
+   
+tp:016C5A68 deref tp:016C5A68 </nameref2>
+</Nameref>
+<Find>_f</Find>
+tp2->type=29<ArgumentList><Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+040 <Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+<TYP__Make>
+</TYP__Make>
+013 007 lastst=53</ArgumentList>
+Type array:
+   040 013 007 
+Got Type: 29openpa calling gsearch2Got direct function _f1 <Find>_f1</Find>
+</ParseExpression>
+</Parse>Found _f1
+<Find>_f1</Find>
+<Find>_f1</Find>
+<Find>_f1:Match</Find>
+sp okay sc=3
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_f1|
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_f1IsEqual:F1sp is not null
+Type array:
+   
+tp:016C5A68 deref tp:016C5A68 </nameref2>
+</Nameref>
+<Find>_f</Find>
+tp2->type=29<ArgumentList><Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+040 <Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+<TYP__Make>
+</TYP__Make>
+013 007 007 <Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+040 <Find>_f</Find>
+<Nameref>GSearchfor:_f|
+<gsearch2> for: |_f|
+Looking in statement table
+<Find>_f:Match</Find>
+Found as an auto var
+Looking in function's symbol table
+<Find>_f</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f</Find>
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_fIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5DA8 deref tp:016C5DA8 </nameref2>
+</Nameref>
+<TYP__Make>
+</TYP__Make>
+013 lastst=53</ArgumentList>
+Type array:
+   040 013 007 007 040 013 
+Got Type: 29openpa calling gsearch2Got direct function _f1 <Find>_return</Find>
+</ParseExpression>
+</Parse><Parse></Parse>Returning EOF from NextToken.
+D<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:1 ===== Before Scan =====Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 118: en_assign
+  rg: 0
+    Node:0
+    nodetype: 169: en_ref
+    rg: 0
+      Node:0
+      nodetype: 61: ???
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 1: en_void
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 1: en_void
+          rg: 0
+            Node:0
+            nodetype: 45: en_autocon
+            rg: 0
+            Node:0
+            nodetype: 1: en_void
+            rg: 0
+              Node:0
+              nodetype: 45: en_autocon
+              rg: 0
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+<Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>BE<OptConst></OptConst>eBE<OptConst></OptConst>eBE<OptConst></OptConst>eBE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 40   20   21   0   10   _f      
+1: 2   2   2   0   -1   _f1   
+2: 0   2   1   0   -1      
+3: 0   1   1   0   -1      
+4: 0   2   1   0   -1      
+5: 0   1   0   0   -1      
+6: 0   1   0   1   -1   _i   
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs><GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:2 ===== Before Scan =====Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+  Node:0
+  nodetype: 118: en_assign
+  rg: 0
+    Node:0
+    nodetype: 169: en_ref
+    rg: 0
+      Node:0
+      nodetype: 61: ???
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 45: en_autocon
+        rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 45: en_autocon
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 45: en_autocon
+      rg: 0
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 1: en_void
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 1: en_void
+          rg: 0
+            Node:0
+            nodetype: 45: en_autocon
+            rg: 0
+            Node:0
+            nodetype: 1: en_void
+            rg: 0
+              Node:0
+              nodetype: 45: en_autocon
+              rg: 0
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+<CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 40   20   21   0   10   _f      
+1: 2   2   2   0   -1   _f1   
+2: 0   2   1   0   -1      
+3: 0   1   1   0   -1      
+4: 0   2   1   0   -1      
+5: 0   1   0   0   -1      
+6: 0   1   0   1   -1   _i   
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+===== After Update =====Statement
+Statement
+Statement
+st_expr
+Node:0
+nodetype: 118: en_assign
+rg: 0
+  Node:0
+  nodetype: 169: en_ref
+  rg: 0
+    Node:0
+    nodetype: 56: en_regvar
+    rg: 10
+  Node:0
+  nodetype: 118: en_assign
+  rg: 0
+    Node:0
+    nodetype: 169: en_ref
+    rg: 0
+      Node:0
+      nodetype: 61: ???
+      rg: 0
+        Node:0
+        nodetype: 56: en_regvar
+        rg: 10
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 37: en_icon
+    rg: 0
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 56: en_regvar
+      rg: 10
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 56: en_regvar
+        rg: 10
+st_expr
+Node:0
+nodetype: 53: ???
+rg: 0
+  Node:0
+  nodetype: 50: ???
+  rg: 0
+  Node:0
+  nodetype: 1: en_void
+  rg: 0
+    Node:0
+    nodetype: 56: en_regvar
+    rg: 10
+    Node:0
+    nodetype: 1: en_void
+    rg: 0
+      Node:0
+      nodetype: 56: en_regvar
+      rg: 10
+      Node:0
+      nodetype: 1: en_void
+      rg: 0
+        Node:0
+        nodetype: 37: en_icon
+        rg: 0
+        Node:0
+        nodetype: 1: en_void
+        rg: 0
+          Node:0
+          nodetype: 37: en_icon
+          rg: 0
+          Node:0
+          nodetype: 1: en_void
+          rg: 0
+            Node:0
+            nodetype: 56: en_regvar
+            rg: 10
+            Node:0
+            nodetype: 1: en_void
+            rg: 0
+              Node:0
+              nodetype: 56: en_regvar
+              rg: 10
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+
+<gsearch2> for: |_f1|
+Looking in statement table
+<Find>_f1</Find>
+<Find>_f1</Find>
+Looking in function's symbol table
+<Find>_f1</Find>
+Searching method/class:_main|00DE7390
+Looking at params 01615488
+<Find>_f1</Find>
+Looking at class members 016C5D10
+Looking at global symbols
+<Find>_f1:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs>E_main: 1 basic blocks
+----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k0 k1 k4 k10 k20 k30 
+Edges to: - - - - Live Out - - - -{ 4 10 20 29 30 }----- Compute Live Vars -----
+0: g4 g10 g20 g29 g30  || k0 k1 k4 k10 k20 k30 
+Edges to: - - - - Live Out - - - -{ 4 10 20 29 30 }<table style="width:100%">
+<tr><td>0: </td><td>vi4 </td><td>vi10 </td><td>vi20 </td><td>vi29 </td><td>vi30 </td><td> || </td><td>vo4 </td><td>vo10 </td><td>vo20 </td><td>vo29 </td><td>vo30 </td></tr>
+<tr><td>1: </td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r30: { 0 }
+Visited r29: { 0 }
+Visited r20: { 0 }
+Visited r10: { 0 }
+Visited r4: { 0 }
+<VarForests>0
+Var30: 1 trees
+<Tree>0 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var29: 1 trees
+<Tree>1 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var20: 1 trees
+<Tree>2 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var10: 1 trees
+<Tree>3 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+Var4: 1 trees
+<Tree>4 Color:-12851 { 0 }</Tree>
+<Forest>{ 0 }</Forest>
+</VarForests>
+<Paths>
+0: { 0 }
+</Paths>
+</ParseFunctionBody>
+<FuncSummary>
+</FuncSummary>
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

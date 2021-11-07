@@ -1,0 +1,305 @@
+Fetched:#if (-2) != -2
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 || 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 || 0) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 || 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 && 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 && 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 && 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 && 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0xf0 | 1) != 0xf1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0xf0 & 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0xf0 & 0x1f) != 0x10
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 ^ 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 == 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 == 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 != 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 != 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 > 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 < 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 > -1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 < -1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 >= 1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 <= 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 >= -1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 <= -1) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 < 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 <= 0) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 > 0) != 0
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 >= 0) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 << 1) != 2
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2 >> 1) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2 + 1) != 3
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2 - 3) != -1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2 * 3) != 6
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (6 / 3) != 2
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (7 % 3) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2+2*3+2) != 10
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if ((2+2)*(3+2)) != 20
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (2 + 2 + 2 + 2 == 2 + 2 * 3) != 1
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (0 ? 1 : 3) != 3
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:#if (1 ? 3 : 1) != 3
+Fetched:#error fail
+Fetched:#endif
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:int
+bef sub  :int
+aft sub  :int
+aft paste:int
+Fetched:main()
+bef sub  :main()
+aft sub  :main()
+aft paste:main()
+Fetched:{
+bef sub  :{
+aft sub  :{
+aft paste:{
+Fetched:	return 0;
+bef sub  :return 0;
+aft sub  :return 0;
+aft paste:return 0;
+Fetched:}
+bef sub  :}
+aft sub  :}
+aft paste:}
+Fetched:
+bef sub  :
+aft sub  :
+aft paste:
+Fetched:bef sub  :aft sub  :aft paste:

@@ -1,0 +1,64 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _foo
+	.align 16
+
+;.func _foo
+
+;====================================================
+; Basic Block 0
+;====================================================
+_foo():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  mov      $a0,$x0
+.C00010:
+  leave    #104
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  bal      $ra,_foo
+  mov      $t4,$a0
+  mov      $a0,$t4
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+;--}

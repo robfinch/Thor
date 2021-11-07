@@ -1,0 +1,43 @@
+     1	extern int printf(const char *format, ...);
+     2	
+     3	int array[0x1E+1];
+     4	
+     5	int main()
+     6	{
+     7	printf("n+1 = %d\n", 0xe+1);
+     8	
+     9	}
+    10	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =0000f8   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+13 _array     =000000   -    Global      Array of Long
+28 __autonew  =000000   -    
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

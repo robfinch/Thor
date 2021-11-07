@@ -1,0 +1,1186 @@
+     1	// This program is designed to test some arm64-specific things, such as the
+     2	// calling convention, but should give the same results on any architecture.
+     3	
+     4	/* stdarg.h standard header */
+     5	/* yvals.h values header -- UNIX 680X0 version */
+     6			/* errno properties */
+     7			/* float properties */
+     8			/* integer properties */
+     9	typedef unsigned short _Wchart;
+    10			/* pointer properties */
+    11	typedef int _Ptrdifft;
+    12	typedef unsigned int _Sizet;
+    13			/* setjmp properties */
+    14	extern int _Setjmp(int *);
+    15			/* signal properties */
+    16			/* stdio properties */
+    17			/* stdlib properties */
+    18			/* storage alignment properties */
+    19			/* time properties */
+    20			/* type definitions */
+    21	typedef __int8 *va_list;
+    22			/* macros */
+    23	/* stdio.h standard header */
+    24			/* macros */
+    25			/* type definitions */
+    26	typedef _Sizet size_t;
+    27	typedef struct {
+    28		unsigned long _Off;	/* system dependent */
+    29		} fpos_t;
+    30	typedef struct {
+    31		unsigned short _Mode;
+    32		short _Handle;
+    33		unsigned char *_Buf, *_Bend, *_Next;
+    34		unsigned char *_Rend, *_Rsave, *_Wend;
+    35		unsigned char _Back[2], _Cbuf, _Nback;
+    36		char *_Tmpnam;
+    37		} FILE;
+    38			/* declarations */
+    39	void clearerr(FILE *);
+    40	int fclose(FILE *);
+    41	int feof(FILE *);
+    42	int ferror(FILE *);
+    43	int fflush(FILE *);
+    44	int fgetc(FILE *);
+    45	int fgetpos(FILE *, fpos_t *);
+    46	char *fgets(char *, int, FILE *);
+    47	FILE *fopen(const char *, const char *);
+    48	int fprintf(FILE *, const char *, ...);
+    49	int fputc(int, FILE *);
+    50	int fputs(const char *, FILE *);
+    51	size_t fread(void *, size_t, size_t, FILE *);
+    52	FILE *freopen(const char *, const char *, FILE *);
+    53	int fscanf(FILE *, const char *, ...);
+    54	int fseek(FILE *, long, int);
+    55	int fsetpos(FILE *, const fpos_t *);
+    56	long ftell(FILE *);
+    57	size_t fwrite(const void *, size_t, size_t, FILE *);
+    58	int getc(FILE *);
+    59	int getchar(void);
+    60	char *gets(char *);
+    61	void perror(const char *);
+    62	int printf(const char *, ...);
+    63	int putc(int, FILE *);
+    64	int putchar(int);
+    65	int puts(const char *);
+    66	int remove(const char *);
+    67	int rename(const char *, const char *);
+    68	void rewind(FILE *);
+    69	int scanf(const char *, ...);
+    70	void setbuf(FILE *, char *);
+    71	int setvbuf(FILE *, char *, int, size_t);
+    72	int sprintf(char *, const char *, ...);
+    73	int sscanf(const char *, const char *, ...);
+    74	FILE *tmpfile(void);
+    75	char *tmpnam(char *);
+    76	int ungetc(int, FILE *);
+    77	int vfprintf(FILE *, const char *, char *);
+    78	int vprintf(const char *, char *);
+    79	int vsprintf(char *, const char *, char *);
+    80	long _Fgpos(FILE *, fpos_t *);
+    81	int _Fspos(FILE *, const fpos_t *, long, int);
+    82	extern FILE *_Files[16];
+    83			/* macro overrides */
+    84	
+    85	struct s1 { char x[1]; } s1 = { "0" };
+    86	struct s2 { char x[2]; } s2 = { "12" };
+    87	struct s3 { char x[3]; } s3 = { "345" };
+    88	struct s4 { char x[4]; } s4 = { "6789" };
+    89	struct s5 { char x[5]; } s5 = { "abcde" };
+    90	struct s6 { char x[6]; } s6 = { "fghijk" };
+    91	struct s7 { char x[7]; } s7 = { "lmnopqr" };
+    92	struct s8 { char x[8]; } s8 = { "stuvwxyz" };
+    93	struct s9 { char x[9]; } s9 = { "ABCDEFGHI" };
+    94	struct s10 { char x[10]; } s10 = { "JKLMNOPQRS" };
+    95	struct s11 { char x[11]; } s11 = { "TUVWXYZ0123" };
+    96	struct s12 { char x[12]; } s12 = { "456789abcdef" };
+    97	struct s13 { char x[13]; } s13 = { "ghijklmnopqrs" };
+    98	struct s14 { char x[14]; } s14 = { "tuvwxyzABCDEFG" };
+    99	struct s15 { char x[15]; } s15 = { "HIJKLMNOPQRSTUV" };
+   100	struct s16 { char x[16]; } s16 = { "WXYZ0123456789ab" };
+   101	struct s17 { char x[17]; } s17 = { "cdefghijklmnopqrs" };
+   102	
+   103	struct hfa11 { float a; } hfa11 = { 11.1 };
+   104	struct hfa12 { float a, b; } hfa12 = { 12.1, 12.2 };
+   105	struct hfa13 { float a, b, c; } hfa13 = { 13.1, 13.2, 13.3 };
+   106	struct hfa14 { float a, b, c, d; } hfa14 = { 14.1, 14.2, 14.3, 14.4 };
+   107	
+   108	struct hfa21 { double a; } hfa21 = { 21.1 };
+   109	struct hfa22 { double a, b; } hfa22 = { 22.1, 22.2 };
+   110	struct hfa23 { double a, b, c; } hfa23 = { 23.1, 23.2, 23.3 };
+   111	struct hfa24 { double a, b, c, d; } hfa24 = { 24.1, 24.2, 24.3, 24.4 };
+   112	
+   113	struct hfa31 { long double a; } hfa31 = { 31.1 };
+   114	struct hfa32 { long double a, b; } hfa32 = { 32.1, 32.2 };
+   115	struct hfa33 { long double a, b, c; } hfa33 = { 33.1, 33.2, 33.3 };
+   116	struct hfa34 { long double a, b, c, d; } hfa34 = { 34.1, 34.2, 34.3, 34.4 };
+   117	
+   118	void fa_s1(struct s1 a) { printf("%.1s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   119	void fa_s2(struct s2 a) { printf("%.2s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   120	void fa_s3(struct s3 a) { printf("%.3s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   121	void fa_s4(struct s4 a) { printf("%.4s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   122	void fa_s5(struct s5 a) { printf("%.5s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   123	void fa_s6(struct s6 a) { printf("%.6s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   124	void fa_s7(struct s7 a) { printf("%.7s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   125	void fa_s8(struct s8 a) { printf("%.8s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   126	void fa_s9(struct s9 a) { printf("%.9s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   127	void fa_s10(struct s10 a) { printf("%.10s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   128	void fa_s11(struct s11 a) { printf("%.11s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   129	void fa_s12(struct s12 a) { printf("%.12s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   130	void fa_s13(struct s13 a) { printf("%.13s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   131	void fa_s14(struct s14 a) { printf("%.14s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   132	void fa_s15(struct s15 a) { printf("%.15s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   133	void fa_s16(struct s16 a) { printf("%.16s\n", a.x); }
+
+
+*** local symbol table ***
+
+
+
+
+   134	void fa_s17(struct s17 a) { printf("%.17s\n", a.x); }
+   135	
+
+
+*** local symbol table ***
+
+
+
+
+   136	void fa_hfa11(struct hfa11 a)
+   137	{ printf("%.1f\n", a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   138	void fa_hfa12(struct hfa12 a)
+   139	{ printf("%.1f %.1f\n", a.a, a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   140	void fa_hfa13(struct hfa13 a)
+   141	{ printf("%.1f %.1f %.1f\n", a.a, a.b, a.c); }
+
+
+*** local symbol table ***
+
+
+
+
+   142	void fa_hfa14(struct hfa14 a)
+   143	{ printf("%.1f %.1f %.1f %.1f\n", a.a, a.b, a.c, a.d); }
+   144	
+
+
+*** local symbol table ***
+
+
+
+
+   145	void fa_hfa21(struct hfa21 a)
+   146	{ printf("%.1f\n", a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   147	void fa_hfa22(struct hfa22 a)
+   148	{ printf("%.1f %.1f\n", a.a, a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   149	void fa_hfa23(struct hfa23 a)
+   150	{ printf("%.1f %.1f %.1f\n", a.a, a.b, a.c); }
+
+
+*** local symbol table ***
+
+
+
+
+   151	void fa_hfa24(struct hfa24 a)
+   152	{ printf("%.1f %.1f %.1f %.1f\n", a.a, a.b, a.c, a.d); }
+   153	
+
+
+*** local symbol table ***
+
+
+
+
+   154	void fa_hfa31(struct hfa31 a)
+   155	{ printf("%.1Lf\n", a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   156	void fa_hfa32(struct hfa32 a)
+   157	{ printf("%.1Lf %.1Lf\n", a.a, a.a); }
+
+
+*** local symbol table ***
+
+
+
+
+   158	void fa_hfa33(struct hfa33 a)
+   159	{ printf("%.1Lf %.1Lf %.1Lf\n", a.a, a.b, a.c); }
+
+
+*** local symbol table ***
+
+
+
+
+   160	void fa_hfa34(struct hfa34 a)
+   161	{ printf("%.1Lf %.1Lf %.1Lf %.1Lf\n", a.a, a.b, a.c, a.d); }
+   162	
+
+
+*** local symbol table ***
+
+
+
+
+   163	void fa1(struct s8 a, struct s9 b, struct s10 c, struct s11 d,
+   164	         struct s12 e, struct s13 f)
+   165	{
+   166	    printf("%.3s %.3s %.3s %.3s %.3s %.3s\n", a.x, b.x, c.x, d.x, e.x, f.x);
+   167	}
+   168	
+
+
+*** local symbol table ***
+
+
+
+
+   169	void fa2(struct s9 a, struct s10 b, struct s11 c, struct s12 d,
+   170	         struct s13 e, struct s14 f)
+   171	{
+   172	    printf("%.3s %.3s %.3s %.3s %.3s %.3s\n", a.x, b.x, c.x, d.x, e.x, f.x);
+   173	}
+   174	
+
+
+*** local symbol table ***
+
+
+
+
+   175	void fa3(struct hfa14 a, struct hfa23 b, struct hfa32 c)
+   176	{
+   177	    printf("%.1f %.1f %.1f %.1f %.1Lf %.1Lf\n",
+   178	           a.a, a.d, b.a, b.c, c.a, c.b);
+   179	}
+   180	
+
+
+*** local symbol table ***
+
+
+
+
+   181	void fa4(struct s1 a, struct hfa14 b, struct s2 c, struct hfa24 d,
+   182	         struct s3 e, struct hfa34 f)
+   183	{
+   184	    printf("%.1s %.1f %.1f %.2s %.1f %.1f %.3s %.1Lf %.1Lf\n",
+   185	           a.x, b.a, b.d, c.x, d.a, d.d, e.x, f.a, f.d);
+   186	}
+   187	
+
+
+*** local symbol table ***
+
+
+
+
+   188	void arg(void)
+   189	{
+   190	    printf("Arguments:\n");
+   191	    fa_s1(s1);
+   192	    fa_s2(s2);
+   193	    fa_s3(s3);
+   194	    fa_s4(s4);
+   195	    fa_s5(s5);
+   196	    fa_s6(s6);
+   197	    fa_s7(s7);
+   198	    fa_s8(s8);
+   199	    fa_s9(s9);
+   200	    fa_s10(s10);
+   201	    fa_s11(s11);
+   202	    fa_s12(s12);
+   203	    fa_s13(s13);
+   204	    fa_s14(s14);
+   205	    fa_s15(s15);
+   206	    fa_s16(s16);
+   207	    fa_s17(s17);
+   208	    fa_hfa11(hfa11);
+   209	    fa_hfa12(hfa12);
+   210	    fa_hfa13(hfa13);
+   211	    fa_hfa14(hfa14);
+   212	    fa_hfa21(hfa21);
+   213	    fa_hfa22(hfa22);
+   214	    fa_hfa23(hfa23);
+   215	    fa_hfa24(hfa24);
+   216	    fa_hfa31(hfa31);
+   217	    fa_hfa32(hfa32);
+   218	    fa_hfa33(hfa33);
+   219	    fa_hfa34(hfa34);
+   220	    fa1(s8, s9, s10, s11, s12, s13);
+   221	    fa2(s9, s10, s11, s12, s13, s14);
+   222	    fa3(hfa14, hfa23, hfa32);
+   223	    fa4(s1, hfa14, s2, hfa24, s3, hfa34);
+   224	}
+   225	
+
+
+*** local symbol table ***
+
+
+
+
+   226	struct s1 fr_s1(void) { return s1; }
+
+
+*** local symbol table ***
+
+
+
+
+   227	struct s2 fr_s2(void) { return s2; }
+
+
+*** local symbol table ***
+
+
+
+
+   228	struct s3 fr_s3(void) { return s3; }
+
+
+*** local symbol table ***
+
+
+
+
+   229	struct s4 fr_s4(void) { return s4; }
+
+
+*** local symbol table ***
+
+
+
+
+   230	struct s5 fr_s5(void) { return s5; }
+
+
+*** local symbol table ***
+
+
+
+
+   231	struct s6 fr_s6(void) { return s6; }
+
+
+*** local symbol table ***
+
+
+
+
+   232	struct s7 fr_s7(void) { return s7; }
+
+
+*** local symbol table ***
+
+
+
+
+   233	struct s8 fr_s8(void) { return s8; }
+
+
+*** local symbol table ***
+
+
+
+
+   234	struct s9 fr_s9(void) { return s9; }
+
+
+*** local symbol table ***
+
+
+
+
+   235	struct s10 fr_s10(void) { return s10; }
+
+
+*** local symbol table ***
+
+
+
+
+   236	struct s11 fr_s11(void) { return s11; }
+
+
+*** local symbol table ***
+
+
+
+
+   237	struct s12 fr_s12(void) { return s12; }
+
+
+*** local symbol table ***
+
+
+
+
+   238	struct s13 fr_s13(void) { return s13; }
+
+
+*** local symbol table ***
+
+
+
+
+   239	struct s14 fr_s14(void) { return s14; }
+
+
+*** local symbol table ***
+
+
+
+
+   240	struct s15 fr_s15(void) { return s15; }
+
+
+*** local symbol table ***
+
+
+
+
+   241	struct s16 fr_s16(void) { return s16; }
+
+
+*** local symbol table ***
+
+
+
+
+   242	struct s17 fr_s17(void) { return s17; }
+   243	
+
+
+*** local symbol table ***
+
+
+
+
+   244	struct hfa11 fr_hfa11(void) { return hfa11; }
+
+
+*** local symbol table ***
+
+
+
+
+   245	struct hfa12 fr_hfa12(void) { return hfa12; }
+
+
+*** local symbol table ***
+
+
+
+
+   246	struct hfa13 fr_hfa13(void) { return hfa13; }
+
+
+*** local symbol table ***
+
+
+
+
+   247	struct hfa14 fr_hfa14(void) { return hfa14; }
+   248	
+
+
+*** local symbol table ***
+
+
+
+
+   249	struct hfa21 fr_hfa21(void) { return hfa21; }
+
+
+*** local symbol table ***
+
+
+
+
+   250	struct hfa22 fr_hfa22(void) { return hfa22; }
+
+
+*** local symbol table ***
+
+
+
+
+   251	struct hfa23 fr_hfa23(void) { return hfa23; }
+
+
+*** local symbol table ***
+
+
+
+
+   252	struct hfa24 fr_hfa24(void) { return hfa24; }
+   253	
+
+
+*** local symbol table ***
+
+
+
+
+   254	struct hfa31 fr_hfa31(void) { return hfa31; }
+
+
+*** local symbol table ***
+
+
+
+
+   255	struct hfa32 fr_hfa32(void) { return hfa32; }
+
+
+*** local symbol table ***
+
+
+
+
+   256	struct hfa33 fr_hfa33(void) { return hfa33; }
+
+
+*** local symbol table ***
+
+
+
+
+   257	struct hfa34 fr_hfa34(void) { return hfa34; }
+   258	
+
+
+*** local symbol table ***
+
+
+
+
+   259	void ret(void)
+   260	{
+   261	    struct s1 t1 = fr_s1();
+   262	    struct s2 t2 = fr_s2();
+   263	    struct s3 t3 = fr_s3();
+   264	    struct s4 t4 = fr_s4();
+   265	    struct s5 t5 = fr_s5();
+   266	    struct s6 t6 = fr_s6();
+   267	    struct s7 t7 = fr_s7();
+   268	    struct s8 t8 = fr_s8();
+   269	    struct s9 t9 = fr_s9();
+   270	    struct s10 t10 = fr_s10();
+   271	    struct s11 t11 = fr_s11();
+   272	    struct s12 t12 = fr_s12();
+   273	    struct s13 t13 = fr_s13();
+   274	    struct s14 t14 = fr_s14();
+   275	    struct s15 t15 = fr_s15();
+   276	    struct s16 t16 = fr_s16();
+   277	    struct s17 t17 = fr_s17();
+   278	    printf("Return values:\n");
+   279	    printf("%.1s\n", t1.x);
+   280	    printf("%.2s\n", t2.x);
+   281	    printf("%.3s\n", t3.x);
+   282	    printf("%.4s\n", t4.x);
+   283	    printf("%.5s\n", t5.x);
+   284	    printf("%.6s\n", t6.x);
+   285	    printf("%.7s\n", t7.x);
+   286	    printf("%.8s\n", t8.x);
+   287	    printf("%.9s\n", t9.x);
+   288	    printf("%.10s\n", t10.x);
+   289	    printf("%.11s\n", t11.x);
+   290	    printf("%.12s\n", t12.x);
+   291	    printf("%.13s\n", t13.x);
+   292	    printf("%.14s\n", t14.x);
+   293	    printf("%.15s\n", t15.x);
+   294	    printf("%.16s\n", t16.x);
+   295	    printf("%.17s\n", t17.x);
+   296	    printf("%.1f\n", fr_hfa11().a);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   297	    printf("%.1f %.1f\n", fr_hfa12().a, fr_hfa12().b);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   298	    printf("%.1f %.1f\n", fr_hfa13().a, fr_hfa13().c);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   299	    printf("%.1f %.1f\n", fr_hfa14().a, fr_hfa14().d);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   300	    printf("%.1f\n", fr_hfa21().a);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   301	    printf("%.1f %.1f\n", fr_hfa22().a, fr_hfa22().b);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   302	    printf("%.1f %.1f\n", fr_hfa23().a, fr_hfa23().c);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   303	    printf("%.1f %.1f\n", fr_hfa24().a, fr_hfa24().d);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   304	    printf("%.1Lf\n", fr_hfa31().a);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   305	    printf("%.1Lf %.1Lf\n", fr_hfa32().a, fr_hfa32().b);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   306	    printf("%.1Lf %.1Lf\n", fr_hfa33().a, fr_hfa33().c);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   307	    printf("%.1Lf %.1Lf\n", fr_hfa34().a, fr_hfa34().d);
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 16: E No member
+   308	}
+   309	
+
+
+*** local symbol table ***
+
+40 _t1        =fffffffe   -    Auto        struct _s1 
+41 _t2        =fffffffa   -    Auto        struct _s2 
+42 _t3        =fffffff4   -    Auto        struct _s3 
+43 _t4        =ffffffec   -    Auto        struct _s4 
+44 _t5        =ffffffe2   -    Auto        struct _s5 
+45 _t6        =ffffffd6   -    Auto        struct _s6 
+46 _t7        =ffffffc8   -    Auto        struct _s7 
+47 _t8        =ffffffb8   -    Auto        struct _s8 
+48 _t9        =ffffffa6   -    Auto        struct _s9 
+49 _t10       =ffffff92   -    Auto        struct _s10 
+50 _t11       =ffffff7c   -    Auto        struct _s11 
+51 _t12       =ffffff64   -    Auto        struct _s12 
+52 _t13       =ffffff4a   -    Auto        struct _s13 
+53 _t14       =ffffff2e   -    Auto        struct _s14 
+54 _t15       =ffffff10   -    Auto        struct _s15 
+55 _t16       =fffffef0   -    Auto        struct _s16 
+56 _t17       =fffffece   -    Auto        struct _s17 
+
+
+
+   310	int match(const char **s, const char *f)
+   311	{
+   312	    const char *p = *s;
+   313	    for (p = *s; *f && *f == *p; f++, p++)
+   314	        ;
+   315	    if (!*f) {
+   316	        *s = p - 1;
+   317	        return 1;
+   318	    }
+   319	    return 0;
+   320	}
+   321	
+
+
+*** local symbol table ***
+
+12 _p         =fffffff8   -    Auto        Pointer to Char
+
+
+
+   322	void myprintf(const char *format, ...)
+   323	{
+   324	    const char *s;
+   325	    va_list ap;
+   326	    (void)((ap) = (__int8 *)&(format) + (sizeof (format) + (7U) & ~(7U)));
+   327	    for (s = format; *s; s++) {
+   328	        if (match(&s, "%7s")) {
+   329	            struct s7 t7 = (*(struct s7 *)(((ap) += (sizeof (struct s7) + (7U) & ~(7U))) - (sizeof (struct s7) + (0U) & ~(0U))));
+   330	            printf("%.7s", t7.x);
+   331	        }
+   332	        else if (match(&s, "%9s")) {
+   333	            struct s9 t9 = (*(struct s9 *)(((ap) += (sizeof (struct s9) + (7U) & ~(7U))) - (sizeof (struct s9) + (0U) & ~(0U))));
+   334	            printf("%.9s", t9.x);
+   335	        }
+   336	        else if (match(&s, "%hfa11")) {
+   337	            struct hfa11 x = (*(struct hfa11 *)(((ap) += (sizeof (struct hfa11) + (7U) & ~(7U))) - (sizeof (struct hfa11) + (0U) & ~(0U))));
+   338	            printf("%.1f,%.1f", x.a, x.a);
+   339	        }
+   340	        else if (match(&s, "%hfa12")) {
+   341	            struct hfa12 x = (*(struct hfa12 *)(((ap) += (sizeof (struct hfa12) + (7U) & ~(7U))) - (sizeof (struct hfa12) + (0U) & ~(0U))));
+   342	            printf("%.1f,%.1f", x.a, x.b);
+   343	        }
+   344	        else if (match(&s, "%hfa13")) {
+   345	            struct hfa13 x = (*(struct hfa13 *)(((ap) += (sizeof (struct hfa13) + (7U) & ~(7U))) - (sizeof (struct hfa13) + (0U) & ~(0U))));
+   346	            printf("%.1f,%.1f", x.a, x.c);
+   347	        }
+   348	        else if (match(&s, "%hfa14")) {
+   349	            struct hfa14 x = (*(struct hfa14 *)(((ap) += (sizeof (struct hfa14) + (7U) & ~(7U))) - (sizeof (struct hfa14) + (0U) & ~(0U))));
+   350	            printf("%.1f,%.1f", x.a, x.d);
+   351	        }
+   352	        else if (match(&s, "%hfa21")) {
+   353	            struct hfa21 x = (*(struct hfa21 *)(((ap) += (sizeof (struct hfa21) + (7U) & ~(7U))) - (sizeof (struct hfa21) + (0U) & ~(0U))));
+   354	            printf("%.1f,%.1f", x.a, x.a);
+   355	        }
+   356	        else if (match(&s, "%hfa22")) {
+   357	            struct hfa22 x = (*(struct hfa22 *)(((ap) += (sizeof (struct hfa22) + (7U) & ~(7U))) - (sizeof (struct hfa22) + (0U) & ~(0U))));
+   358	            printf("%.1f,%.1f", x.a, x.b);
+   359	        }
+   360	        else if (match(&s, "%hfa23")) {
+   361	            struct hfa23 x = (*(struct hfa23 *)(((ap) += (sizeof (struct hfa23) + (7U) & ~(7U))) - (sizeof (struct hfa23) + (0U) & ~(0U))));
+   362	            printf("%.1f,%.1f", x.a, x.c);
+   363	        }
+   364	        else if (match(&s, "%hfa24")) {
+   365	            struct hfa24 x = (*(struct hfa24 *)(((ap) += (sizeof (struct hfa24) + (7U) & ~(7U))) - (sizeof (struct hfa24) + (0U) & ~(0U))));
+   366	            printf("%.1f,%.1f", x.a, x.d);
+   367	        }
+   368	        else if (match(&s, "%hfa31")) {
+   369	            struct hfa31 x = (*(struct hfa31 *)(((ap) += (sizeof (struct hfa31) + (7U) & ~(7U))) - (sizeof (struct hfa31) + (0U) & ~(0U))));
+   370	            printf("%.1Lf,%.1Lf", x.a, x.a);
+   371	        }
+   372	        else if (match(&s, "%hfa32")) {
+   373	            struct hfa32 x = (*(struct hfa32 *)(((ap) += (sizeof (struct hfa32) + (7U) & ~(7U))) - (sizeof (struct hfa32) + (0U) & ~(0U))));
+   374	            printf("%.1Lf,%.1Lf", x.a, x.b);
+   375	        }
+   376	        else if (match(&s, "%hfa33")) {
+   377	            struct hfa33 x = (*(struct hfa33 *)(((ap) += (sizeof (struct hfa33) + (7U) & ~(7U))) - (sizeof (struct hfa33) + (0U) & ~(0U))));
+   378	            printf("%.1Lf,%.1Lf", x.a, x.c);
+   379	        }
+   380	        else if (match(&s, "%hfa34")) {
+   381	            struct hfa34 x = (*(struct hfa34 *)(((ap) += (sizeof (struct hfa34) + (7U) & ~(7U))) - (sizeof (struct hfa34) + (0U) & ~(0U))));
+   382	            printf("%.1Lf,%.1Lf", x.a, x.d);
+   383	        }
+   384	        else
+   385	            (_Files[1]->_Next < _Files[1]->_Wend ? (*_Files[1]->_Next++ = *s) : (putchar)(*s));
+   386	    }
+   387	    (_Files[1]->_Next < _Files[1]->_Wend ? (*_Files[1]->_Next++ = '\n') : (putchar)('\n'));
+   388	}
+   389	
+
+
+*** local symbol table ***
+
+12 _s         =fffffff8   -    Auto        Pointer to Char
+12 _ap        =fffffff0   -    Auto        Pointer to Byte
+46 _t7        =ffffffe2   -    Auto        struct _s7 
+
+
+
+   390	void stdarg(void)
+   391	{
+   392	    printf("stdarg:\n");
+   393	    myprintf("%9s %9s %9s %9s %9s %9s", s9, s9, s9, s9, s9, s9);
+   394	    myprintf("%7s %9s %9s %9s %9s %9s", s7, s9, s9, s9, s9, s9);
+   395	
+   396	    myprintf("HFA long double:");
+   397	    myprintf("%hfa34 %hfa34 %hfa34 %hfa34", hfa34, hfa34, hfa34, hfa34);
+   398	    myprintf("%hfa33 %hfa34 %hfa34 %hfa34", hfa33, hfa34, hfa34, hfa34);
+   399	    myprintf("%hfa32 %hfa34 %hfa34 %hfa34", hfa32, hfa34, hfa34, hfa34);
+   400	    myprintf("%hfa31 %hfa34 %hfa34 %hfa34", hfa31, hfa34, hfa34, hfa34);
+   401	
+   402	    myprintf("%hfa32 %hfa33 %hfa33 %hfa33 %hfa33",
+   403	             hfa32, hfa33, hfa33, hfa33, hfa33);
+   404	    myprintf("%hfa31 %hfa33 %hfa33 %hfa33 %hfa33",
+   405	             hfa31, hfa33, hfa33, hfa33, hfa33);
+   406	    myprintf("%hfa33 %hfa33 %hfa33 %hfa33",
+   407	             hfa33, hfa33, hfa33, hfa33);
+   408	
+   409	    myprintf("%hfa34 %hfa32 %hfa32 %hfa32 %hfa32",
+   410	             hfa34, hfa32, hfa32, hfa32, hfa32);
+   411	    myprintf("%hfa33 %hfa32 %hfa32 %hfa32 %hfa32",
+   412	             hfa33, hfa32, hfa32, hfa32, hfa32);
+   413	
+   414	    myprintf("%hfa34 %hfa32 %hfa31 %hfa31 %hfa31 %hfa31",
+   415	             hfa34, hfa32, hfa31, hfa31, hfa31, hfa31);
+   416	
+   417	    myprintf("HFA double:");
+   418	    myprintf("%hfa24 %hfa24 %hfa24 %hfa24", hfa24, hfa24, hfa24, hfa24);
+   419	    myprintf("%hfa23 %hfa24 %hfa24 %hfa24", hfa23, hfa24, hfa24, hfa24);
+   420	    myprintf("%hfa22 %hfa24 %hfa24 %hfa24", hfa22, hfa24, hfa24, hfa24);
+   421	    myprintf("%hfa21 %hfa24 %hfa24 %hfa24", hfa21, hfa24, hfa24, hfa24);
+   422	
+   423	    myprintf("%hfa22 %hfa23 %hfa23 %hfa23 %hfa23",
+   424	             hfa22, hfa23, hfa23, hfa23, hfa23);
+   425	    myprintf("%hfa21 %hfa23 %hfa23 %hfa23 %hfa23",
+   426	             hfa21, hfa23, hfa23, hfa23, hfa23);
+   427	    myprintf("%hfa23 %hfa23 %hfa23 %hfa23",
+   428	             hfa23, hfa23, hfa23, hfa23);
+   429	
+   430	    myprintf("%hfa24 %hfa22 %hfa22 %hfa22 %hfa22",
+   431	             hfa24, hfa22, hfa22, hfa22, hfa22);
+   432	    myprintf("%hfa23 %hfa22 %hfa22 %hfa22 %hfa22",
+   433	             hfa23, hfa22, hfa22, hfa22, hfa22);
+   434	
+   435	    myprintf("%hfa24 %hfa22 %hfa21 %hfa21 %hfa21 %hfa21",
+   436	             hfa24, hfa22, hfa21, hfa21, hfa21, hfa21);
+   437	
+   438	    myprintf("HFA float:");
+   439	    myprintf("%hfa14 %hfa14 %hfa14 %hfa14", hfa14, hfa14, hfa14, hfa14);
+   440	    myprintf("%hfa13 %hfa14 %hfa14 %hfa14", hfa13, hfa14, hfa14, hfa14);
+   441	    myprintf("%hfa12 %hfa14 %hfa14 %hfa14", hfa12, hfa14, hfa14, hfa14);
+   442	    myprintf("%hfa11 %hfa14 %hfa14 %hfa14", hfa11, hfa14, hfa14, hfa14);
+   443	
+   444	    myprintf("%hfa12 %hfa13 %hfa13 %hfa13 %hfa13",
+   445	             hfa12, hfa13, hfa13, hfa13, hfa13);
+   446	    myprintf("%hfa11 %hfa13 %hfa13 %hfa13 %hfa13",
+   447	             hfa11, hfa13, hfa13, hfa13, hfa13);
+   448	    myprintf("%hfa13 %hfa13 %hfa13 %hfa13",
+   449	             hfa13, hfa13, hfa13, hfa13);
+   450	
+   451	    myprintf("%hfa14 %hfa12 %hfa12 %hfa12 %hfa12",
+   452	             hfa14, hfa12, hfa12, hfa12, hfa12);
+   453	    myprintf("%hfa13 %hfa12 %hfa12 %hfa12 %hfa12",
+   454	             hfa13, hfa12, hfa12, hfa12, hfa12);
+   455	
+   456	    myprintf("%hfa14 %hfa12 %hfa11 %hfa11 %hfa11 %hfa11",
+   457	             hfa14, hfa12, hfa11, hfa11, hfa11, hfa11);
+   458	}
+   459	
+
+
+*** local symbol table ***
+
+
+
+
+   460	void pll(unsigned long long x)
+ *** error 6: E Bad punctuation
+   461	{
+   462	    printf("%llx\n", x);
+   463	}
+   464	
+
+
+*** local symbol table ***
+
+
+
+
+   465	void movi(void)
+   466	{
+   467	    printf("MOVI:\n");
+   468	    pll(0);
+   469	    pll(0xabcd);
+   470	    pll(0xabcd0000);
+   471	    pll(0xabcd00000000);
+   472	    pll(0xabcd000000000000);
+   473	    pll(0xffffabcd);
+   474	    pll(0xabcdffff);
+   475	    pll(0xffffffffffffabcd);
+   476	    pll(0xffffffffabcdffff);
+   477	    pll(0xffffabcdffffffff);
+   478	    pll(0xabcdffffffffffff);
+   479	    pll(0xaaaaaaaa);
+   480	    pll(0x5555555555555555);
+   481	    pll(0x77777777);
+   482	    pll(0x3333333333333333);
+   483	    pll(0xf8f8f8f8);
+   484	    pll(0x1e1e1e1e1e1e1e1e);
+   485	    pll(0x3f803f80);
+   486	    pll(0x01ff01ff01ff01ff);
+   487	    pll(0x007fffc0);
+   488	    pll(0x03fff80003fff800);
+   489	    pll(0x0007fffffffffe00);
+   490	
+   491	    pll(0xabcd1234);
+   492	    pll(0xabcd00001234);
+   493	    pll(0xabcd000000001234);
+   494	    pll(0xabcd12340000);
+   495	    pll(0xabcd000012340000);
+   496	    pll(0xabcd123400000000);
+   497	    pll(0xffffffffabcd1234);
+   498	    pll(0xffffabcdffff1234);
+   499	    pll(0xabcdffffffff1234);
+   500	    pll(0xffffabcd1234ffff);
+   501	    pll(0xabcdffff1234ffff);
+   502	    pll(0xabcd1234ffffffff);
+   503	
+   504	    pll(0xffffef0123456789);
+   505	    pll(0xabcdef012345ffff);
+   506	
+   507	    pll(0xabcdef0123456789);
+   508	}
+   509	
+
+
+*** local symbol table ***
+
+
+
+
+   510	static uint32_t addip0(uint32_t x) { return x + 0; }
+ *** error 6: E Bad punctuation
+   511	static uint64_t sublp0(uint64_t x) { return x - 0; }
+ *** error 6: E Bad punctuation
+   512	static uint32_t addip123(uint32_t x) { return x + 123; }
+ *** error 6: E Bad punctuation
+   513	static uint64_t addlm123(uint64_t x) { return x + -123; }
+ *** error 6: E Bad punctuation
+   514	static uint64_t sublp4095(uint64_t x) { return x - 4095; }
+ *** error 6: E Bad punctuation
+   515	static uint32_t subim503808(uint32_t x) { return x - -503808; }
+ *** error 6: E Bad punctuation
+   516	static uint64_t addp12345(uint64_t x) { return x + 12345; }
+ *** error 6: E Bad punctuation
+   517	static uint32_t subp12345(uint32_t x) { return x - 12345; }
+ *** error 6: E Bad punctuation
+   518	
+   519	static uint32_t mvni(uint32_t x) { return 0xffffffff - x; }
+ *** error 6: E Bad punctuation
+   520	static uint64_t negl(uint64_t x) { return 0 - x; }
+ *** error 6: E Bad punctuation
+   521	static uint32_t rsbi123(uint32_t x) { return 123 - x; }
+ *** error 6: E Bad punctuation
+   522	static uint64_t rsbl123(uint64_t x) { return 123 - x; }
+ *** error 6: E Bad punctuation
+   523	
+   524	static uint32_t andi0(uint32_t x) { return x & 0; }
+ *** error 6: E Bad punctuation
+   525	static uint64_t andlm1(uint64_t x) { return x & -1; }
+ *** error 6: E Bad punctuation
+   526	static uint64_t orrl0(uint64_t x) { return x | 0; }
+ *** error 6: E Bad punctuation
+   527	static uint32_t orrim1(uint32_t x) { return x | -1; }
+ *** error 6: E Bad punctuation
+   528	static uint32_t eori0(uint32_t x) { return x ^ 0; }
+ *** error 6: E Bad punctuation
+   529	static uint64_t eorlm1(uint64_t x) { return x ^ -1; }
+ *** error 6: E Bad punctuation
+   530	static uint32_t and0xf0(uint32_t x) { return x & 0xf0; }
+ *** error 6: E Bad punctuation
+   531	static uint64_t orr0xf0(uint64_t x) { return x | 0xf0; }
+ *** error 6: E Bad punctuation
+   532	static uint64_t eor0xf0(uint64_t x) { return x ^ 0xf0; }
+ *** error 6: E Bad punctuation
+   533	
+   534	static uint32_t lsli0(uint32_t x) { return x << 0; }
+ *** error 6: E Bad punctuation
+   535	static uint32_t lsri0(uint32_t x) { return x >> 0; }
+ *** error 6: E Bad punctuation
+   536	static int64_t asrl0(int64_t x) { return x >> 0; }
+ *** error 6: E Bad punctuation
+   537	static uint32_t lsli1(uint32_t x) { return x << 1; }
+ *** error 6: E Bad punctuation
+   538	static uint32_t lsli31(uint32_t x) { return x << 31; }
+ *** error 6: E Bad punctuation
+   539	static uint64_t lsll1(uint64_t x) { return x << 1; }
+ *** error 6: E Bad punctuation
+   540	static uint64_t lsll63(uint64_t x) { return x << 63; }
+ *** error 6: E Bad punctuation
+   541	static uint32_t lsri1(uint32_t x) { return x >> 1; }
+ *** error 6: E Bad punctuation
+   542	static uint32_t lsri31(uint32_t x) { return x >> 31; }
+ *** error 6: E Bad punctuation
+   543	static uint64_t lsrl1(uint64_t x) { return x >> 1; }
+ *** error 6: E Bad punctuation
+   544	static uint64_t lsrl63(uint64_t x) { return x >> 63; }
+ *** error 6: E Bad punctuation
+   545	static int32_t asri1(int32_t x) { return x >> 1; }
+ *** error 6: E Bad punctuation
+   546	static int32_t asri31(int32_t x) { return x >> 31; }
+ *** error 6: E Bad punctuation
+   547	static int64_t asrl1(int64_t x) { return x >> 1; }
+ *** error 6: E Bad punctuation
+   548	static int64_t asrl63(int64_t x) { return x >> 63; }
+ *** error 6: E Bad punctuation
+   549	
+   550	void opi(void)
+   551	{
+   552	    int x = 1000;

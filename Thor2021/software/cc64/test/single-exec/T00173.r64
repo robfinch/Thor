@@ -1,0 +1,120 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   
+	data
+	align	8
+    
+	align	8
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #64
+  ldi      $t4,#.C00018
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$0000FE00
+  lea      $t4,-60[$fp]
+  base     $t4,$t4,#10
+  mov      $s4,$t4
+  ldi      $s6,#_printf
+; int x = 'a';
+  lea      $t4,T00173_1[$gp1]
+  base     $t4,$t4,#12
+  mov      $s1,$t4
+  mov      $s2,$s4
+  mov      $s3,$s1
+; printf("%s\n", a);
+  lea      $t4,T00173_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s1
+  jal      $ra,[$s6]
+; c = *a;
+  ldw      $t4,[$s1]
+  sto      $t4,-32[$fp]
+; for (b = a; *b != 0; b++)
+  mov      $s0,$s1
+  ldw      $t4,[$s0]
+  beqz     $t4,.C00021
+.C00020:
+; printf("%c: %d\n", *b, *b);
+  sub      $sp,$sp,#24
+  lea      $t4,T00173_3[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldw      $t4,[$s0]
+  sto      $t4,8[$sp]
+  ldw      $t4,[$s0]
+  sto      $t4,16[$sp]
+  jal      $ra,[$s6]
+  add      $s0,$s0,#2
+  ldw      $t4,[$s0]
+  bnez     $t4,.C00020
+.C00021:
+; while (*src != 0)
+  ldw      $t4,[$s3]
+  beqz     $t4,.C00024
+.C00023:
+; *dest++ = *src++;
+  ldw      $t4,[$s3]
+  stw      $t4,[$s2]
+  add      $s2,$s2,#2
+  ldw      $t4,[$s3]
+  bnez     $t4,.C00023
+.C00024:
+; *dest = 0;
+  stw      $x0,[$s2]
+; printf("copied string is %s\n", destarray);
+  lea      $t4,T00173_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s4
+  jal      $ra,[$s6]
+; return 0;
+  mov      $a0,$x0
+.C00019:
+  ldm      [$sp],#$0000FE00
+  leave    #96
+.C00018:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00019
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00173_1[12]: ; hello
+
+	dcw	104,101,108,108,111,0
+T00173_2[8]: ; %s
+
+	dcw	37,115,10,0
+T00173_3[16]: ; %c: %d
+
+	dcw	37,99,58,32,37,100,10,0
+T00173_4[42]: ; copied string is %s
+
+	dcw	99,111,112,105,101,100,32,115
+	dcw	116,114,105,110,103,32,105,115
+	dcw	32,37,115,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

@@ -1,0 +1,568 @@
+<title>C64D Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_typedef</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+Enter declare()
+A<ParseSpecifier>
+A</Find>
+_struct</Find>
+</Find>
+_int</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_a</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_a|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_a</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_a into 01AC18E4
+<BuildSignature>:_a</BuildSignature>Insert _a into 01AC18E4()
+</Find>
+_a</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_b</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_b|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_b</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_b into 01AC18E4
+<BuildSignature>:_b</BuildSignature>Insert _b into 01AC18E4()
+</Find>
+_b</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_ABStruct</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ABStruct|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_ABStruct</Find>
+hh1kIIbIcinsert type: 31
+***Inserting:_ABStruct into 0133F848
+<BuildSignature>:_ABStruct</BuildSignature>Insert _ABStruct into 0133F848()
+Insert into global table
+</Find>
+_ABStruct</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_char</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_ptrTest</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ptrTest|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _ptrTest
+****************************
+****************************
+</Find>
+_ABStruct</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_ptrTest)
+Type array:
+   
+Proto types(_ptrTest)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_ptrTest</Find>
+hh1h2ikIIbIcinsert type: 36
+***Inserting:_ptrTest into 0133F848
+<BuildSignature>:_ptrTest</BuildSignature>Insert _ptrTest into 0133F848()
+Insert into global table
+</Find>
+_ptrTest</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _ptrTest
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(1)CEnter declare()
+A<ParseSpecifier>
+A<ParseId>_ABStruct</Find>
+_ABStruct</Find>
+</Find>
+_ABStructMatch
+</Find>
+Actually found type.
+</ParseId></ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_ab</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ab|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_ab</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_ab into 013507EC
+<BuildSignature>:_ab</BuildSignature>Insert _ab into 013507EC(_ptrTest)
+</Find>
+_ab</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_abMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_ptrTest</BuildSignature></Find>
+_ptrTestMatch
+</Find>
+CDEG<Parse function body>:_ptrTest|
+</Find>
+_ABStruct</Find>
+BbEnter GenerateMonadic
+ABCDLeave GenerateMonadic
+CFound _ABStruct
+</Find>
+_ABStruct</Find>
+</Find>
+_ABStructMatch
+</Find>
+sp okay sc=10
+Declaring var of type
+Enter declare()
+A<ParseSpecifier>
+A<ParseId>_ABStruct</Find>
+_ABStruct</Find>
+</Find>
+_ABStructMatch
+</Find>
+Actually found type.
+</Find>
+_p</Find>
+</ParseId></ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_p|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_p</Find>
+hh1kIIbIcinsert type: 31
+***Inserting:_p into 000B9A00
+<BuildSignature>:_p</BuildSignature>Insert _p into 000B9A00()
+</Find>
+_p</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_p</Find>
+Found _p
+</Find>
+_p</Find>
+</Find>
+_p</Find>
+<Parse><ParseExpression>
+<Nameref>
+GSearchfor:_p|
+<gsearch2> for: |_p|
+Looking in statement table
+</Find>
+_pMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_pIsEqual:T2sp is not null
+Type array:
+   
+tp:01AC18C4 <Deref>F</Deref>deref tp:01AC18C4 </nameref2>
+</Nameref>
+</Find>
+_a</Find>
+dot search: 01AC18E4
+<FindRising>_a 
+</Find>
+_aMatch
+</Find>
+</FindRising>Sym:_a Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_a type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+_ab</Find>
+<Nameref>
+GSearchfor:_ab|
+<gsearch2> for: |_ab|
+Looking in statement table
+</Find>
+_ab</Find>
+Looking in function's symbol table
+</Find>
+_ab</Find>
+Searching method/class:_ptrTest|01350798
+Looking at params 013507EC
+</Find>
+_abMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_abIsEqual:T2sp is not null
+Type array:
+   
+tp:01AC1AA4 <Deref></Deref>deref tp:01AC1AA4 </nameref2>
+</Nameref>
+</Find>
+_a</Find>
+dot search: 01AC18E4
+<FindRising>_a 
+</Find>
+_aMatch
+</Find>
+</FindRising>Sym:_a Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_a type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+_p</Find>
+</ParseExpression>
+</Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_p|
+<gsearch2> for: |_p|
+Looking in statement table
+</Find>
+_pMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_pIsEqual:T2sp is not null
+Type array:
+   
+tp:01AC18C4 <Deref>F</Deref>deref tp:01AC18C4 </nameref2>
+</Nameref>
+</Find>
+_b</Find>
+dot search: 01AC18E4
+<FindRising>_b 
+</Find>
+_bMatch
+</Find>
+</FindRising>Sym:_b Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_b type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+_ab</Find>
+<Nameref>
+GSearchfor:_ab|
+<gsearch2> for: |_ab|
+Looking in statement table
+</Find>
+_ab</Find>
+Looking in function's symbol table
+</Find>
+_ab</Find>
+Searching method/class:_ptrTest|01350798
+Looking at params 013507EC
+</Find>
+_abMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_abIsEqual:T2sp is not null
+Type array:
+   
+tp:01AC1AA4 <Deref></Deref>deref tp:01AC1AA4 </nameref2>
+</Nameref>
+</Find>
+_b</Find>
+dot search: 01AC18E4
+<FindRising>_b 
+</Find>
+_bMatch
+</Find>
+</FindRising>Sym:_b Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_b type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+_return</Find>
+</ParseExpression>
+</Parse><Parse></Find>
+_p</Find>
+<Nameref>
+GSearchfor:_p|
+<gsearch2> for: |_p|
+Looking in statement table
+</Find>
+_pMatch
+</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_pIsEqual:T2sp is not null
+Type array:
+   
+tp:01AC18C4 <Deref>F</Deref>deref tp:01AC18C4 </nameref2>
+</Nameref>
+</Find>
+_a</Find>
+dot search: 01AC18E4
+<FindRising>_a 
+</Find>
+_aMatch
+</Find>
+</FindRising>Sym:_a Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_a type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B<TYP__Make>
+</TYP__Make>
+</Parse>Returning EOF from NextToken.
+D<CSETable>For _ptrTest
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 6   3   2   0   11   
+1: 4   2   2   0   12   
+2: 0   2   2   0   -1      
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+<CSETable>For _ptrTest
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 6   3   2   0   11   
+1: 4   2   2   0   12   
+2: 0   2   2   0   -1      
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+E
+sub
+mov
+sub
+sub
+;
+;
+lw
+sptr
+;
+hint
+hint
+hint
+hint
+lw
+sptr
+;
+hint
+mov
+add
+mov
+ret
+bra
+bra
+_ptrTest: 1 basic blocks
+<table style="width:100%">
+<tr><td>0: </td><td>vi0 </td><td>vi1 </td><td>vi11 </td><td>vi12 </td><td>vi30 </td><td>vi31 </td><td> || </td><td>vo0 </td><td>vo1 </td><td>vo11 </td><td>vo12 </td><td>vo30 </td><td>vo31 </td></tr>
+<tr><td>1: </td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r31: { 0 }
+Visited r30: { 0 }
+Visited r12: { 0 }
+Visited r11: { 0 }
+Visited r1: { 0 }
+Visited r0: { 0 }
+<VarForests>
+Var31: 1 trees
+{ 0 }
+{ 0 }
+Var30: 1 trees
+{ 0 }
+{ 0 }
+Var12: 1 trees
+{ 0 }
+{ 0 }
+Var11: 1 trees
+{ 0 }
+{ 0 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 1 trees
+{ 0 }
+{ 0 }
+</VarForests>
+<Paths>
+0: { 0 }
+</Paths>
+<TreeCosts>
+Tree:0 cost = 0
+Tree:1 cost = 0
+Tree:2 cost = 0
+Tree:3 cost = 0
+Tree:4 cost = 0
+Tree:5 cost = 0
+</TreeCosts>
+<VarForests>
+Var31: 1 trees
+{ 0 }
+{ 0 }
+Var30: 1 trees
+{ 0 }
+{ 0 }
+Var12: 1 trees
+{ 0 }
+{ 0 }
+Var11: 1 trees
+{ 0 }
+{ 0 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 1 trees
+{ 0 }
+{ 0 }
+</VarForests>
+
+sub
+mov
+sub
+lw
+sptr
+lw
+sptr
+mov
+mov
+ret
+</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

@@ -1,0 +1,7 @@
+     1	typedef unsigned char u8;
+     2	typedef struct {} empty_s;
+     3	struct contains_empty {
+     4	u8 a;
+     5	empty_s empty;
+     6	u8 b;
+     7	};

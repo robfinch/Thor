@@ -1,0 +1,121 @@
+
+;{++
+                                                                                                                                                   
+	code
+	align	16
+
+	.global _myfunc
+	.align 16
+
+;.func _myfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_myfunc():
+  enter    #16
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  ldo      $s0,16[$fp]
+  mul      $a0,$s0,$s0
+.C00010:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+  
+	.global _vfunc
+	.align 16
+
+;.func _vfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_vfunc():
+  enter    #0
+  ldi      $t4,#.C00020
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00159_11[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,16[$fp]
+  push     $t4
+  bal      $ra,_printf
+.C00021:
+  leave    #104
+.C00020:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00021
+.. 
+
+ 
+	.global _qfunc
+	.align 16
+
+;.func _qfunc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_qfunc():
+  enter    #0
+  ldi      $t4,#.C00031
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00159_22[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+.C00032:
+  leave    #96
+.C00031:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00032
+.. 
+
+ 
+	.global _zfunc
+	.align 16
+
+;.func _zfunc
+
+ 
+	rodata
+	align	16
+
+	align	8
+
+
+T00159_11[12]: ; a=%d
+
+	dcw	97,61,37,100,10,0
+T00159_22[18]: ; qfunc()
+
+	dcw	113,102,117,110,99,40,41,10
+	dcw	0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

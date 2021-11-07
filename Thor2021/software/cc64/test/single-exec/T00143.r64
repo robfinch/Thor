@@ -1,0 +1,94 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #56
+  ldi      $t4,#.C00022
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00007E00
+  lea      $t4,-344[$fp]
+  base     $t4,$t4,#10
+  mov      $s3,$t4
+  lea      $t4,-188[$fp]
+  base     $t4,$t4,#10
+  mov      $s4,$t4
+; for(n = 0; n < 39; n++) {
+  mov      $s0,$x0
+  sge      $t4,$s0,#39
+  bne      $t4,$x0,.C00025
+.C00024:
+; a[n] = n;
+  sll      $t4,$s0,#2
+  stt      $s0,[$t4+$s4]
+; b[n] = 0;
+  sll      $t4,$s0,#2
+  stt      $x0,[$t4+$s3]
+.C00026:
+  add      $s0,$s0,#1
+  slt      $t4,$s0,#39
+  bne      $t4,$x0,.C00024
+.C00025:
+; from = a;
+  mov      $s2,$s4
+; to = b;
+  mov      $s1,$s3
+; count = 39;
+  ldi      $s5,#39
+; n = (count + 7) / 8;
+  add      $t5,#7,$s5
+  sra      $s0,$t5,#3
+; switch (count % 8) {
+  and      $t4,$s5,#7
+; case 0: do { *to++ = *from++;
+  beq      $t4,#0,.C00031
+.C00027:
+; for(n = 0; n < 39; n++)
+  mov      $s0,$x0
+  sge      $t4,$s0,#39
+  bne      $t4,$x0,.C00033
+.C00032:
+; if(a[n] != b[n])
+  sll      $t4,$s0,#2
+  ldt      $t4,[$t4+$s4]
+  sll      $t5,$s0,#2
+  ldt      $t5,[$t5+$s3]
+  beq      $t4,$t5,.C00035
+; return 1;
+  ldi      $a0,#1
+.C00023:
+  ldm      [$sp],#$00007E00
+  leave    #96
+.C00035:
+  add      $s0,$s0,#1
+  slt      $t4,$s0,#39
+  bne      $t4,$x0,.C00032
+.C00033:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00023
+.C00022:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00023
+.. 
+
+
+	rodata
+	align	16
+
+;--}

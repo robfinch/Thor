@@ -1,0 +1,52 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; p = "hello";
+  lea      $t4,T00026_1[$gp1]
+  base     $t4,$t4,#12
+  mov      $s0,$t4
+; return p[0] - 104;
+  ldw      $t5,[$s0]
+  sub      $a0,$t5,#104
+.C00011:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00026_1[12]: ; hello
+
+	dcw	104,101,108,108,111,0
+;--}

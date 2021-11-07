@@ -1,0 +1,111 @@
+
+;{++
+                                                                                                                                                   
+	code
+	align	16
+
+	.global _factorial
+	.align 16
+
+;.func _factorial
+
+;====================================================
+; Basic Block 0
+;====================================================
+_factorial():
+  enter    #16
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  ldo      $s0,16[$fp]
+; if (i < 2)
+  bge      $s0,#2,.C00013
+; return i;
+  mov      $a0,$s0
+.C00012:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00013:
+; return i * factorial(i - 1);
+  sto      $t4,-16[$fp]
+  sub      $t5,$s0,#1
+  push     $t5
+  bal      $ra,_factorial
+  add      $sp,$sp,#8
+  mov      $t5,$a0
+  mul      $a0,$s0,$t5
+  bra      .C00012
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00027
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; for (Count = 1; Count <= 10; Count++)
+  ldi      $s0,#1
+  slt      $t4,#10,$s0
+  bne      $t4,$x0,.C00030
+.C00029:
+; printf("%d\n", factorial(Count));
+  lea      $t4,T00168_15[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  push     $s0
+  bal      $ra,_factorial
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  push     $t4
+  bal      $ra,_printf
+.C00031:
+  add      $s0,$s0,#1
+  sge      $t4,#10,$s0
+  bne      $t4,$x0,.C00029
+.C00030:
+; return 0;
+  mov      $a0,$x0
+.C00028:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00027:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00028
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00168_15[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

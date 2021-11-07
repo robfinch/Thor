@@ -1,0 +1,35 @@
+    	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestPostinc:
+  link     #48
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldo      $s0,16[$fp]
+; *s1++ = *s2++ = *s1++;
+  ldw      $t0,24[$fp]
+  ldw      $t1,[$s0]
+  stw      $t1,[$t0]
+  stw      $t0,[$s0]
+  add      $s0,$s0,#2
+; x = func()++;
+  bal      $ra,_func
+  mov      $t0,$a0
+  sxw      $a0,$t0
+TestPostinc_5:
+TestPostinc_8:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+	extern	_func
+;	global	_TestPostinc

@@ -1,0 +1,28 @@
+     1	
+     2	int *TestTypecast(int *a)
+     3	{
+     4	int *tmp;
+     5	
+     6	(int *)(*tmp) = a;
+ *** error 17: E LValue required
+ *** error 18: E Dereference
+     7	return (int *)21;
+     8	}
+
+
+*** local symbol table ***
+
+7 _tmp       =fffffff8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+13 _TestTypecast =000000   -    Global      Pointer to Function returning Long
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

@@ -1,0 +1,37 @@
+     1	void testexcept(int a, int b)
+     2	{
+     3		if (a)
+     4			throw (__exception)66;
+     5		if (b)
+     6			throw "Hello World";
+     7		printf("Test over");
+     8	}
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+_testexcept =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   019 019 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		_printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   024 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

@@ -1,0 +1,33 @@
+     1	double x = 100.0;
+     2	
+     3	int
+     4	main()
+     5	{
+     6	return x < 1;
+     7	}
+     8	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+9 _x         =000000   -    Global      Double
+
+ *** structures and unions ***
+

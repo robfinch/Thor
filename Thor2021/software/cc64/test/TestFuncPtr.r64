@@ -1,0 +1,30 @@
+        	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestFuncptr:
+  link     #40
+  lea      $gp,__data_start
+; (*ExecAddress)();
+  ldo      $t0,_ExecAddress[$gp]
+  sto      $t0,-8[$fp]
+  jal      $ra,[$t0]
+; (*(ag->fptr))(21);
+  lea      $t0,-16[$fp]
+  ldo      $t0,8[$t0]
+  ldi      $t1,#21
+  push     $t1
+  jal      $ra,[$t0]
+TestFuncPtr_5:
+TestFuncPtr_8:
+  unlink 
+  ret    
+endpublic
+
+	rodata
+	align	16
+	extern	_ExecAddress
+;	global	_TestFuncptr

@@ -1,0 +1,342 @@
+
+;{++
+                                                                                                                                                  
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	bss
+	align	8
+
+public bss _array[128]:
+
+	fill.b	128,0x00                    
+
+endpublic
+   
+	code
+	align	16
+
+	.global _swap
+	.align 16
+
+;.func _swap
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_swap():
+  enter    #32
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  stm      [$sp],#$00000E00
+  ldo      $s0,16[$fp]
+  ldo      $s1,24[$fp]
+; int tmp  = array[a];
+  sll      $t4,$s0,#3
+  lea      $t5,_array[$gp]
+  ldo      $s2,[$t4+$t5]
+; array[a] = array[b];
+  sll      $t4,$s0,#3
+  lea      $t5,_array[$gp]
+  sll      $t6,$s1,#3
+  lea      $t7,_array[$gp]
+  ldo      $t8,[$t6+$t7]
+  sto      $t8,[$t4+$t5]
+; array[b] = tmp;
+  sll      $t4,$s1,#3
+  lea      $t5,_array[$gp]
+  sto      $s2,[$t4+$t5]
+.C00010:
+  ldm      [$sp],#$00000E00
+  leave    #112
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+   
+	.global _partition
+	.align 16
+
+;.func _partition
+
+    ;====================================================
+; Basic Block 0
+;====================================================
+_partition():
+  enter    #56
+  ldi      $t4,#.C00024
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  stm      [$sp],#$0000FE00
+  ldo      $s1,16[$fp]
+  ldo      $s2,24[$fp]
+  ldi      $s6,#_swap
+; int pivotIndex = left;
+  mov      $s4,$s1
+  sll      $t4,$s4,#3
+  lea      $t5,_array[$gp]
+  ldo      $s5,[$t4+$t5]
+  mov      $s3,$s1
+; swap(pivotIndex, right);
+  push     $s4,$s2
+  jal      $ra,[$s6]
+; for(i = left; i < right; i++)
+  mov      $s0,$s1
+  bge      $s0,$s2,.C00027
+.C00026:
+; if(array[i] < pivotValue)
+  sll      $t4,$s0,#3
+  lea      $t5,_array[$gp]
+  ldo      $t4,[$t4+$t5]
+  bge      $t4,$s5,.C00029
+; swap(i, index);
+  push     $s0,$s3
+  jal      $ra,[$s6]
+; index += 1;
+  add      $s3,$s3,#1
+.C00029:
+.C00028:
+  add      $s0,$s0,#1
+  blt      $s0,$s2,.C00026
+.C00027:
+; swap(right, index);
+  push     $s2,$s3
+  jal      $ra,[$s6]
+; return index;
+  mov      $a0,$s3
+.C00025:
+  ldm      [$sp],#$0000FE00
+  leave    #112
+.C00024:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00025
+.. 
+
+   
+	.global _quicksort
+	.align 16
+
+;.func _quicksort
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_quicksort():
+  enter    #24
+  ldi      $t4,#.C00041
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00000E00
+  ldo      $s0,16[$fp]
+  ldo      $s1,24[$fp]
+; if(left >= right)
+  push     $s0,$s1
+  bal      $ra,_partition
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  mov      $s2,$t4
+  blt      $s0,$s1,.C00043
+.C00042:
+  ldm      [$sp],#$00000E00
+  leave    #112
+.C00043:
+; quicksort(left, index - 1);
+  push     $s0
+  sub      $t4,$s2,#1
+  push     $t4
+  bal      $ra,_quicksort
+  add      $sp,$sp,#8
+; quicksort(index + 1, right);
+  add      $t4,$s2,#1
+  push     $t4,$s1
+  bal      $ra,_quicksort
+  add      $sp,$sp,#8
+  bra      .C00042
+.C00041:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00042
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00063
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_printf
+; array[0] = 62;
+  ldi      $t4,#62
+  sto      $t4,_array[$gp]
+; array[1] = 83;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#83
+  sto      $t5,8[$t4]
+; array[2] = 4;
+  lea      $t4,_array[$gp]
+  sto      #4,16[$t4]
+; array[3] = 89;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#89
+  sto      $t5,24[$t4]
+; array[4] = 36;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#36
+  sto      $t5,32[$t4]
+; array[5] = 21;
+  lea      $t4,_array[$gp]
+  sto      #21,40[$t4]
+; array[6] = 74;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#74
+  sto      $t5,48[$t4]
+; array[7] = 37;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#37
+  sto      $t5,56[$t4]
+; array[8] = 65;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#65
+  sto      $t5,64[$t4]
+; array[9] = 33;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#33
+  sto      $t5,72[$t4]
+; array[10] = 96;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#96
+  sto      $t5,80[$t4]
+; array[11] = 38;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#38
+  sto      $t5,88[$t4]
+; array[12] = 53;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#53
+  sto      $t5,96[$t4]
+; array[13] = 16;
+  lea      $t4,_array[$gp]
+  sto      #16,104[$t4]
+; array[14] = 74;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#74
+  sto      $t5,112[$t4]
+; array[15] = 55;
+  lea      $t4,_array[$gp]
+  ldi      $t5,#55
+  sto      $t5,120[$t4]
+; for (i = 0; i < 16; i++)
+  mov      $s0,$x0
+  bge      $s0,#16,.C00066
+.C00065:
+; printf("%d ", array[i]);
+  lea      $t4,T00176_45[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sll      $t4,$s0,#3
+  lea      $t5,_array[$gp]
+  ldo      $t4,[$t4+$t5]
+  push     $t4
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  blt      $s0,#16,.C00065
+.C00066:
+; printf("\n");
+  lea      $t4,T00176_46[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; quicksort(0, 15);
+  push     $x0
+  ldi      $t4,#15
+  push     $t4
+  bal      $ra,_quicksort
+  add      $sp,$sp,#8
+; for (i = 0; i < 16; i++)
+  mov      $s0,$x0
+  bge      $s0,#16,.C00069
+.C00068:
+; printf("%d ", array[i]);
+  lea      $t4,T00176_47[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sll      $t4,$s0,#3
+  lea      $t5,_array[$gp]
+  ldo      $t4,[$t4+$t5]
+  push     $t4
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  blt      $s0,#16,.C00068
+.C00069:
+; printf("\n");
+  lea      $t4,T00176_48[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+; return 0;
+  mov      $a0,$x0
+.C00064:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00063:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00064
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00176_45[8]: ; %d 
+
+	dcw	37,100,32,0
+T00176_46[4]:
+
+	dcw	10,0
+T00176_47[8]: ; %d 
+
+	dcw	37,100,32,0
+T00176_48[4]:
+
+	dcw	10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

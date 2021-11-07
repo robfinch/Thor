@@ -1,0 +1,529 @@
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #48
+  lea      $gp1,__rodata_start
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s0,#TestSwitch_printf
+  ldo      $s1,16[$fp]
+; switch(x) {
+  sub      $s1,$s1,#1
+  bgtu     $s1,#11,TestSwitch_254
+  sll      $s1,$s1,#4
+  ldo      $s1,TestSwitch_281[$s1]
+  jmp      [$s1]
+TestSwitch_255:
+  lea      $t0,TestSwitch_1[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_257:
+  lea      $t0,TestSwitch_2[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_259:
+  lea      $t0,TestSwitch_3[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_261:
+  lea      $t0,TestSwitch_4[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_263:
+  lea      $t0,TestSwitch_5[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_265:
+  lea      $t0,TestSwitch_6[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_267:
+  lea      $t0,TestSwitch_7[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_269:
+  lea      $t0,TestSwitch_8[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_271:
+  lea      $t0,TestSwitch_9[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_273:
+  lea      $t0,TestSwitch_10[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_275:
+  lea      $t0,TestSwitch_11[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_254
+TestSwitch_277:
+  lea      $t0,TestSwitch_12[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+TestSwitch_254:
+; switch(x; naked) {
+  sub      $s1,$s1,#1
+  sll      $s1,$s1,#3
+  ldo      $s1,TestSwitch_309[$s1]
+  jmp      [$s1]
+TestSwitch_283:
+  lea      $t0,TestSwitch_13[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_285:
+  lea      $t0,TestSwitch_14[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_287:
+  lea      $t0,TestSwitch_15[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_289:
+  lea      $t0,TestSwitch_16[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_291:
+  lea      $t0,TestSwitch_17[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_293:
+  lea      $t0,TestSwitch_18[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_295:
+  lea      $t0,TestSwitch_19[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_297:
+  lea      $t0,TestSwitch_20[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_299:
+  lea      $t0,TestSwitch_21[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_301:
+  lea      $t0,TestSwitch_22[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_303:
+  lea      $t0,TestSwitch_23[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_282
+TestSwitch_305:
+  lea      $t0,TestSwitch_24[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+TestSwitch_282:
+; switch(x) {
+  ldi      $t0,#42
+  bgt      $s1,$t0,TestSwitch_350
+  blt      $s1,$t0,TestSwitch_351
+; case 42:	printf("42"); break;
+  lea      $t0,TestSwitch_28[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_350:
+  ldi      $t0,#206
+  bgt      $s1,$t0,TestSwitch_352
+  blt      $s1,$t0,TestSwitch_353
+; case 206:	printf("206"); break;
+  lea      $t0,TestSwitch_32[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_352:
+  ldi      $t0,#306
+  bgt      $s1,$t0,TestSwitch_354
+  blt      $s1,$t0,TestSwitch_355
+; case 306:	printf("306"); break;
+  lea      $t0,TestSwitch_34[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_354:
+  ldi      $t0,#400
+  bne      $s1,$t0,TestSwitch_358
+; case 400:	printf("400"); break;
+  lea      $t0,TestSwitch_35[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_358:
+  ldi      $t0,#406
+  bne      $s1,$t0,TestSwitch_310
+; case 406:	printf("406"); break;
+  lea      $t0,TestSwitch_36[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_355:
+  ldi      $t0,#300
+  bne      $s1,$t0,TestSwitch_310
+; case 300:	printf("300"); break;
+  lea      $t0,TestSwitch_33[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_353:
+  ldi      $t0,#106
+  bgt      $s1,$t0,TestSwitch_362
+  blt      $s1,$t0,TestSwitch_363
+; case 106:	printf("106"); break;
+  lea      $t0,TestSwitch_30[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_362:
+  ldi      $t0,#200
+  bne      $s1,$t0,TestSwitch_310
+; case 200:	printf("200"); break;
+  lea      $t0,TestSwitch_31[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_363:
+  ldi      $t0,#100
+  bne      $s1,$t0,TestSwitch_310
+; case 100:	printf("100"); break;
+  lea      $t0,TestSwitch_29[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_351:
+  bgt      $s1,#7,TestSwitch_370
+  blt      $s1,#7,TestSwitch_371
+; case 3,4,5,6,7,8:	printf("3 to 8"); break;
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_370:
+  bgt      $s1,#10,TestSwitch_372
+  blt      $s1,#10,TestSwitch_373
+; case 10:	printf("10"); break;
+  lea      $t0,TestSwitch_26[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_372:
+  bne      $s1,#21,TestSwitch_310
+; case 21:	printf("21"); break;
+  lea      $t0,TestSwitch_27[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_373:
+  bne      $s1,#8,TestSwitch_310
+; case 3,4,5,6,7,8:	printf("3 to 8"); break;
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_371:
+  bgt      $s1,#5,TestSwitch_380
+  blt      $s1,#5,TestSwitch_381
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_380:
+  bne      $s1,#6,TestSwitch_310
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_381:
+  bne      $s1,#3,TestSwitch_387
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_310
+TestSwitch_387:
+  bne      $s1,#4,TestSwitch_310
+  lea      $t0,TestSwitch_25[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+TestSwitch_310:
+; switch(x) {
+  ldi      $t0,#32
+  bgt      $s1,$t0,TestSwitch_417
+  blt      $s1,$t0,TestSwitch_418
+; case 32:	printf("32");
+  lea      $t0,TestSwitch_42[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_417:
+  ldi      $t0,#256
+  bgt      $s1,$t0,TestSwitch_419
+  blt      $s1,$t0,TestSwitch_420
+; case 256:	printf("256");
+  lea      $t0,TestSwitch_45[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_419:
+  ldi      $t0,#512
+  bgt      $s1,$t0,TestSwitch_421
+  blt      $s1,$t0,TestSwitch_422
+; case 512:	printf("512");
+  lea      $t0,TestSwitch_46[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_421:
+  bbc      $s1,#10,TestSwitch_425
+; case 1024:	printf("1024");
+  lea      $t0,TestSwitch_47[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_425:
+  bbc      $s1,#11,TestSwitch_389
+; case 2048:	printf("2048");
+  lea      $t0,TestSwitch_48[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_422:
+  bbc      $s1,#9,TestSwitch_428
+; case 512:	printf("512");
+  lea      $t0,TestSwitch_46[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_428:
+  bbc      $s1,#10,TestSwitch_389
+; case 1024:	printf("1024");
+  lea      $t0,TestSwitch_47[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_420:
+  ldi      $t0,#64
+  bgt      $s1,$t0,TestSwitch_429
+  blt      $s1,$t0,TestSwitch_430
+; case 64:	printf("64");
+  lea      $t0,TestSwitch_43[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_429:
+  bbc      $s1,#7,TestSwitch_389
+; case 128:	printf("128");
+  lea      $t0,TestSwitch_44[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_430:
+  bbc      $s1,#6,TestSwitch_436
+; case 64:	printf("64");
+  lea      $t0,TestSwitch_43[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_436:
+  bbc      $s1,#7,TestSwitch_389
+; case 128:	printf("128");
+  lea      $t0,TestSwitch_44[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_418:
+  bgt      $s1,#4,TestSwitch_437
+  blt      $s1,#4,TestSwitch_438
+; case 4:	printf("4");
+  lea      $t0,TestSwitch_39[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_437:
+  bgt      $s1,#8,TestSwitch_439
+  blt      $s1,#8,TestSwitch_440
+; case 8:	printf("8");
+  lea      $t0,TestSwitch_40[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_439:
+  bbc      $s1,#4,TestSwitch_389
+; case 16:	printf("16");
+  lea      $t0,TestSwitch_41[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_440:
+  bbc      $s1,#3,TestSwitch_446
+; case 8:	printf("8");
+  lea      $t0,TestSwitch_40[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_446:
+  bbc      $s1,#4,TestSwitch_389
+; case 16:	printf("16");
+  lea      $t0,TestSwitch_41[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_438:
+  bbc      $s1,#0,TestSwitch_449
+; case 1:	printf("1");
+  lea      $t0,TestSwitch_37[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+  bra      TestSwitch_389
+TestSwitch_449:
+  bbc      $s1,#1,TestSwitch_389
+; case 2:	printf("2");
+  lea      $t0,TestSwitch_38[$gp1]
+  push     $t0
+  jal      $ra,[$s0]
+TestSwitch_389:
+TestSwitch_250:
+TestSwitch_253:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestSwitch_309:
+	dw	TestSwitch_283,TestSwitch_285,TestSwitch_287,TestSwitch_289,TestSwitch_291,TestSwitch_293,TestSwitch_295
+	dw	TestSwitch_297,TestSwitch_299,TestSwitch_301,TestSwitch_303,TestSwitch_305,TestSwitch_308
+TestSwitch_281:
+	dw	TestSwitch_255,TestSwitch_257,TestSwitch_259,TestSwitch_261,TestSwitch_263,TestSwitch_265,TestSwitch_267
+	dw	TestSwitch_269,TestSwitch_271,TestSwitch_273,TestSwitch_275,TestSwitch_277,TestSwitch_280
+	align	8
+TestSwitch_1:	; 1
+	dcw	49,0
+TestSwitch_2:	; 2
+	dcw	50,0
+TestSwitch_3:	; 3
+	dcw	51,0
+TestSwitch_4:	; 4
+	dcw	52,0
+TestSwitch_5:	; 5
+	dcw	53,0
+TestSwitch_6:	; 6
+	dcw	54,0
+TestSwitch_7:	; 7
+	dcw	55,0
+TestSwitch_8:	; 8
+	dcw	56,0
+TestSwitch_9:	; 9
+	dcw	57,0
+TestSwitch_10:	; 10
+	dcw	49,48,0
+TestSwitch_11:	; 11
+	dcw	49,49,0
+TestSwitch_12:	; 12
+	dcw	49,50,0
+TestSwitch_13:	; 1
+	dcw	49,0
+TestSwitch_14:	; 2
+	dcw	50,0
+TestSwitch_15:	; 3
+	dcw	51,0
+TestSwitch_16:	; 4
+	dcw	52,0
+TestSwitch_17:	; 5
+	dcw	53,0
+TestSwitch_18:	; 6
+	dcw	54,0
+TestSwitch_19:	; 7
+	dcw	55,0
+TestSwitch_20:	; 8
+	dcw	56,0
+TestSwitch_21:	; 9
+	dcw	57,0
+TestSwitch_22:	; 10
+	dcw	49,48,0
+TestSwitch_23:	; 11
+	dcw	49,49,0
+TestSwitch_24:	; 12
+	dcw	49,50,0
+TestSwitch_25:	; 3 to 8
+	dcw	51,32,116,111,32,56,0
+TestSwitch_26:	; 10
+	dcw	49,48,0
+TestSwitch_27:	; 21
+	dcw	50,49,0
+TestSwitch_28:	; 42
+	dcw	52,50,0
+TestSwitch_29:	; 100
+	dcw	49,48,48,0
+TestSwitch_30:	; 106
+	dcw	49,48,54,0
+TestSwitch_31:	; 200
+	dcw	50,48,48,0
+TestSwitch_32:	; 206
+	dcw	50,48,54,0
+TestSwitch_33:	; 300
+	dcw	51,48,48,0
+TestSwitch_34:	; 306
+	dcw	51,48,54,0
+TestSwitch_35:	; 400
+	dcw	52,48,48,0
+TestSwitch_36:	; 406
+	dcw	52,48,54,0
+TestSwitch_37:	; 1
+	dcw	49,0
+TestSwitch_38:	; 2
+	dcw	50,0
+TestSwitch_39:	; 4
+	dcw	52,0
+TestSwitch_40:	; 8
+	dcw	56,0
+TestSwitch_41:	; 16
+	dcw	49,54,0
+TestSwitch_42:	; 32
+	dcw	51,50,0
+TestSwitch_43:	; 64
+	dcw	54,52,0
+TestSwitch_44:	; 128
+	dcw	49,50,56,0
+TestSwitch_45:	; 256
+	dcw	50,53,54,0
+TestSwitch_46:	; 512
+	dcw	53,49,50,0
+TestSwitch_47:	; 1024
+	dcw	49,48,50,52,0
+TestSwitch_48:	; 2048
+	dcw	50,48,52,56,0
+;	global	_main
+	extern	TestSwitch_printf

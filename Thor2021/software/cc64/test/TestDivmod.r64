@@ -1,0 +1,97 @@
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestDivmod:
+  link     #32
+  ldo      $t1,16[$fp]
+  ldo      $t2,24[$fp]
+  div      $a0,$t1,$t2
+TestDivmod_8:
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestDivmod2:
+  link     #32
+  ldo      $t1,16[$fp]
+  div      $a0,$t1,#10
+TestDivmod_16:
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestMod:
+  link     #32
+  ldo      $t1,16[$fp]
+  ldo      $t2,24[$fp]
+  rem      $a0,$t1,$t2
+TestDivmod_24:
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestDivmod3:
+  link     #40
+  sto      $s0,0[$sp]
+  ldo      $s0,16[$fp]
+; a /= b;
+  mov      $t0,$s0
+  ldo      $t1,24[$fp]
+  div      $t0,$t0,$t1
+  mov      $a0,$t0
+TestDivmod_29:
+TestDivmod_32:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestModu:
+  rem      $a0,$a0,$a1
+TestDivmod_40:
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestMod
+;	global	_TestDivmod
+;	global	_TestDivmod2
+;	global	_TestModu
+;	global	_TestDivmod3

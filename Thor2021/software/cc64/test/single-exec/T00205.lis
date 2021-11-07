@@ -1,0 +1,89 @@
+     1	
+     2	
+     3	
+     4	
+     5	
+     6	
+     7	typedef unsigned short _Wchart;
+     8	
+     9	typedef int _Ptrdifft;
+    10	typedef unsigned int _Sizet;
+    11	
+    12	extern int _Setjmp(int *);
+    13	
+    14	
+    15	
+    16	
+    17	
+    18	
+    19	
+    20	
+    21	
+    22	
+    23	typedef _Sizet size_t;
+    24	typedef struct {
+    25	unsigned long _Off;	/* system dependent */
+    26	} fpos_t;
+    27	typedef struct {
+    28	unsigned short _Mode;
+    29	short _Handle;
+    30	unsigned char *_Buf, *_Bend, *_Next;
+    31	unsigned char *_Rend, *_Rsave, *_Wend;
+    32	unsigned char _Back[2], _Cbuf, _Nback;
+    33	char *_Tmpnam;
+    34	} FILE;
+    35	
+    36	void clearerr(FILE *);
+    37	int fclose(FILE *);
+    38	int feof(FILE *);
+    39	int ferror(FILE *);
+    40	int fflush(FILE *);
+    41	int fgetc(FILE *);
+    42	int fgetpos(FILE *, fpos_t *);
+    43	char *fgets(char *, int, FILE *);
+    44	FILE *fopen(const char *, const char *);
+    45	int fprintf(FILE *, const char *, ...);
+    46	int fputc(int, FILE *);
+    47	int fputs(const char *, FILE *);
+    48	size_t fread(void *, size_t, size_t, FILE *);
+    49	FILE *freopen(const char *, const char *, FILE *);
+    50	int fscanf(FILE *, const char *, ...);
+    51	int fseek(FILE *, long, int);
+    52	int fsetpos(FILE *, const fpos_t *);
+    53	long ftell(FILE *);
+    54	size_t fwrite(const void *, size_t, size_t, FILE *);
+    55	int getc(FILE *);
+    56	int getchar(void);
+    57	char *gets(char *);
+    58	void perror(const char *);
+    59	int printf(const char *, ...);
+    60	int putc(int, FILE *);
+    61	int putchar(int);
+    62	int puts(const char *);
+    63	int remove(const char *);
+    64	int rename(const char *, const char *);
+    65	void rewind(FILE *);
+    66	int scanf(const char *, ...);
+    67	void setbuf(FILE *, char *);
+    68	int setvbuf(FILE *, char *, int, size_t);
+    69	int sprintf(char *, const char *, ...);
+    70	int sscanf(const char *, const char *, ...);
+    71	FILE *tmpfile(void);
+    72	char *tmpnam(char *);
+    73	int ungetc(int, FILE *);
+    74	int vfprintf(FILE *, const char *, char *);
+    75	int vprintf(const char *, char *);
+    76	int vsprintf(char *, const char *, char *);
+    77	long _Fgpos(FILE *, fpos_t *);
+    78	int _Fspos(FILE *, const fpos_t *, long, int);
+    79	extern FILE *_Files[16];
+    80	
+    81	
+    82	
+    83	
+    84	
+    85	typedef long I;
+    86	typedef struct{I c[4];I b,e,k;} PT;
+    87	
+    88	PT cases[] = {
+    89	((I)4194304L +(I)2097152L +(I)67108864L), (I)262144L, (((I)1L +(I)256L +(I)4L +(I)8L +(I)16L +(I)64L +(I)128L +(I)268435456L +(I)536870912L +(I)1024L +(I)4096L +(I)8192L +(I)16384L)+((I)2L +(I)131072L +(I)2048L)+(I)32L +(I)32768L +(I)65536L), -1L, 1,2,1,

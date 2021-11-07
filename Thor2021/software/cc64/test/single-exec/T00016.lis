@@ -1,0 +1,37 @@
+     1	int
+     2	main()
+     3	{
+     4	int arr[2];
+     5	int *p;
+     6	
+     7	p = &arr[1];
+     8	*p = 0;
+     9	return arr[1];
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+13 _arr       =fffffff0   -    Auto        Array of Long
+13 _p         =ffffffe8   -    Auto        Pointer to Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -24
+		Stkspc: 24
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

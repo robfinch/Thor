@@ -1,0 +1,39 @@
+     1	int
+     2	main()
+     3	{
+     4	struct T { int x; };
+     5	{
+     6	struct T s;
+     7	s.x = 0;
+     8	return s.x;
+     9	}
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+40 __noname_var0 =fffffff8   -    Auto        struct _T 
+40 _s         =fffffff0   -    Auto        struct _T 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _T         =000000   -    Type        struct _T 
+    7 _x         =000000   -    Member      Long

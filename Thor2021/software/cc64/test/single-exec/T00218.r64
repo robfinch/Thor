@@ -1,0 +1,186 @@
+
+;{++
+ 
+	bss
+	align	2
+
+public bss __noname_var0[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+      
+	data
+	align	8
+
+	fill.b	7,0x00                    
+
+	bss
+	align	8
+
+public bss __noname_var1[24]:
+
+	fill.b	24,0x00                    
+
+endpublic
+  
+	align	8
+
+public bss __noname_var2[24]:
+
+	fill.b	24,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss __noname_var3[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	bss
+	align	2
+
+public bss __noname_var4[1]:
+
+	fill.b	1,0x00                    
+
+endpublic
+    
+	data
+	align	8
+
+	fill.b	1,0x00                    
+
+	code
+	align	16
+
+	.global _blah
+	.align 16
+
+;.func _blah
+
+;====================================================
+; Basic Block 0
+;====================================================
+_blah():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  mov      $a0,$x0
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+  
+	.global _convert_like_real
+	.align 16
+
+;.func _convert_like_real
+
+;====================================================
+; Basic Block 0
+;====================================================
+_convert_like_real():
+  enter    #0
+  ldi      $t4,#.C00029
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; switch (((enum tree_code) (convs)->common.code))
+  ldi      $t4,#0
+; default:
+  bra      .C00039
+; printf("unsigned enum bit-fields broken\n");
+  lea      $t4,T00218_11[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+.C00030:
+  leave    #104
+.C00029:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00030
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00048
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  lea      $t4,-24[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; convs.common.code = AMBIG_CONV;
+  ldb      $t4,16[$s0]
+  ldi      $t5,#152
+  and      $t5,$t5,#127
+  ror      $t4,$t4,#0
+  and      $t4,$t4,#-128
+  or       $t4,$t4,$t5
+  rol      $t4,$t4,#0
+  stb      $t4,16[$s0]
+; convert_like_real (&convs);
+  push     $s0
+  bal      $ra,_convert_like_real
+  add      $sp,$sp,#8
+; return 0;
+  mov      $a0,$x0
+.C00049:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00048:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00049
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00218_11[66]: ; unsigned enum bit-fields broken
+
+	dcw	117,110,115,105,103,110,101,100
+	dcw	32,101,110,117,109,32,98,105
+	dcw	116,45,102,105,101,108,100,115
+	dcw	32,98,114,111,107,101,110,10
+	dcw	0
+;--}
+	.extern	_printf

@@ -1,0 +1,62 @@
+     1	
+     2	
+     3	int main()
+     4	{
+     5	int  count, n;
+     6	short *from, *to;
+     7	short a[39], b[39];
+     8	
+     9	for(n = 0; n < 39; n++) {
+    10	a[n] = n;
+    11	b[n] = 0;
+    12	}
+    13	from = a;
+    14	to = b;
+    15	count = 39;
+    16	n = (count + 7) / 8;
+    17	switch (count % 8) {
+    18	case 0: do { *to++ = *from++;
+    19	case 7:      *to++ = *from++;
+    20	case 6:      *to++ = *from++;
+    21	case 5:      *to++ = *from++;
+    22	case 4:      *to++ = *from++;
+    23	case 3:      *to++ = *from++;
+    24	case 2:      *to++ = *from++;
+    25	case 1:      *to++ = *from++;
+    26	} while (--n > 0);
+    27	}
+    28	for(n = 0; n < 39; n++)
+    29	if(a[n] != b[n])
+    30	return 1;
+    31	return 0;
+    32	}
+
+
+*** local symbol table ***
+
+7 _count     =fffffff8   -    Auto        Long
+7 _n         =fffffff0   -    Auto        Long
+13 _from      =ffffffe8   -    Auto        Pointer to Short
+13 _to        =ffffffe0   -    Auto        Pointer to Short
+13 _a         =ffffff44   -    Auto        Array of Short
+13 _b         =fffffea8   -    Auto        Array of Short
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -56
+		Stkspc: 56
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

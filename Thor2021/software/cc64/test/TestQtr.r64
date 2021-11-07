@@ -1,0 +1,42 @@
+  	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestQtr:
+  link     #40
+  sto      $s0,0[$sp]
+  ldo      $s0,16[$fp]
+; if (!IsNullPointer(qtr)) {
+  push     $s0
+  bal      $ra,TestQtr_IsNullPointer
+  mov      $t0,$a0
+  sne      $t0,$t0,$x0
+  bne      $t0,$x0,TestQtr_13
+; if (*qtr == (('O' << 40) | ('B' << 32) | ('J' << 24) | ('E' << 16) | ('C' << 8) | 'T')) {
+  ldo      $t0,[$s0]
+  sne      $t1,$t0,#87146132489044
+  bne      $t1,$x0,TestQtr_15
+; return (21);
+  ldi      $a0,#21
+TestQtr_9:
+TestQtr_12:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+TestQtr_15:
+TestQtr_13:
+  bra      TestQtr_12
+endpublic
+
+	rodata
+	align	16
+;	global	_TestQtr
+	extern	TestQtr_IsNullPointer

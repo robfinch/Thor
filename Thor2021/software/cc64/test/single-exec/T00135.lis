@@ -1,0 +1,50 @@
+     1	int
+     2	main(void)
+     3	{
+     4	long long i;
+     5	unsigned long long u;
+     6	
+     7	i = 1;
+     8	i = -1;
+     9	i = -1l;
+    10	i = -1u;
+    11	i = -1ll;
+    12	i = -1ll & 3;
+    13	i = -1ll < 0;
+    14	
+    15	u = 1;
+    16	u = -1;
+    17	u = -1l;
+    18	u = -1u;
+    19	u = -1ll;
+    20	u = -1llu & 3;
+    21	u = -1llu < 0;
+    22	return 0;
+    23	}
+    24	
+
+
+*** local symbol table ***
+
+7 _i         =fffffff8   -    Auto        Long
+7 _u         =fffffff0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -24
+		Stkspc: 24
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

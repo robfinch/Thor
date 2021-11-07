@@ -1,0 +1,39 @@
+    	bss
+	align	8
+	align	8
+	dw	$FFF0200000000002
+public bss _a:
+	fill.b	16,0x00                    
+
+endpublic
+ 	align	8
+	align	8
+	dw	$FFF0200000000002
+public bss _b:
+	fill.b	16,0x00                    
+
+endpublic
+ 	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestUnion:
+  lea      $t1,_b[$gp]
+  ldo      $t1,8[$t1]
+  ldo      $t3,_a[$gp]
+  itof.d   $t2,$t3
+  fadd     $a0,$t1,$t2
+TestUnion_9:
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+	dct	0x00000000,0x40454000
+;	global	_TestUnion
+;	global	_a
+;	global	_b

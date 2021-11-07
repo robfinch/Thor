@@ -1,0 +1,52 @@
+     1	
+     2	typedef struct _tagFieldStruct
+     3	{
+     4	unsigned int a : 1;
+     5	unsigned int b : 5;
+     6	unsigned int c : 11;
+     7	unsigned int d : 17;
+     8	} FS;
+     9	
+    10	int TestBitfield()
+    11	{
+    12	FS j,k;
+    13	
+    14	j.a = 1;
+    15	j.b = 10;
+    16	
+    17	j.c = j.a + j.b;
+    18	return (j.c);
+    19	}
+    20	
+
+
+*** local symbol table ***
+
+40 _j         =fffffff8   -    Auto        struct __tagFieldStruct 
+40 _k         =fffffff0   -    Auto        struct __tagFieldStruct 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+29 _TestBitfield =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __delete   =000000   -    
+28 __autonew  =000000   -    
+40 _FS        =000000   1   struct __tagFieldStruct 
+
+ *** structures and unions ***
+
+40 __tagFieldStruct =000000   -    Type        struct __tagFieldStruct 
+    36 _a         =000000  0 0   -    Member      
+    36 _b         =000000  1 4   -    Member      
+    36 _c         =000000  6 10   -    Member      
+    36 _d         =000000  17 16   -    Member      

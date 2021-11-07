@@ -1,0 +1,44 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  
+	data
+	align	8
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+; short s = 1;
+  ldi      $s0,#1
+; s -= l;
+  sub      $a0,$s0,#1
+.C00010:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+
+	rodata
+	align	16
+
+;--}

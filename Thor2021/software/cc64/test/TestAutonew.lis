@@ -1,0 +1,25 @@
+     1	
+     2	
+     3	int main(int x)
+     4	{
+     5	__int8 *pd;
+     6	
+     7	if (x = 10)
+     8	return;
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

@@ -1,0 +1,150 @@
+     1	
+     2	enum tree_code {
+     3	SOME_CODE = 148, /* has bit 7 set, and hence all further enum values as well */
+     4	LAST_AND_UNUSED_TREE_CODE
+     5	};
+     6	typedef union tree_node *tree;
+     7	struct tree_common
+     8	{
+     9	union tree_node *chain;
+    10	union tree_node *type;
+    11	enum tree_code code : 8;
+    12	unsigned side_effects_flag : 1;
+    13	};
+    14	union tree_node
+    15	{
+    16	struct tree_common common;
+    17	};
+    18	enum c_tree_code {
+    19	C_DUMMY_TREE_CODE = LAST_AND_UNUSED_TREE_CODE,
+    20	STMT_EXPR,
+    21	LAST_C_TREE_CODE
+    22	};
+    23	enum cplus_tree_code {
+    24	CP_DUMMY_TREE_CODE = LAST_C_TREE_CODE,
+    25	AMBIG_CONV,
+    26	LAST_CPLUS_TREE_CODE
+    27	};
+    28	
+    29	extern int printf(const char *, ...);
+    30	int blah(){return 0;}
+    31	
+
+
+*** local symbol table ***
+
+
+
+
+    32	int convert_like_real (tree convs)
+    33	{
+    34	switch (((enum tree_code) (convs)->common.code))
+    35	{
+    36	e somehow marked unsigned.  */
+ *** error 20: E Expression expected
+ *** error 7: E Identifier expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+    37	return blah();
+ *** error 6: E Bad punctuation
+    38	default:
+    39	break;
+    40	};
+    41	printf("unsigned enum bit-fields broken\n");
+    42	}
+    43	
+
+
+*** local symbol table ***
+
+
+
+
+    44	int main()
+    45	{
+    46	union tree_node convs;
+    47	
+    48	convs.common.code = AMBIG_CONV;
+    49	convert_like_real (&convs);
+    50	return 0;
+    51	}
+    52	
+
+
+*** local symbol table ***
+
+40 _convs     =ffffffe8   -    Auto        union _tree_node 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+7 _LAST_AND_UNUSED_TREE_CODE =000095   -    Constant    Long
+29 _main      =000044   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+7 _SOME_CODE =000094   -    Constant    Long
+13 _tree      =000001   1   Pointer to union _tree_node 
+27 __noname_var0 =000000   -    Global      enum _tree_code 
+41 __noname_var1 =000010   -    Global      struct _tree_common 
+40 __noname_var2 =000028   -    Global      union _tree_node 
+27 __noname_var3 =000040   -    Global      enum _c_tree_code 
+27 __noname_var4 =000042   -    Global      enum _cplus_tree_code 
+28 __delete   =000000   -    
+7 _LAST_C_TREE_CODE =000097   -    Constant    Long
+7 _STMT_EXPR =000096   -    Constant    Long
+7 _AMBIG_CONV =000098   -    Constant    Long
+29 _convert_like_real =000044   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		7 _LAST_CPLUS_TREE_CODE =000099   -    Constant    Long
+7 _C_DUMMY_TREE_CODE =000095   -    Constant    Long
+28 __autonew  =000000   -    
+7 _CP_DUMMY_TREE_CODE =000097   -    Constant    Long
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _blah      =000044   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+
+27 _tree_code =000000   -    Type        enum _tree_code 
+40 _tree_node =000000   -    Type        union _tree_node 
+    41 _common    =000000   -    Member      struct _tree_common 
+41 _tree_common =000000   -    Type        struct _tree_common 
+    13 _chain     =000000   -    Member      Pointer to union _tree_node 
+    13 _type      =000008   -    Member      Pointer to union _tree_node 
+    36 _code      =000010  0 7   -    Member      
+    36 _side_effects_flag =000010  8 0   -    Member      
+27 _c_tree_code =000000   -    Type        enum _c_tree_code 
+27 _cplus_tree_code =000000   -    Type        enum _cplus_tree_code 

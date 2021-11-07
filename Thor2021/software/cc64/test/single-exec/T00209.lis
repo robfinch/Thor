@@ -1,0 +1,201 @@
+     1	
+     2	enum E *e;
+     3	const enum E *e1;
+     4	enum E const *e2;
+     5	struct S *s;
+     6	const struct S *s1;
+     7	struct S const *s2;
+     8	
+     9	
+    10	typedef int (*fptr1)();
+    11	int f1 (int (), int);
+    12	typedef int (*fptr2)(int x);
+    13	int f2 (int (int x), int);
+    14	typedef int (*fptr3)(int);
+    15	int f3 (int (int), int);
+    16	typedef int (*fptr4[4])(int);
+    17	int f4 (int (*[4])(int), int);
+    18	typedef int (*fptr5)(fptr1);
+    19	int f5 (int (int()), fptr1);
+    20	int f1 (fptr1 fp, int i)
+    21	{
+    22	return (*fp)(i);
+    23	}
+
+
+*** local symbol table ***
+
+
+
+
+    24	int f2 (fptr2 fp, int i)
+    25	{
+    26	return (*fp)(i);
+    27	}
+
+
+*** local symbol table ***
+
+
+
+
+    28	int f3 (fptr3 fp, int i)
+    29	{
+    30	return (*fp)(i);
+    31	}
+
+
+*** local symbol table ***
+
+
+
+
+    32	int f4 (fptr4 fp, int i)
+    33	{
+    34	return (*fp[i])(i);
+    35	}
+
+
+*** local symbol table ***
+
+
+
+
+    36	int f5 (fptr5 fp, fptr1 i)
+    37	{
+    38	return fp(i);
+    39	}
+
+
+*** local symbol table ***
+
+
+
+
+    40	int f8 (int ([4]), int);
+    41	int main () { return 0; }
+    42	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+13 _s1        =000020   -    Global      Pointer to struct _S 
+13 _s2        =000028   -    Global      Pointer to struct _S 
+29 _main      =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+13 _fptr1     =000030   1   Pointer to Long
+13 _fptr2     =000038   1   Pointer to Long
+13 _fptr3     =000040   1   Pointer to Long
+13 _fptr4     =000048   1   Array of Pointer to Long
+13 _fptr5     =000068   1   Pointer to Long
+28 __autonew  =000000   -    
+13 _e         =000000   -    Global      Pointer to enum _E 
+13 _s         =000018   -    Global      Pointer to struct _S 
+13 _e1        =000008   -    Global      Pointer to enum _E 
+13 _e2        =000010   -    Global      Pointer to enum _E 
+29 _f1        =000038   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f1        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _f2        =000040   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f2        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f3        =000048   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f3        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f4        =000068   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f4        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _f5        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f5        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _f8        =000070   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+
+40 _S         =000000   -    Type        struct _S 

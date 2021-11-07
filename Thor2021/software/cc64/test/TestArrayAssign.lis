@@ -1,0 +1,44 @@
+     1	
+     2	void TestArrayAssign4(int aa)
+     3	{
+     4	int x[3][5][6];
+     5	int y[7][2][10];
+     6	int j = (int){15,20,25};
+     7	int *k;
+     8	
+     9	x[2][0][0] = 21;
+    10	x[1][4] = (int[6]){1,2,3,4,5,6};
+    11	k = &x[2];
+    12	x[2] = (int[5][6]){{10,2,1,0},{9,6,2},{8},{7},{6}};
+    13	x = y;
+    14	}
+    15	
+    16	
+
+
+*** local symbol table ***
+
+13 _x         =fffffd30   -    Auto        Array of Array of Array of Long
+13 _y         =fffff8d0   -    Auto        Array of Array of Array of Long
+7 _j         =fffff8c8   -    Auto        Long
+7 _k         =fffff8c0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _TestArrayAssign4 =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

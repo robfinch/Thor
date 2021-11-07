@@ -1,0 +1,491 @@
+
+;{++
+ 
+	bss
+	align	2
+
+public bss _a[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _b[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _c[2]:
+
+	fill.b	2,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _d[2]:
+
+	fill.b	2,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _e[2]:
+
+	fill.b	2,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+	fill.b	2,0x00                    
+
+	bss
+	align	2
+
+public bss _f[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _g[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _h[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _i[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _j[4]:
+
+	fill.b	4,0x00                    
+
+endpublic
+ 
+	align	2
+
+public bss _k[4]:
+
+	fill.b	4,0x00                    
+
+endpublic
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; a = b;
+  ldo      $t4,_b[$gp]
+  sto      $t4,_a[$gp]
+; a = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_a[$gp]
+; a = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_a[$gp]
+; a = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_a[$gp]
+; a = f;
+  ldo      $t4,_f[$gp]
+  sto      $t4,_a[$gp]
+; a = g;
+  ldo      $t4,_g[$gp]
+  sto      $t4,_a[$gp]
+; a = h;
+  ldo      $t4,_h[$gp]
+  sto      $t4,_a[$gp]
+; a = i;
+  ldo      $t4,_i[$gp]
+  sto      $t4,_a[$gp]
+; a = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_a[$gp]
+; a = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_a[$gp]
+; b = a;
+  ldo      $t4,_a[$gp]
+  sto      $t4,_b[$gp]
+; b = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_b[$gp]
+; b = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_b[$gp]
+; b = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_b[$gp]
+; b = f;
+  ldo      $t4,_f[$gp]
+  sto      $t4,_b[$gp]
+; b = g;
+  ldo      $t4,_g[$gp]
+  sto      $t4,_b[$gp]
+; b = h;
+  ldo      $t4,_h[$gp]
+  sto      $t4,_b[$gp]
+; b = i;
+  ldo      $t4,_i[$gp]
+  sto      $t4,_b[$gp]
+; b = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_b[$gp]
+; b = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_b[$gp]
+; c = a;
+  ldw      $t4,_a[$gp]
+  stw      $t4,_c[$gp]
+; c = b;
+  ldw      $t4,_b[$gp]
+  stw      $t4,_c[$gp]
+; c = d;
+  ldw      $t4,_d[$gp]
+  stw      $t4,_c[$gp]
+; c = e;
+  ldw      $t4,_e[$gp]
+  stw      $t4,_c[$gp]
+; c = f;
+  ldw      $t4,_f[$gp]
+  stw      $t4,_c[$gp]
+; c = g;
+  ldw      $t4,_g[$gp]
+  stw      $t4,_c[$gp]
+; c = h;
+  ldw      $t4,_h[$gp]
+  stw      $t4,_c[$gp]
+; c = i;
+  ldw      $t4,_i[$gp]
+  stw      $t4,_c[$gp]
+; c = j;
+  ldw      $t4,_j[$gp]
+  stw      $t4,_c[$gp]
+; c = k;
+  ldw      $t4,_k[$gp]
+  stw      $t4,_c[$gp]
+; d = a;
+  ldw      $t4,_a[$gp]
+  stw      $t4,_d[$gp]
+; d = b;
+  ldw      $t4,_b[$gp]
+  stw      $t4,_d[$gp]
+; d = c;
+  ldw      $t4,_c[$gp]
+  stw      $t4,_d[$gp]
+; d = e;
+  ldw      $t4,_e[$gp]
+  stw      $t4,_d[$gp]
+; d = f;
+  ldw      $t4,_f[$gp]
+  stw      $t4,_d[$gp]
+; d = g;
+  ldw      $t4,_g[$gp]
+  stw      $t4,_d[$gp]
+; d = h;
+  ldw      $t4,_h[$gp]
+  stw      $t4,_d[$gp]
+; d = i;
+  ldw      $t4,_i[$gp]
+  stw      $t4,_d[$gp]
+; d = j;
+  ldw      $t4,_j[$gp]
+  stw      $t4,_d[$gp]
+; d = k;
+  ldw      $t4,_k[$gp]
+  stw      $t4,_d[$gp]
+; e = a;
+  ldw      $t4,_a[$gp]
+  stw      $t4,_e[$gp]
+; e = b;
+  ldw      $t4,_b[$gp]
+  stw      $t4,_e[$gp]
+; e = c;
+  ldwu     $t4,_c[$gp]
+  stw      $t4,_e[$gp]
+; e = d;
+  ldwu     $t4,_d[$gp]
+  stw      $t4,_e[$gp]
+; e = f;
+  ldw      $t4,_f[$gp]
+  stw      $t4,_e[$gp]
+; e = g;
+  ldw      $t4,_g[$gp]
+  stw      $t4,_e[$gp]
+; e = h;
+  ldw      $t4,_h[$gp]
+  stw      $t4,_e[$gp]
+; e = i;
+  ldw      $t4,_i[$gp]
+  stw      $t4,_e[$gp]
+; e = j;
+  ldw      $t4,_j[$gp]
+  stw      $t4,_e[$gp]
+; e = k;
+  ldw      $t4,_k[$gp]
+  stw      $t4,_e[$gp]
+; f = a;
+  ldo      $t4,_a[$gp]
+  sto      $t4,_f[$gp]
+; f = b;
+  ldo      $t4,_b[$gp]
+  sto      $t4,_f[$gp]
+; f = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_f[$gp]
+; f = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_f[$gp]
+; f = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_f[$gp]
+; f = g;
+  ldo      $t4,_g[$gp]
+  sto      $t4,_f[$gp]
+; f = h;
+  ldo      $t4,_h[$gp]
+  sto      $t4,_f[$gp]
+; f = i;
+  ldo      $t4,_i[$gp]
+  sto      $t4,_f[$gp]
+; f = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_f[$gp]
+; f = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_f[$gp]
+; g = a;
+  ldo      $t4,_a[$gp]
+  sto      $t4,_g[$gp]
+; g = b;
+  ldo      $t4,_b[$gp]
+  sto      $t4,_g[$gp]
+; g = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_g[$gp]
+; g = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_g[$gp]
+; g = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_g[$gp]
+; g = f;
+  ldo      $t4,_f[$gp]
+  sto      $t4,_g[$gp]
+; g = h;
+  ldo      $t4,_h[$gp]
+  sto      $t4,_g[$gp]
+; g = i;
+  ldo      $t4,_i[$gp]
+  sto      $t4,_g[$gp]
+; g = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_g[$gp]
+; g = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_g[$gp]
+; h = a;
+  ldo      $t4,_a[$gp]
+  sto      $t4,_h[$gp]
+; h = b;
+  ldo      $t4,_b[$gp]
+  sto      $t4,_h[$gp]
+; h = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_h[$gp]
+; h = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_h[$gp]
+; h = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_h[$gp]
+; h = f;
+  ldo      $t4,_f[$gp]
+  sto      $t4,_h[$gp]
+; h = g;
+  ldo      $t4,_g[$gp]
+  sto      $t4,_h[$gp]
+; h = i;
+  ldo      $t4,_i[$gp]
+  sto      $t4,_h[$gp]
+; h = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_h[$gp]
+; h = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_h[$gp]
+; i = a;
+  ldo      $t4,_a[$gp]
+  sto      $t4,_i[$gp]
+; i = b;
+  ldo      $t4,_b[$gp]
+  sto      $t4,_i[$gp]
+; i = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_i[$gp]
+; i = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  sto      $t4,_i[$gp]
+; i = e;
+  ldwu     $t4,_e[$gp]
+  sto      $t4,_i[$gp]
+; i = f;
+  ldo      $t4,_f[$gp]
+  sto      $t4,_i[$gp]
+; i = g;
+  ldo      $t4,_g[$gp]
+  sto      $t4,_i[$gp]
+; i = h;
+  ldo      $t4,_h[$gp]
+  sto      $t4,_i[$gp]
+; i = j;
+  ldt      $t4,_j[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_i[$gp]
+; i = k;
+  ldtu     $t4,_k[$gp]
+  sxt      $t4,$t4
+  sto      $t4,_i[$gp]
+; j = a;
+  ldt      $t4,_a[$gp]
+  stt      $t4,_j[$gp]
+; j = b;
+  ldt      $t4,_b[$gp]
+  stt      $t4,_j[$gp]
+; j = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  stt      $t4,_j[$gp]
+; j = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  stt      $t4,_j[$gp]
+; j = e;
+  ldwu     $t4,_e[$gp]
+  stt      $t4,_j[$gp]
+; j = f;
+  ldt      $t4,_f[$gp]
+  stt      $t4,_j[$gp]
+; j = g;
+  ldt      $t4,_g[$gp]
+  stt      $t4,_j[$gp]
+; j = h;
+  ldt      $t4,_h[$gp]
+  stt      $t4,_j[$gp]
+; j = i;
+  ldt      $t4,_i[$gp]
+  stt      $t4,_j[$gp]
+; j = k;
+  ldt      $t4,_k[$gp]
+  stt      $t4,_j[$gp]
+; k = a;
+  ldt      $t4,_a[$gp]
+  stt      $t4,_k[$gp]
+; k = b;
+  ldt      $t4,_b[$gp]
+  stt      $t4,_k[$gp]
+; k = c;
+  ldwu     $t4,_c[$gp]
+  sxw      $t4,$t4
+  stt      $t4,_k[$gp]
+; k = d;
+  ldwu     $t4,_d[$gp]
+  sxw      $t4,$t4
+  stt      $t4,_k[$gp]
+; k = e;
+  ldwu     $t4,_e[$gp]
+  stt      $t4,_k[$gp]
+; k = f;
+  ldt      $t4,_f[$gp]
+  stt      $t4,_k[$gp]
+; k = g;
+  ldt      $t4,_g[$gp]
+  stt      $t4,_k[$gp]
+; k = h;
+  ldt      $t4,_h[$gp]
+  stt      $t4,_k[$gp]
+; k = j;
+  ldt      $t4,_j[$gp]
+  stt      $t4,_k[$gp]
+; k = i;
+  ldt      $t4,_i[$gp]
+  stt      $t4,_k[$gp]
+; return 0;
+  mov      $a0,$x0
+.C00010:
+  leave    #104
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+
+	rodata
+	align	16
+
+;--}

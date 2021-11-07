@@ -1,0 +1,49 @@
+     1	typedef struct {
+     2	int a[1024];
+     3	} TCB;
+     4	
+     5	typedef struct {
+     6	int ndx;
+     7	} S2;
+     8	
+     9	TCB t[100];
+    10	
+    11	short int TestPtrSub(TCB *a, TCB *b)
+    12	{
+    13	S2 x;
+    14	
+    15	x.ndx = a - t;
+    16	return (x.ndx);
+    17	}
+
+
+*** local symbol table ***
+
+41 _x         =fffffff8   -    Auto        struct __noname_tag1 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+40 _TCB       =000000   1   struct __noname_tag0 
+29 _TestPtrSub =0ca008   -    Global      Function returning Short
+		Parameters:
+			Type array:
+   013 040 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+13 _t         =002008   -    Global      Array of struct __noname_tag0 
+41 _S2        =002000   1   struct __noname_tag1 
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    13 _a         =000000   -    Member      Array of Long
+41 __noname_tag1 =000000   -    Type        struct __noname_tag1 
+    7 _ndx       =000000   -    Member      Long

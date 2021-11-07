@@ -1,0 +1,64 @@
+     1	struct _tagTest2 {
+     2	int a;
+     3	char b[50];
+     4	};
+     5	
+     6	struct _tagTest {
+     7	int a;
+     8	struct _tagTest2 b;
+     9	};
+    10	
+    11	struct _tagTest var;
+    12	int vara[120];
+    13	
+    14	int main(int ndx)
+    15	{
+    16	char ch;
+    17	
+    18	return ch = in64(&vara[ndx]);
+    19	return (&var)->b.b[21];
+    20	}
+    21	
+
+
+*** local symbol table ***
+
+5 _ch        =fffffffe   -    Auto        Char
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000520   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+13 _vara      =000160   -    Global      Array of Long
+40 __noname_var0 =000000   -    Global      struct __tagTest2 
+41 __noname_var1 =000070   -    Global      struct __tagTest 
+28 __delete   =000000   -    
+29 TestAddrof_in64 =000000   -    External    Function returning Short
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		41 _var       =0000e8   -    Global      struct __tagTest 
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 __tagTest2 =000000   -    Type        struct __tagTest2 
+    7 _a         =000000   -    Member      Long
+    13 _b         =000008   -    Member      Array of Char
+41 __tagTest  =000000   -    Type        struct __tagTest 
+    7 _a         =000000   -    Member      Long
+    40 _b         =000008   -    Member      struct __tagTest2 

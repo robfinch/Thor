@@ -1,0 +1,74 @@
+     1	typedef struct
+     2	{
+     3	int a;
+     4	} A;
+     5	
+     6	typedef struct
+     7	{
+     8	char s[50];
+     9	A a1[25];
+    10	A a2;
+    11	A a3;
+    12	int b;
+    13	} B;
+    14	
+    15	typedef struct
+    16	{
+    17	int c;
+    18	A *pa;
+    19	} C;
+    20	
+    21	char c1;
+    22	__int8 i8;
+    23	
+    24	A gblA;
+    25	B gblB = {
+    26	"Hello world"
+    27	};
+ *** error 38: E Integer constant required.
+ *** error 38: E Integer constant required.
+    28	
+    29	int iarray[100][20];
+    30	
+    31	B sarray[100][30];
+    32	
+    33	C cvar;
+    34	C dvar = { 10, 20 };
+    35	
+    36	B s2array[100][30];
+    37	
+    38	C vararray[15];
+    39	
+
+ *** global scope typedef symbol table ***
+
+1 _i8        =000162   -    Global      Byte
+28 __new      =000000   -    
+42 _cvar      =0f44f8   -    Global      struct __noname_tag2 
+42 _dvar      =0f4508   -    Global      struct __noname_tag2 
+13 _s2array   =0f4518   -    Global      Array of Array of struct __noname_tag1 
+28 __delete   =000000   -    
+40 _A         =000000   1   struct __noname_tag0 
+41 _B         =000008   1   struct __noname_tag1 
+42 _C         =000150   1   struct __noname_tag2 
+28 __autonew  =000000   -    
+13 _vararray  =1e48d8   -    Global      Array of struct __noname_tag2 
+40 _gblA      =000168   -    Global      struct __noname_tag0 
+41 _gblB      =000170   -    Global      struct __noname_tag1 
+13 _iarray    =0002b8   -    Global      Array of Array of Long
+13 _sarray    =004138   -    Global      Array of Array of struct __noname_tag1 
+5 _c1        =000160   -    Global      Char
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _a         =000000   -    Member      Long
+41 __noname_tag1 =000000   -    Type        struct __noname_tag1 
+    13 _s         =000000   -    Member      Array of Char
+    13 _a1        =000064   -    Member      Array of struct __noname_tag0 
+    40 _a2        =000130   -    Member      struct __noname_tag0 
+    40 _a3        =000138   -    Member      struct __noname_tag0 
+    7 _b         =000140   -    Member      Long
+42 __noname_tag2 =000000   -    Type        struct __noname_tag2 
+    7 _c         =000000   -    Member      Long
+    40 _pa        =000008   -    Member      struct __noname_tag0 

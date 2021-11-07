@@ -1,0 +1,238 @@
+     1	extern int printf(const char *format, ...);
+     2	static void kb_wait_1(void)
+     3	{
+     4	unsigned long timeout = 2;
+     5	do {
+     6	if (1) printf("timeout=%ld\n", timeout);
+     7	else
+     8	{
+     9	while (1)
+    10	printf("error\n");
+    11	}
+    12	timeout--;
+    13	} while (timeout);
+    14	}
+
+
+*** local symbol table ***
+
+19 _timeout   =fffffff8   -    Auto        
+
+
+
+    15	static void kb_wait_2(void)
+    16	{
+    17	unsigned long timeout = 2;
+    18	do {
+    19	if (1) printf("timeout=%ld\n", timeout);
+    20	else
+    21	{
+    22	for (;;)
+    23	printf("error\n");
+    24	}
+    25	timeout--;
+    26	} while (timeout);
+    27	}
+
+
+*** local symbol table ***
+
+19 _timeout   =fffffff8   -    Auto        
+
+
+
+    28	static void kb_wait_2_1(void)
+    29	{
+    30	unsigned long timeout = 2;
+    31	do {
+    32	if (1) printf("timeout=%ld\n", timeout);
+    33	else
+    34	{
+    35	do {
+    36	printf("error\n");
+    37	} while (1);
+    38	}
+    39	timeout--;
+    40	} while (timeout);
+    41	}
+
+
+*** local symbol table ***
+
+19 _timeout   =fffffff8   -    Auto        
+
+
+
+    42	static void kb_wait_2_2(void)
+    43	{
+    44	unsigned long timeout = 2;
+    45	do {
+    46	if (1) printf("timeout=%ld\n", timeout);
+    47	else
+    48	{
+    49	label:
+    50	printf("error\n");
+    51	goto label;
+    52	}
+    53	timeout--;
+    54	} while (timeout);
+    55	}
+
+
+*** local symbol table ***
+
+31 _label     =000050   -    Label
+19 _timeout   =fffffff8   -    Auto        
+
+
+
+    56	static void kb_wait_3(void)
+    57	{
+    58	unsigned long timeout = 2;
+    59	do {
+    60	if (1) printf("timeout=%ld\n", timeout);
+    61	else
+    62	{
+    63	int i = 1;
+    64	goto label;
+    65	i = i + 2;
+    66	label:
+    67	i = i + 3;
+    68	}
+    69	timeout--;
+    70	} while (timeout);
+    71	}
+
+
+*** local symbol table ***
+
+31 _label     =000066   -    Label
+19 _timeout   =fffffff8   -    Auto        
+7 _i         =fffffff0   -    Auto        Long
+
+
+
+    72	static void kb_wait_4(void)
+    73	{
+    74	unsigned long timeout = 2;
+    75	do {
+    76	if (1) printf("timeout=%ld\n", timeout);
+    77	else
+    78	{
+    79	switch(timeout) {
+    80	case 2:
+    81	printf("timeout is 2");
+    82	break;
+    83	case 1:
+    84	printf("timeout is 1");
+    85	break;
+    86	default:
+    87	printf("timeout is 0?");
+    88	break;
+    89	};
+    90	
+    91	}
+    92	timeout--;
+    93	} while (timeout);
+    94	}
+
+
+*** local symbol table ***
+
+19 _timeout   =fffffff8   -    Auto        
+
+
+
+    95	int main()
+    96	{
+    97	printf("begin\n");
+    98	kb_wait_1();
+    99	kb_wait_2();
+   100	kb_wait_2_1();
+   101	kb_wait_2_2();
+   102	kb_wait_3();
+   103	kb_wait_4();
+   104	printf("end\n");
+   105	return 0;
+   106	}
+   107	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _kb_wait_2_1 =000035   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _kb_wait_2_2 =00004e   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+29 _kb_wait_1 =000001   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 _kb_wait_2 =00001a   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		29 _kb_wait_3 =000064   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 _kb_wait_4 =000079   -    Static      Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

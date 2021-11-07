@@ -1,0 +1,72 @@
+     1	struct S1 {
+     2	int a;
+     3	int b;
+     4	};
+     5	
+     6	struct S2 {
+     7	int a;
+     8	int b;
+     9	union {
+    10	int c;
+    11	int d;
+    12	};
+    13	struct S1 s;
+    14	};
+    15	
+    16	struct S2 v = {1, 2, 3, {4, 5}};
+    17	
+    18	int
+    19	main()
+    20	{
+    21	if(v.a != 1)
+    22	return 1;
+    23	if(v.b != 2)
+    24	return 2;
+    25	if(v.c != 3 || v.d != 3)
+    26	return 3;
+    27	if(v.s.a != 4)
+    28	return 4;
+    29	if(v.s.b != 5)
+    30	return 5;
+    31	
+    32	return 0;
+    33	}
+    34	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000060   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _S1 
+41 __noname_var2 =000010   -    Global      struct _S2 
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+41 _v         =000038   -    Global      struct _S2 
+
+ *** structures and unions ***
+
+40 _S1        =000000   -    Type        struct _S1 
+    7 _a         =000000   -    Member      Long
+    7 _b         =000008   -    Member      Long
+41 _S2        =000000   -    Type        struct _S2 
+    7 _a         =000000   -    Member      Long
+    7 _b         =000008   -    Member      Long
+    42 __noname_var1 =000010   -    Member      union __noname_tag0 
+    40 _s         =000018   -    Member      struct _S1 
+42 __noname_tag0 =000000   -    Type        union __noname_tag0 
+    7 _c         =000000   -    Member      Long
+    7 _d         =000000   -    Member      Long

@@ -1,0 +1,73 @@
+   	data
+	align	8
+  	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _a:
+	dco	0
+	dcw	0
+	align 2
+	dct	0x00000000,0x00000000
+	fill.b	6,0x00                    
+
+endpublic
+ 	align	8
+	align	8
+	dw	$FFF0200000000003
+public data _b:
+	dco	0
+	dcw	0
+	align 2
+	dct	0x00000000,0x00000000
+	fill.b	6,0x00                    
+
+endpublic
+ 	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestStructAssign:
+  link     #56
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  sto      $s0,0[$sp]
+  lea      $s0,-24[$fp]
+; c = (UT){10,'k',21.5};
+  lea      $t0,TestStructAssign_3[$gp1]
+  mov      $a0,$s0
+  mov      $a1,$t0
+  ldi      $a2,#24
+  bal      $ra,__aacpy
+; c = d;
+  lea      $t0,-48[$fp]
+  mov      $a0,$s0
+  mov      $a1,$t0
+  ldi      $a2,#24
+  bal      $ra,__aacpy
+; return (b.f + a.i);
+  lea      $t1,_b[$gp]
+  ldo      $t1,10[$t1]
+  ldo      $t3,_a[$gp]
+  itof.d   $t2,$t3
+  fadd     $a0,$t1,$t2
+TestStructAssign_8:
+TestStructAssign_11:
+  ldo      $s0,0[$sp]
+  unlink 
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestStructAssign_3:
+align 8		dco	10
+align 2		dcw	107
+align 8		dco	0x4035800000000000
+fill.b 6,0x00
+;	global	_a
+;	global	_b
+;	global	_TestStructAssign

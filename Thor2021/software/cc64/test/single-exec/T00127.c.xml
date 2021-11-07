@@ -1,0 +1,624 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614DD8(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 01A09BE0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614EC8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 01A09BE0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 01614FB8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 01A09BE0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 123 124 125 126 127 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 350 354 355 358 359 362 363 364 370 375 380 381 382 383 385 386 387 388 414 }<Find>_int</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_c</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_c|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_c</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_c</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_c into 01A09BE0
+Insert _c into 01A09BE0Insert into global table
+<Find>_c</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_int</Find>
+</declare>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_main</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_main|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _main
+****************************
+****************************
+<TYP__Make>
+</TYP__Make>
+o p q </openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 30
+***Inserting:_main into 01A09BE0
+<BuildSignature>E:_main</BuildSignature>Insert _main into 01A09BE0Insert into global table
+<Find>_main</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _main
+***********************************
+***********************************
+***********************************
+A<BuildParameterList><ParseParmDecls>
+A(50)</ParseParmDecls>
+B</BuildParameterList>
+B<BuildSignature>:_main</BuildSignature><Find>_main:Match</Find>
+CDEG<Parse function body>:_main|
+<Find>_if</Find>
+<GenerateMonadic>ABCD</GenerateMonadic>
+BbC<Parse><ParseIf><Parse><Find>_return</Find>
+<Parse></Parse><Find>_else</Find>
+<Find>_if</Find>
+<Parse><ParseIf><Parse><Find>_else</Find>
+<Parse><Find>_if</Find>
+<Parse><ParseIf><Parse><Find>_if</Find>
+<Parse><ParseIf><Find>_c</Find>
+<Nameref>GSearchfor:_c|
+<gsearch2> for: |_c|
+Looking in statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in outer statement table
+<Find>_c</Find>
+Looking in function's symbol table
+<Find>_c</Find>
+Searching method/class:_main|00DE5DE8
+Looking at params 016150C8
+<Find>_c</Find>
+Looking at class members 016C5898
+Looking at global symbols
+<Find>_c:Match</Find>
+Found in global symbol table
+Looking at enums
+</gsearch2>
+<nameref2>
+A:1:_cIsEqual:T2sp is not null
+Type array:
+   
+tp:016C5790 <Deref></Deref>deref tp:016C5790 </nameref2>
+</Nameref>
+<Find>_return</Find>
+<Parse><Find>_else</Find>
+</Parse><Find>_return</Find>
+<Parse></Parse></ParseIf></Parse><Find>_else</Find>
+<Parse><Find>_return</Find>
+<Parse></Parse></ParseIf></Parse><Find>_return</Find>
+</ParseIf></Parse></ParseIf></Parse><Parse></Parse>Returning EOF from NextToken.
+D<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:1 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 44: ???
+  rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+<Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan></Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>B{if}<OptConst></OptConst><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan>{/if}</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><Statement__Scan>BC
+<Statement__Scan></Statement__Scan><Statement__Scan>BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan>{/if}</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan>{/if}</Statement__Scan>{/if}BE<OptConst></OptConst>e</Statement__Scan><Statement__Scan></Statement__Scan>c</Statement__Scan><CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 0   5   4   0   -1      
+1: 0   1   1   0   -1   _c   _c   
+2: 0   3   2   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs><GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+<GenerateMonadic>ABCD</GenerateMonadic>
+<CSETable__Optimize>Pass:2 ===== Before Scan =====Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 44: ???
+  rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+<CSETable>For _main
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 0   5   4   0   -1      
+1: 0   1   1   0   -1   _c   _c   
+2: 0   3   2   0   -1      
+</CSETable>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+===== After Update =====Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Node:0
+nodetype: 169: en_ref
+rg: 0
+  Node:0
+  nodetype: 44: ???
+  rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+Statement
+Node:0
+nodetype: 37: en_icon
+rg: 0
+Statement
+</CSETable__Optimize>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<GenerateMonadic>ABCD</GenerateMonadic>
+<StaticRegs>====== Statically Assigned Registers =======
+</StaticRegs>E_main: 7 basic blocks
+----- Compute Live Vars -----
+6: g4 g29  || k0 k4 
+Edges to: - - - - Live Out - - - -{ 4 29 }----- Compute Live Vars -----
+5: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 20 }----- Compute Live Vars -----
+4: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 20 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 20 }----- Compute Live Vars -----
+2: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 20 }----- Compute Live Vars -----
+1: g4 g20 g28  || k4 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 28 }----- Compute Live Vars -----
+0: g4 g20 g29  || k0 k4 k20 k28 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+6: g4 g29  || k0 k4 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+5: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+4: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 20 }----- Compute Live Vars -----
+2: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+1: g4 g20 g28  || k4 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 28 29 }----- Compute Live Vars -----
+0: g4 g20 g29  || k0 k4 k20 k28 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+6: g4 g29  || k0 k4 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+5: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+4: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+2: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+1: g4 g20 g28  || k4 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 28 29 }----- Compute Live Vars -----
+0: g4 g20 g29  || k0 k4 k20 k28 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+6: g4 g29  || k0 k4 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+5: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+4: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+2: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+1: g4 g20 g28  || k4 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 28 29 }----- Compute Live Vars -----
+0: g4 g20 g29  || k0 k4 k20 k28 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+6: g4 g29  || k0 k4 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+5: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+4: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+3:  || 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+2: g20  || k20 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }----- Compute Live Vars -----
+1: g4 g20 g28  || k4 k20 
+Edges to: - - - - Live Out - - - -{ 4 20 28 29 }----- Compute Live Vars -----
+0: g4 g20 g29  || k0 k4 k20 k28 
+Edges to: - - - - Live Out - - - -{ 4 20 29 }<table style="width:100%">
+<tr><td>0: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>1: </td><td>vi4 </td><td>vi20 </td><td>vi28 </td><td>vi29 </td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo28 </td><td>vo29 </td></tr>
+<tr><td>2: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>3: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>4: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>5: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>6: </td><td>vi4 </td><td>vi20 </td><td>vi29 </td><td></td><td> || </td><td>vo4 </td><td>vo20 </td><td>vo29 </td><td></td></tr>
+<tr><td>7: </td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r28: { 0 1 2 3 4 5 6 }
+Visited r29: { 0 1 2 3 4 5 6 }
+Visited r20: { 0 1 2 3 4 5 6 }
+Visited r4: { 0 1 2 3 4 5 6 }
+<VarForests>0
+Var28: 1 trees
+<Tree>0 Color:-12851 { 1 }</Tree>
+<Forest>{ 1 }</Forest>
+Var29: 1 trees
+<Tree>1 Color:-12851 { 0 1 2 3 4 5 6 }</Tree>
+<Forest>{ 0 1 2 3 4 5 6 }</Forest>
+Var20: 1 trees
+<Tree>2 Color:-12851 { 0 1 2 3 4 5 6 }</Tree>
+<Forest>{ 0 1 2 3 4 5 6 }</Forest>
+Var4: 1 trees
+<Tree>3 Color:-12851 { 0 1 2 3 4 5 6 }</Tree>
+<Forest>{ 0 1 2 3 4 5 6 }</Forest>
+</VarForests>
+<Paths>
+0: { 0 6 }
+1: { 0 5 6 }
+</Paths>
+</ParseFunctionBody>
+<FuncSummary>
+</FuncSummary>
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

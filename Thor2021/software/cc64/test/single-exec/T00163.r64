@@ -1,0 +1,177 @@
+
+;{++
+                                                                                                                                                     
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	bss
+	align	8
+
+public bss _bolshevic[24]:
+
+	fill.b	24,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+    ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #32
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00000E00
+  ldi      $s0,#_printf
+; int a;
+  lea      $s2,_bolshevic[$gp]
+; a = 42;
+  ldi      $t4,#42
+  sto      $t4,-8[$fp]
+; b = &a;
+  lea      $t4,-8[$fp]
+  base     $t4,$t4,#10
+  mov      $s1,$t4
+; printf("a = %d\n", *b);
+  lea      $t4,T00163_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s1]
+  push     $t4
+  jal      $ra,[$s0]
+; bolshevic.a = 12;
+  sto      #12,_bolshevic[$gp]
+; bolshevic.b = 34;
+  lea      $t4,_bolshevic[$gp]
+  ldi      $t5,#34
+  sto      $t5,8[$t4]
+; bolshevic.c = 56;
+  lea      $t4,_bolshevic[$gp]
+  ldi      $t5,#56
+  sto      $t5,16[$t4]
+; printf("bolshevic.a = %d\n", bolshevic.a);
+  lea      $t4,T00163_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,_bolshevic[$gp]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("bolshevic.b = %d\n", bolshevic.b);
+  lea      $t4,T00163_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,_bolshevic[$gp]
+  ldo      $t4,8[$t4]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("bolshevic.c = %d\n", bolshevic.c);
+  lea      $t4,T00163_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,_bolshevic[$gp]
+  ldo      $t4,16[$t4]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("tsar->a = %d\n", tsar->a);
+  lea      $t4,T00163_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s2]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("tsar->b = %d\n", tsar->b);
+  lea      $t4,T00163_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,8[$s2]
+  push     $t4
+  jal      $ra,[$s0]
+; printf("tsar->c = %d\n", tsar->c);
+  lea      $t4,T00163_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,16[$s2]
+  push     $t4
+  jal      $ra,[$s0]
+; b = &(bolshevic.b);
+  lea      $t5,_bolshevic[$gp]
+  add      $s1,$t5,#8
+; printf("bolshevic.b = %d\n", *b);
+  lea      $t4,T00163_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s1]
+  push     $t4
+  jal      $ra,[$s0]
+; return 0;
+  mov      $a0,$x0
+.C00018:
+  ldm      [$sp],#$00000E00
+  leave    #96
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00163_1[16]: ; a = %d
+
+	dcw	97,32,61,32,37,100,10,0
+T00163_2[36]: ; bolshevic.a = %d
+
+	dcw	98,111,108,115,104,101,118,105
+	dcw	99,46,97,32,61,32,37,100
+	dcw	10,0
+T00163_3[36]: ; bolshevic.b = %d
+
+	dcw	98,111,108,115,104,101,118,105
+	dcw	99,46,98,32,61,32,37,100
+	dcw	10,0
+T00163_4[36]: ; bolshevic.c = %d
+
+	dcw	98,111,108,115,104,101,118,105
+	dcw	99,46,99,32,61,32,37,100
+	dcw	10,0
+T00163_5[28]: ; tsar->a = %d
+
+	dcw	116,115,97,114,45,62,97,32
+	dcw	61,32,37,100,10,0
+T00163_6[28]: ; tsar->b = %d
+
+	dcw	116,115,97,114,45,62,98,32
+	dcw	61,32,37,100,10,0
+T00163_7[28]: ; tsar->c = %d
+
+	dcw	116,115,97,114,45,62,99,32
+	dcw	61,32,37,100,10,0
+T00163_8[36]: ; bolshevic.b = %d
+
+	dcw	98,111,108,115,104,101,118,105
+	dcw	99,46,98,32,61,32,37,100
+	dcw	10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

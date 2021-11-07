@@ -1,0 +1,80 @@
+
+;{++
+ 
+	data
+	align	8
+
+public data _s[0]:
+
+	dcw	87,97,87,98,87,99,0
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; if (s[0] != 'a')
+  ldw      $t4,_s[$gp]
+  seq      $t5,$t4,#97
+  bne      $t5,$x0,.C00019
+; return 1;
+  ldi      $a0,#1
+.C00018:
+  leave    #96
+.C00019:
+; if (s[1] != 'b')
+  lea      $t4,_s[$gp]
+  ldw      $t4,2[$t4]
+  seq      $t5,$t4,#98
+  bne      $t5,$x0,.C00021
+; return 2;
+  ldi      $a0,#2
+  bra      .C00018
+.C00021:
+; if (s[2] != 'c')
+  lea      $t4,_s[$gp]
+  ldw      $t4,4[$t4]
+  seq      $t5,$t4,#99
+  bne      $t5,$x0,.C00023
+; return 3;
+  ldi      $a0,#3
+  bra      .C00018
+.C00023:
+; if (s[3] != '\0')
+  lea      $t4,_s[$gp]
+  ldw      $t4,6[$t4]
+  beqz     $t4,.C00025
+; return 4;
+  ldi      $a0,#4
+  bra      .C00018
+.C00025:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00018
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+
+	rodata
+	align	16
+
+;--}

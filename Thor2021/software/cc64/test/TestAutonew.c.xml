@@ -1,0 +1,226 @@
+<title>CC64 Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EA48(__new)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __new into 00CD49E0Insert into global table
+<Find>__new</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EAF8(__autonew)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __autonew into 00CD49E0Insert into global table
+<Find>__autonew</Find>
+At insert:
+Type array:
+   007 
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0098EBA8(__delete)
+<Find>_p0</Find>
+At insert:
+Type array:
+   
+Insert __delete into 00CD49E0Insert into global table
+<Find>__delete</Find>
+At insert:
+Type array:
+   013 
+Instructions not in outcode table.
+{ 0 1 7 9 10 12 14 16 17 18 20 21 24 26 29 31 37 43 44 45 47 48 49 58 67 68 69 78 79 83 84 93 94 95 117 118 119 120 122 126 129 130 131 132 137 138 151 154 155 156 157 165 166 193 194 195 196 197 198 216 219 221 226 227 228 229 231 236 238 240 243 244 267 268 271 273 274 279 280 283 286 293 294 301 309 310 311 337 341 342 345 346 349 350 351 357 362 367 368 369 370 371 372 373 374 375 391 }<Find>_int</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_main</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_main|CDE</ParsePrefixId><ParseDeclSuffix>
+(<openpa>
+****************************
+****************************
+Function: _main
+****************************
+****************************
+<Find>_int</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rss Set false
+<BuildParameterList><ParseParmDecls>
+A(71)C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+<Find>_x</Find>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_x|CDE</ParsePrefixId></ParseDeclPrefix>
+C<FindSymbol><Find>_x</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_x</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 7
+***Inserting:_x into 0098EC68
+Insert _x into 0098EC68<Find>_x</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK</declare>
+EA(53)</ParseParmDecls>
+B<Find>_x:Match</Find>
+</BuildParameterList>
+Set false
+Set true1
+Z
+</openpa>
+</ParseDeclSuffix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+DEGH<FindSymbol><Find>_main</Find>
+hh1h2i</FindSymbol>
+k<DoInsert>insert type: 29
+***Inserting:_main into 00CD49E0
+<BuildSignature>E<TypenoToChars>ABCD:HAAA</TypenoToChars>:_mainHAAA</BuildSignature>Insert _main into 00CD49E0Insert into global table
+<Find>_main</Find>
+At insert:
+Type array:
+   007 
+</DoInsert>
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _main
+***********************************
+***********************************
+***********************************
+A<BuildParameterList>Function parameter list already processed.<ParseParmDecls>
+A(50)</ParseParmDecls>
+B<BuildSignature>:_main</BuildSignature><Find>_main:Match</Find>
+CDEG<Parse function body>:_main|
+<Find>___int8</Find>
+Bb<GenerateMonadic>ABCD</GenerateMonadic>
+C<declare>
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<Declaration_ParsePrefix>(12)
+**<Find>_pd</Find>
+<Declaration_ParsePrefix>(1)
+I<ParsePrefixId>B|_pd|CDE</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+C<FindSymbol><Find>_pd</Find>
+hh1</FindSymbol>
+DEGH<FindSymbol><Find>_pd</Find>
+hh1</FindSymbol>
+k<DoInsert>insert type: 1
+***Inserting:_pd into 0180C0B0
+Insert _pd into 0180C0B0<Find>_pd</Find>
+At insert:
+Type array:
+   
+</DoInsert>
+JK<Find>_if</Find>
+</declare>
+<Parse><ParseIf><Find>_x</Find>
+<Nameref>GSearchfor:_x|
+<gsearch2> for: |_x|
+Looking in statement table
+<Find>_x</Find>
+Looking in function's symbol table
+<Find>_x</Find>
+Searching method/class:_main|0021E0A8
+Looking at params 0098EC68
+<Find>_x:Match</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_xIsEqual:T2sp is not null
+Type array:
+   
+tp:00A104A0 <Deref></Deref>deref tp:00A104A0 </nameref2>
+</Nameref>
+<Find>_return</Find>
+<Parse><Find>_pd</Find>
+</Parse></ParseIf></Parse>Found _pd
+<Find>_pd</Find>
+<Find>_pd</Find>
+<Parse><ParseExpression>
+<Nameref>GSearchfor:_pd|
+<gsearch2> for: |_pd|
+Looking in statement table
+<Find>_pd:Match</Find>
+Found as an auto var
+</gsearch2>
+<nameref2>
+A:1:_pdIsEqual:T2sp is not null
+Type array:
+   
+tp:00A104F8 <Deref></Deref>deref tp:00A104F8 </nameref2>
+</Nameref>
+<Find>_auto</Find>
+<Find>_new</Find>
+<Find>___int8</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<Declaration_ParsePrefix>(48)
+D<ParseDeclSuffix>
+[<TYP__Make>
+</TYP__Make>
+<OptConst2></OptConst2>Setting array size:256
+</ParseDeclSuffix>
+d</ParseDeclPrefix>
+E Compiler: null pointer encountered</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

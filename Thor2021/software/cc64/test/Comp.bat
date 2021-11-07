@@ -1,0 +1,1 @@
+FOR %%f in (single-exec\T*.c) do echo %%f 1>>TestErr.txt & .\cc64 -w -S %%f 1>>TestErr.txt

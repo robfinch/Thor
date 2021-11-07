@@ -1,0 +1,71 @@
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _abs:
+  bge      $a0,$x0,TestAbs_11
+  neg      $t1,$a0
+TestAbs_11:
+TestAbs_10:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _min:
+  bge      $a0,$a1,TestAbs_23
+TestAbs_23:
+TestAbs_24:
+  mov      $a0,$a1
+TestAbs_22:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _max:
+  bge      $a1,$a0,TestAbs_35
+  bra      TestAbs_36
+TestAbs_35:
+  mul      $t2,$a1,#20
+  add      $t1,$a1,$t2
+TestAbs_36:
+  mov      $a0,$t1
+TestAbs_34:
+  ret    
+endpublic
+
+   	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _minu:
+  bge      $a0,$a1,TestAbs_47
+TestAbs_47:
+  mov      $a0,$a1
+TestAbs_46:
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_minu
+;	global	_abs
+;	global	_min
+;	global	_max

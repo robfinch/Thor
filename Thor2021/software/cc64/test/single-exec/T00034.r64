@@ -1,0 +1,79 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00024
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+; x = 0;
+  mov      $s0,$x0
+; while(1)
+  ldi      $t4,#1
+  beqz     $t4,.C00027
+.C00026:
+.C00027:
+; while(1) {
+  ldi      $t4,#1
+  beqz     $t4,.C00029
+.C00028:
+; if (x == 5) {
+  bne      $s0,#5,.C00030
+; break;
+  bra      .C00029
+.C00030:
+; x = x + 1;
+  add      $s0,$s0,#1
+; continue;
+  bra      .C00028
+.C00029:
+; if (x == 10) {
+  bne      $s0,#10,.C00035
+; break;
+  bra      .C00033
+.C00035:
+; x = x + 1;
+  add      $s0,$s0,#1
+.C00033:
+.C00037:
+; if (x == 15) {
+  bne      $s0,#15,.C00039
+; break;
+  bra      .C00038
+.C00039:
+; x = x + 1;
+  add      $s0,$s0,#1
+; continue;
+  bra      .C00037
+.C00038:
+; return x - 15;
+  sub      $a0,$s0,#15
+.C00025:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00024:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00025
+.. 
+
+
+	rodata
+	align	16
+
+;--}

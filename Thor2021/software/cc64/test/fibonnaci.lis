@@ -1,0 +1,53 @@
+     1	
+     2	int nums [30];
+     3	
+     4	int main()
+     5	{
+     6	int c,c1,c2;
+     7	int n;
+     8	
+     9	c1 = 0;
+    10	c2 = 1;
+    11	for (n = 0; n < 23; n = n + 1) {
+    12	if (n < 1) {
+    13	nums[0] = 1;
+    14	c = 1;
+    15	}
+    16	else {
+    17	nums[n] = c;
+    18	c = c1 + c2;
+    19	c1 = c2;
+    20	c2 = c;
+    21	}
+    22	}
+    23	}
+    24	
+
+
+*** local symbol table ***
+
+7 _c         =fffffff8   -    Auto        Long
+7 _c1        =fffffff0   -    Auto        Long
+7 _c2        =ffffffe8   -    Auto        Long
+7 _n         =ffffffe0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =0000f0   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -32
+		Stkspc: 32
+		28 __new      =000000   -    
+13 _nums      =000000   -    Global      Array of Long
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

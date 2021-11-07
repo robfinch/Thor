@@ -1,0 +1,63 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00015
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+; x = 4;
+  ldi      $s0,#4
+; if(!x != 0)
+  not      $t4,$s0
+  beqz     $t4,.C00017
+; return 1;
+  ldi      $a0,#1
+.C00016:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00017:
+; if(!!x != 1)
+  not      $t5,$s0
+  not      $t4,$t5
+  beq      $t4,#1,.C00019
+; return 1;
+  ldi      $a0,#1
+  bra      .C00016
+.C00019:
+; if(-x != 0 - 4)
+  neg      $t4,$s0
+  beq      $t4,#-4,.C00021
+; return 1;
+  ldi      $a0,#1
+  bra      .C00016
+.C00021:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00016
+.C00015:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00016
+.. 
+
+
+	rodata
+	align	16
+
+;--}

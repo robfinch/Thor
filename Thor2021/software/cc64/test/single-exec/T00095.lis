@@ -1,0 +1,63 @@
+     1	int x;
+     2	int x = 3;
+     3	int x;
+     4	
+     5	int main();
+     6	
+     7	void *
+     8	foo()
+     9	{
+    10	return &main;
+    11	}
+    12	
+
+
+*** local symbol table ***
+
+
+
+
+    13	int
+    14	main()
+    15	{
+    16	if (x != 3)
+    17	return 0;
+    18	
+    19	x = 0;
+    20	return x;
+    21	}
+    22	
+    23	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000018   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _foo       =000018   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+7 _x         =000000   -    Global      Long
+
+ *** structures and unions ***
+

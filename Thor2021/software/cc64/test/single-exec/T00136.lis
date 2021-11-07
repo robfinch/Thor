@@ -1,0 +1,49 @@
+     1	
+     2	int a;
+     3	int b;
+     4	int c;
+     5	int d;
+     6	int e;
+     7	int f;
+     8	int e_;
+     9	int f_;
+    10	int e_;
+    11	int f_;
+    12	int
+    13	main()
+    14	{
+    15	return 0;
+    16	}
+    17	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000050   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+7 _e_        =000030   -    Global      Long
+7 _f_        =000038   -    Global      Long
+28 __delete   =000000   -    
+7 _a         =000000   -    Global      Long
+28 __autonew  =000000   -    
+7 _b         =000008   -    Global      Long
+7 _c         =000010   -    Global      Long
+7 _d         =000018   -    Global      Long
+7 _e         =000020   -    Global      Long
+7 _f         =000028   -    Global      Long
+
+ *** structures and unions ***
+

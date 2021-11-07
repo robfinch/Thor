@@ -1,0 +1,37 @@
+     1	unsigned int __mulsi3 (register unsigned int a, register unsigned int b)
+     2	{
+     3	unsigned int r = 0;
+     4	while (a)
+     5	{
+     6	if (a & 1)
+     7	r += b;
+     8	a >>= 1;
+     9	b <<= 1;
+    10	}
+    11	return r;
+    12	}
+
+
+*** local symbol table ***
+
+19 _r         =fffffff8   -    Auto        
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+29 ___mulsi3  =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   019 019 
+Stack Space:
+		Argbot: -8
+		Tmpbot: -24
+		Stkspc: 24
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

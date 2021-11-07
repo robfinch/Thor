@@ -1,0 +1,53 @@
+ 	code
+	align	16
+ 	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestFor:
+  sub      $sp,$sp,#48
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+; for (x = 1; x < 100; x++) {
+  ldi      $s0,#1
+  sge      $t0,$s0,#100
+  bne      $t0,$x0,TestFor_16
+TestFor_15:
+; putch('a');
+  ldi      $t0,#97
+  push     $t0
+  bal      $ra,TestFor_putch
+  add      $s0,$s0,#1
+  slt      $t0,$s0,#100
+  bne      $t0,$x0,TestFor_15
+TestFor_16:
+; y = 50;
+  ldi      $s1,#50
+  sub      $s1,$s1,#1
+; for (; y > 0;) {
+  bge      $x0,$s1,TestFor_19
+TestFor_18:
+; putch('b');
+  ldi      $t0,#98
+  push     $t0
+  bal      $ra,TestFor_putch
+TestFor_20:
+  blt      $x0,$s1,TestFor_18
+TestFor_19:
+TestFor_11:
+TestFor_14:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  add      $sp,$sp,#48
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestFor
+	extern	TestFor_putch

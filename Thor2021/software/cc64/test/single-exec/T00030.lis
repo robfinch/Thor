@@ -1,0 +1,64 @@
+     1	int
+     2	f()
+     3	{
+     4	return 100;
+     5	}
+     6	
+
+
+*** local symbol table ***
+
+
+
+
+     7	int
+     8	main()
+     9	{
+    10	if (f() > 1000)
+    11	return 1;
+    12	if (f() >= 1000)
+    13	return 1;
+    14	if (1000 < f())
+    15	return 1;
+    16	if (1000 <= f())
+    17	return 1;
+    18	if (1000 == f())
+    19	return 1;
+    20	if (100 != f())
+    21	return 1;
+    22	return 0;
+    23	}
+    24	
+    25	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _f         =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+

@@ -1,0 +1,33 @@
+     1	typedef struct {
+     2		int *addr;
+     3		int size;
+     4	} MEMORY;
+     5	
+     6	int IsInMemory(register MEMORY *mem, register void *ptr)
+     7	{
+     8		return ((__int8*)ptr >= (__int8*)mem->addr &&
+     9			(__int8*)ptr < (__int8*)mem->addr + mem->size)
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+_MEMORY    =000000   1   struct <no name> 
+_IsInMemory =000010   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   024 024 
+Stack Space:
+		Argbot: -8
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+

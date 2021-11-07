@@ -1,0 +1,41 @@
+     1	try int main(int argc)
+     2	{
+     3	printf ("In main");
+     4	}
+     5	catch(char *str)
+     6	{
+     7	printf("error is %s", str);
+     8	}
+     9	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: -8
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

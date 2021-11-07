@@ -1,0 +1,46 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00012
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t5,T00112_1[$gp1]
+  base     $t5,$t5,#12
+  seq      $a0,$t5,$x0
+.C00013:
+  leave    #96
+.C00012:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00013
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00112_1[8]: ; abc
+
+	dcw	97,98,99,0
+;--}

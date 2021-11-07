@@ -1,0 +1,40 @@
+     1	int
+     2	main()
+     3	{
+     4	void *p;
+     5	int x;
+     6	
+     7	x = 2;
+     8	p = &x;
+     9	
+    10	if(*((int*)p) != 2)
+    11	return 1;
+    12	return 0;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+13 _p         =fffffff8   -    Auto        Pointer to 
+7 _x         =fffffff0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

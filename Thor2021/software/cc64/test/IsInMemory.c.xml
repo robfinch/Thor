@@ -1,0 +1,599 @@
+<title>C64D Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_typedef</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+Enter declare()
+A<ParseSpecifier>
+A</Find>
+_struct</Find>
+</Find>
+_int</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_addr</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_addr|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_addr</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_addr into 00A328F4
+<BuildSignature>:_addr</BuildSignature>Insert _addr into 00A328F4()
+</Find>
+_addr</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_size</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_size|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_size</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_size into 00A328F4
+<BuildSignature>:_size</BuildSignature>Insert _size into 00A328F4()
+</Find>
+_size</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_MEMORY</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_MEMORY|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_MEMORY</Find>
+hh1kIIbIcinsert type: 31
+***Inserting:_MEMORY into 002B0858
+<BuildSignature>:_MEMORY</BuildSignature>Insert _MEMORY into 002B0858()
+Insert into global table
+</Find>
+_MEMORY</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_IsInMemory</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_IsInMemory|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _IsInMemory
+****************************
+****************************
+</Find>
+_register</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_IsInMemory)
+Type array:
+   
+Proto types(_IsInMemory)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_IsInMemory</Find>
+hh1h2ikIIbIcinsert type: 36
+***Inserting:_IsInMemory into 002B0858
+<BuildSignature>:_IsInMemory</BuildSignature>Insert _IsInMemory into 002B0858()
+Insert into global table
+</Find>
+_IsInMemory</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _IsInMemory
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(87)</Find>
+_MEMORY</Find>
+EA(1)CEnter declare()
+A<ParseSpecifier>
+A<ParseId>_MEMORY</Find>
+_MEMORY</Find>
+</Find>
+_MEMORYMatch
+</Find>
+Actually found type.
+</ParseId></ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_mem</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_mem|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_mem</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_mem into 002C17FC
+<BuildSignature>:_mem</BuildSignature>Insert _mem into 002C17FC(_IsInMemory)
+</Find>
+_mem</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_register</Find>
+EA(87)</Find>
+_void</Find>
+EA(74)CEnter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</Find>
+_ptr</Find>
+<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_ptr|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+</ParseDeclPrefix>
+CDEGH</Find>
+_ptr</Find>
+hh1kIIbIcinsert type: 24
+***Inserting:_ptr into 002C17FC
+<BuildSignature>:_ptr</BuildSignature>Insert _ptr into 002C17FC(_IsInMemory)
+</Find>
+_ptr</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_memMatch
+</Find>
+</Find>
+_ptrMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_IsInMemory</BuildSignature></Find>
+_IsInMemoryMatch
+</Find>
+CDEG<Parse function body>:_IsInMemory|
+</Find>
+_return</Find>
+BbEnter GenerateMonadic
+ABCDLeave GenerateMonadic
+C<Parse></Find>
+___int8</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</ParseDeclPrefix>
+</Find>
+_ptr</Find>
+<Nameref>
+GSearchfor:_ptr|
+<gsearch2> for: |_ptr|
+Looking in statement table
+</Find>
+_ptr</Find>
+Looking in function's symbol table
+</Find>
+_ptr</Find>
+Searching method/class:_IsInMemory|002C17A8
+Looking at params 002C17FC
+</Find>
+_ptrMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_ptrIsEqual:T2sp is not null
+Type array:
+   
+tp:00A32AB4 <Deref></Deref>deref tp:00A32AB4 </nameref2>
+</Nameref>
+</Find>
+___int8</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</ParseDeclPrefix>
+</Find>
+_mem</Find>
+<Nameref>
+GSearchfor:_mem|
+<gsearch2> for: |_mem|
+Looking in statement table
+</Find>
+_mem</Find>
+Looking in function's symbol table
+</Find>
+_mem</Find>
+Searching method/class:_IsInMemory|002C17A8
+Looking at params 002C17FC
+</Find>
+_memMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_memIsEqual:T2sp is not null
+Type array:
+   
+tp:00A32A3C <Deref></Deref>deref tp:00A32A3C </nameref2>
+</Nameref>
+</Find>
+_addr</Find>
+dot search: 00A328F4
+<FindRising>_addr 
+</Find>
+_addrMatch
+</Find>
+</FindRising>Sym:_addr Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_addr type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+___int8</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</ParseDeclPrefix>
+</Find>
+_ptr</Find>
+<Nameref>
+GSearchfor:_ptr|
+<gsearch2> for: |_ptr|
+Looking in statement table
+</Find>
+_ptr</Find>
+Looking in function's symbol table
+</Find>
+_ptr</Find>
+Searching method/class:_IsInMemory|002C17A8
+Looking at params 002C17FC
+</Find>
+_ptrMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_ptrIsEqual:T2sp is not null
+Type array:
+   
+tp:00A32AB4 <Deref></Deref>deref tp:00A32AB4 </nameref2>
+</Nameref>
+</Find>
+___int8</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<ParseDeclPrefix>(9)
+*<TYP__Make>
+</TYP__Make>
+</ParseDeclPrefix>
+</Find>
+_mem</Find>
+<Nameref>
+GSearchfor:_mem|
+<gsearch2> for: |_mem|
+Looking in statement table
+</Find>
+_mem</Find>
+Looking in function's symbol table
+</Find>
+_mem</Find>
+Searching method/class:_IsInMemory|002C17A8
+Looking at params 002C17FC
+</Find>
+_memMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_memIsEqual:T2sp is not null
+Type array:
+   
+tp:00A32A3C <Deref></Deref>deref tp:00A32A3C </nameref2>
+</Nameref>
+</Find>
+_addr</Find>
+dot search: 00A328F4
+<FindRising>_addr 
+</Find>
+_addrMatch
+</Find>
+</FindRising>Sym:_addr Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_addr type 24 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:24tp1->type:24<Deref></Deref>tp1->type:24B</Find>
+_mem</Find>
+<Nameref>
+GSearchfor:_mem|
+<gsearch2> for: |_mem|
+Looking in statement table
+</Find>
+_mem</Find>
+Looking in function's symbol table
+</Find>
+_mem</Find>
+Searching method/class:_IsInMemory|002C17A8
+Looking at params 002C17FC
+</Find>
+_memMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_memIsEqual:T2sp is not null
+Type array:
+   
+tp:00A32A3C <Deref></Deref>deref tp:00A32A3C </nameref2>
+</Nameref>
+</Find>
+_size</Find>
+dot search: 00A328F4
+<FindRising>_size 
+</Find>
+_sizeMatch
+</Find>
+</FindRising>Sym:_size Types: (000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, )
+<FindRisingMatch>_size type 19 Found method:IsEqual:T3Found in a base class:</FindRisingMatch>
+tp1->type:19tp1->type:19<Deref></Deref>tp1->type:19B</Parse>Returning EOF from NextToken.
+D<CSETable>For _IsInMemory
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 1   1   0   0   -1   
+1: 1   1   0   0   -1   
+2: 1   1   0   0   -1   
+3: 1   1   0   0   -1   
+4: 0   1   1   0   -1      
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+<CSETable>For _IsInMemory
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 1   1   0   0   -1   
+1: 1   1   0   0   -1   
+2: 1   1   0   0   -1   
+3: 1   1   0   0   -1   
+4: 0   1   1   0   -1      
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+E
+sub
+mov
+sub
+lw
+bltu
+lw
+hint
+hint
+lw
+add
+bgeu
+ldi
+bra
+ldi
+hint
+mov
+mov
+ret
+bra
+bra
+_IsInMemory: 5 basic blocks
+<table style="width:100%">
+<tr><td>0: </td><td>vi0 </td><td>vi1 </td><td>vi2 </td><td>vi3 </td><td>vi18 </td><td>vi19 </td><td>vi30 </td><td>vi31 </td><td> || </td><td>vo0 </td><td>vo1 </td><td>vo2 </td><td>vo3 </td><td>vo18 </td><td>vo19 </td><td>vo31 </td></tr>
+<tr><td>1: </td><td>vi0 </td><td>vi1 </td><td>vi2 </td><td>vi3 </td><td>vi18 </td><td>vi19 </td><td>vi31 </td><td></td><td> || </td><td>vo0 </td><td>vo31 </td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>2: </td><td>vi0 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo31 </td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>3: </td><td>vi0 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo31 </td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>4: </td><td>vi0 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo31 </td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>5: </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r31: { 0 1 2 3 4 }
+Visited r19: { 0 1 2 3 4 }
+Visited r18: { 0 1 2 3 4 }
+Visited r3: { 0 1 2 3 4 }
+Visited r2: { 0 1 2 3 4 }
+Visited r1: { 0 1 2 3 4 }
+Visited r0: { 0 1 2 3 4 }
+<VarForests>
+Var31: 2 trees
+{ 0 1 2 3 }
+{ 4 }
+{ 0 1 2 3 4 }
+Var19: 1 trees
+{ 0 }
+{ 0 }
+Var18: 1 trees
+{ 0 }
+{ 0 }
+Var3: 1 trees
+{ 0 }
+{ 0 }
+Var2: 1 trees
+{ 0 }
+{ 0 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 2 trees
+{ 0 1 2 3 }
+{ 4 }
+{ 0 1 2 3 4 }
+</VarForests>
+<Paths>
+0: { 0 3 }
+1: { 0 1 3 }
+2: { 0 1 2 3 }
+</Paths>
+<TreeCosts>
+Tree:0 cost = 0
+Tree:1 cost = 0
+Tree:2 cost = 0
+Tree:3 cost = 0
+Tree:4 cost = 0
+Tree:5 cost = 0
+Tree:6 cost = 0
+Tree:7 cost = 0
+Tree:8 cost = 0
+</TreeCosts>
+<VarForests>
+Var31: 2 trees
+{ 0 1 2 3 }
+{ 4 }
+{ 0 1 2 3 4 }
+Var19: 1 trees
+{ 0 }
+{ 0 }
+Var18: 1 trees
+{ 0 }
+{ 0 }
+Var3: 1 trees
+{ 0 }
+{ 0 }
+Var2: 1 trees
+{ 0 }
+{ 0 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 2 trees
+{ 0 1 2 3 }
+{ 4 }
+{ 0 1 2 3 4 }
+</VarForests>
+
+sub
+mov
+sub
+lw
+bltu
+lw
+lw
+add
+bgeu
+ldi
+bra
+ldi
+mov
+ret
+bra
+</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

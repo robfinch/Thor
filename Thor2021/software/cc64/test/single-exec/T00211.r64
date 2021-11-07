@@ -1,0 +1,60 @@
+
+;{++
+    
+	bss
+	align	8
+
+public bss _array[248]:
+
+	fill.b	248,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  lea      $t4,T00211_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldi      $t4,#15
+  push     $t4
+  bal      $ra,_printf
+.C00011:
+  leave    #96
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00211_1[20]: ; n+1 = %d
+
+	dcw	110,43,49,32,61,32,37,100
+	dcw	10,0
+;--}
+	.extern	_printf

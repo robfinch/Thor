@@ -1,0 +1,35 @@
+     	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestBFAI:
+  link     #40
+  sto      $s0,0[$sp]
+  ldo      $t0,0[$fp]
+  and      $t1,$t1,#15
+  sto      $t1,-8[$fp]
+  ldo      $t1,0[$fp]
+  and      $t2,$t2,#15
+  add      $t2,$t2,#1
+  and      $t2,$t2,#7
+  ror      $t1,$t1,#0
+  and      $t1,$t1,#-8
+  or       $t1,$t1,$t2
+  rol      $t1,$t1,#0
+  sto      $t1,0[$fp]
+  mov      $s0,$t1
+; bf->bf++;
+  add      $a0,$s0,#1
+TestBFAI_8:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestBFAI

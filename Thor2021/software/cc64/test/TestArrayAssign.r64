@@ -1,0 +1,67 @@
+  	code
+	align	16
+   	code
+	align	16
+ ;====================================================
+; Basic Block 0
+;====================================================
+public code _TestArrayAssign4:
+  link     #40
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  sto      $s0,0[$sp]
+  lea      $s0,-720[$fp]
+; int x[3][5][6];
+  lea      $t0,TestArrayAssign_1[$gp1]
+  sto      $t0,-1848[$fp]
+; x[2][0][0] = 21;
+  sto      #21,480[$s0]
+; x[1][4] = (int[6]){1,2,3,4,5,6};
+  add      $t1,$s0,#240
+; k = &x[2];
+  add      $t0,$s0,#480
+  sto      $t0,-1856[$fp]
+; x[2] = (int[5][6]){{10,2,1,0},{9,6,2},{8},{7},{6}};
+  lea      $t0,TestArrayAssign_8[$gp]
+; x = y;
+  lea      $s0,-1840[$fp]
+TestArrayAssign_16:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestArrayAssign_1:
+	dcb	15
+	dcb	20
+	dcb	25
+fill.b 5,0x00
+TestArrayAssign_2:
+	dco	1
+	dco	2
+	dco	3
+	dco	4
+	dco	5
+	dco	6
+TestArrayAssign_8:
+	dco	10
+	dco	2
+	dco	1
+	dco	0
+fill.b 8,0x00
+	dco	9
+	dco	6
+	dco	2
+fill.b 16,0x00
+	dco	8
+fill.b 32,0x00
+	dco	7
+fill.b 32,0x00
+	dco	6
+fill.b 32,0x00
+fill.b 160,0x00
+;	global	_TestArrayAssign4

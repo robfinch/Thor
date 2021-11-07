@@ -1,0 +1,74 @@
+
+;{++
+                             
+	bss
+	align	2
+
+public bss _x[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+  
+	code
+	align	16
+
+	.global _fooc
+	.align 16
+
+;.func _fooc
+
+;====================================================
+; Basic Block 0
+;====================================================
+_fooc():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  lea      $t4,16[$fp]
+  base     $t4,$t4,#10
+  ldi      $t5,#42
+  sto      $t5,24[$t4]
+.C00010:
+  leave    #104
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+     
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  mov      $a0,$x0
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+;--}

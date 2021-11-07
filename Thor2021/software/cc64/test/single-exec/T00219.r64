@@ -1,0 +1,195 @@
+
+;{++
+                                                                                                                                                  
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	rodata
+	align	2
+
+public _a[8]:
+
+	dco	0
+endpublic
+  
+	bss
+	align	8
+
+public bss __noname_var0[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+  
+	align	8
+
+public bss __noname_var1[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _a_f
+	.align 16
+
+;.func _a_f
+
+;====================================================
+; Basic Block 0
+;====================================================
+_a_f():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  ldi      $a0,#20
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _b_f
+	.align 16
+
+;.func _b_f
+
+;====================================================
+; Basic Block 0
+;====================================================
+_b_f():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  ldi      $a0,#10
+.C00020:
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+     
+	.global _foo
+	.align 16
+
+;.func _foo
+
+;====================================================
+; Basic Block 0
+;====================================================
+_foo():
+  enter    #0
+  ldi      $t4,#.C00029
+  sto      $t4,32[$fp]
+  ldo      $a0,16[$fp]
+.C00030:
+  leave    #104
+.C00029:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00030
+.. 
+
+  
+	.global _main
+	.align 16
+
+;.func _main
+
+         
+	.local _a_f
+	.align 16
+;.func _a_f
+
+ 
+	.local _b_f
+	.align 16
+;.func _b_f
+
+                            
+	rodata
+	align	16
+
+	align	8
+
+
+T00219_31[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_32[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_35[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_37[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_40[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_41[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_42[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_43[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_45[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_46[14]: ; 17, io
+
+	dcw	49,55,44,32,105,111,0
+T00219_47[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_48[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_49[8]: ; %s
+
+	dcw	37,115,10,0
+T00219_50[10]: ; long
+
+	dcw	108,111,110,103,0
+T00219_51[8]: ; int
+
+	dcw	105,110,116,0
+T00219_52[20]: ; long long
+
+	dcw	108,111,110,103,32,108,111,110
+	dcw	103,0
+T00219_53[8]: ; %d
+
+	dcw	37,100,10,0
+T00219_55[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Generic
+	.extern	__Files

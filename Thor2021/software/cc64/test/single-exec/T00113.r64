@@ -1,0 +1,47 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+; int a = 0;
+  mov      $s0,$x0
+  add      $t5,$s0,#1
+  itof.d   $t4,$t5
+  sto      $t4,-16[$fp]
+; return f == a;
+  ldo      $t5,-16[$fp]
+  itof.d   $t6,$s0
+  fseq     $t4,$t5,$t6
+  mov      $a0,$t4
+.C00012:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+;--}

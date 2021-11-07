@@ -1,0 +1,64 @@
+  	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestInline:
+; __asm {
+  ;asm     
+			.0002:
+			lc		r1,[lr]
+			beq		r1,r0,.0001
+			push	lr
+			push	r1
+			call	_DBGDisplayChar
+			lw		lr,8[sp]
+			add		sp,sp,#16
+			add		lr,lr,#2
+			bra		.0002
+			.0001:
+			add		lr,lr,#2
+			ret
+endpublic
+
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  sub      $sp,$sp,#32
+  sto      $ra,8[$sp]
+  lea      $gp1,__rodata_start
+  sub      $sp,$sp,#8
+  ldi      $t0,#2
+  sto      $t0,0[$sp]
+  bal      $ra,_TestInline
+  dc         "WHello World!",0
+  dc         "WA second parameter",0
+TestInline_13:
+TestInline_16:
+  ldo      $ra,8[$sp]
+  add      $sp,$sp,#32
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestInline_7:	; Hello World!
+	dcw	72,101,108,108,111,32,87,111
+	dcw	114,108,100,33,0
+TestInline_8:	; A second parameter
+	dcw	65,32,115,101,99,111,110,100
+	dcw	32,112,97,114,97,109,101,116
+	dcw	101,114,0
+;	global	_main
+;	global	_TestInline

@@ -1,0 +1,54 @@
+
+;{++
+ 
+	data
+	align	2
+
+public data _x[8]:
+
+	dco	0
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00040
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; switch(x)
+  ldo      $t4,_x[$gp]
+; case 0:
+  beq      $t4,#0,.C00046
+; switch(x)
+  ldo      $t4,_x[$gp]
+; case 0:
+  beq      $t4,#0,.C00051
+; return 1;
+  ldi      $a0,#1
+.C00041:
+  leave    #96
+.C00040:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00041
+.. 
+
+
+	rodata
+	align	16
+
+;--}

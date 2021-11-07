@@ -1,0 +1,112 @@
+
+;{++
+   
+	bss
+	align	2
+
+public bss _a[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  sto      $t4,-16[$fp]
+  ldi      $t5,#1
+  push     $t5
+  bal      $ra,_f
+  add      $sp,$sp,#8
+  ldo      $t4,-16[$fp]
+  mov      $t5,$a0
+  sto      $t4,-16[$fp]
+  sto      $t5,-24[$fp]
+  ldi      $t6,#1
+  push     $t6
+  bal      $ra,_g
+  add      $sp,$sp,#8
+  ldo      $t5,-24[$fp]
+  mov      $t6,$a0
+  sub      $a0,$t5,$t6
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+  
+	.global _f
+	.align 16
+
+;.func _f
+
+;====================================================
+; Basic Block 0
+;====================================================
+_f():
+  enter    #0
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  ldo      $a0,16[$fp]
+.C00020:
+  leave    #104
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+  
+	.global _g
+	.align 16
+
+;.func _g
+
+;====================================================
+; Basic Block 0
+;====================================================
+_g():
+  enter    #0
+  ldi      $t4,#.C00029
+  sto      $t4,32[$fp]
+  ldo      $a0,16[$fp]
+.C00030:
+  leave    #104
+.C00029:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00030
+.. 
+
+
+	rodata
+	align	16
+
+;--}

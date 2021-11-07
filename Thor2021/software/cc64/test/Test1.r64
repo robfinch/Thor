@@ -1,0 +1,77 @@
+   	code
+	align	16
+ 	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #48
+  lea      $gp1,__rodata_start
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#Test1_printf
+; for (x = 0; x < 10; x++)  {
+  mov      $s0,$x0
+  bge      $s0,#10,Test1_34
+Test1_33:
+; printf("Hello World!");
+  lea      $t0,Test1_1[$gp1]
+  push     $t0
+  jal      $ra,[$s1]
+  add      $s0,$s0,#1
+  blt      $s0,#10,Test1_33
+Test1_34:
+; switch(argc) {
+  ldo      $t0,16[$fp]
+Test1_48:
+  bne      $t0,#1,Test1_51
+; case 1:	printf("One"); break;
+  lea      $t0,Test1_2[$gp1]
+  push     $t0
+  jal      $ra,[$s1]
+  bra      Test1_36
+Test1_51:
+  bne      $t0,#2,Test1_52
+; case 2:	printf("Two"); break;
+  lea      $t0,Test1_3[$gp1]
+  push     $t0
+  jal      $ra,[$s1]
+  bra      Test1_36
+Test1_52:
+  ldi      $t1,#3
+  bne      $t0,$t1,Test1_36
+; case 3:	printf("Three"); break;
+  lea      $t0,Test1_4[$gp1]
+  push     $t0
+  jal      $ra,[$s1]
+Test1_36:
+; exit(0);
+  push     $x0
+  bal      $ra,Test1_exit
+Test1_29:
+Test1_32:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+Test1_1:	; Hello World!
+	dcw	72,101,108,108,111,32,87,111
+	dcw	114,108,100,33,0
+Test1_2:	; One
+	dcw	79,110,101,0
+Test1_3:	; Two
+	dcw	84,119,111,0
+Test1_4:	; Three
+	dcw	84,104,114,101,101,0
+;	global	_main
+	extern	Test1_printf
+	extern	Test1_exit

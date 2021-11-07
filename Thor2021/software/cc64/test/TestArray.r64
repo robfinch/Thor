@@ -1,0 +1,15 @@
+  	code
+	align	16
+ 	data
+	align	8
+	align	8
+	dw	$FFF0200000000001
+_z:
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0,0,0
+	dco	0,0,0

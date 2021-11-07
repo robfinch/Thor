@@ -1,0 +1,70 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00014
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; printf ("In main");
+  lea      $t4,T00302_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+; catch(char *str)
+  ldi      $t4,#.C00000
+  sto      $t4,8[$fp]
+.C00014:
+  sne      $t4,$a1,#8197
+  bnez     $t4,.C00017
+  sto      $a0,-8[$fp]
+; printf("error is %s", str);
+  lea      $t4,T00302_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  bal      $ra,_printf
+  add      $sp,$sp,#16
+  bra      .C00015
+.C00017:
+.C00016:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+.C00015:
+  leave    #104
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00302_1[16]: ; In main
+
+	dcw	73,110,32,109,97,105,110,0
+T00302_2[24]: ; error is %s
+
+	dcw	101,114,114,111,114,32,105,115
+	dcw	32,37,115,0
+;--}
+	.extern	_printf

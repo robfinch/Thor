@@ -1,0 +1,45 @@
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestAbs:
+  link     #32
+  ldo      $t0,16[$fp]
+  push     $t0
+  bal      $ra,TestAbs2_abs
+  mov      $t0,$a0
+  mov      $a0,$t0
+TestAbs2_5:
+TestAbs2_8:
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestAbs2:
+  sub      $sp,$sp,#32
+  push     $a0
+  bal      $ra,TestAbs2_abs
+  mov      $t0,$a0
+  mov      $a0,$t0
+TestAbs2_13:
+TestAbs2_16:
+  add      $sp,$sp,#32
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestAbs
+;	global	_TestAbs2
+	extern	TestAbs2_abs

@@ -1,0 +1,36 @@
+  	code
+	align	16
+ 	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestConstant:
+  link     #56
+  stm      [$sp],#$00000E00
+  ldo      $s1,16[$fp]
+  ldi      $s2,#100000
+; for (x = 0; x < 100000; x++) {
+  mov      $s0,$x0
+  bge      $s0,$s2,TestConstant_13
+TestConstant_12:
+; a = a + x;
+  add      $s1,$s1,$s0
+  add      $s0,$s0,#1
+  blt      $s0,$s2,TestConstant_12
+TestConstant_13:
+; return a;
+  mov      $a0,$s1
+TestConstant_8:
+TestConstant_11:
+  ldm      [$sp],#$00000E00
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestConstant

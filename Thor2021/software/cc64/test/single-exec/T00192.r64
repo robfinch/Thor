@@ -1,0 +1,61 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00015
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; int Count = 0;
+  mov      $s0,$x0
+; Count++;
+  add      $s0,$s0,#1
+; printf("%d\n", Count);
+  lea      $t4,T00192_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+; if (Count >= 10)
+  blt      $s0,#10,.C00020
+.C00020:
+; return 0;
+  mov      $a0,$x0
+.C00016:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00015:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00016
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00192_1[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

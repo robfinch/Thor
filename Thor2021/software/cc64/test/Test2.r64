@@ -1,0 +1,115 @@
+ 	bss
+	align	8
+	align	8
+	dw	$FFF0200000000384
+public bss _ary:
+	fill.b	7200,0x00                    
+
+endpublic
+   	code
+	align	16
+ 	code
+	align	16
+	code
+	align	16
+	code
+	align	16
+ ;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #72
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  stm      [$sp],#$00003E00
+  ldo      $s2,16[$fp]
+  ldi      $s4,#Test2_printf
+; for (y = 0; y < argc; y++) {
+  mov      $s1,$x0
+  bge      $s1,$s2,Test2_40
+Test2_39:
+; for (z = 0; z < 45; z++)
+  mov      $s0,$x0
+  sge      $t0,$s0,#45
+  bne      $t0,$x0,Test2_43
+Test2_42:
+; ary[y][z] = rand();
+  sll      $t0,$s0,#3
+  mulu     $t2,$s1,#360
+  lea      $t3,_ary[$gp]
+  add      $t1,$t2,$t3
+  sto      $t0,-40[$fp]
+  sto      $t1,-48[$fp]
+  bal      $ra,Test2_rand
+  ldo      $t1,-48[$fp]
+  ldo      $t0,-40[$fp]
+  mov      $t2,$a0
+  sto      $t2,[$t0+$t1]
+  add      $s0,$s0,#1
+  slt      $t0,$s0,#45
+  bne      $t0,$x0,Test2_42
+Test2_43:
+  add      $s1,$s1,#1
+  blt      $s1,$s2,Test2_39
+Test2_40:
+; for (x = 0; x < 10; x++)  {
+  mov      $s3,$x0
+  bge      $s3,#10,Test2_46
+Test2_45:
+; printf("Hello World!");
+  lea      $t0,Test2_1[$gp1]
+  push     $t0
+  jal      $ra,[$s4]
+  add      $s3,$s3,#1
+  blt      $s3,#10,Test2_45
+Test2_46:
+; naked switch(argc) {
+  bne      $s2,#1,Test2_63
+; case 1:	printf("One"); break;
+  lea      $t0,Test2_2[$gp1]
+  push     $t0
+  jal      $ra,[$s4]
+  bra      Test2_48
+Test2_63:
+  bne      $s2,#2,Test2_64
+; case 2:	printf("Two"); break;
+  lea      $t0,Test2_3[$gp1]
+  push     $t0
+  jal      $ra,[$s4]
+  bra      Test2_48
+Test2_64:
+  ldi      $t0,#3
+  bne      $s2,$t0,Test2_48
+; case 3:	printf("Three"); break;
+  lea      $t0,Test2_4[$gp1]
+  push     $t0
+  jal      $ra,[$s4]
+Test2_48:
+; exit(0);
+  push     $x0
+  bal      $ra,Test2_exit
+Test2_35:
+Test2_38:
+  ldm      [$sp],#$00003E00
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+	align	8
+Test2_1:	; Hello World!
+	dcw	72,101,108,108,111,32,87,111
+	dcw	114,108,100,33,0
+Test2_2:	; One
+	dcw	79,110,101,0
+Test2_3:	; Two
+	dcw	84,119,111,0
+Test2_4:	; Three
+	dcw	84,104,114,101,101,0
+;	global	_main
+;	global	_ary
+	extern	Test2_printf
+	extern	Test2_rand
+	extern	Test2_exit

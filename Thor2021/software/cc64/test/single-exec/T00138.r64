@@ -1,0 +1,59 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00012
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+; char *a = "hi";
+  lea      $t4,T00138_1[$gp1]
+  base     $t4,$t4,#12
+  mov      $s0,$t4
+; return (a[1] == 'i') ? 0 : 1;
+  ldw      $t4,2[$s0]
+  sne      $t5,$t4,#105
+  bne      $t5,$x0,.C00014
+  ldi      $t5,#0
+  bra      .C00015
+.C00014:
+  ldi      $t5,#1
+.C00015:
+  mov      $a0,$t5
+.C00013:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00012:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00013
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00138_1[6]: ; hi
+
+	dcw	104,105,0
+;--}

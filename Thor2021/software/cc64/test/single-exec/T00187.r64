@@ -1,0 +1,333 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   
+	data
+	align	8
+ 
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #72
+  ldi      $t4,#.C00041
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$0001FE00
+  lea      $t4,-22[$fp]
+  base     $t4,$t4,#10
+  mov      $s3,$t4
+  ldi      $s4,#_fopen
+  ldi      $s5,#_printf
+  ldi      $s6,#_fgetc
+  ldi      $s7,#_fclose
+; FILE *f = fopen("fred.txt", "w");
+  lea      $t4,T00187_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00187_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s4]
+  mov      $t4,$a0
+  mov      $s0,$t4
+; fwrite("hello\nhello\n", 1, 12, f);
+  sub      $sp,$sp,#32
+  lea      $t4,T00187_3[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldi      $t4,#1
+  sto      $t4,8[$sp]
+  ldi      $t4,#12
+  sto      $t4,16[$sp]
+  sto      $s0,24[$sp]
+  bal      $ra,_fwrite
+  add      $sp,$sp,#8
+; fclose(f);
+  push     $s0
+  jal      $ra,[$s7]
+; f = fopen("fred.txt", "r");
+  lea      $t4,T00187_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00187_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s4]
+  mov      $t4,$a0
+  mov      $s0,$t4
+; if (fread(freddy, 1, 6, f) != 6)
+  sub      $sp,$sp,#32
+  sto      $s3,0[$sp]
+  ldi      $t4,#1
+  sto      $t4,8[$sp]
+  ldi      $t4,#6
+  sto      $t4,16[$sp]
+  sto      $s0,24[$sp]
+  bal      $ra,_fread
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  beq      $t4,#6,.C00043
+; printf("couldn't read fred.txt\n");
+  lea      $t4,T00187_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s5]
+.C00043:
+; freddy[6] = '\0';
+  stw      $x0,12[$s3]
+; fclose(f);
+  push     $s0
+  jal      $ra,[$s7]
+; printf("%s", freddy);
+  lea      $t4,T00187_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s3
+  jal      $ra,[$s5]
+; f = fopen("fred.txt", "r");
+  lea      $t4,T00187_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00187_9[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s4]
+  mov      $t4,$a0
+  mov      $s0,$t4
+; while ( (InChar = fgetc(f)) != (-1))
+  push     $s0
+  jal      $ra,[$s6]
+  mov      $t4,$a0
+  mov      $s1,$t4
+  beq      $s1,#-1,.C00046
+.C00045:
+; ShowChar = InChar;
+  mov      $s2,$s1
+; if (ShowChar < ' ')
+  sge      $t4,$s2,#32
+  bne      $t4,$x0,.C00047
+; ShowChar = '.';
+  ldi      $s2,#46
+.C00047:
+; printf("ch: %d '%c'\n", InChar, ShowChar);
+  sub      $sp,$sp,#24
+  lea      $t4,T00187_10[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $s1,8[$sp]
+  sto      $s2,16[$sp]
+  jal      $ra,[$s5]
+  push     $s0
+  jal      $ra,[$s6]
+  mov      $t4,$a0
+  mov      $s1,$t4
+  bne      $s1,#-1,.C00045
+.C00046:
+; fclose(f);
+  push     $s0
+  jal      $ra,[$s7]
+; f = fopen("fred.txt", "r");
+  lea      $t4,T00187_11[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00187_12[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s4]
+  mov      $t4,$a0
+  mov      $s0,$t4
+; while ( (InChar = ((f)->_Next < (f)->_Rend ? *(f)->_Next++ : (getc)(f))) != (-1))
+  ldo      $t4,24[$s0]
+  ldo      $t5,32[$s0]
+  bgeu     $t4,$t5,.C00051
+  ldo      $t5,24[$s0]
+  ldw      $t5,[$t5]
+  ldo      $t6,24[$s0]
+  add      $t6,$t6,#2
+  sto      $t6,24[$s0]
+  ldo      $t6,24[$s0]
+  bra      .C00052
+.C00051:
+  sto      $t4,-72[$fp]
+  push     $s0
+  bal      $ra,_getc
+  add      $sp,$sp,#8
+  ldo      $t4,-72[$fp]
+  mov      $t5,$a0
+.C00052:
+  zxw      $s1,$t5
+  beq      $s1,#-1,.C00050
+.C00049:
+; ShowChar = InChar;
+  mov      $s2,$s1
+; if (ShowChar < ' ')
+  sge      $t4,$s2,#32
+  bne      $t4,$x0,.C00053
+; ShowChar = '.';
+  ldi      $s2,#46
+.C00053:
+; printf("ch: %d '%c'\n", InChar, ShowChar);
+  sub      $sp,$sp,#24
+  lea      $t4,T00187_13[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $s1,8[$sp]
+  sto      $s2,16[$sp]
+  jal      $ra,[$s5]
+  ldo      $t4,24[$s0]
+  ldo      $t5,32[$s0]
+  bgeu     $t4,$t5,.C00055
+  ldo      $t5,24[$s0]
+  ldw      $t5,[$t5]
+  ldo      $t6,24[$s0]
+  add      $t6,$t6,#2
+  sto      $t6,24[$s0]
+  ldo      $t6,24[$s0]
+  bra      .C00056
+.C00055:
+  sto      $t4,-72[$fp]
+  push     $s0
+  bal      $ra,_getc
+  add      $sp,$sp,#8
+  ldo      $t4,-72[$fp]
+  mov      $t5,$a0
+.C00056:
+  zxw      $s1,$t5
+  bne      $s1,#-1,.C00049
+.C00050:
+; fclose(f);
+  push     $s0
+  jal      $ra,[$s7]
+; f = fopen("fred.txt", "r");
+  lea      $t4,T00187_14[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00187_15[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s4]
+  mov      $t4,$a0
+  mov      $s0,$t4
+; while (fgets(freddy, sizeof(freddy), f) != (void *)0)
+  sub      $sp,$sp,#24
+  sto      $s3,0[$sp]
+  ldi      $t4,#14
+  sto      $t4,8[$sp]
+  sto      $s0,16[$sp]
+  bal      $ra,_fgets
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  beqz     $t4,.C00058
+.C00057:
+; printf("x: %s", freddy);
+  lea      $t4,T00187_16[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s3
+  jal      $ra,[$s5]
+  sub      $sp,$sp,#24
+  sto      $s3,0[$sp]
+  ldi      $t4,#14
+  sto      $t4,8[$sp]
+  sto      $s0,16[$sp]
+  bal      $ra,_fgets
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  bnez     $t4,.C00057
+.C00058:
+; fclose(f);
+  push     $s0
+  jal      $ra,[$s7]
+; return 0;
+  mov      $a0,$x0
+.C00042:
+  ldm      [$sp],#$0001FE00
+  leave    #96
+.C00041:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00042
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00187_1[18]: ; fred.txt
+
+	dcw	102,114,101,100,46,116,120,116
+	dcw	0
+T00187_2[4]: ; w
+
+	dcw	119,0
+T00187_3[26]: ; hellohello
+
+	dcw	104,101,108,108,111,10,104,101
+	dcw	108,108,111,10,0
+T00187_4[18]: ; fred.txt
+
+	dcw	102,114,101,100,46,116,120,116
+	dcw	0
+T00187_5[4]: ; r
+
+	dcw	114,0
+T00187_6[48]: ; couldn't read fred.txt
+
+	dcw	99,111,117,108,100,110,39,116
+	dcw	32,114,101,97,100,32,102,114
+	dcw	101,100,46,116,120,116,10,0
+T00187_7[6]: ; %s
+
+	dcw	37,115,0
+T00187_8[18]: ; fred.txt
+
+	dcw	102,114,101,100,46,116,120,116
+	dcw	0
+T00187_9[4]: ; r
+
+	dcw	114,0
+T00187_10[26]: ; ch: %d '%c'
+
+	dcw	99,104,58,32,37,100,32,39
+	dcw	37,99,39,10,0
+T00187_11[18]: ; fred.txt
+
+	dcw	102,114,101,100,46,116,120,116
+	dcw	0
+T00187_12[4]: ; r
+
+	dcw	114,0
+T00187_13[26]: ; ch: %d '%c'
+
+	dcw	99,104,58,32,37,100,32,39
+	dcw	37,99,39,10,0
+T00187_14[18]: ; fred.txt
+
+	dcw	102,114,101,100,46,116,120,116
+	dcw	0
+T00187_15[4]: ; r
+
+	dcw	114,0
+T00187_16[12]: ; x: %s
+
+	dcw	120,58,32,37,115,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

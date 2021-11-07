@@ -1,0 +1,80 @@
+
+;{++
+ 
+	bss
+	align	2
+
+public bss _c[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; if(0) {
+  ldi      $t4,#0
+  beqz     $t4,.C00019
+; return 1;
+  ldi      $a0,#1
+.C00018:
+  leave    #96
+.C00019:
+; } else if(0) {
+  ldi      $t4,#0
+  beqz     $t4,.C00021
+; } else {
+  bra      .C00022
+.C00021:
+; if(1) {
+  ldi      $t4,#1
+  beqz     $t4,.C00023
+; if(c)
+  ldo      $t4,_c[$gp]
+  beqz     $t4,.C00025
+; return 1;
+  ldi      $a0,#1
+  bra      .C00018
+.C00025:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00018
+  bra      .C00024
+.C00023:
+; return 1;
+  ldi      $a0,#1
+  bra      .C00018
+.C00024:
+.C00022:
+.C00020:
+  ldi      $a0,#1
+  bra      .C00018
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,39 @@
+     1	struct {
+     2	enum { X } x;
+     3	} s;
+     4	
+     5	
+     6	int
+     7	main()
+     8	{
+     9	return X;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+40 _s         =000000   -    Global      struct __noname_tag0 
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _X         =000000   -    Constant    Long
+    0 _x         =000000   -    Member      enum <no name> 

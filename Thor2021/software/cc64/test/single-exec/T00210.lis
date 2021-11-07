@@ -1,0 +1,95 @@
+     1	typedef unsigned short uint16_t;
+     2	typedef unsigned char uint8_t;
+     3	
+     4	typedef union Unaligned16a {
+     5	uint16_t u;
+     6	uint8_t b[2];
+     7	} __attribute__((packed)) Unaligned16a;
+     8	
+     9	typedef union __attribute__((packed)) Unaligned16b {
+    10	uint16_t u;
+    11	uint8_t b[2];
+    12	} Unaligned16b;
+    13	
+    14	extern void foo (void) __attribute__((stdcall));
+ *** error 0: E Syntax error
+ *** error 6: E Bad punctuation
+    15	void __attribute__((stdcall)) foo (void)
+    16	{
+    17	}
+    18	
+    19	
+    20	int __attribute__((__noinline__)) actual_function() {
+    21	return 42;
+    22	}
+    23	
+    24	extern int printf (const char *, ...);
+    25	int main()
+    26	{
+    27	void *function_pointer = &actual_function;
+ *** error 17: E LValue required
+ *** error 7: E Identifier expected
+ *** error 4: E Undefined symbol
+    28	
+    29	int a = ((__attribute__((__noinline__)) int(*) (void)) function_pointer)();
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 17: E LValue required
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+    30	printf("%i\n", a);
+ *** error 6: E Bad punctuation
+    31	
+    32	
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000020   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+17 _uint8_t   =000004   1   Char
+28 __delete   =000000   -    
+7 ___noinline__ =000018   -    Global      Long
+7 _stdcall   =000000   -    External    Long
+18 _uint16_t  =000000   1   
+29 _foo       =000000   -    External    Function returning 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		40 _Unaligned16a =000006   1   union _Unaligned16a 
+41 _Unaligned16b =00000a   1   union _Unaligned16b 
+28 __autonew  =000000   -    
+29 _printf    =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+
+40 _Unaligned16a =000000   -    Type        union _Unaligned16a 
+    18 _u         =000000   -    Member      
+    13 _b         =000000   -    Member      Array of Char
+41 _Unaligned16b =000000   -    Type        union _Unaligned16b 
+    18 _u         =000000   -    Member      
+    13 _b         =000000   -    Member      Array of Char

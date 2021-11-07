@@ -1,0 +1,46 @@
+
+;{++
+  
+	bss
+	align	8
+
+public bss __noname_var0[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+; return 1;
+  ldi      $a0,#1
+.C00012:
+  leave    #96
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,253 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _fred
+	.align 16
+
+;.func _fred
+
+;====================================================
+; Basic Block 0
+;====================================================
+_fred():
+  enter    #8
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; printf("fred\n");
+  lea      $t4,T00196_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+; return 0;
+  mov      $a0,$x0
+.C00011:
+  leave    #96
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+ 
+	.global _joe
+	.align 16
+
+;.func _joe
+
+;====================================================
+; Basic Block 0
+;====================================================
+_joe():
+  enter    #0
+  ldi      $t4,#.C00021
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; printf("joe\n");
+  lea      $t4,T00196_12[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_printf
+; return 1;
+  ldi      $a0,#1
+.C00022:
+  leave    #96
+.C00021:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00022
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00047
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00000E00
+  ldi      $s0,#_fred
+  ldi      $s1,#_joe
+  ldi      $s2,#_printf
+; printf("%d\n", fred() && joe());
+  lea      $t4,T00196_23[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  jal      $ra,[$s1]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", fred() || joe());
+  lea      $t4,T00196_24[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  jal      $ra,[$s1]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", joe() && fred());
+  lea      $t4,T00196_25[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", joe() || fred());
+  lea      $t4,T00196_26[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", fred() && (1 + joe()));
+  lea      $t4,T00196_27[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  jal      $ra,[$s1]
+  mov      $t6,$a0
+  add      $t5,$t6,#1
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", fred() || (0 + joe()));
+  lea      $t4,T00196_28[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  mov      $t4,$a0
+  jal      $ra,[$s1]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", joe() && (0 + fred()));
+  lea      $t4,T00196_29[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  jal      $ra,[$s0]
+  mov      $t5,$a0
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", joe() || (1 + fred()));
+  lea      $t4,T00196_30[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  jal      $ra,[$s0]
+  mov      $t6,$a0
+  add      $t5,$t6,#1
+  sne      $t6,$t4,$x0
+  sne      $t7,$t5,$x0
+  and      $t6,$t6,$t7
+  push     $t4
+  jal      $ra,[$s2]
+; return 0;
+  mov      $a0,$x0
+.C00048:
+  ldm      [$sp],#$00000E00
+  leave    #96
+.C00047:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00048
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00196_1[12]: ; fred
+
+	dcw	102,114,101,100,10,0
+T00196_12[10]: ; joe
+
+	dcw	106,111,101,10,0
+T00196_23[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_24[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_25[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_26[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_27[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_28[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_29[8]: ; %d
+
+	dcw	37,100,10,0
+T00196_30[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

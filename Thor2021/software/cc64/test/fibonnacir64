@@ -1,0 +1,62 @@
+
+;{++
+ 
+	bss
+	align	8
+
+public bss _nums:
+
+	fill.b	240,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+  ;====================================================
+; Basic Block 0
+;====================================================
+_main:
+  enter    #64
+  lea      $gp,__data_start
+  stm      [$sp],#$00001E00
+; c1 = 0;
+  mov      $s3,$x0
+; c2 = 1;
+  ldi      $s1,#1
+; for (n = 0; n < 23; n = n + 1) {
+  mov      $s0,$x0
+  bge      $s0,#23,.C00017
+.C00016:
+; if (n < 1) {
+  bge      $s0,#1,.C00019
+; nums[0] = 1;
+  sto      #1,_nums[$gp]
+; c = 1;
+  ldi      $s2,#1
+  bra      .C00020
+.C00019:
+; nums[n] = c;
+  sll      $t4,$s0,#3
+  lea      $t5,_nums[$gp]
+  sto      $s2,[$t4+$t5]
+; c = c1 + c2;
+  add      $s2,$s3,$s1
+; c1 = c2;
+  mov      $s3,$s1
+; c2 = c;
+  mov      $s1,$s2
+.C00020:
+  add      $s0,$s0,#1
+  blt      $s0,#23,.C00016
+.C00017:
+.C00015:
+  ldm      [$sp],#$00001E00
+  leave    #32
+
+
+	rodata
+	align	16
+
+;--}

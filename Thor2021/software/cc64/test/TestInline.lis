@@ -1,0 +1,65 @@
+     1	
+     2	
+     3	naked int TestInline(inline char *str)
+     4	{
+     5	__asm {
+     6	.0002:
+     7	lc		r1,[lr]
+     8	beq		r1,r0,.0001
+     9	push	lr
+    10	push	r1
+    11	call	_DBGDisplayChar
+    12	lw		lr,8[sp]
+    13	add		sp,sp,#16
+    14	add		lr,lr,#2
+    15	bra		.0002
+    16	.0001:
+    17	add		lr,lr,#2
+    18	ret
+    19	}
+    20	}
+    21	
+
+
+*** local symbol table ***
+
+
+
+
+    22	int main(int arg)
+    23	{
+    24	TestInline(2,I"Hello World!",I"A second parameter");
+    25	}
+    26	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _TestInline =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   014 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

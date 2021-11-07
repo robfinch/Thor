@@ -1,0 +1,72 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+; if (sizeof(0) < 2)
+  ldi      $t4,#0
+  beqz     $t4,.C00021
+; return 1;
+  ldi      $a0,#1
+.C00020:
+  leave    #96
+.C00021:
+; if (sizeof 0 < 2)
+  ldi      $t4,#0
+  beqz     $t4,.C00023
+; return 1;
+  ldi      $a0,#1
+  bra      .C00020
+.C00023:
+; if (sizeof(char) < 1)
+  ldi      $t4,#0
+  beqz     $t4,.C00025
+; return 1;
+  ldi      $a0,#1
+  bra      .C00020
+.C00025:
+; if (sizeof(int) - 2 < 0)
+  ldi      $t4,#0
+  beqz     $t4,.C00027
+; return 1;
+  ldi      $a0,#1
+  bra      .C00020
+.C00027:
+; if (sizeof(&x) != sizeof p)
+  ldi      $t4,#0
+  beqz     $t4,.C00029
+; return 1;
+  ldi      $a0,#1
+  bra      .C00020
+.C00029:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00020
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+;--}

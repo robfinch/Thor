@@ -1,0 +1,41 @@
+     1	
+     2	int TestCompl(int a, int b)
+     3	{
+     4	int x;
+     5	int y;
+     6	int z;
+     7	
+     8	x = ~((y=(a & b)));
+     9	x = ~(a & b);
+    10	y = !(a && b);
+    11	z = (a || b);
+    12	return x+y+z;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff8   -    Auto        Long
+7 _y         =fffffff0   -    Auto        Long
+7 _z         =ffffffe8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _TestCompl =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -40
+		Stkspc: 40
+		
+ *** structures and unions ***
+

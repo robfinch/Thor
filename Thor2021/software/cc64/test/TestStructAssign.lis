@@ -1,0 +1,51 @@
+     1	typedef struct
+     2	{
+     3	int i;
+     4	char ch;
+     5	float f;
+     6	} UT;
+     7	
+     8	UT a = {21,'h',0.0};
+     9	UT b = {16,'i',42.5};
+    10	
+    11	int TestStructAssign()
+    12	{
+    13	UT c, d;
+    14	
+    15	c = (UT){10,'k',21.5};
+    16	c = d;
+    17	return (b.f + a.i);
+    18	}
+
+
+*** local symbol table ***
+
+40 _c         =ffffffe8   -    Auto        struct __noname_tag0 
+40 _d         =ffffffd0   -    Auto        struct __noname_tag0 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+40 _UT        =000000   1   struct __noname_tag0 
+28 __delete   =000000   -    
+40 _a         =000018   -    Global      struct __noname_tag0 
+28 __autonew  =000000   -    
+40 _b         =000030   -    Global      struct __noname_tag0 
+29 _TestStructAssign =000048   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: -16
+		Tmpbot: -24
+		Stkspc: 24
+		
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _i         =000000   -    Member      Long
+    5 _ch        =000008   -    Member      Char
+    9 _f         =000010   -    Member      Double

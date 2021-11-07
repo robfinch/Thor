@@ -1,0 +1,175 @@
+     1	
+     2	int a;
+     3	unsigned b;
+     4	char c;
+     5	signed char d;
+     6	unsigned char e;
+     7	long f;
+     8	unsigned long g;
+     9	long long h;
+    10	unsigned long long i;
+    11	short j;
+    12	unsigned short k;
+    13	
+    14	int
+    15	main(void)
+    16	{
+    17	a = b;
+    18	a = c;
+    19	a = d;
+    20	a = e;
+    21	a = f;
+    22	a = g;
+    23	a = h;
+    24	a = i;
+    25	a = j;
+    26	a = k;
+    27	
+    28	b = a;
+    29	b = c;
+    30	b = d;
+    31	b = e;
+    32	b = f;
+    33	b = g;
+    34	b = h;
+    35	b = i;
+    36	b = j;
+    37	b = k;
+    38	
+    39	c = a;
+    40	c = b;
+    41	c = d;
+    42	c = e;
+    43	c = f;
+    44	c = g;
+    45	c = h;
+    46	c = i;
+    47	c = j;
+    48	c = k;
+    49	
+    50	d = a;
+    51	d = b;
+    52	d = c;
+    53	d = e;
+    54	d = f;
+    55	d = g;
+    56	d = h;
+    57	d = i;
+    58	d = j;
+    59	d = k;
+    60	
+    61	e = a;
+    62	e = b;
+    63	e = c;
+    64	e = d;
+    65	e = f;
+    66	e = g;
+    67	e = h;
+    68	e = i;
+    69	e = j;
+    70	e = k;
+    71	
+    72	f = a;
+    73	f = b;
+    74	f = c;
+    75	f = d;
+    76	f = e;
+    77	f = g;
+    78	f = h;
+    79	f = i;
+    80	f = j;
+    81	f = k;
+    82	
+    83	g = a;
+    84	g = b;
+    85	g = c;
+    86	g = d;
+    87	g = e;
+    88	g = f;
+    89	g = h;
+    90	g = i;
+    91	g = j;
+    92	g = k;
+    93	
+    94	h = a;
+    95	h = b;
+    96	h = c;
+    97	h = d;
+    98	h = e;
+    99	h = f;
+   100	h = g;
+   101	h = i;
+   102	h = j;
+   103	h = k;
+   104	
+   105	i = a;
+   106	i = b;
+   107	i = c;
+   108	i = d;
+   109	i = e;
+   110	i = f;
+   111	i = g;
+   112	i = h;
+   113	i = j;
+   114	i = k;
+   115	
+   116	j = a;
+   117	j = b;
+   118	j = c;
+   119	j = d;
+   120	j = e;
+   121	j = f;
+   122	j = g;
+   123	j = h;
+   124	j = i;
+   125	j = k;
+   126	
+   127	k = a;
+   128	k = b;
+   129	k = c;
+   130	k = d;
+   131	k = e;
+   132	k = f;
+   133	k = g;
+   134	k = h;
+   135	k = j;
+   136	k = i;
+   137	
+   138	return 0;
+   139	}
+   140	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000040   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+7 _a         =000000   -    Global      Long
+28 __autonew  =000000   -    
+7 _b         =000008   -    Global      Long
+5 _c         =000010   -    Global      Char
+5 _d         =000012   -    Global      Char
+17 _e         =000014   -    Global      Char
+7 _f         =000018   -    Global      Long
+19 _g         =000020   -    Global      
+7 _h         =000028   -    Global      Long
+7 _i         =000030   -    Global      Long
+6 _j         =000038   -    Global      Short
+18 _k         =00003c   -    Global      
+
+ *** structures and unions ***
+

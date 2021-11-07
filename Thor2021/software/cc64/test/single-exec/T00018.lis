@@ -1,0 +1,43 @@
+     1	int
+     2	main()
+     3	{
+     4	
+     5	struct S { int x; int y; } s;
+     6	struct S *p;
+     7	
+     8	p = &s;
+     9	s.x = 1;
+    10	p->y = 2;
+    11	return p->y + p->x - 3;
+    12	}
+    13	
+    14	
+
+
+*** local symbol table ***
+
+40 _s         =fffffff0   -    Auto        struct _S 
+13 _p         =ffffffe8   -    Auto        Pointer to struct _S 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -24
+		Stkspc: 24
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _S         =000000   -    Type        struct _S 
+    7 _x         =000000   -    Member      Long
+    7 _y         =000008   -    Member      Long

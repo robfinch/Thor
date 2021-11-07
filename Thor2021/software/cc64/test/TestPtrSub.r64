@@ -1,0 +1,35 @@
+     	bss
+	align	8
+	align	8
+	dw	$FFF0200000019000
+public bss _t:
+	fill.b	819200,0x00                    
+
+endpublic
+   	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestPtrSub:
+  link     #40
+  lea      $gp,__data_start
+  sto      $s0,0[$sp]
+; x.ndx = a - t;
+  ldo      $t2,16[$fp]
+  lea      $t3,_t[$gp]
+  sub      $t1,$t2,$t3
+  sra      $a0,$t1,#13
+TestPtrSub_8:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#16
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestPtrSub
+;	global	_t

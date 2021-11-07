@@ -1,0 +1,24 @@
+      	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _TestBitfield:
+  sub      $sp,$sp,#40
+  sto      $s0,0[$sp]
+  and      $t1,$t1,#1
+; j.b = 10;
+  ldi      $s0,#10
+; j.c = j.a + j.b;
+  add      $a0,$s0,$s0
+TestBitfield_8:
+  ldo      $s0,0[$sp]
+  add      $sp,$sp,#40
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_TestBitfield

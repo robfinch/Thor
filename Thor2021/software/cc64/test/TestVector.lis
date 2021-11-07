@@ -1,0 +1,17 @@
+     1	
+     2	int TestVector(int a, register int vector g)
+     3	{
+     4	register int vector b;
+     5	int vector c;
+     6	int vector e;
+     7	int d;
+     8	int f;
+     9	vector_mask vm0;
+    10	
+    11	f = c.5;
+    12	f = c.(d);
+    13	e.6 = 21;
+    14	b = g;
+ *** error 19: E Mismatch
+    15	
+    16	vm0 = 0xFFFFF;

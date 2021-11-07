@@ -1,0 +1,108 @@
+
+;{++
+    
+	bss
+	align	8
+
+public bss __noname_var0[40]:
+
+	fill.b	40,0x00                    
+
+endpublic
+     
+	code
+	align	16
+
+	.global _f1
+	.align 16
+
+;.func _f1
+
+;====================================================
+; Basic Block 0
+;====================================================
+_f1():
+  enter    #56
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  ldo      $s0,56[$fp]
+; if (f.i != p->i)
+  ldo      $t4,0[$fp]
+  beq      $t4,$s0,.C00013
+.C00013:
+; return 0;
+  mov      $a0,$x0
+.C00012:
+  ldo      $s0,0[$sp]
+  leave    #112
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+  
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00023
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  lea      $t4,-40[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; f.i = f.j = 1;
+  sto      #1,8[$s0]
+  ldo      $t4,8[$s0]
+  sto      $t4,[$s0]
+; f1(f, &f, 2);
+  sub      $sp,$sp,#24
+  sto      $s0,0[$sp]
+  sto      $s0,8[$sp]
+  ldi      $t4,#2
+  sto      $t4,16[$sp]
+  bal      $ra,_f1
+; f1(f, &f, 2, 1, f, &f);
+  sub      $sp,$sp,#48
+  sto      $s0,0[$sp]
+  sto      $s0,8[$sp]
+  ldi      $t4,#2
+  sto      $t4,16[$sp]
+  ldi      $t4,#1
+  sto      $t4,24[$sp]
+  sto      $s0,32[$sp]
+  sto      $s0,40[$sp]
+  bal      $ra,_f1
+  add      $sp,$sp,#24
+; return 0;
+  mov      $a0,$x0
+.C00024:
+  ldo      $s0,0[$sp]
+  leave    #104
+.C00023:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00024
+.. 
+
+
+	rodata
+	align	16
+
+;--}

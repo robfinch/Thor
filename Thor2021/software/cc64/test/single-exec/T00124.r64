@@ -1,0 +1,72 @@
+
+;{++
+   
+	code
+	align	16
+
+	.global _f2
+	.align 16
+
+;.func _f2
+
+;====================================================
+; Basic Block 0
+;====================================================
+_f2():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  ldo      $t5,16[$fp]
+  ldo      $t6,24[$fp]
+  sub      $a0,$t5,$t6
+.C00010:
+  leave    #112
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+      
+	.global _f1
+	.align 16
+
+;.func _f1
+
+;====================================================
+; Basic Block 0
+;====================================================
+_f1():
+  enter    #0
+  ldi      $t4,#.C00021
+  sto      $t4,32[$fp]
+; return f2;
+  ldi      $a0,#_f2
+.C00022:
+  leave    #112
+.C00021:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00022
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+      
+	rodata
+	align	16
+
+;--}
+	.extern	_p

@@ -1,0 +1,46 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+   ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+; x = 0;
+  sto      $x0,-8[$fp]
+; foo = (void*)&x;
+  sto      #-8,-16[$fp]
+; bar = &foo;
+  lea      $t4,-16[$fp]
+  base     $t4,$t4,#10
+  sto      $t4,-24[$fp]
+; return **(int**)bar;
+  ldo      $t4,[$x0]
+  ldo      $a0,[$t4]
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+
+	rodata
+	align	16
+
+;--}

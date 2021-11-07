@@ -1,0 +1,100 @@
+     1	int
+     2	f2(int c, int b)
+     3	{
+     4	return c - b;
+     5	}
+     6	
+
+
+*** local symbol table ***
+
+
+
+
+     7	int (*
+     8	f1(int a, int b))(int c, int b)
+     9	{
+    10	if (a != b)
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 4: E Undefined symbol
+    11	return f2;
+ *** error 6: E Bad punctuation
+    12	return 0;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+
+
+
+    15	int
+    16	main()
+    17	{
+    18	int (* (*p)(int a, int b))(int c, int d) = f1;
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 1000: E Compiler: null pointer encountered
+ *** error 1000: E Compiler: null pointer encountered
+ *** error 1000: E Compiler: null pointer encountered
+ *** error 7: E Identifier expected
+ *** error 6: E Bad punctuation
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+ *** error 6: E Bad punctuation
+ *** error 20: E Expression expected
+    19	
+    20	
+    21	return (*(*p)(0, 2))(2, 2);
+    22	}
+    23	
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+29 _p         =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f1        =000000   -    Global      Function returning Pointer to Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _f2        =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		
+ *** structures and unions ***
+

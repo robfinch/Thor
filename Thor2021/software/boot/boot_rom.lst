@@ -1,0 +1,186 @@
+F00:0001       	.set	CSR_MGDT,0x3051
+F00:0002       	.set	IOBASE,0xFF800000
+F00:0003       	.set	RODATABASE,0xFFFE0000
+F00:0004       
+F00:0005       	.bss
+F00:0006       _bss_a:
+F00:0007       	.space	10
+F00:0008       
+F00:0009       	.data
+F00:0010       _data_a:
+F00:0011       	.space	10
+F00:0012       
+F00:0013       	.text
+F00:0014       	.align	2
+F00:0015       #------------------------------------------------------------------------------
+F00:0016       #------------------------------------------------------------------------------
+F00:0017       	jmp			MachineStart
+               S03:00000000:  20 30 00 00 00 00 [R]
+F00:0018       	nop
+               S03:00000006:  F1 00
+F00:0019       	nop
+               S03:00000008:  F1 00
+F00:0020       	nop
+               S03:0000000A:  F1 00
+F00:0021       
+F00:0022       MachineStart:
+F00:0023         # Map 4kB GDT area
+F00:0024       #	ldi			$t0,#$8000000000000C00	# entry number = $000, way = 3, write = true
+F00:0025       #	ldi			$t1,#$008E000000000000
+F00:0026       #	tlbrw		$x0,$t0,$t1
+F00:0027       #	FFFC0000
+F00:0028       #	1111_1111_1111_1100_0000_0000_0000_0000
+F00:0029       #	1111_1111_11_11_1100_0000
+F00:0030       	ldi			t0,0x8000000000000FC0		# entry number = $3C0, way = 3, write = true
+               S03:0000000C:  49 00 00 00 00 00 FE FF D4 06 00 00 00 00
+F00:0031       	ldi			t1,0x008E000FFC0003FF
+               S03:0000001A:  7C FC 0F 00 8E 00 D4 08 E0 7F 00 00
+F00:0032       	tlbrw		r0,t0,t1
+               S03:00000026:  07 80 81 00 00 3C
+F00:0033       #	add			t0,t0,1
+F00:0034       #	tlbrw		x0,t0,t1
+F00:0035       #	add			t0,t0,1
+F00:0036       #	tlbrw		x0,t0,t1
+F00:0037       #	add			t0,t0,1
+F00:0038       #	tlbrw		x0,t0,t1
+F00:0039       	# Setup segments, codeseg already set at reset.
+F00:0040       	# set data segment
+F00:0041       	ldi			a2,0xFFFC00FF			# start of scratchpad area
+               S03:0000002C:  47 FE 03 00 D4 2A E0 1F 80 0F
+F00:0042       	csrrw		r0,a2,CSR_MGDT
+               S03:00000036:  0F 00 20 0A 06 02
+F00:0043       	and			a2,a2,-256
+               S03:0000003C:  08 AA 0A E0
+F00:0044       	ldi			a1,0x0000000000000000	# 0MB boundary
+               S03:00000040:  04 04 00 00
+F00:0045       	sto			a1,0000*32[a2]
+               S03:00000044:  95 84 0A 00 00 20
+F00:0046       	sto			a1,0000*32+8[a2]
+               S03:0000004A:  95 84 0A 01 00 20
+F00:0047       	ldi			a1,0xFFFFFFFFFFFFFFFF	# All - debug mode only
+               S03:00000050:  04 04 E0 FF
+F00:0048       	sto			a1,0000*32+16[a2]
+               S03:00000054:  95 84 0A 02 00 20
+F00:0049       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+               S03:0000005A:  49 00 00 00 FC 3B FE FF D4 04 00 00 00 00
+F00:0050       	sto			a2,0000*32+24[a2]
+               S03:00000068:  95 AA 0A 03 00 20
+F00:0051       	ldi			a0,001								# DS
+               S03:0000006E:  04 02 20 00
+F00:0052       	ldi			a1,0xFF000000
+               S03:00000072:  47 FC 03 00 D4 04 00 00 00 00
+F00:0053       	mtsel		a0,a1
+               S03:0000007C:  07 80 40 00 00 52
+F00:0054       	# set stack segment
+F00:0055       	ldi			a1,0xFFFC7000					# last 4kB of bss
+               S03:00000082:  47 FE 03 00 D4 04 00 00 8E 0F
+F00:0056       	sto			a1,0003*32[a2]
+               S03:0000008C:  95 84 0A 0C 00 20
+F00:0057       	ldi			a1,0
+               S03:00000092:  04 04 00 00
+F00:0058       	sto			a1,0003*32+8[a2]
+               S03:00000096:  95 84 0A 0D 00 20
+F00:0059       	ldi			a1,0x0000000000001000	# 4kB top of stack limit
+               S03:0000009C:  D4 04 00 00 02 00
+F00:0060       	sto			a1,0003*32+16[a2]
+               S03:000000A2:  95 84 0A 0E 00 20
+F00:0061       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+               S03:000000A8:  49 00 00 00 FC 3B FE FF D4 04 00 00 00 00
+F00:0062       	sto			a2,0003*32+24[a2]
+               S03:000000B6:  95 AA 0A 0F 00 20
+F00:0063       	ldi			a0,006								# SS
+               S03:000000BC:  04 02 C0 00
+F00:0064       	ldi			a1,0xFF000003					#
+               S03:000000C0:  47 FC 03 00 D4 04 60 00 00 00
+F00:0065       	mtsel		a0,a1
+               S03:000000CA:  07 80 40 00 00 52
+F00:0066       	# set io segment
+F00:0067       	ldi			a1,IOBASE
+               S03:000000D0:  47 FE 03 00 D4 04 00 00 00 00
+F00:0068       	sto			a1,0004*32[a2]
+               S03:000000DA:  95 84 0A 10 00 20
+F00:0069       	ldi			a1,0
+               S03:000000E0:  04 04 00 00
+F00:0070       	sto			a1,0004*32+8[a2]
+               S03:000000E4:  95 84 0A 11 00 20
+F00:0071       	ldi			a1,0x00000000007FFFFF	# 8MB
+               S03:000000EA:  46 00 D4 04 E0 FF FF 0F
+F00:0072       	sto			a1,0004*32+16[a2]			# set limit
+               S03:000000F2:  95 84 0A 12 00 20
+F00:0073       	ldi			a1,0x86FF000000000000	# R/W non-cacheable data segment
+               S03:000000F8:  49 00 00 00 FC 1B FE FF D4 04 00 00 00 00
+F00:0074       	sto			a2,0004*32+24[a2]
+               S03:00000106:  95 AA 0A 13 00 20
+F00:0075       	ldi			a0,005								# HS
+               S03:0000010C:  04 02 A0 00
+F00:0076       	ldi			a1,0xFF000004					# Max priv.
+               S03:00000110:  47 FC 03 00 D4 04 80 00 00 00
+F00:0077       	mtsel		a0,a1
+               S03:0000011A:  07 80 40 00 00 52
+F00:0078       	# set read-only segment
+F00:0079       	ldi			a1,RODATABASE					#
+               S03:00000120:  47 FE 03 00 D4 04 00 00 C0 0F
+F00:0080       	sto			a1,0005*32[a2]
+               S03:0000012A:  95 84 0A 14 00 20
+F00:0081       	ldi			a1,0
+               S03:00000130:  04 04 00 00
+F00:0082       	sto			a1,0005*32+8[a2]
+               S03:00000134:  95 84 0A 15 00 20
+F00:0083       	ldi			a1,0x000000000001FFFF	# 128kB
+               S03:0000013A:  D4 04 E0 FF 3F 00
+F00:0084       	sto			a1,0005*32+16[a2]
+               S03:00000140:  95 84 0A 16 00 20
+F00:0085       	ldi			a1,0x8CFF000000000000	# R-only cacheable data segment
+               S03:00000146:  49 00 00 00 FC 33 FE FF D4 04 00 00 00 00
+F00:0086       	sto			a2,0005*32+24[a2]
+               S03:00000154:  95 AA 0A 17 00 20
+F00:0087       	ldi			a0,2
+               S03:0000015A:  04 02 40 00
+F00:0088       	ldi			a1,0xFF000005
+               S03:0000015E:  47 FC 03 00 D4 04 A0 00 00 00
+F00:0089       	mtsel		a0,a1
+               S03:00000168:  07 80 40 00 00 52
+F00:0090         # Map 32kB scratchpad stack area into stack segment
+F00:0091       #	FFFC8000
+F00:0092       #	1111_1111_1111_1100_1000_0000_0000_0000
+F00:0093       #	1111_1111_11_11_1100_1000
+F00:0094       	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
+               S03:0000016E:  49 00 00 00 00 00 FE FF D4 06 00 00 00 00
+F00:0095       	ldi			t1,0x008E000FFC0003FF
+               S03:0000017C:  7C FC 0F 00 8E 00 D4 08 E0 7F 00 00
+F00:0096       	ldi			a1,8
+               S03:00000188:  04 04 00 01
+F00:0097       	mtlc		a1
+               S03:0000018C:  52 00 00 A0
+F00:0098       .0001:
+F00:0099       	tlbrw		r0,t0,t1
+               S03:00000190:  07 80 81 00 00 3C
+F00:0100       	add			t0,t0,1							# map next 4kB
+               S03:00000196:  04 86 21 00
+F00:0101       	dbra		.0001
+               S03:0000019A:  30 D8 FF FF FF FF
+F00:0102       
+
+
+Sections:
+S01  .bss
+S02  .data
+S03  .text
+
+
+Sources:
+F00  boot_rom.t64
+
+
+Symbols:
+ MachineStart .0001 LAB (0x190) sec=.text 
+MachineStart LAB (0xc) REF sec=.text 
+_data_a LAB (0x0) UNUSED sec=.data 
+_bss_a LAB (0x0) UNUSED sec=.bss 
+RODATABASE EXPR(4294836224=0xfffe0000) 
+IOBASE EXPR(4286578688=0xff800000) 
+CSR_MGDT EXPR(12369=0x3051) 
+__VASM EXPR(0=0x0) INTERNAL 
+__MSDOSFS EXPR(0=0x0) INTERNAL 
+
+There have been no errors.

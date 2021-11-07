@@ -1,0 +1,54 @@
+     1	void TestHoisting(int a, int b, int c, int d)
+     2	{
+     3	volatile int n;	// prevent n from being assigned a register
+     4	int j;
+     5	
+     6	do {
+     7	printf("%d", a);
+     8	b = 10;
+     9	for (j = 0; j < 20; j++) {
+    10	d = 15;
+    11	c = c + b;
+    12	b = 21;
+    13	}
+    14	d = d + c;
+    15	n++;
+    16	} while (n < 10);
+    17	printf("%d", b);
+    18	printf("%d", c);
+    19	}
+    20	
+
+
+*** local symbol table ***
+
+7 _n         =fffffff8   -    Auto        Long
+7 _j         =fffffff0   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _TestHoisting =000000   -    Global      Function returning 
+		Parameters:
+			Type array:
+   007 007 007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -40
+		Stkspc: 40
+		28 __autonew  =000000   -    
+29 TestHoisting_printf =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

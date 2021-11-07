@@ -1,0 +1,38 @@
+     1	
+     2	int
+     3	main(void)
+     4	{
+     5	int foo, bar, foobar;
+     6	
+     7	foobar = foo + bar;
+     8	foobar = foo + bar;
+     9	return 0;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+7 _foo       =fffffff8   -    Auto        Long
+7 _bar       =fffffff0   -    Auto        Long
+7 _foobar    =ffffffe8   -    Auto        Long
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -32
+		Stkspc: 32
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

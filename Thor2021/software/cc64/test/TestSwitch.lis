@@ -1,0 +1,93 @@
+     1	
+     2	int main(int x)
+     3	{
+     4	switch(x) {
+     5	case 1:	printf("1"); break;
+     6	case 2:	printf("2"); break;
+     7	case 3:	printf("3"); break;
+     8	case 4:	printf("4"); break;
+     9	case 5:	printf("5"); break;
+    10	case 6:	printf("6"); break;
+    11	case 7:	printf("7"); break;
+    12	case 8:	printf("8"); break;
+    13	case 9:	printf("9"); break;
+    14	case 10:	printf("10"); break;
+    15	case 11:	printf("11"); break;
+    16	case 12:	printf("12"); break;
+    17	}
+    18	switch(x; naked) {
+    19	case 1:	printf("1"); break;
+    20	case 2:	printf("2"); break;
+    21	case 3:	printf("3"); break;
+    22	case 4:	printf("4"); break;
+    23	case 5:	printf("5"); break;
+    24	case 6:	printf("6"); break;
+    25	case 7:	printf("7"); break;
+    26	case 8:	printf("8"); break;
+    27	case 9:	printf("9"); break;
+    28	case 10:	printf("10"); break;
+    29	case 11:	printf("11"); break;
+    30	case 12:	printf("12"); break;
+    31	}
+    32	switch(x) {
+    33	case 3,4,5,6,7,8:	printf("3 to 8"); break;
+    34	case 10:	printf("10"); break;
+    35	case 21:	printf("21"); break;
+    36	case 42:	printf("42"); break;
+    37	case 100:	printf("100"); break;
+    38	case 106:	printf("106"); break;
+    39	case 200:	printf("200"); break;
+    40	case 206:	printf("206"); break;
+    41	case 300:	printf("300"); break;
+    42	case 306:	printf("306"); break;
+    43	case 400:	printf("400"); break;
+    44	case 406:	printf("406"); break;
+    45	}
+    46	switch(x) {
+    47	case 1:	printf("1");
+    48	case 2:	printf("2");
+    49	case 4:	printf("4");
+    50	case 8:	printf("8");
+    51	case 16:	printf("16");
+    52	case 32:	printf("32");
+    53	case 64:	printf("64");
+    54	case 128:	printf("128");
+    55	case 256:	printf("256");
+    56	case 512:	printf("512");
+    57	case 1024:	printf("1024");
+    58	case 2048:	printf("2048");
+    59	}
+    60	}
+    61	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 TestSwitch_printf =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

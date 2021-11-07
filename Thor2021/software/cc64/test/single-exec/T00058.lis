@@ -1,0 +1,41 @@
+     1	int main()
+     2	{
+     3	char * s;
+     4	
+     5	s = "abc" "def";
+     6	if(s[0] != 'a') return 1;
+     7	if(s[1] != 'b') return 2;
+     8	if(s[2] != 'c') return 3;
+     9	if(s[3] != 'd') return 4;
+    10	if(s[4] != 'e') return 5;
+    11	if(s[5] != 'f') return 6;
+    12	if(s[6] != 0) return 7;
+    13	
+    14	return 0;
+    15	}
+    16	
+
+
+*** local symbol table ***
+
+13 _s         =fffffff8   -    Auto        Pointer to Char
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+

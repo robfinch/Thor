@@ -1,0 +1,118 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  ldi      $s0,#_printf
+; printf("abort = %s\n", "111");
+  lea      $t4,T00206_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00206_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+; printf("abort = %s\n", "222");
+  lea      $t4,T00206_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00206_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+; printf("abort = %s\n", "333");
+  lea      $t4,T00206_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00206_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  lea      $t4,T00206_7[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00206_8[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+  lea      $t4,T00206_9[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  lea      $t4,T00206_10[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  jal      $ra,[$s0]
+.C00020:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00206_1[24]: ; abort = %s
+
+	dcw	97,98,111,114,116,32,61,32
+	dcw	37,115,10,0
+T00206_2[8]: ; 111
+
+	dcw	49,49,49,0
+T00206_3[24]: ; abort = %s
+
+	dcw	97,98,111,114,116,32,61,32
+	dcw	37,115,10,0
+T00206_4[8]: ; 222
+
+	dcw	50,50,50,0
+T00206_5[24]: ; abort = %s
+
+	dcw	97,98,111,114,116,32,61,32
+	dcw	37,115,10,0
+T00206_6[8]: ; 333
+
+	dcw	51,51,51,0
+T00206_7[24]: ; abort = %s
+
+	dcw	97,98,111,114,116,32,61,32
+	dcw	37,115,10,0
+T00206_8[8]: ; 333
+
+	dcw	51,51,51,0
+T00206_9[24]: ; abort = %s
+
+	dcw	97,98,111,114,116,32,61,32
+	dcw	37,115,10,0
+T00206_10[8]: ; 333
+
+	dcw	51,51,51,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

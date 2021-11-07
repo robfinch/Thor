@@ -1,0 +1,16 @@
+
+;{++
+      
+	bss
+	align	8
+
+public bss __noname_var0[4]:
+
+	fill.b	4,0x00                    
+
+endpublic
+ 
+	data
+	align	8
+
+public data _ce[4]:

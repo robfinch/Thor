@@ -1,0 +1,81 @@
+     
+;{++ _main
+
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main .proc
+  enter_far   #16
+  ldi      $t4,#.C00016
+  di       #2
+  sto      $t4,32[$fp]
+  sto      $b15,40[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; try {
+  ldi      $t4,#.C00019
+  di       #2
+  sto      $t4,32[$fp]
+  sto      $b15,40[$fp]
+; printf ("In main");
+  lea      $t4,T00303_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  mfbase   $b14,$b15
+  ldi      $t4,#_printf_cs
+  mtbase   $b15,$t4
+  jal      $ra,_printf
+  ldi      $t4,#.C00016
+  di       #2
+  sto      $t4,32[$fp]
+  sto      $b15,40[$fp]
+  bra      .C00020
+.C00019:
+; catch(char *str)
+  sne      $t4,$a1,#8197
+  bnez     $t4,.C00021
+  sto      $a0,-8[$fp]
+; printf("error is %s", str);
+  lea      $t4,T00303_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,-8[$fp]
+  push     $t4
+  mfbase   $b14,$b15
+  ldi      $t4,#_printf_cs
+  mtbase   $b15,$t4
+  jal      $ra,_printf
+  add      $sp,$sp,#8
+  bra      .C00020
+.C00021:
+  bra      .C00016
+.C00020:
+.C00017:
+  leave_far   #8
+.C00016:
+  defcat   $t4,$t5
+  bra      .C00017
+.endp _main
+
+;--}
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00303_1[16]: ; In main
+
+	dcw	73,110,32,109,97,105,110,0
+T00303_2[24]: ; error is %s
+
+	dcw	101,114,114,111,114,32,105,115
+	dcw	32,37,115,0
+	.extern	_printf

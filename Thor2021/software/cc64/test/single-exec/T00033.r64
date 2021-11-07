@@ -1,0 +1,168 @@
+
+;{++
+ 
+	bss
+	align	2
+
+public bss _g[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _effect
+	.align 16
+
+;.func _effect
+
+;====================================================
+; Basic Block 0
+;====================================================
+_effect():
+  enter    #8
+  ldi      $t4,#.C00009
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; g = 1;
+  sto      #1,_g[$gp]
+; return 1;
+  ldi      $a0,#1
+.C00010:
+  leave    #96
+.C00009:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00010
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00037
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldi      $s1,#_effect
+; g = 0;
+  sto      $x0,_g[$gp]
+; x = 0;
+  mov      $s0,$x0
+; if(x && effect())
+  beqz     $s0,.C00039
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  beqz     $t4,.C00039
+; return 1;
+  ldi      $a0,#1
+.C00038:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #96
+.C00039:
+; if(g)
+  ldo      $t4,_g[$gp]
+  beqz     $t4,.C00041
+; return 2;
+  ldi      $a0,#2
+  bra      .C00038
+.C00041:
+; x = 1;
+  ldi      $s0,#1
+; if(x && effect()) {
+  beqz     $s0,.C00043
+  jal      $ra,[$s1]
+  mov      $t4,$a0
+  beqz     $t4,.C00043
+; if(g != 1)
+  ldo      $t4,_g[$gp]
+  beq      $t4,#1,.C00045
+; return 3;
+  ldi      $a0,#3
+  bra      .C00038
+.C00045:
+  bra      .C00044
+.C00043:
+; return 4;
+  ldi      $a0,#4
+  bra      .C00038
+.C00044:
+; g = 0;
+  sto      $x0,_g[$gp]
+; x = 1;
+  ldi      $s0,#1
+; if(x || effect()) {
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00049
+  jal      $ra,[$s1]
+  mov      $t5,$a0
+  beqz     $t5,.C00047
+.C00049:
+; if(g)
+  ldo      $t4,_g[$gp]
+  beqz     $t4,.C00050
+; return 5;
+  ldi      $a0,#5
+  bra      .C00038
+.C00050:
+  bra      .C00048
+.C00047:
+; return 6;
+  ldi      $a0,#6
+  bra      .C00038
+.C00048:
+; x = 0;
+  mov      $s0,$x0
+; if(x || effect()) {
+  sne      $t4,$s0,$x0
+  bne      $t4,$x0,.C00054
+  jal      $ra,[$s1]
+  mov      $t5,$a0
+  beqz     $t5,.C00052
+.C00054:
+; if(g != 1)
+  ldo      $t4,_g[$gp]
+  beq      $t4,#1,.C00055
+; return 7;
+  ldi      $a0,#7
+  bra      .C00038
+.C00055:
+  bra      .C00053
+.C00052:
+; return 8;
+  ldi      $a0,#8
+  bra      .C00038
+.C00053:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00038
+.C00037:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00038
+.. 
+
+
+	rodata
+	align	16
+
+;--}

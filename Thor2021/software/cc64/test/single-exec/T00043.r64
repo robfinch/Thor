@@ -1,0 +1,70 @@
+
+;{++
+     
+	bss
+	align	8
+
+public bss __noname_var0[24]:
+
+	fill.b	24,0x00                    
+
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  lea      $t4,-24[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; v.x = 1;
+  sto      #1,[$s0]
+; v.nest.y = 2;
+  sto      #2,8[$s0]
+; v.nest.z = 3;
+  add      $t4,$s0,#8
+  sto      #3,8[$t4]
+; if (v.x + v.nest.y + v.nest.z != 6)
+  ldo      $t6,[$s0]
+  ldo      $t7,8[$s0]
+  add      $t5,$t6,$t7
+  add      $t6,$s0,#8
+  ldo      $t6,8[$t6]
+  add      $t4,$t5,$t6
+  beq      $t4,#6,.C00013
+; return 1;
+  ldi      $a0,#1
+.C00012:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00013:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00012
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+;--}

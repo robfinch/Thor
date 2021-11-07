@@ -1,0 +1,54 @@
+
+;{++
+ 
+	data
+	align	2
+
+public data _x[8]:
+
+	align 2
+	dct	0x00000000,0x00000000
+endpublic
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00012
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  ldo      $t5,_x[$gp]
+  ldo      $t6,T00119_6[$gp]
+  fslt     $t4,$fp5,$t6
+  mov      $a0,$t4
+.C00013:
+  leave    #96
+.C00012:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00013
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00119_6[0]:
+
+;--}

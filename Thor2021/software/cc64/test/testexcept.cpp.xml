@@ -1,0 +1,464 @@
+<title>C64D Compiler debug file</title>
+<compile>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+</Find>
+_void</Find>
+<Parsing GlobalDecl>
+<ParseGlobalDecl>
+Enter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_testexcept</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_testexcept|CDE<ParseDeclSuffix>
+<openpa>
+****************************
+****************************
+Function: _testexcept
+****************************
+****************************
+</Find>
+_int</Find>
+<TYP__Make>
+</TYP__Make>
+o p q rsYParameter types(_testexcept)
+Type array:
+   
+Proto types(_testexcept)
+Type array:
+   
+X</openpa>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_testexcept</Find>
+hh1h2ikIIbIcinsert type: 36
+***Inserting:_testexcept into 0045D750
+<BuildSignature>:_testexcept</BuildSignature>Insert _testexcept into 0045D750()
+Insert into global table
+</Find>
+_testexcept</Find>
+At insert:
+Type array:
+   
+J<ParseFunction>
+***********************************
+***********************************
+***********************************
+Parsing function: _testexcept
+***********************************
+***********************************
+***********************************
+A<BuildParameterList
+><ParseParmDecls>
+A(63)CEnter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_a</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_a|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_a</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_a into 0046E464
+<BuildSignature>:_a</BuildSignature>Insert _a into 0046E464(_testexcept)
+</Find>
+_a</Find>
+At insert:
+Type array:
+   
+JK</Find>
+_int</Find>
+EA(63)CEnter declare()
+A<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</Find>
+_b</Find>
+</ParseSpecifier>
+Bb<ParseDeclPrefix>(1)
+<ParsePrefixId>B|_b|CDE<ParseDeclSuffix>
+</ParseDeclSuffix>
+</ParsePrefixId></ParseDeclPrefix>
+CDEGH</Find>
+_b</Find>
+hh1kIIbIcinsert type: 19
+***Inserting:_b into 0046E464
+<BuildSignature>:_b</BuildSignature>Insert _b into 0046E464(_testexcept)
+</Find>
+_b</Find>
+At insert:
+Type array:
+   
+JKEA(49)</ParseParmDecls>
+B</Find>
+_aMatch
+</Find>
+</Find>
+_bMatch
+</Find>
+</BuildParameterList>
+B<BuildSignature>:_testexcept</BuildSignature></Find>
+_testexceptMatch
+</Find>
+CDEG<Parse function body>:_testexcept|
+</Find>
+_if</Find>
+BbEnter GenerateMonadic
+ABCDLeave GenerateMonadic
+C<Parse><ParseIf></Find>
+_a</Find>
+<Nameref>
+GSearchfor:_a|
+<gsearch2> for: |_a|
+Looking in statement table
+</Find>
+_a</Find>
+Looking in function's symbol table
+</Find>
+_a</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_aMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_aIsEqual:T2sp is not null
+Type array:
+   
+tp:00BDF884 <Deref></Deref>deref tp:00BDF884 </nameref2>
+</Nameref>
+</Find>
+_throw</Find>
+<Parse></Find>
+___exception</Find>
+<ParseSpecifier>
+A<TYP__Make>
+</TYP__Make>
+</ParseSpecifier>
+<ParseDeclPrefix>(49)
+<ParseDeclSuffix>
+</ParseDeclSuffix>
+Z</ParseDeclPrefix>
+</Find>
+_if</Find>
+</Parse></ParseIf></Parse><Parse><ParseIf></Find>
+_b</Find>
+<Nameref>
+GSearchfor:_b|
+<gsearch2> for: |_b|
+Looking in statement table
+</Find>
+_b</Find>
+Looking in function's symbol table
+</Find>
+_b</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_bMatch
+</Find>
+Found as parameter
+</gsearch2>
+<nameref2>
+A:1:_bIsEqual:T2sp is not null
+Type array:
+   
+tp:00BDF8C0 <Deref></Deref>deref tp:00BDF8C0 </nameref2>
+</Nameref>
+</Find>
+_throw</Find>
+<Parse></Find>
+_printf</Find>
+</Parse></ParseIf></Parse><Parse><ParseExpression>
+<Nameref>
+GSearchfor:_printf|
+<gsearch2> for: |_printf|
+Looking in statement table
+</Find>
+_printf</Find>
+Looking in function's symbol table
+</Find>
+_printf</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_printf</Find>
+Looking at class members 00BDF868
+Looking at global symbols
+</Find>
+_printf</Find>
+</gsearch2>
+<nameref2>
+A:0:_printfInsert at nameref
+Type array:
+   
+<BuildSignature>:_printf</BuildSignature></nameref2>
+</Nameref>
+tp2->type=36<ArgumentList>024 lastst=49</ArgumentList>
+Type array:
+   024 
+Got Type: 36openpa calling gsearch2<FindRising>_printf 
+</Find>
+_printf</Find>
+</FindRising>
+<gsearch2> for: |_printf|
+Looking in statement table
+</Find>
+_printf</Find>
+Looking in function's symbol table
+</Find>
+_printf</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_printf</Find>
+Looking at class members 00BDF868
+Looking at global symbols
+</Find>
+_printf</Find>
+</gsearch2>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+<TYP__Make>
+</TYP__Make>
+Insert _p0 into 0046E814(_printf)
+</Find>
+_p0</Find>
+At insert:
+Type array:
+   
+<BuildSignature>:_printf</BuildSignature>Insert _printf into 0045D750()
+Insert into global table
+</Find>
+_printf</Find>
+At insert:
+Type array:
+   024 
+Got direct function _printf </ParseExpression>
+</Parse>Returning EOF from NextToken.
+D<CSETable>For _testexcept
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 2   1   0   0   11   
+1: 2   1   0   0   12   
+2: 1   1   0   0   -1   
+3: 1   1   0   0   -1   
+4: 1   1   0   0   -1   
+5: 0   1   1   0   -1   
+6: 0   1   0   0   -1   
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+
+<gsearch2> for: |_printf|
+Looking in statement table
+</Find>
+_printf</Find>
+Looking in function's symbol table
+</Find>
+_printf</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_printf</Find>
+Looking at class members 00BDF868
+Looking at global symbols
+</Find>
+_printfMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+<CSETable>For _testexcept
+*The expression must be used three or more times before it will be allocated
+to a register.
+N OD Uses DUses Void Reg Sym
+0: 2   1   0   0   11   
+1: 2   1   0   0   12   
+2: 1   1   0   0   -1   
+3: 1   1   0   0   -1   
+4: 1   1   0   0   -1   
+5: 0   1   1   0   -1   
+6: 0   1   0   0   -1   
+</CSETable>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+
+<gsearch2> for: |_printf|
+Looking in statement table
+</Find>
+_printf</Find>
+Looking in function's symbol table
+</Find>
+_printf</Find>
+Searching method/class:_testexcept|0046E410
+Looking at params 0046E464
+</Find>
+_printf</Find>
+Looking at class members 00BDF868
+Looking at global symbols
+</Find>
+_printfMatch
+</Find>
+Found in global symbol table
+</gsearch2>
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+Enter GenerateMonadic
+ABCDLeave GenerateMonadic
+E_testexcept: 5 basic blocks
+<table style="width:100%">
+<tr><td>0: </td><td>vi0 </td><td>vi1 </td><td>vi3 </td><td>vi11 </td><td>vi12 </td><td>vi28 </td><td>vi29 </td><td>vi30 </td><td>vi31 </td><td> || </td><td>vo0 </td><td>vo1 </td><td>vo3 </td><td>vo11 </td><td>vo29 </td><td>vo30 </td><td>vo31 </td></tr>
+<tr><td>1: </td><td>vi0 </td><td>vi1 </td><td>vi3 </td><td>vi11 </td><td>vi29 </td><td>vi30 </td><td>vi31 </td><td></td><td></td><td> || </td><td>vo0 </td><td>vo3 </td><td>vo29 </td><td>vo30 </td><td>vo31 </td><td></td><td></td></tr>
+<tr><td>2: </td><td>vi0 </td><td>vi29 </td><td>vi30 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo29 </td><td>vo30 </td><td>vo31 </td><td></td><td></td><td></td></tr>
+<tr><td>3: </td><td>vi0 </td><td>vi3 </td><td>vi29 </td><td>vi30 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo29 </td><td>vo30 </td><td>vo31 </td><td></td><td></td><td></td></tr>
+<tr><td>4: </td><td>vi0 </td><td>vi29 </td><td>vi30 </td><td>vi31 </td><td></td><td></td><td></td><td></td><td></td><td> || </td><td>vo0 </td><td>vo29 </td><td>vo30 </td><td>vo31 </td><td></td><td></td><td></td></tr>
+<tr><td>5: </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td> || </td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+Visited r31: { 0 1 2 3 4 }
+Visited r30: { 0 1 2 3 4 }
+Visited r29: { 0 1 2 3 4 }
+Visited r11: { 0 1 2 3 4 }
+Visited r3: { 0 1 2 3 4 }
+Visited r1: { 0 1 2 3 4 }
+Visited r0: { 0 1 2 3 4 }
+<VarForests>
+Var31: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var30: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var29: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var11: 1 trees
+{ 0 }
+{ 0 }
+Var3: 1 trees
+{ 0 1 }
+{ 0 1 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+</VarForests>
+<Paths>
+0: { 0 1 3 4 }
+1: { 0 1 2 3 4 }
+</Paths>
+<TreeCosts>
+Tree:0 cost = 0
+Tree:1 cost = 0
+Tree:2 cost = 0
+Tree:3 cost = 0
+Tree:4 cost = 0
+Tree:5 cost = 0
+Tree:6 cost = 0
+</TreeCosts>
+<VarForests>
+Var31: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var30: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var29: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+Var11: 1 trees
+{ 0 }
+{ 0 }
+Var3: 1 trees
+{ 0 1 }
+{ 0 1 }
+Var1: 1 trees
+{ 0 }
+{ 0 }
+Var0: 1 trees
+{ 0 1 2 3 4 }
+{ 0 1 2 3 4 }
+</VarForests>
+</ParseFunctionBody>
+Enter funcbottom
+Leave funcbottom
+F</ParseFunction>
+</ParseGlobalDecl>
+</Parsing GlobalDecl>
+</compile>
+<Dumplits>
+..</Dumplits>
+<summary>
+</summary>
+<closefiles>
+ABC</closefiles>
+<CmdNext>Next on command line (1).</CmdNext>
+<Exit></Exit>

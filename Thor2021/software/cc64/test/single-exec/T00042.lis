@@ -1,0 +1,40 @@
+     1	int
+     2	main()
+     3	{
+     4	union { int a; int b; } u;
+     5	u.a = 1;
+     6	u.b = 3;
+     7	
+     8	if (u.a != 3 || u.b != 3)
+     9	return 1;
+    10	return 0;
+    11	}
+    12	
+
+
+*** local symbol table ***
+
+40 _u         =fffffff8   -    Auto        union __noname_tag0 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        union __noname_tag0 
+    7 _a         =000000   -    Member      Long
+    7 _b         =000000   -    Member      Long

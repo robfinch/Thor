@@ -1,0 +1,12 @@
+
+;{++
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+  

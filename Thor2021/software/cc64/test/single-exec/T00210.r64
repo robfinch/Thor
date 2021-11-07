@@ -1,0 +1,47 @@
+
+;{++
+             
+	data
+	align	8
+
+	fill.b	2,0x00                    
+
+	bss
+	align	2
+
+public bss _stdcall[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+  
+	align	2
+
+public bss ___noinline__[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+    
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+       
+	rodata
+	align	16
+
+	align	8
+
+
+T00210_1[8]: ; %i
+
+	dcw	37,105,10,0
+;--}
+	.extern	_stdcall
+	.extern	_foo
+	.extern	_printf

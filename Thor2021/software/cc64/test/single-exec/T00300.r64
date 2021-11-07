@@ -1,0 +1,56 @@
+
+;{++
+   
+	code
+	align	16
+
+	.global ___mulsi3
+	.align 16
+
+;.func ___mulsi3
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+___mulsi3():
+  enter    #24
+  ldi      $t4,#.C00013
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+; unsigned int r = 0;
+  mov      $s0,$x0
+; while (a)
+  beqz     $a0,.C00016
+.C00015:
+; if (a & 1)
+  and      $t4,$a0,#1
+  beqz     $t4,.C00017
+; r += b;
+  add      $s0,$s0,$a1
+.C00017:
+; a >>= 1;
+  srl      $a0,$a0,#1
+; b <<= 1;
+  sll      $a1,$a1,#1
+  bnez     $a0,.C00015
+.C00016:
+; return r;
+  mov      $a0,$s0
+.C00014:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00013:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00014
+.. 
+
+
+	rodata
+	align	16
+
+;--}

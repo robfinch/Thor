@@ -1,0 +1,47 @@
+     1	typedef struct _tagTest
+     2	{
+     3	unsigned int bf1 : 10;
+     4	unsigned int bf2 : 3;
+     5	unsigned int bf3 : 29;
+     6	} TEST;
+     7	
+     8	int main(int x)
+     9	{
+    10	TEST a;
+    11	
+    12	a.bf2 = 10;
+    13	
+    14	a.bf2++;
+    15	return (a.bf2);
+    16	}
+    17	
+
+
+*** local symbol table ***
+
+40 _a         =fffffff8   -    Auto        struct __tagTest 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+40 _TEST      =000000   1   struct __tagTest 
+28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 __tagTest  =000000   -    Type        struct __tagTest 
+    36 _bf1       =000000  0 9   -    Member      
+    36 _bf2       =000000  10 2   -    Member      
+    36 _bf3       =000000  13 28   -    Member      

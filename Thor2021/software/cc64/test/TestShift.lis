@@ -1,0 +1,103 @@
+     1	
+     2	int TestShiftLeft(register int a, register int b)
+     3	{
+     4	return a << b;
+     5	}
+     6	
+
+
+*** local symbol table ***
+
+
+
+
+     7	int TestShiftRight(int a, int b)
+     8	{
+     9	return a >> b;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+
+
+
+    12	int TestShiftLeftI1(int a)
+    13	{
+    14	return a << 1;
+    15	}
+    16	
+
+
+*** local symbol table ***
+
+
+
+
+    17	int TestShiftLeftI5(int a)
+    18	{
+    19	return a << 1;
+    20	}
+    21	
+
+
+*** local symbol table ***
+
+
+
+
+    22	int TestShiftRight(unsigned int a, int b)
+    23	{
+    24	return a >> b;
+    25	}
+    26	
+    27	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _TestShiftLeftI1 =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _TestShiftLeftI5 =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+28 __delete   =000000   -    
+29 _TestShiftLeft =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: -8
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+29 _TestShiftRight =000000   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   019 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+

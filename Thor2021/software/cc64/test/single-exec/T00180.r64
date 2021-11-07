@@ -1,0 +1,69 @@
+
+;{++
+                                                                                                                                                                                                                              
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #16
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  lea      $t4,-20[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; strcpy(a, "abcdef");
+  push     $s0
+  lea      $t4,T00180_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  bal      $ra,_strcpy
+  add      $sp,$sp,#8
+; printf("%s\n", &a[1]);
+  lea      $t4,T00180_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  add      $t4,$s0,#2
+  push     $t4
+  bal      $ra,_printf
+; return 0;
+  mov      $a0,$x0
+.C00012:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00180_1[14]: ; abcdef
+
+	dcw	97,98,99,100,101,102,0
+T00180_2[8]: ; %s
+
+	dcw	37,115,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

@@ -1,0 +1,101 @@
+	.set	CSR_MGDT,0x3051
+	.set	IOBASE,0xFF800000
+	.set	RODATABASE,0xFFFE0000
+
+	.bss
+_bss_a:
+	.space	10
+
+	.data
+_data_a:
+	.space	10
+
+	.text
+	.align	2
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+	jmp			MachineStart
+	nop
+	nop
+	nop
+
+MachineStart:
+  # Map 4kB GDT area
+#	ldi			$t0,#$8000000000000C00	# entry number = $000, way = 3, write = true
+#	ldi			$t1,#$008E000000000000
+#	tlbrw		$x0,$t0,$t1
+#	FFFC0000
+#	1111_1111_1111_1100_0000_0000_0000_0000
+#	1111_1111_11_11_1100_0000
+	ldi			t0,0x8000000000000FC0		# entry number = $3C0, way = 3, write = true
+	ldi			t1,0x008E000FFC0003FF
+	tlbrw		r0,t0,t1
+#	add			t0,t0,1
+#	tlbrw		x0,t0,t1
+#	add			t0,t0,1
+#	tlbrw		x0,t0,t1
+#	add			t0,t0,1
+#	tlbrw		x0,t0,t1
+	# Setup segments, codeseg already set at reset.
+	# set data segment
+	ldi			a2,0xFFFC00FF			# start of scratchpad area
+	csrrw		r0,a2,CSR_MGDT
+	and			a2,a2,-256
+	ldi			a1,0x0000000000000000	# 0MB boundary
+	sto			a1,0000*32[a2]
+	sto			a1,0000*32+8[a2]
+	ldi			a1,0xFFFFFFFFFFFFFFFF	# All - debug mode only
+	sto			a1,0000*32+16[a2]
+	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+	sto			a2,0000*32+24[a2]
+	ldi			a0,001								# DS
+	ldi			a1,0xFF000000
+	mtsel		a0,a1
+	# set stack segment
+	ldi			a1,0xFFFC7000					# last 4kB of bss
+	sto			a1,0003*32[a2]
+	ldi			a1,0
+	sto			a1,0003*32+8[a2]
+	ldi			a1,0x0000000000001000	# 4kB top of stack limit
+	sto			a1,0003*32+16[a2]
+	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+	sto			a2,0003*32+24[a2]
+	ldi			a0,006								# SS
+	ldi			a1,0xFF000003					#
+	mtsel		a0,a1
+	# set io segment
+	ldi			a1,IOBASE
+	sto			a1,0004*32[a2]
+	ldi			a1,0
+	sto			a1,0004*32+8[a2]
+	ldi			a1,0x00000000007FFFFF	# 8MB
+	sto			a1,0004*32+16[a2]			# set limit
+	ldi			a1,0x86FF000000000000	# R/W non-cacheable data segment
+	sto			a2,0004*32+24[a2]
+	ldi			a0,005								# HS
+	ldi			a1,0xFF000004					# Max priv.
+	mtsel		a0,a1
+	# set read-only segment
+	ldi			a1,RODATABASE					#
+	sto			a1,0005*32[a2]
+	ldi			a1,0
+	sto			a1,0005*32+8[a2]
+	ldi			a1,0x000000000001FFFF	# 128kB
+	sto			a1,0005*32+16[a2]
+	ldi			a1,0x8CFF000000000000	# R-only cacheable data segment
+	sto			a2,0005*32+24[a2]
+	ldi			a0,2
+	ldi			a1,0xFF000005
+	mtsel		a0,a1
+  # Map 32kB scratchpad stack area into stack segment
+#	FFFC8000
+#	1111_1111_1111_1100_1000_0000_0000_0000
+#	1111_1111_11_11_1100_1000
+	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
+	ldi			t1,0x008E000FFC0003FF
+	ldi			a1,8
+	mtlc		a1
+.0001:
+	tlbrw		r0,t0,t1
+	add			t0,t0,1							# map next 4kB
+	dbra		.0001

@@ -1,0 +1,46 @@
+     1	typedef struct
+     2	{
+     3	int i;
+     4	float f;
+     5	} UT;
+     6	
+     7	UT a.i = 21;
+ *** error 6: E Bad punctuation
+     8	UT b.f = 42.5;
+ *** error 19: E Mismatch
+ *** error 6: E Bad punctuation
+     9	
+    10	int TestUnion()
+    11	{
+    12	return (b.f + a.i);
+    13	}
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+28 __new      =000000   -    
+40 _UT        =000000   1   struct __noname_tag0 
+29 _TestUnion =000030   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __delete   =000000   -    
+40 _a         =000010   -    Global      struct __noname_tag0 
+28 __autonew  =000000   -    
+40 _b         =000020   -    Global      struct __noname_tag0 
+
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    7 _i         =000000   -    Member      Long
+    9 _f         =000008   -    Member      Double

@@ -1,0 +1,587 @@
+     1	
+     2	
+     3	
+     4	
+     5	
+     6	
+     7	typedef unsigned short _Wchart;
+     8	
+     9	typedef int _Ptrdifft;
+    10	typedef unsigned int _Sizet;
+    11	
+    12	extern int _Setjmp(int *);
+    13	
+    14	
+    15	
+    16	
+    17	
+    18	
+    19	
+    20	
+    21	
+    22	
+    23	typedef _Sizet size_t;
+    24	typedef struct {
+    25	unsigned long _Off;	/* system dependent */
+    26	} fpos_t;
+    27	typedef struct {
+    28	unsigned short _Mode;
+    29	short _Handle;
+    30	unsigned char *_Buf, *_Bend, *_Next;
+    31	unsigned char *_Rend, *_Rsave, *_Wend;
+    32	unsigned char _Back[2], _Cbuf, _Nback;
+    33	char *_Tmpnam;
+    34	} FILE;
+    35	
+    36	void clearerr(FILE *);
+    37	int fclose(FILE *);
+    38	int feof(FILE *);
+    39	int ferror(FILE *);
+    40	int fflush(FILE *);
+    41	int fgetc(FILE *);
+    42	int fgetpos(FILE *, fpos_t *);
+    43	char *fgets(char *, int, FILE *);
+    44	FILE *fopen(const char *, const char *);
+    45	int fprintf(FILE *, const char *, ...);
+    46	int fputc(int, FILE *);
+    47	int fputs(const char *, FILE *);
+    48	size_t fread(void *, size_t, size_t, FILE *);
+    49	FILE *freopen(const char *, const char *, FILE *);
+    50	int fscanf(FILE *, const char *, ...);
+    51	int fseek(FILE *, long, int);
+    52	int fsetpos(FILE *, const fpos_t *);
+    53	long ftell(FILE *);
+    54	size_t fwrite(const void *, size_t, size_t, FILE *);
+    55	int getc(FILE *);
+    56	int getchar(void);
+    57	char *gets(char *);
+    58	void perror(const char *);
+    59	int printf(const char *, ...);
+    60	int putc(int, FILE *);
+    61	int putchar(int);
+    62	int puts(const char *);
+    63	int remove(const char *);
+    64	int rename(const char *, const char *);
+    65	void rewind(FILE *);
+    66	int scanf(const char *, ...);
+    67	void setbuf(FILE *, char *);
+    68	int setvbuf(FILE *, char *, int, size_t);
+    69	int sprintf(char *, const char *, ...);
+    70	int sscanf(const char *, const char *, ...);
+    71	FILE *tmpfile(void);
+    72	char *tmpnam(char *);
+    73	int ungetc(int, FILE *);
+    74	int vfprintf(FILE *, const char *, char *);
+    75	int vprintf(const char *, char *);
+    76	int vsprintf(char *, const char *, char *);
+    77	long _Fgpos(FILE *, fpos_t *);
+    78	int _Fspos(FILE *, const fpos_t *, long, int);
+    79	extern FILE *_Files[16];
+    80	
+    81	
+    82	
+    83	void fred()
+    84	{
+    85	printf("In fred()\n");
+    86	goto done;
+    87	printf("In middle\n");
+    88	done:
+    89	printf("At end\n");
+    90	}
+    91	
+
+
+*** local symbol table ***
+
+31 _done      =000002   -    Label
+
+
+
+    92	void joe()
+    93	{
+    94	int b = 5678;
+    95	
+    96	printf("In joe()\n");
+    97	
+    98	{
+    99	int c = 1234;
+   100	printf("c = %d\n", c);
+   101	goto outer;
+   102	printf("uh-oh\n");
+   103	}
+   104	
+   105	outer:
+   106	
+   107	printf("done\n");
+   108	}
+   109	
+
+
+*** local symbol table ***
+
+31 _outer     =000011   -    Label
+7 _b         =fffffff8   -    Auto        Long
+7 _c         =fffffff0   -    Auto        Long
+
+
+
+   110	void henry()
+   111	{
+   112	int a;
+   113	
+   114	printf("In henry()\n");
+   115	goto inner;
+   116	
+   117	{
+   118	int b;
+   119	inner:
+   120	b = 1234;
+   121	printf("b = %d\n", b);
+   122	}
+   123	
+   124	printf("done\n");
+   125	}
+   126	
+
+
+*** local symbol table ***
+
+31 _inner     =00001f   -    Label
+7 _a         =fffffff8   -    Auto        Long
+7 _b         =fffffff0   -    Auto        Long
+
+
+
+   127	int main()
+   128	{
+   129	fred();
+   130	joe();
+   131	henry();
+   132	
+   133	return 0;
+   134	}
+   135	
+   136	
+   137	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _fred      =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		7 __Ptrdifft =000004   1   Long
+29 _getc      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _main      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __new      =000000   -    
+29 _gets      =00006c   -    Global      Function returning Pointer to Char
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _putc      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		18 __Wchart   =000000   1   
+29 _puts      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __delete   =000000   -    
+29 __Setjmp   =000000   -    External    Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _getchar   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _freopen   =00006c   -    Global      Function returning Pointer to struct __noname_tag1 
+		Parameters:
+			Type array:
+   013 013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _tmpfile   =00006c   -    Global      Function returning Pointer to struct __noname_tag1 
+		Parameters:
+			Type array:
+   028 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _putchar   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fgetpos   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fprintf   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _setvbuf   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 007 019 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fread     =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 019 019 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fsetpos   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _sprintf   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fgetc     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _vprintf   =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _scanf     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fseek     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _ftell     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fopen     =00006c   -    Global      Function returning Pointer to struct __noname_tag1 
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fgets     =00006c   -    Global      Function returning Pointer to Char
+		Parameters:
+			Type array:
+   013 007 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		41 _FILE      =000024   1   struct __noname_tag1 
+29 _fputc     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _henry     =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 _fputs     =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _joe       =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -16
+		Stkspc: 16
+		29 _clearerr  =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		13 __Files    =000000   -    External    Array of Pointer to struct __noname_tag1 
+29 __Fgpos    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		28 __autonew  =000000   -    
+29 __Fspos    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		19 __Sizet    =00000c   1   
+29 _vfprintf  =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fscanf    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _rename    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fclose    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _vsprintf  =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _sscanf    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _ungetc    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   007 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fflush    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _rewind    =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _setbuf    =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		40 _fpos_t    =00001c   1   struct __noname_tag0 
+29 _tmpnam    =00006c   -    Global      Function returning Pointer to Char
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		19 _size_t    =000014   1   
+29 _remove    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _ferror    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _fwrite    =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 019 019 013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _printf    =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 039 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _perror    =00006c   -    Global      Function returning 
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		29 _feof      =00006c   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   013 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+		
+ *** structures and unions ***
+
+40 __noname_tag0 =000000   -    Type        struct __noname_tag0 
+    19 __Off      =000000   -    Member      
+41 __noname_tag1 =000000   -    Type        struct __noname_tag1 
+    18 __Mode     =000000   -    Member      
+    6 __Handle   =000004   -    Member      Short
+    13 __Buf      =000008   -    Member      Pointer to Char
+    13 __Bend     =000010   -    Member      Pointer to Char
+    13 __Next     =000018   -    Member      Pointer to Char
+    13 __Rend     =000020   -    Member      Pointer to Char
+    13 __Rsave    =000028   -    Member      Pointer to Char
+    13 __Wend     =000030   -    Member      Pointer to Char
+    13 __Back     =000038   -    Member      Array of Char
+    17 __Cbuf     =00003c   -    Member      Char
+    17 __Nback    =00003e   -    Member      Char
+    13 __Tmpnam   =000040   -    Member      Pointer to Char

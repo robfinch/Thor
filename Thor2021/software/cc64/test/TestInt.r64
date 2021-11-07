@@ -1,0 +1,42 @@
+ 	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _myint:
+  sub      $sp,$sp,#32
+  lea      $gp1,__rodata_start
+  lea      $t0,TestInt_1[$gp1]
+  push     $t0
+  bal      $ra,TestInt_printf
+TestInt_6:
+TestInt_9:
+  add      $sp,$sp,#32
+  rti    
+endpublic
+
+  	code
+	align	16
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _BIOScall:
+  ldi      $a0,#-1
+TestInt_17:
+  rti    
+  bra      TestInt_17
+endpublic
+
+	rodata
+	align	16
+	align	8
+TestInt_1:	; Hello again.
+	dcw	72,101,108,108,111,32,97,103
+	dcw	97,105,110,46,0
+;	global	_BIOScall
+;	global	_myint
+	extern	TestInt_printf

@@ -1,0 +1,27 @@
+      	code
+	align	16
+ 	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+public code _main:
+  link     #40
+  sto      $s0,0[$sp]
+  ldo      $t0,-8[$fp]
+  srl      $t1,$t0,#10
+  and      $t1,$t1,#7
+; a.bf2 = 10;
+  ldi      $s0,#10
+; a.bf2++;
+  add      $a0,$s0,#1
+TestBitfieldInc_8:
+  ldo      $s0,0[$sp]
+  unlink 
+  add      $sp,$sp,#8
+  ret    
+endpublic
+
+	rodata
+	align	16
+;	global	_main

@@ -1,0 +1,124 @@
+
+;{++
+                                                                                                                                                  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+    ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #48
+  ldi      $t4,#.C00023
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00003E00
+  ldi      $s2,#_printf
+  lea      $t4,-8[$fp]
+  base     $t4,$t4,#10
+  mov      $s3,$t4
+  lea      $t4,-16[$fp]
+  base     $t4,$t4,#10
+  mov      $s4,$t4
+; d = &a;
+  mov      $s1,$s3
+; e = &b;
+  mov      $s0,$s4
+; a = 12;
+  sto      #12,[$s3]
+; b = 34;
+  ldi      $t4,#34
+  sto      $t4,[$s4]
+; printf("%d\n", *d);
+  lea      $t4,T00172_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s1]
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", *e);
+  lea      $t4,T00172_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,[$s0]
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", d == e);
+  lea      $t4,T00172_3[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  seq      $t4,$s1,$s0
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", d != e);
+  lea      $t4,T00172_4[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sne      $t4,$s1,$s0
+  push     $t4
+  jal      $ra,[$s2]
+; d = e;
+  mov      $s1,$s0
+; printf("%d\n", d == e);
+  lea      $t4,T00172_5[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  seq      $t4,$s1,$s0
+  push     $t4
+  jal      $ra,[$s2]
+; printf("%d\n", d != e);
+  lea      $t4,T00172_6[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  sne      $t4,$s1,$s0
+  push     $t4
+  jal      $ra,[$s2]
+; return 0;
+  mov      $a0,$x0
+.C00024:
+  ldm      [$sp],#$00003E00
+  leave    #96
+.C00023:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00024
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00172_1[8]: ; %d
+
+	dcw	37,100,10,0
+T00172_2[8]: ; %d
+
+	dcw	37,100,10,0
+T00172_3[8]: ; %d
+
+	dcw	37,100,10,0
+T00172_4[8]: ; %d
+
+	dcw	37,100,10,0
+T00172_5[8]: ; %d
+
+	dcw	37,100,10,0
+T00172_6[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

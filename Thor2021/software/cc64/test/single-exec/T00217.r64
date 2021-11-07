@@ -1,0 +1,21 @@
+
+;{++
+    
+	data
+	align	8
+
+public data _t[0]:
+
+	dcw	87,48,49,50,51,52,53,54
+	dcw	55,56,0
+endpublic
+  
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+    

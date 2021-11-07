@@ -1,0 +1,77 @@
+
+;{++
+                                                                                                                                                  
+	data
+	align	8
+
+	fill.b	4,0x00                    
+
+	align	2
+
+T00200_1[8]: ; _debug
+
+	fill.b	8,0x00                    
+
+	align	2
+
+T00200_2[8]: ; _nfailed
+
+	dco	0    
+	code
+	align	16
+ ;====================================================
+; Basic Block 0
+;====================================================
+_check
+	.align 16
+():
+  enter    #32
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  stm      [$sp],#$00000E00
+  ldo      $s1,32[$fp]
+  ldo      $s2,24[$fp]
+; int failed = arg1 != shift;
+  sne      $s0,$s2,$s1
+; if (debug || failed)
+  ldo      $t4,T00200_1[$gp]
+  or       $t5,$t4,$s0
+  beqz     $t5,.C00021
+; printf ("%s %d %d\n", s, arg1, shift);
+  sub      $sp,$sp,#32
+  lea      $t4,T00200_4[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  ldo      $t4,16[$fp]
+  sto      $t4,8[$sp]
+  sto      $s2,16[$sp]
+  sto      $s1,24[$sp]
+  bal      $ra,_printf
+  add      $sp,$sp,#16
+.C00021:
+; nfailed += failed;
+  ldo      $t4,T00200_2[$gp]
+  add      $t4,$t4,$s0
+  sto      $t4,T00200_2[$gp]
+.C00018:
+  ldm      [$sp],#$00000E00
+  leave    #120
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+   
+	.global _main
+	.align 16
+
+;.func _main
+

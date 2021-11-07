@@ -1,0 +1,306 @@
+
+;{++
+                  
+	data
+	align	8
+                                                                                                       
+	bss
+	align	2
+
+public bss _N[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+ 
+	align	8
+
+public bss _t[8]:
+
+	fill.b	8,0x00                    
+
+endpublic
+   
+	code
+	align	16
+
+	.global _chk
+	.align 16
+
+;.func _chk
+
+  ;====================================================
+; Basic Block 0
+;====================================================
+_chk():
+  enter    #40
+  ldi      $t4,#.C00036
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  stm      [$sp],#$00001E00
+  ldo      $s2,24[$fp]
+  ldo      $s3,16[$fp]
+; for (r=i=0; i<8; i++) {
+  mov      $s0,$x0
+  mov      $s1,$s0
+  bge      $s0,#8,.C00039
+.C00038:
+; r = r + t[x + 8*i];
+  sll      $t7,$s0,#3
+  add      $t6,$s3,$t7
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+; r = r + t[i + 8*y];
+  sll      $t7,$s2,#3
+  add      $t6,$s0,$t7
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+; if (x+i < 8 & y+i < 8)
+  add      $t6,$s3,$s0
+  slt      $t5,$t6,#8
+  add      $t7,$s2,$s0
+  slt      $t6,$t7,#8
+  and      $t4,$t5,$t6
+  beqz     $t4,.C00041
+; r = r + t[x+i + 8*(y+i)];
+  add      $t7,$s3,$s0
+  add      $t9,$s2,$s0
+  sll      $t8,$t9,#3
+  add      $t6,$t7,$t8
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+.C00041:
+; if (x+i < 8 & y-i >= 0)
+  add      $t6,$s3,$s0
+  slt      $t5,$t6,#8
+  sub      $t7,$s2,$s0
+  sge      $t6,$t7,$x0
+  and      $t4,$t5,$t6
+  beqz     $t4,.C00047
+; r = r + t[x+i + 8*(y-i)];
+  add      $t7,$s3,$s0
+  sub      $t9,$s2,$s0
+  sll      $t8,$t9,#3
+  add      $t6,$t7,$t8
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+.C00047:
+; if (x-i >= 0 & y+i < 8)
+  sub      $t6,$s3,$s0
+  sge      $t5,$t6,$x0
+  add      $t7,$s2,$s0
+  slt      $t6,$t7,#8
+  and      $t4,$t5,$t6
+  beqz     $t4,.C00053
+; r = r + t[x-i + 8*(y+i)];
+  sub      $t7,$s3,$s0
+  add      $t9,$s2,$s0
+  sll      $t8,$t9,#3
+  add      $t6,$t7,$t8
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+.C00053:
+; if (x-i >= 0 & y-i >= 0)
+  sub      $t6,$s3,$s0
+  sge      $t5,$t6,$x0
+  sub      $t7,$s2,$s0
+  sge      $t6,$t7,$x0
+  and      $t4,$t5,$t6
+  beqz     $t4,.C00059
+; r = r + t[x-i + 8*(y-i)];
+  sub      $t7,$s3,$s0
+  sub      $t9,$s2,$s0
+  sll      $t8,$t9,#3
+  add      $t6,$t7,$t8
+  sll      $t5,$t6,#3
+  ldo      $t6,_t[$gp]
+  ldo      $t5,[$t5+$t6]
+  add      $s1,$s1,$t5
+.C00059:
+.C00040:
+  add      $s0,$s0,#1
+  blt      $s0,#8,.C00038
+.C00039:
+; return r;
+  mov      $a0,$s1
+.C00037:
+  ldm      [$sp],#$00001E00
+  leave    #112
+.C00036:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00037
+.. 
+
+    
+	.global _go
+	.align 16
+
+;.func _go
+
+;====================================================
+; Basic Block 0
+;====================================================
+_go():
+  enter    #24
+  ldi      $t4,#.C00083
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  stm      [$sp],#$00000E00
+  ldo      $s0,24[$fp]
+  ldo      $s1,32[$fp]
+  ldo      $s2,16[$fp]
+; if (n == 8) {
+  bne      $s2,#8,.C00085
+; N++;
+  ldo      $t4,_N[$gp]
+  add      $t4,$t4,#1
+  sto      $t4,_N[$gp]
+; return 0;
+  mov      $a0,$x0
+.C00084:
+  ldm      [$sp],#$00000E00
+  leave    #120
+.C00085:
+; for (; y<8; y++) {
+  bge      $s1,#8,.C00088
+.C00087:
+; for (; x<8; x++)
+  bge      $s0,#8,.C00091
+.C00090:
+; if (chk(x, y) == 0) {
+  push     $s0,$s1
+  bal      $ra,_chk
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  bnez     $t4,.C00093
+; t[x + 8*y]++;
+  sll      $t6,$s1,#3
+  add      $t5,$s0,$t6
+  sll      $t4,$t5,#3
+  sll      $t8,$s1,#3
+  add      $t7,$s0,$t8
+  sll      $t6,$t7,#3
+  ldo      $t7,_t[$gp]
+  ldo      $t8,[$t6+$t7]
+  add      $t8,$t8,#1
+  sto      $t8,[$t6+$t7]
+; go(n+1, x, y);
+  sub      $sp,$sp,#24
+  add      $t4,$s2,#1
+  sto      $t4,0[$sp]
+  sto      $s0,8[$sp]
+  sto      $s1,16[$sp]
+  bal      $ra,_go
+  add      $sp,$sp,#8
+; t[x + 8*y]--;
+  sll      $t6,$s1,#3
+  add      $t5,$s0,$t6
+  sll      $t4,$t5,#3
+  ldo      $t5,_t[$gp]
+  sll      $t8,$s1,#3
+  add      $t7,$s0,$t8
+  sll      $t6,$t7,#3
+  ldo      $t7,_t[$gp]
+  ldo      $t8,[$t6+$t7]
+  sub      $t8,$t8,#1
+  sto      $t8,[$t6+$t7]
+.C00093:
+  add      $s0,$s0,#1
+  blt      $s0,#8,.C00090
+.C00091:
+; x = 0;
+  mov      $s0,$x0
+  add      $s1,$s1,#1
+  blt      $s1,#8,.C00087
+.C00088:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00084
+.C00083:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00084
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #0
+  ldi      $t4,#.C00105
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+; t = calloc(64, sizeof(int));
+  ldi      $t4,#64
+  push     $t4
+  ldi      $t4,#8
+  push     $t4
+  bal      $ra,_calloc
+  add      $sp,$sp,#8
+  mov      $t4,$a0
+  sto      $t4,_t[$gp]
+; go(0, 0, 0);
+  sub      $sp,$sp,#24
+  sto      $x0,0[$sp]
+  sto      $x0,8[$sp]
+  sto      $x0,16[$sp]
+  bal      $ra,_go
+  add      $sp,$sp,#8
+; if(N != 92)
+  ldo      $t4,_N[$gp]
+  seq      $t5,$t4,#92
+  bne      $t5,$x0,.C00107
+; return 1;
+  ldi      $a0,#1
+.C00106:
+  leave    #96
+.C00107:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00106
+.C00105:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00106
+.. 
+
+
+	rodata
+	align	16
+
+;--}
+	.extern	__Mbxlen
+	.extern	__Setjmp
+	.extern	__Wcxtomb
+	.extern	__Mbxtowc
+	.extern	__Randseed
+	.extern	__Mbcurmax

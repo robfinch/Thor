@@ -1,0 +1,114 @@
+
+;{++
+                                                                                                                                                   
+	code
+	align	16
+
+	.global _fred
+	.align 16
+
+;.func _fred
+
+;====================================================
+; Basic Block 0
+;====================================================
+_fred():
+  enter    #8
+  ldi      $t4,#.C00010
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; printf("yo %d\n", p);
+  lea      $t4,T00189_1[$gp1]
+  base     $t4,$t4,#12
+  push     $t4
+  ldo      $t4,16[$fp]
+  push     $t4
+  bal      $ra,_printf
+; return 42;
+  ldi      $a0,#42
+.C00011:
+  leave    #104
+.C00010:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00011
+.. 
+
+   
+	data
+	align	8
+
+	fill.b	4,0x00                    
+      
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00021
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+; fprintfptr(_Files[1], "%d\n", (*f)(24));
+  ldo      $t4,_fprintfptr[$gp]
+  sto      $t4,-8[$fp]
+  sub      $sp,$sp,#24
+  lea      $t5,__Files[$gp]
+  ldo      $t5,8[$t5]
+  sto      $t5,0[$sp]
+  lea      $t5,T00189_12[$gp1]
+  base     $t5,$t5,#12
+  sto      $t5,8[$sp]
+  ldo      $t5,_f[$gp]
+  ldo      $t5,[$t5]
+  ldi      $t6,#24
+  push     $t6
+  jal      $ra,[$t5]
+  mov      $t5,$a0
+  sto      $t5,16[$sp]
+  jal      $ra,[$t4]
+  ldo      $t4,-8[$fp]
+; return 0;
+  mov      $a0,$x0
+.C00022:
+  leave    #96
+.C00021:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00022
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00189_1[14]: ; yo %d
+
+	dcw	121,111,32,37,100,10,0
+T00189_12[8]: ; %d
+
+	dcw	37,100,10,0
+;--}
+	.extern	__Setjmp
+	.extern	__Files

@@ -1,0 +1,64 @@
+     1	struct S
+     2	{
+     3	int	(*fptr)();
+     4	};
+     5	
+     6	int
+     7	foo()
+     8	{
+     9	return 0;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+
+
+
+    12	int
+    13	main()
+    14	{
+    15	struct S v;
+    16	
+    17	v.fptr = foo;
+    18	return v.fptr();
+    19	}
+    20	
+    21	
+
+
+*** local symbol table ***
+
+40 _v         =fffffff8   -    Auto        struct _S 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+29 _main      =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __new      =000000   -    
+40 __noname_var0 =000000   -    Global      struct _S 
+28 __delete   =000000   -    
+29 _foo       =000008   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -8
+		Stkspc: 8
+		28 __autonew  =000000   -    
+
+ *** structures and unions ***
+
+40 _S         =000000   -    Type        struct _S 
+    13 _fptr      =000000   -    Member      Pointer to Long

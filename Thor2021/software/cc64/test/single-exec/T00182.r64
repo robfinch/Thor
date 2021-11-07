@@ -1,0 +1,315 @@
+
+;{++
+                  
+	data
+	align	8
+                                                                                                                                                                                                                                                    
+	code
+	align	16
+
+	.global _topline
+	.align 16
+
+;.func _topline
+
+;====================================================
+; Basic Block 0
+;====================================================
+_topline():
+  enter    #16
+  ldi      $t4,#.C00017
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  ldo      $s0,24[$fp]
+; *p++ = ' ';
+  ldi      $t4,#32
+  stw      $t4,[$s0]
+  add      $s0,$s0,#2
+; switch(d){
+  ldo      $t4,16[$fp]
+; case 0:
+  beq      $t4,#0,.C00025
+; default:
+  bra      .C00026
+.C00018:
+  ldo      $s0,0[$sp]
+  leave    #112
+.C00017:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00018
+.. 
+
+   
+	.global _midline
+	.align 16
+
+;.func _midline
+
+;====================================================
+; Basic Block 0
+;====================================================
+_midline():
+  enter    #16
+  ldi      $t4,#.C00059
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldo      $s0,24[$fp]
+  ldo      $s1,16[$fp]
+; case 0:
+  beq      $s1,#0,.C00067
+; default:
+  bra      .C00068
+.C00060:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #112
+.C00059:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00060
+.. 
+
+   
+	.global _botline
+	.align 16
+
+;.func _botline
+
+;====================================================
+; Basic Block 0
+;====================================================
+_botline():
+  enter    #16
+  ldi      $t4,#.C00117
+  sto      $t4,32[$fp]
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+  ldo      $s0,24[$fp]
+  ldo      $s1,16[$fp]
+; case 0:
+  beq      $s1,#0,.C00125
+; default:
+  bra      .C00126
+.C00118:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #112
+.C00117:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00118
+.. 
+
+   
+	.global _print_led
+	.align 16
+
+;.func _print_led
+
+  
+	data
+	align	8
+
+T00182_143[256]: ; _d
+
+	fill.b	256,0x00                    
+
+	code
+	align	16
+;====================================================
+; Basic Block 0
+;====================================================
+_print_led():
+  enter    #40
+  ldi      $t4,#.C00167
+  sto      $t4,32[$fp]
+  lea      $gp,__data_start
+  stm      [$sp],#$00003E00
+  ldo      $s0,24[$fp]
+  ldo      $s2,16[$fp]
+  lea      $t4,T00182_143[$gp]
+  mov      $s4,$t4
+; int i=0,n;
+  mov      $s1,$x0
+; n = ( x == 0L ? 1 : 0 );  /* 0 is a digit, hence a special case */
+  bnez     $s2,.C00169
+  ldi      $t5,#1
+  bra      .C00170
+.C00169:
+  ldi      $t5,#0
+.C00170:
+  mov      $s3,$t5
+; while(x){
+  beqz     $s2,.C00172
+.C00171:
+; d[n++] = (int)(x%10L);
+  add      $s3,$s3,#1
+  sll      $t4,$s3,#3
+  sto      $x0,[$t4+$s4]
+; if(n >= 32)break;
+  slt      $t4,$s3,#32
+  bne      $t4,$x0,.C00173
+  bra      .C00172
+.C00173:
+; x = x/10L;
+  div      $s2,$s2,#10
+  sne      $t4,$s2,$x0
+  bne      $t4,$x0,.C00171
+.C00172:
+; for(i=n-1;i>=0;i--){
+  sub      $s1,$s3,#1
+  blt      $s1,$x0,.C00176
+.C00175:
+; topline(d[i],buf);
+  sll      $t4,$s1,#3
+  ldo      $t4,[$t4+$s4]
+  push     $t4,$s0
+  bal      $ra,_topline
+  add      $sp,$sp,#8
+; buf += 3;
+  add      $s0,$s0,#6
+; *buf++=' ';
+  ldi      $t4,#32
+  stw      $t4,[$s0]
+  add      $s0,$s0,#2
+  sub      $s1,$s1,#1
+  bge      $s1,$x0,.C00175
+.C00176:
+; *buf++='\n'; /* move teletype to next line */
+  stw      #10,[$s0]
+  add      $s0,$s0,#2
+; for(i=n-1;i>=0;i--){
+  sub      $s1,$s3,#1
+  blt      $s1,$x0,.C00179
+.C00178:
+; midline(d[i],buf);
+  sll      $t4,$s1,#3
+  ldo      $t4,[$t4+$s4]
+  push     $t4,$s0
+  bal      $ra,_midline
+  add      $sp,$sp,#8
+; buf += 3;
+  add      $s0,$s0,#6
+; *buf++=' ';
+  ldi      $t4,#32
+  stw      $t4,[$s0]
+  add      $s0,$s0,#2
+  sub      $s1,$s1,#1
+  bge      $s1,$x0,.C00178
+.C00179:
+; *buf++='\n';
+  stw      #10,[$s0]
+  add      $s0,$s0,#2
+; for(i=n-1;i>=0;i--){
+  sub      $s1,$s3,#1
+  blt      $s1,$x0,.C00182
+.C00181:
+; botline(d[i],buf);
+  sll      $t4,$s1,#3
+  ldo      $t4,[$t4+$s4]
+  push     $t4,$s0
+  bal      $ra,_botline
+  add      $sp,$sp,#8
+; buf += 3;
+  add      $s0,$s0,#6
+; *buf++=' ';
+  ldi      $t4,#32
+  stw      $t4,[$s0]
+  add      $s0,$s0,#2
+  sub      $s1,$s1,#1
+  bge      $s1,$x0,.C00181
+.C00182:
+; *buf++='\n';
+  stw      #10,[$s0]
+  add      $s0,$s0,#2
+; *buf='\0';
+  stw      $x0,[$s0]
+.C00168:
+  ldm      [$sp],#$00003E00
+  leave    #112
+.C00167:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00168
+.. 
+
+ 
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #8
+  ldi      $t4,#.C00193
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  lea      $t4,-320[$fp]
+  base     $t4,$t4,#10
+  mov      $s0,$t4
+; print_led(1234567, buf);
+  ldi      $t4,#1234567
+  push     $t4,$s0
+  bal      $ra,_print_led
+  add      $sp,$sp,#8
+; printf("%s\n",buf);
+  lea      $t4,T00182_184[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+; return 0;
+  mov      $a0,$x0
+.C00194:
+  ldo      $s0,0[$sp]
+  leave    #96
+.C00193:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00194
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00182_184[8]: ; %s
+
+	dcw	37,115,10,0
+;--}
+	.extern	__Mbxlen
+	.extern	__Setjmp
+	.extern	__Wcxtomb
+	.extern	__Mbxtowc
+	.extern	__Files
+	.extern	__Randseed
+	.extern	__Mbcurmax

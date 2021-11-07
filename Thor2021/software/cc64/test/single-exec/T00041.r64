@@ -1,0 +1,83 @@
+
+;{++
+ 
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+    ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #40
+  ldi      $t4,#.C00019
+  sto      $t4,32[$fp]
+  stm      [$sp],#$00001E00
+; c = 0;
+  mov      $s2,$x0
+; n = 2;
+  ldi      $s1,#2
+; while (n < 5000) {
+  sge      $t4,$s1,#5000
+  bne      $t4,$x0,.C00022
+.C00021:
+; t = 2;
+  ldi      $s0,#2
+; p = 1;
+  ldi      $s3,#1
+; while (t*t <= n) {
+  mul      $t4,$s0,$s0
+  blt      $s1,$t4,.C00024
+.C00023:
+; if (n % t == 0)
+  rem      $t4,$s1,$s0
+  bnez     $t4,.C00025
+; p = 0;
+  mov      $s3,$x0
+.C00025:
+; t++;
+  add      $s0,$s0,#1
+  mul      $t4,$s0,$s0
+  bge      $s1,$t4,.C00023
+.C00024:
+; n++;
+  add      $s1,$s1,#1
+; if (p)
+  beqz     $s3,.C00027
+; c++;
+  add      $s2,$s2,#1
+.C00027:
+  slt      $t4,$s1,#5000
+  bne      $t4,$x0,.C00021
+.C00022:
+; if (c != 669)
+  seq      $t4,$s2,#669
+  bne      $t4,$x0,.C00029
+; return 1;
+  ldi      $a0,#1
+.C00020:
+  ldm      [$sp],#$00001E00
+  leave    #96
+.C00029:
+; return 0;
+  mov      $a0,$x0
+  bra      .C00020
+.C00019:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00020
+.. 
+
+
+	rodata
+	align	16
+
+;--}

@@ -1,0 +1,78 @@
+
+;{++
+                                                                                                                                                   
+	code
+	align	16
+
+	.global _main
+	.align 16
+
+;.func _main
+
+ ;====================================================
+; Basic Block 0
+;====================================================
+_main():
+  enter    #24
+  ldi      $t4,#.C00011
+  sto      $t4,32[$fp]
+  lea      $gp1,__rodata_start
+  base     $gp1,$gp1,#12
+  sto      $s0,0[$sp]
+  sto      $s1,8[$sp]
+; int bob, jim = 21;
+  ldi      $s0,#21
+; bob = jim; bob *= 2;
+  mov      $s1,$s0
+  mul      $s1,$s1,#1
+; printf("jim: %d, bob: %d\n", jim, bob);
+  sub      $sp,$sp,#24
+  lea      $t4,T00202_1[$gp1]
+  base     $t4,$t4,#12
+  sto      $t4,0[$sp]
+  sto      $s0,8[$sp]
+  sto      $s1,16[$sp]
+  bal      $ra,_printf
+  add      $sp,$sp,#8
+; jim = 60 ++3;
+  ldi      $s0,#60
+; printf("jim: %d\n", jim);
+  lea      $t4,T00202_2[$gp1]
+  base     $t4,$t4,#12
+  push     $t4,$s0
+  bal      $ra,_printf
+; return 0;
+  mov      $a0,$x0
+.C00012:
+  ldo      $s0,0[$sp]
+  ldo      $s1,8[$sp]
+  leave    #104
+.C00011:
+  di       #5
+  ldo      $t4,0[$fp]
+  ldo      $t4,32[$t4]
+  sto      $t4,16[$fp]
+  ldo      $t4,40[$t4]
+  sto      $t4,24[$fp]
+  bra      .C00012
+.. 
+
+
+	rodata
+	align	16
+
+	align	8
+
+
+T00202_1[36]: ; jim: %d, bob: %d
+
+	dcw	106,105,109,58,32,37,100,44
+	dcw	32,98,111,98,58,32,37,100
+	dcw	10,0
+T00202_2[18]: ; jim: %d
+
+	dcw	106,105,109,58,32,37,100,10
+	dcw	0
+;--}
+	.extern	__Setjmp
+	.extern	__Files
