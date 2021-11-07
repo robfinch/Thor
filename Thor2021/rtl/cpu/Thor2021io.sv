@@ -38,7 +38,7 @@
 
 import Thor2021_pkg::*;
 
-module Thor2021(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, irq_i, icause_i,
+module Thor2021io(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, irq_i, icause_i,
 		vpa_o, vda_o, bte_o, cti_o, bok_i, cyc_o, stb_o, lock_o, ack_i,
     err_i, we_o, sel_o, adr_o, dat_i, dat_o, cr_o, sr_o, rb_i, state_o, trigger_o);
 input [63:0] hartid_i;
