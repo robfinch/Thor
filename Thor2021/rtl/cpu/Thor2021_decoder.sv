@@ -368,8 +368,9 @@ else
 	deco.jmptgt = {{30{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	
 deco.csr = ir.any.opcode==CSR;
-deco.rti = ir.any.opcode==OSR2 && ir.r2.func==RTI;
-deco.rex = ir.any.opcode==OSR2 && ir.r2.func==REX;
+deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
+deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
+deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 
 end
 

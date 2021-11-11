@@ -169,7 +169,8 @@ reg xDivi;
 reg xLoadr, xLoadn;
 reg xStorer, xStoren;
 reg [2:0] xSeg;
-reg xMemsz;
+reg [2:0] xMemsz;
+reg xTlb;
 reg xCsr;
 MemoryRequest memreq;
 MemoryResponse memresp;
@@ -429,6 +430,9 @@ SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
 SGTI,SGTIL:		res2 = $signed(xa) > $signed(imm);
 SLTUI,SLTUIL:	res2 = xa < imm;
 SGTUI,SGTUIL:	res2 = xa > imm;
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+							res2 = memresp.res;
 default:			res2 = 64'd0;
 endcase
 
@@ -472,7 +476,7 @@ Thor2021_gselectPredictor ubp
 
 Thor2021_biu ubiu
 (
-	.rst(rst),
+	.rst(rst_i),
 	.clk(clk_g),
 	.tlbclk(clk2x_i),
 	.UserMode(UserMode),
@@ -578,15 +582,30 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 assign run = ihit && (state==RUN);
-assign adcance_w = run;
-assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle;
-assign advance_d = (advance_x | ~xval);
-assign advance_i = (advance_d | ~dval);
+assign advance_w = run;
+assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle & run;
+assign advance_d = (advance_x | ~xval) & run;
+assign advance_i = (advance_d | ~dval) & run;
 
 always_ff @(posedge clk_g)
 if (rst_i) begin
 	state <= RESTART1;
 	ld_time <= FALSE;
+	wval <= INV;
+	xval <= INV;
+	dval <= INV;
+	ival <= INV;
+	xIsMultiCycle <= FALSE;
+	tid <= 8'h00;
+	memreq.tid <= 8'h00;
+	memreq.step <= 6'd0;
+	memreq.wr <= 1'b0;
+	memreq.func <= 4'd0;
+	memreq.func2 <= 3'd0;
+	memreq.adr <= 64'h0;
+	memreq.seg <= 5'd0;
+	memreq.dat <= 128'd0;
+	memreq.sel <= 16'h0;
 end
 else begin
 	xrfwr <= FALSE;
@@ -607,6 +626,10 @@ RESTART1:
 		pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
 		plStack <= 64'hffffffffffffffff;	// PL = 255
 		istk_depth <= 4'd1;
+		wval <= INV;
+		xval <= INV;
+		dval <= INV;
+		ival <= INV;
 		goto(RESTART2);
 	end
 RESTART2:
@@ -679,6 +702,7 @@ RUN:
 		xStoren <= deco.storen;
 		xLdz <= deco.ldz;
 		xMemsz <= deco.memsz;
+		xTlb <= deco.tlb;
 		xIsMultiCycle <= deco.multi_cycle;
 		xrfwr <= deco.rfwr;
 		xcarfwr <= deco.carfwr;
@@ -850,7 +874,7 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
-    if (xLoadn) begin
+    else if (xLoadn) begin
     	memreq.tid <= tid;
     	tid <= tid + 2'd1;
     	memreq.func <= xLdz ? MR_LOADZ : MR_LOAD;
@@ -865,7 +889,7 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
-    if (xStorer) begin
+    else if (xStorer) begin
     	memreq.tid <= tid;
     	tid <= tid + 2'd1;
     	memreq.func <= MR_STORE;
@@ -881,7 +905,7 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
-    if (xStoren) begin
+    else if (xStoren) begin
     	memreq.tid <= tid;
     	tid <= tid + 2'd1;
     	memreq.func <= MR_STORE;
@@ -897,6 +921,18 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
+    else if (xTlb) begin
+    	memreq.tid <= tid;
+    	tid <= tid + 2'd1;
+    	memreq.func <= MR_TLB;
+    	memreq.func2 <= MR_STO;
+    	memreq.sel <= 16'h00FF;
+    	memreq.adr <= xa;
+    	memreq.dat <= xb;
+    	memreq.seg <= {2'd0,3'd0};
+    	memreq.wr <= TRUE;
+    	goto (WAIT_MEM1);
+  	end
 	end
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -990,7 +1026,6 @@ WAIT_MEM2:
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ) begin
 					xrfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
-						res <= memresp.res;
 						xrfwr <= TRUE;
 					end
 				end
@@ -1089,7 +1124,6 @@ default:
 endcase
 
 end
-
 
 task inv_i;
 begin
@@ -1309,11 +1343,11 @@ begin
   		$display("ADD r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
   ORI:		$display("OR r%d,r%d,%d", ir.ri.Rt, ir.ri.Ra, ir.ri.imm);
   ORIL:		$display("OR r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
-  LDT:		$display("LDT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
-  LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
-  LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
-  STT:		$display("STT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
-  STO:		$display("STO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.Ra);
+  LDT:		$display("LDT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
+  LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
+  LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
+  STT:		$display("STT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.st.Ra);
+  STO:		$display("STO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.st.Ra);
   RTS:   	$display("RTS #%d", ir.rts.cnst);
   endcase
 end

@@ -96,7 +96,7 @@ typedef struct {
 
 #define EXI7	0x46
 #define EXI23	0x47
-#define EXI41	0x7C
+#define EXI41	0x6C
 #define EXI55	0x49
 #define EXIM	0x4A
 

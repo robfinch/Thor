@@ -409,6 +409,15 @@ initial begin
   end
 end
 
+initial begin
+  for (n = 0; n < 512/4; n = n + 1) begin
+    icvalid[0][n] = 1'b0;
+    icvalid[1][n] = 1'b0;
+    icvalid[2][n] = 1'b0;
+    icvalid[3][n] = 1'b0;
+  end
+end
+
 always_comb
 begin
   case(1'b1)
@@ -1286,8 +1295,8 @@ else begin
 	// cache line.
 	IFETCH0:
 		begin
-			ipo <= {csip[63:6],7'b0};
-			iadr <= {csip[63:6],7'b0};
+			ipo <= {csip[63:6],6'b0};
+			iadr <= {csip[63:6],6'b0};
 			goto (IFETCH1);
 			for (n = 0; n < 5; n = n + 1) begin
 				if (ivtag[n]==csip[AWID-1:6] && ivvalid[n]) begin
