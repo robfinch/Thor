@@ -67,7 +67,7 @@ case(ir.any.opcode)
 STB,STW,STT,STO,STOC,
 STBX,STWX,STTX,STOX,STOCX,
 STOS:
-	Rc = ir[14:9];
+	Rc = ir.st.Rs;
 default:	Rc = ir[34:29];
 endcase
 
@@ -152,6 +152,16 @@ ADDIL,CMPIL,SEQIL,SNEIL,SLTIL:
 	imm = {{41{ir[43]}},ir[43:21]};
 ANDIL:	imm = {{41{1'b1}},ir[43:21]};
 ORIL,XORIL:	imm = {{41{1'b0}},ir[43:21]};
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO:
+	imm = {{40{ir.ld.disp[23]}},ir.ld.disp};
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+	imm = {{56{ir.ldx.disp[7]}},ir.ldx.disp};
+STB,STW,STT,STO:
+	imm = {{40{ir.st.disp[23]}},ir.st.disp};
+STBX,STWX,STTX,STOX:
+	imm = {{56{ir.stx.disp[7]}},ir.stx.disp};
+LDOS:	imm = {{56{ir.sts.disp[7]}},ir.lds.disp};
+STOS:	imm = {{56{ir.sts.disp[7]}},ir.sts.disp};
 default:
 	imm = 64'd0;
 endcase
@@ -271,6 +281,27 @@ LDTX,LDTUX,STT:		deco.memsz = tetra;
 default:	deco.memsz = octa;
 endcase
 
+case(ir.any.opcode)
+LDB,LDBU:	deco.seg = ir.ld.seg;
+LDW,LDWU:	deco.seg = ir.ld.seg;
+LDT,LDTU:	deco.seg = ir.ld.seg;
+LDO:			deco.seg = ir.ld.seg;
+LDOS:			deco.seg = ir.lds.seg;
+LDBX,LDBUX:	deco.seg = ir.ldx.seg;
+LDWX,LDWUX:	deco.seg = ir.ldx.seg;
+LDTX,LDTUX:	deco.seg = ir.ldx.seg;
+LDOX:			deco.seg = ir.ldx.seg;
+STB:			deco.seg = ir.st.seg;
+STW:			deco.seg = ir.st.seg;
+STT:			deco.seg = ir.st.seg;
+STO:			deco.seg = ir.st.seg;
+STOS:			deco.seg = ir.sts.seg;
+STBX:			deco.seg = ir.stx.seg;
+STWX:			deco.seg = ir.stx.seg;
+STTX:			deco.seg = ir.stx.seg;
+STOX:			deco.seg = ir.stx.seg;
+default:	deco.seg = 3'd0;
+endcase
 
 case(ir.any.opcode)
 JMP,DJMP:	deco.jmp = TRUE;
@@ -306,11 +337,11 @@ R2:
 	endcase
 MULI,MULIL:		deco.multi_cycle = TRUE;
 DIVI,DIVIL:		deco.multi_cycle = TRUE;
-JMP,DJMP:			deco.multi_cycle = TRUE;
+JMP,DJMP:			deco.multi_cycle = FALSE;
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	deco.multi_cycle = TRUE;
+	deco.multi_cycle = FALSE;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	deco.multi_cycle = TRUE;
+	deco.multi_cycle = FALSE;
 RTS:	deco.multi_cycle = TRUE;
 CACHE,CACHEX:	deco.multi_cycle = TRUE;
 LDB,LDBU,STB:	deco.multi_cycle = TRUE;
@@ -371,6 +402,19 @@ deco.csr = ir.any.opcode==CSR;
 deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
+deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
+
+case(ir.any.opcode)
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU,
+DJMP:	deco.wrlc = TRUE;
+VM:
+	case(ir.vmr2.func)
+	MTLC:	deco.wrlc = FALSE;	// MTLC will update LC in Thor2021io.sv
+	default:	deco.wrlc = FALSE;
+	endcase
+default:
+	deco.wrlc = FALSE;
+endcase
 
 end
 

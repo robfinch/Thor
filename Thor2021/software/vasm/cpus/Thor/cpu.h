@@ -71,6 +71,7 @@ typedef struct {
 #define OP_REG7						0x20000000L
 
 #define OP_NEXT			-1
+#define OP_NEXTREG	-2
 
 /* supersets of other operands */
 #define OP_IMM			(OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78)

@@ -902,7 +902,7 @@ else begin
 	    		  tEA(ea);
 	      		xlaten <= TRUE;
 	      		// Setup proper select lines
-			      sel <= zero_data ? 32'h0003 << ea[3:0] : {32'h0,memreq.sel} << ea[3:0];
+			      sel <= zero_data ? 32'h0001 << ea[3:0] : {32'h0,memreq.sel} << ea[3:0];
 			      // Shift output data into position
 	    		  dat <= zero_data ? 256'd0 : {128'd0,memreq.dat} << {ea[3:0],3'b0};
 			  		goto (MEMORY3);
@@ -970,8 +970,8 @@ else begin
 	    	vda_o <= HIGH;
 	      cyc_o <= HIGH;
 	      stb_o <= HIGH;
-	      for (n = 0; n < 32; n = n + 2)
-	      	sel_o[n>>1] <= sel[n];
+	      for (n = 0; n < 16; n = n + 1)
+	      	sel_o[n] <= sel[n];
 //	      sel_o <= sel[15:0];
 	      dat_o <= dat[127:0];
 	      case(memreq.func)
@@ -1133,8 +1133,8 @@ else begin
 		 			tDeactivateBus();
 				else begin
 	      	stb_o <= HIGH;
-		      for (n = 0; n < 32; n = n + 2)
-		      	sel_o[n>>1] <= sel[n+32];
+		      for (n = 0; n < 16; n = n + 1)
+		      	sel_o[n] <= sel[n+16];
 //	      	sel_o <= sel[31:16];
 	      	dat_o <= dat[255:128];
 	    	end

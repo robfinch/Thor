@@ -135,6 +135,7 @@ wire dAddi = deco.addi;
 wire dld = deco.ld;
 wire dst = deco.st;
 Value rfoa, rfob, rfoc;
+reg [63:0] dlc;
 
 // Execute stage vars
 reg xval;
@@ -172,6 +173,9 @@ reg [2:0] xSeg;
 reg [2:0] xMemsz;
 reg xTlb;
 reg xCsr;
+reg xMtlc;
+reg xwrlc;
+reg [63:0] xlc;
 MemoryRequest memreq;
 MemoryResponse memresp;
 reg memresp_fifo_rd;
@@ -193,6 +197,9 @@ reg [5:0] wRt;
 reg wCsr;
 reg wRti;
 reg wRex;
+reg wMtlc;
+reg wwrlc;
+reg [63:0] wlc;
 Value wa;
 Value wres;
 
@@ -268,9 +275,9 @@ Thor2021_decoder udec (ir, xir, deco);
 always_comb
 if (Ra==6'd0 && (dAddi | dld | dst))
   rfoa = {VALUE_SIZE{1'b0}};
-else if (Ra==xRt)
+else if (Ra==xRt && xval && xrfwr)
   rfoa = res;
-else if (Ra==wRt)
+else if (Ra==wRt && wval && wrfwr)
 	rfoa = wres;
 else
   case(Ra)
@@ -281,9 +288,9 @@ else
 always_comb
 if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
-else if (Rb==xRt)
+else if (Rb==xRt && xval && xrfwr)
   rfob = res;
-else if (Rb==wRt)
+else if (Rb==wRt && wval && wrfwr)
 	rfob = wres;
 else
   case(Rb)
@@ -294,15 +301,27 @@ else
 always_comb
 if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
-else if (Rc==xRt)
+else if (Rc==xRt && xval && xrfwr)
   rfoc = res;
-else if (Rc==wRt)
+else if (Rc==wRt && wval && wrfwr)
 	rfoc = wres;
 else
   case(Rc)
   6'd63:  rfoc = sp [{omode,ilvl}];
   default:    rfoc = regfile[Rc];
   endcase
+
+always_comb
+	if (xMtlc && xval && xrfwr)
+		dlc = res;
+	else if (xwrlc && xval)
+		dlc = xlc;
+	else if (wMtlc && wres && wrfwr)
+		dlc = wres;
+	else if (wwrlc && wval)
+		dlc = wlc;
+	else
+		dlc = lc;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute stage combinational logic
@@ -407,6 +426,12 @@ R2:
 	DIVSU:	res2 = qo;
 	MUX:	res2 = mux_out;
 	default:			res2 = 64'd0;
+	endcase
+VM:
+	case(xir.vmr2.func)
+	MTLC:			res2 <= xa;
+	MFLC:			res2 <= xlc;
+	default:	res2 <= 64'd0;
 	endcase
 CSR:		res2 = csr_res;
 BTFLD:	res2 = bf_out;
@@ -584,8 +609,8 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 assign run = ihit && (state==RUN);
 assign advance_w = run;
 assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle & run;
-assign advance_d = (advance_x | ~xval) & run;
-assign advance_i = (advance_d | ~dval) & run;
+assign advance_d = (advance_x | ~xval) & ihit;
+assign advance_i = (advance_d | ~dval) & ihit;
 
 always_ff @(posedge clk_g)
 if (rst_i) begin
@@ -596,6 +621,7 @@ if (rst_i) begin
 	dval <= INV;
 	ival <= INV;
 	xIsMultiCycle <= FALSE;
+	xSeg <= 3'd0;
 	tid <= 8'h00;
 	memreq.tid <= 8'h00;
 	memreq.step <= 6'd0;
@@ -608,8 +634,6 @@ if (rst_i) begin
 	memreq.sel <= 16'h0;
 end
 else begin
-	xrfwr <= FALSE;
-	xcarfwr <= FALSE;
 	memreq.wr <= FALSE;
 	if (ld_time==TRUE && wc_time_dat==wc_time)
 		ld_time <= FALSE;
@@ -630,6 +654,7 @@ RESTART1:
 		xval <= INV;
 		dval <= INV;
 		ival <= INV;
+		lc <= 64'd0;
 		goto(RESTART2);
 	end
 RESTART2:
@@ -646,9 +671,9 @@ RUN:
 	if (advance_i) begin
 		ival <= VAL;
 		ip <= next_ip;
-		if (insn.jmp.Ca==3'd0 && insn.any.opcode==JMP)
+		if (insn.jmp.Ca==3'd0 && (insn.any.opcode==JMP || insn.any.opcode==DJMP))
 			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		else if (insn.jmp.Ca==3'd7 && insn.any.opcode==JMP)
+		else if (insn.jmp.Ca==3'd7 && (insn.any.opcode==JMP || insn.any.opcode==DJMP))
 			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (btbe & btb_hit)
 			ip <= btb_tgt;
@@ -667,6 +692,8 @@ RUN:
 	// Wait for cache load
 	else begin
 		ip <= ip;
+		if (advance_d)
+			inv_d();
 	end	
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -682,6 +709,7 @@ RUN:
 		xb <= rfob;
 		xc <= rfoc;
 		imm <= deco.imm;
+		xlc <= dlc;
 		xRa <= Ra;
 		xRb <= Rb;
 		xRc <= Rc;
@@ -702,6 +730,7 @@ RUN:
 		xStoren <= deco.storen;
 		xLdz <= deco.ldz;
 		xMemsz <= deco.memsz;
+		xSeg <= deco.seg;
 		xTlb <= deco.tlb;
 		xIsMultiCycle <= deco.multi_cycle;
 		xrfwr <= deco.rfwr;
@@ -718,6 +747,8 @@ RUN:
 		xCsr <= deco.csr;
 		xRti <= deco.rti;
 		xRex <= deco.rex;
+		xMtlc <= deco.mtlc;
+		xwrlc <= deco.wrlc;
 		xcause <= dcause;
 		xpredict_taken <= dpredict_taken;
 	end
@@ -728,25 +759,28 @@ RUN:
   // Execute stage
   // If the execute stage has been invalidated it doesn't do anything. 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	if (xval) begin
+	if (advance_x) begin
 		wval <= xval;
 		wir <= xir;
 		wRt <= xRt;
 		wrfwr <= xrfwr;
 		wres <= res;
+		wlc <= xlc;
 		wCsr <= xCsr;
 		wRti <= xRti;
 		wRex <= xRex;
+		wMtlc <= xMtlc;
+		wwrlc <= xwrlc;
 		wa <= xa;
     if (xJxx) begin
     	if (xdj)
-    		lc = lc - 2'd1;
+    		wlc = xlc - 2'd1;
     	if (ir.jxx.lk != 2'd0) begin
 	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
 	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
     	end
       if (bpe) begin
-        if (xpredict_taken && !(xdj ? takb && lc != 64'd0 : takb)) begin
+        if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb)) begin
 			    ival <= INV;
 			    inv_d();
 			    inv_x();
@@ -763,7 +797,7 @@ RUN:
 	    			goto (WAIT_MEM1);
 	    		end
         end
-        else if (!xpredict_taken && (xdj ? takb && lc != 64'd0 : takb)) begin
+        else if (!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) begin
 			    ival <= INV;
 			    inv_d();
 			    inv_x();
@@ -785,7 +819,7 @@ RUN:
 	    		end
         end
       end
-      else if (xdj ? (takb && lc != 64'd0) : takb) begin
+      else if (xdj ? (takb && xlc != 64'd0) : takb) begin
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
@@ -809,7 +843,7 @@ RUN:
     end
     if (xJmp) begin
     	if (xdj)
-    		lc = lc - 2'd1;
+    		wlc = xlc - 2'd1;
 	  	if (ir.jxx.lk != 2'd0) begin
 	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
 	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
@@ -850,6 +884,8 @@ RUN:
 	  			goto (WAIT_MEM1);
 	  		end
   		end
+  	if (xMtlc)
+  		wlc <= res;
   	end
 
     if (xIsMul)
@@ -934,6 +970,8 @@ RUN:
     	goto (WAIT_MEM1);
   	end
 	end
+	else if (advance_w)
+		inv_w();
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Writeback stage
@@ -1004,6 +1042,10 @@ RUN:
 		    if (wRt==6'd63)
 		      gie <= TRUE;
 		  end
+		  if (wMtlc)
+		  	lc <= wres;
+		  else if (wwrlc)
+		  	lc <= wlc;
 		end
   end
 	end	// RUN

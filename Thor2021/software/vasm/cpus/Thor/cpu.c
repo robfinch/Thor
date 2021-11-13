@@ -145,7 +145,7 @@ mnemonic mnemonics[]={
 	"dbne",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000037LL,6},
 	"dbra",	{OP_IMM,0,0,0,0},{B2,CPU_ALL,0,0x0000E0000030LL,6},
 
-	"di",		{OP_NEXT,OP_NEXT,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x2C0000000007LL,6},
+	"di",		{OP_NEXTREG,OP_NEXTREG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x2C0000000007LL,6},
 	"dif",	{OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
 
 	"div", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x142LL,6},	// 3r
@@ -221,7 +221,7 @@ mnemonic mnemonics[]={
 	"jsr",	{OP_LK,OP_IMM,0,0,0}, {JL2,CPU_ALL,0,0x00000020LL,6},
 	"jsr",	{OP_IMM,0,0,0,0}, {J2,CPU_ALL,0,0x00000220LL,6},
 
-	"ldi", {OP_REG,OP_NEXT,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD4LL,6,0x04LL,4},
+	"ldi", {OP_REG,OP_NEXTREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD4LL,6,0x04LL,4},
 
 	"ldb",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x80LL,6},	
 	"ldb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB0LL,6},	
@@ -249,8 +249,8 @@ mnemonic mnemonics[]={
 	"max",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x520000000002LL,6},	// 3r
 	"memdb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF9,2},
 	"memsb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF8,2},
-	"mfsel",	{OP_REG,OP_NEXT,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	// 3r
-	"mfsel",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	// 3r
+	"mfsel",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	// 3r
+	"mfsel",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	// 3r
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	// 3r
 
 	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
@@ -262,10 +262,10 @@ mnemonic mnemonics[]={
 	"movzxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0811F00000AALL,6},
 	"movzxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0813F00000AALL,6},
 
-	"mtlc",		{OP_REG,0,0,0,0}, {R1,CPU_ALL,0,0xA0000052LL,4},
+	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
 
-	"mtsel",	{OP_NEXT,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
-	"mtsel",	{OP_NEXT,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
+	"mtsel",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
+	"mtsel",	{OP_NEXTREG,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
 
 	"mul", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x1D2LL,6},	// 3r
 	"mul", {OP_VREG,OP_VREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x1D2LL,6},
@@ -307,22 +307,22 @@ mnemonic mnemonics[]={
 	"orn", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x060000000102LL,6},	// 3r
 	"orn", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x060000000002LL,6},	// 3r
 
-	"peekq",	{OP_REG,OP_NEXT,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	// 3r
-	"peekq",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	// 3r
+	"peekq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	// 3r
+	"peekq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	// 3r
 
 	"pfi",	{OP_REG,0,0,0,0},{R3RR,CPU_ALL,0,0x220000000007LL,6},	// 3r
 
-	"popq",	{OP_REG,OP_NEXT,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	// 3r
-	"popq",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	// 3r
+	"popq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	// 3r
+	"popq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	// 3r
 
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x281000000002LL,6},
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
 
-	"pushq",	{OP_NEXT,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	// 3r
-	"pushq",	{OP_NEXT,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	// 3r
+	"pushq",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	// 3r
+	"pushq",	{OP_NEXTREG,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	// 3r
 
-	"resetq",	{OP_NEXT,OP_NEXT,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x180000000007LL,6},	// 3r
-	"resetq",	{OP_NEXT,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x180000000007LL,6},	// 3r
+	"resetq",	{OP_NEXTREG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x180000000007LL,6},	// 3r
+	"resetq",	{OP_NEXTREG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x180000000007LL,6},	// 3r
 
 	"revbit",	{OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x50000001LL,4},
 
@@ -350,7 +350,7 @@ mnemonic mnemonics[]={
 	"rts",	{OP_LK,0,0,0,0}, {RTS,CPU_ALL,0,0x00F2LL, 2},
 	"rts",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x02F2LL, 2},
 
-	"sei",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x2E0000000007LL,6},	// 3r
+	"sei",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x2E0000000007LL,6},	// 3r
 
 	"seq", {OP_VREG,OP_VREG,OP_VREG,OP_VMREG,0}, {R3,CPU_ALL,0,0x4C0000000102LL,6},	// 3r
 	"seq", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x4C0000000102LL,6},	// 3r
@@ -383,12 +383,11 @@ mnemonic mnemonics[]={
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	// 3r
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	// 3r
 
-	"statq",	{OP_REG,OP_NEXT,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
-	"statq",	{OP_REG,OP_NEXT,OP_REG,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
+	"statq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
+	"statq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
 
 	"stb",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x90LL,6},	
 	"stb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC0LL,6},	
-	"sto",	{OP_REG,OP_SEL|OP_REGIND8,0,0,0}, {REGIND,CPU_ALL,0,0x95LL,4},	
 	"sto",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x93LL,6,0x95LL,4},	
 	"sto",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x93LL,6},	
 	"sto",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC3LL,6},	
@@ -728,6 +727,12 @@ int parse_operand(char *p,int len,operand *op,int requires)
 	op->selector = -1;
 	op->value = NULL;
 
+	if (requires==OP_NEXTREG) {
+    op->type = OP_REG;
+    op->basereg = 0;
+    op->value = number_expr((taddr)0);
+		return (PO_NEXT);
+	}
 	if (requires==OP_NEXT) {
     op->value = number_expr((taddr)0);
 		return (PO_NEXT);
@@ -1414,7 +1419,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 							if (prefix)
 								*prefix = ((val >> 25LL) << 9LL) | EXI41 | ((val >> 23) & 3LL);
 	 						isize = (6<<8)|6;
-							if (!is_nbit(val,62)) {
+							if (!is_nbit(val,64)) {
 								if (prefix)
 									*prefix = ((val >> 23LL) << 9LL) | EXI55;
 		 						isize = (8<<8)|6;
@@ -1434,6 +1439,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 				case (2<<8)|6:
 				case (4<<8)|6:
 				case (6<<8)|6:
+				case (8<<8)|6:
 					*insn = *insn | ((val & 0x7fffffLL) << 21LL);
 					break;
 				}
@@ -1466,12 +1472,19 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 			if (prefix)
 				*prefix = ((val >> 23LL) << 9LL) | EXI23;
 		}
-		else {
+		else if (abits < 64) {
 			isize = (6<<8)|6;
 			if (insn)
 				*insn = *insn | ((val & 0x7fffffLL) << 21LL);
 			if (prefix)
 				*prefix = ((val >> 25LL) << 9LL) | EXI41 | ((val >> 23) & 3LL);
+		}
+		else {
+			isize = (8<<8)|6;
+			if (insn)
+				*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+			if (prefix)
+				*prefix = ((val >> 23LL) << 9LL) | EXI55;
 		}
 	}
 	return (isize);

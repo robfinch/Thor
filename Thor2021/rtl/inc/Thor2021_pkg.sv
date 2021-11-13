@@ -42,6 +42,8 @@ package Thor2021_pkg;
 `define QSLOTS	2		// number of simulataneously queueable instructions
 `define RENTRIES	8	// number of reorder buffer entries
 
+parameter RSTIP	= 64'hFF000007FFFD0000;
+
 parameter QSLOTS	= `QSLOTS;
 parameter RENTRIES	= `RENTRIES;
 parameter BitsQS	= $clog2(`QSLOTS-1);
@@ -76,11 +78,18 @@ parameter ADCI		= 8'h0C;
 parameter	SBCFI		= 8'h0D;
 parameter MULUI		= 8'h0E;
 parameter CSR			= 8'h0F;
-
+parameter CSRRD			= 3'd0;
+parameter CSRRW			=	3'd1;
+parameter CSRRS			= 3'd2;
+parameter CSRRC			= 3'd3;
 parameter BEQZ		= 8'h10;
+parameter JEQZ		= 8'h10;
 parameter DBEQZ		= 8'h11;
+parameter DJEQZ		= 8'h11;
 parameter BNEZ		= 8'h12;
+parameter	JNEZ		= 8'h12;
 parameter DBNEZ		= 8'h13;
+parameter DJNEZ		= 8'h13;
 parameter JGATE		= 8'h14;
 parameter MULFI		= 8'h15;
 parameter SEQI		= 8'h16;
@@ -138,6 +147,7 @@ parameter VMFILL	= 8'h53;
 parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
+parameter CMPUI		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
 parameter F3			= 8'h63;
@@ -147,7 +157,25 @@ parameter DF3			= 8'h67;
 parameter P1			= 8'h69;
 parameter P2			= 8'h6A;
 parameter P3			= 8'h6B;
-parameter EXI41		= 8'b011111??
+parameter EXI41		= 8'b011011??;
+
+parameter LDB			= 8'h80;
+parameter LDBU		= 8'h81;
+parameter LDW			= 8'h82;
+parameter LDWU		= 8'h83;
+parameter LDT			= 8'h84;
+parameter LDTU		= 8'h85;
+parameter LDO			= 8'h86;
+parameter LDOS		= 8'h87;
+
+parameter STB			= 8'h90;
+parameter STW			= 8'h91;
+parameter STT			= 8'h92;
+parameter STO			= 8'h93;
+parameter STOC		= 8'h94;
+parameter STOS		= 8'h95;
+parameter CACHE		= 8'h9F;
+
 parameter SYS			= 8'hA5;
 parameter INT			= 8'hA6;
 parameter MOV			= 8'hA7;
@@ -159,6 +187,22 @@ parameter ANDM			= 4'h8;
 parameter BFSET			= 4'h9;
 parameter BFCHG			= 4'hA;
 parameter BFCLR			= 4'hB;
+
+parameter LDBX		= 8'hB0;
+parameter LDBUX		= 8'hB1;
+parameter LDWX		= 8'hB2;
+parameter LDWUX		= 8'hB3;
+parameter LDTX		= 8'hB4;
+parameter LDTUX		= 8'hB5;
+parameter LDOX		= 8'hB6;
+
+parameter STBX		= 8'hC0;
+parameter STWX		= 8'hC1;
+parameter STTX		= 8'hC2;
+parameter STOX		= 8'hC3;
+parameter STOCX		= 8'hC4;
+parameter CACHEX	= 8'hCF;
+
 parameter LDxX		= 8'hB0;
 parameter STxX		= 8'hC0;
 
@@ -189,6 +233,8 @@ parameter MEMDB		= 8'hF9;
 parameter WFI			= 8'hFA;
 parameter SEI			= 8'hFB;
 
+parameter NOP_INSN	= NOP;
+
 // R1
 parameter CNTLZ		= 7'h00;
 parameter CNTLO		= 7'h01;
@@ -205,7 +251,7 @@ parameter NOR			= 7'h01;
 parameter XNOR		= 7'h02;
 parameter ORC			= 7'h03;
 parameter ADD			= 7'h04;
-parameter SUBF		= 7'h05;
+parameter SUB			= 7'h05;
 parameter MUL			= 7'h06;
 parameter AND			= 7'h08;
 parameter OR			= 7'h09;
@@ -248,6 +294,7 @@ parameter ROR			= 7'h44;
 // OSR2
 parameter REX			= 7'h10;
 parameter RTI			= 7'h13;
+parameter TLBRW		= 7'h1E;
 
 // VM
 parameter VMADD		= 5'h04;
@@ -262,6 +309,8 @@ parameter MTVM		= 5'h10;
 parameter MFVM		= 5'h11;
 parameter MTVL		= 5'h12;
 parameter MFVL		= 5'h13;
+parameter MTLC		= 5'h14;
+parameter MFLC		= 5'h15;
 parameter VMSLL0	= 5'h1C;
 parameter VMSLL1	= 5'h1D;
 parameter VMSRL0	= 5'h1E;
@@ -375,7 +424,7 @@ parameter CSR_MHARTID = 16'h3001;
 parameter CSR_TICK	= 16'h3002;
 parameter CSR_MBADADDR	= 16'h3007;
 parameter CSR_MTVEC = 16'b0011_0000_0011_0???;
-parameter CSR_MSVEC = 16'b0011_0000_0011_1???;
+parameter CSR_MPLSTACK	= 16'h303F;
 parameter CSR_MPMSTACK	= 16'h3040;
 parameter CSR_MSTATUS	= 16'h3044;
 parameter CSR_MVSTEP= 16'h3046;
@@ -383,16 +432,19 @@ parameter CSR_MVTMP	= 16'h3047;
 parameter CSR_MEIP	=	16'h3048;
 parameter CSR_MECS	= 16'h3049;
 parameter CSR_MPCS	= 16'h304A;
-parameter CSR_MCA		=	16'h310?;
+parameter CSR_MCA		=	16'b0011_0100_000?_????;
+parameter CSR_MSEL	= 16'h0011_0100_0010_0???;
 parameter CSR_DSTUFF0	= 16'h4042;
 parameter CSR_DSTUFF1	= 16'h4043;
 parameter CSR_DTCBPTR=16'h4050;
 parameter CSR_MGDT	= 16'h3051;
 parameter CSR_MLDT	= 16'h3052;
+parameter CSR_MTCB	= 16'h3054;
 parameter CSR_DBVEC	= 16'b0100_0000_0101_1???;
 parameter CSR_DSP		= 16'h4060;
 parameter CSR_TIME	= 16'h?FE0;
 parameter CSR_MTIME	= 16'h3FE0;
+parameter CSR_MTIMECMP	= 16'h3FE1;
 
 parameter FLT_NONE	= 8'h00;
 parameter FLT_TLBMISS = 8'h04;
@@ -406,14 +458,16 @@ parameter FLT_SGB		= 8'h34;
 parameter FLT_PRIV	= 8'h35;
 parameter FLT_WD		= 8'h36;
 parameter FLT_UNIMP	= 8'h37;
+parameter FLT_DBZ		= 8'h38;
 parameter FLT_PMA		= 8'h3D;
 parameter FLT_BRK		= 8'h3F;
+parameter FLT_TMR		= 8'hE2;
 parameter FLT_NMI		= 8'hFE;
 
 parameter pL1CacheLines = 64;
 parameter pL1LineSize = 512;
 parameter pL1ICacheLines = 512;
-parameter pL1ICacheLineSize = 548;
+parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
 typedef logic [63:0]	Value;
@@ -537,7 +591,7 @@ typedef struct packed
 	logic [5:0] Rb;
 	logic [5:0] Ra;
 	logic [3:0] Tgtlo;
-	logic [1:0] Rt;
+	logic [1:0] lk;
 	logic v;
 	logic [7:0] opcode;
 } jxxinst;
@@ -555,9 +609,9 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [39:0] pad;
+	logic [31:0] pad;
 	logic [4:0] func;
-	logic pad1;
+	logic [8:0] pad1;
 	logic [2:0] Vmb;
 	logic [2:0] Vma;
 	logic [2:0] Vmt;
@@ -605,10 +659,13 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [23:0] pad;
-	logic [5:0] func;
+	logic [15:0] pad;
+	logic [2:0] m;
+	logic z;
+	logic c;
+	logic [7:0] disp;
 	logic [2:0] seg;
-	logic [1:0] Sc;
+	logic [2:0] Sc;
 	logic [1:0] Tb;
 	logic [5:0] Rb;
 	logic [5:0] Ra;
@@ -619,28 +676,39 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [31:0] pad;
+	logic [15:0] pad;
 	logic [2:0] seg;
-	logic [1:0] Tb;
-	logic [5:0] Rb;
+	logic [23:0] disp;
 	logic [5:0] Ra;
-	logic [5:0] disp;
+	logic [5:0] Rs;
 	logic v;
 	logic [7:0] opcode;
 } st_inst;
 
 typedef struct packed
 {
-	logic [15:0] pad;
-	logic [5:0] func;
+	logic [31:0] pad;
 	logic [2:0] seg;
-	logic [1:0] Sc;
-	logic [1:0] Tc;
-	logic [5:0] Rc;
+	logic [7:0] disp;
+	logic [5:0] Ra;
+	logic [5:0] Rs;
+	logic v;
+	logic [7:0] opcode;
+} sts_inst;
+
+typedef struct packed
+{
+	logic [15:0] pad;
+	logic [2:0] m;
+	logic z;
+	logic c;
+	logic [7:0] disp;
+	logic [2:0] seg;
+	logic [2:0] Sc;
 	logic [1:0] Tb;
 	logic [5:0] Rb;
 	logic [5:0] Ra;
-	logic [5:0] Rt;
+	logic [5:0] Rs;
 	logic v;
 	logic [7:0] opcode;
 } stx_inst;
@@ -667,7 +735,7 @@ typedef struct packed
 	logic [2:0] m;
 	logic z;
 	logic [2:0] op;
-	logic [3:0] pad;
+	logic [3:0] padlo;
 	logic [15:0] regno;
 	logic [5:0] Ra;
 	logic [5:0] Rt;
@@ -692,6 +760,7 @@ typedef union packed
 	vld_inst vld;
 	ldx_inst ldx;
 	st_inst st;
+	sts_inst sts;
 	stx_inst stx;
 	rm_inst rm;
 	csr_inst csr;
@@ -741,7 +810,7 @@ typedef struct packed
 	logic [4:0] seg;
 	logic [127:0] dat;
 	logic [15:0] sel;		// data byte select, indicates size of data
-} MemoryRequest;	// 230
+} MemoryRequest;	// 235
 
 // All the fields in this structure are *output* back to the system.
 typedef struct packed
@@ -797,6 +866,15 @@ typedef struct packed
 	logic [63:0] limit;
 	logic [63:0] pad_base;
 	logic [63:0] base;
+} SegDesc;
+
+typedef struct packed
+{
+	SegACR	acr;
+	logic [43:0] pad_limit;
+	logic [63:0] limit;
+	logic [63:0] pad_base;
+	logic [63:0] base;
 } MemSegDesc;
 
 typedef struct packed
@@ -821,17 +899,17 @@ parameter hexi = 3'd4;
 typedef struct packed
 {
 	logic rfwr;
-	lofic carfwr;
+	logic carfwr;
 	Value imm;
 	logic [5:0] Ra;
 	logic [5:0] Rb;
 	logic [5:0] Rc;
 	logic [5:0] Rt;
+	logic [1:0] Tb;
+	logic [1:0] Tc;
 	logic [2:0] Cat;
 	logic is_vector;			// a vector instruction
 	logic is_cbranch;			// is a conditional branch
-	logic mul;
-	logic div;
 	logic float;
 	logic addi;
 	logic ld;
@@ -847,6 +925,8 @@ typedef struct packed
 	logic storen;
 	logic ldz;
 	logic [2:0] memsz;
+	logic [2:0] seg;
+	logic tlb;
 	logic multi_cycle;
 	logic mul;
 	logic muli;
@@ -867,6 +947,8 @@ typedef struct packed
 	logic csr;
 	logic rti;
 	logic rex;
+	logic mtlc;
+	logic wrlc;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -995,11 +1077,11 @@ OSR2:
 	default: Source1Valid = TRUE;
 	endcase
 // Branches
-8'h2x:	Source1Valid = isn.br.Ra==6'd0;
-8'h3x:	Source1Valid = isn.br.Ra==6'd0;
-DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,BMAPI,MULUI,DIVUI:
+8'h2x:	Source1Valid = isn.jxx.Ra==6'd0;
+8'h3x:	Source1Valid = isn.jxx.Ra==6'd0;
+DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
 	Source1Valid = isn.ri.Ra==6'd0;
-CMPI,ADDIH,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIH,ORIH,XORIH:
+CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 	Source1Valid = isn.ri.Ra==6'd0;
 VM:
 	case(isn.vmr2.func)
@@ -1036,25 +1118,6 @@ P1:
 	endcase
 P2:	Source1Valid = isn.r2.Ra==6'd0;
 P3:	Source1Valid = isn.r3.Ra==6'd0;
-CMPIS:	Source1Valid = isn.ri.Ra==6'd0;
-F1L:
-	case(isn.r1l.func)
-	FSYNC:		Source1Valid = TRUE;
-	default:	Source1Valid = isn.r1.Ra==6'd0;
-	endcase
-F2L:	Source1Valid = isn.r2.Ra==6'd0;
-DF1L:
-	case(isn.r1l.func)
-	DFSYNC:		Source1Valid = TRUE;
-	default:	Source1Valid = isn.r1.Ra==6'd0;
-	endcase
-DF2L:	Source1Valid = isn.r2.Ra==6'd0;
-P1L:
-	case(isn.r1l.func)
-	PSYNC:		Source1Valid = TRUE;
-	default:	Source1Valid = isn.r1.Ra==6'd0;
-	endcase
-P2L:	Source1Valid = isn.r2.Ra==6'd0;
 8'h8x:	Source1Valid = isn.ld.Ra==6'd0;
 8'h9x:	Source1Valid = isn.st.Ra==6'd0;
 SYS:	Source1Valid = TRUE;
@@ -1066,7 +1129,7 @@ STxX:	Source1Valid = isn.stx.Ra==6'd0;
 8'hDx:Source1Valid = isn.ld.Ra==6'd0;
 8'hEx:Source1Valid = isn.st.Ra==6'd0;
 NOP:	Source1Valid = TRUE;
-RTS:	Source1Valid = isn.rts.Ra==2'd0;
+RTS:	Source1Valid = isn.rts.lk==2'd0;
 BCD:	Source1Valid = isn.r1.Ra==6'd0;
 SYNC,MEMSB,MEMDB,WFI:	Source1Valid = TRUE;
 SEI:	Source1Valid = isn.r1.Ra==2'd0;
@@ -1102,11 +1165,11 @@ OSR2:
 	default: Source2Valid = TRUE;
 	endcase
 // Branches
-8'h2x:	Source2Valid = isn.br.Rb==6'd0 || isn.br.Tb[1];
-8'h3x:	Source2Valid = isn.br.Rb==6'd0 || isn.br.Tb[1];
-DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,BMAPI,MULUI,DIVUI:
+8'h2x:	Source2Valid = isn.jxx.Rb==6'd0 || isn.jxx.Tb[1];
+8'h3x:	Source2Valid = isn.jxx.Rb==6'd0 || isn.jxx.Tb[1];
+DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
 	Source2Valid = TRUE;
-CMPI,ADDIH,BYTNDXI,WYDNDXI,UTF21NDXI,ANDIH,ORIH,XORIH:
+CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 	Source2Valid = TRUE;
 VM:
 	case(isn.vmr2.func)
@@ -1144,39 +1207,19 @@ P1:
 	endcase
 P2:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
 P3:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
-CMPIS:	Source2Valid = TRUE;
-F1L:
-	case(isn.r1l.func)
-	FSYNC:		Source2Valid = TRUE;
-	default:	Source2Valid = TRUE;
-	endcase
-F2L:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
-DF1L:
-	case(isn.r1l.func)
-	DFSYNC:		Source2Valid = TRUE;
-	default:	Source2Valid = TRUE;
-	endcase
-DF2L:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
-P1L:
-	case(isn.r1l.func)
-	PSYNC:		Source2Valid = TRUE;
-	default:	Source2Valid = TRUE;
-	endcase
-P2L:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
 8'h8x:	Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 || isn.r2.Tb[1] : TRUE;
-8'h9x:	Source2Valid = isn.st.Rb==6'd0 || isn.r2.Tb[1];
+8'h9x:	Source2Valid = VAL;
 SYS:	Source2Valid = TRUE;
 INT:	Source2Valid = TRUE;
 MOV:	Source2Valid = TRUE;
 BTFLD:	
 	case(isn.rm.func)
-	BFINSI:	Source2Valid = TRUE;
 	default:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
 	endcase
 LDxX:	Source2Valid = isn.ldx.Rb==6'd0 || isn.ldx.Tb[1];
 STxX:	Source2Valid = isn.stx.Rb==6'd0 || isn.stx.Tb[1];
 8'hDx:Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 || isn.r2.Tb[1] : TRUE;
-8'hEx:Source2Valid = isn.st.Rb==6'd0 || isn.r2.Tb[1];
+8'hEx:Source2Valid = VAL;
 NOP:	Source2Valid = TRUE;
 RTS:	Source2Valid = TRUE;
 BCD:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
@@ -1200,11 +1243,14 @@ R3:
 8'h2x:	Source3Valid = FALSE;
 8'h3x:	Source3Valid = FALSE;
 F3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
-DF3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r2.Tc[1];
+DF3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
 P3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
-8'h9x:	Source3Valid = isn.st.v ? isn.r3.Rc==6'd0 || isn.r3.Tc[1] : TRUE;
+8'h9x:	Source3Valid = isn.st.Rs==6'd0;
 BTFLD:	Source3Valid = isn.rm.Rc==6'd0 || isn.rm.Tc[1];
-STxX:	Source3Valid = isn.stx.Rc==6'd0 || isn.stx.Tc[1];
+STBX:	Source3Valid = isn.stx.Rs==6'd0;
+STWX:	Source3Valid = isn.stx.Rs==6'd0;
+STTX:	Source3Valid = isn.stx.Rs==6'd0;
+STOX:	Source3Valid = isn.stx.Rs==6'd0;
 8'hEx:Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
 default:
 	Source3Valid = TRUE;
