@@ -295,6 +295,8 @@ parameter ROR			= 7'h44;
 parameter REX			= 7'h10;
 parameter RTI			= 7'h13;
 parameter TLBRW		= 7'h1E;
+parameter MFSEL		= 7'h28;
+parameter MTSEL		= 7'h29;
 
 // VM
 parameter VMADD		= 5'h04;
@@ -402,15 +404,17 @@ parameter PNABS	= 6'h21;
 parameter PNEG	= 6'h22;
 
 
-parameter MR_LOAD = 3'd0;
-parameter MR_STORE = 3'd1;
-parameter MR_TLB = 3'd2;
-parameter MR_CACHE = 3'd3;
-parameter LEA2 = 3'd4;
+parameter MR_LOAD = 4'd0;
+parameter MR_STORE = 4'd1;
+parameter MR_TLB = 4'd2;
+parameter MR_CACHE = 4'd3;
+parameter LEA2 = 4'd4;
 //parameter RTS2 = 3'd5;
-parameter M_JALI	= 3'd5;
-parameter M_CALL	= 3'd6;
-parameter MR_LOADZ = 3'd7;		// unsigned load
+parameter M_JALI	= 4'd5;
+parameter M_CALL	= 4'd6;
+parameter MR_LOADZ = 4'd7;		// unsigned load
+parameter MR_MFSEL = 4'd8;
+parameter MR_MTSEL = 4'd9;
 
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_SEMA	= 16'h?00C;
@@ -804,13 +808,13 @@ typedef struct packed
 	logic [7:0] tid;		// tran id
 	logic [5:0] step;		// vector operation step
 	logic wr;
-	logic [2:0] func;		// function to perform
+	logic [3:0] func;		// function to perform
 	logic [3:0] func2;	// more resolution to function
 	Address adr;
 	logic [4:0] seg;
 	logic [127:0] dat;
 	logic [15:0] sel;		// data byte select, indicates size of data
-} MemoryRequest;	// 235
+} MemoryRequest;	// 236
 
 // All the fields in this structure are *output* back to the system.
 typedef struct packed
@@ -839,9 +843,8 @@ typedef struct packed
 	logic R;
 	logic W;
 	logic X;
-	logic [19:0] vpn;
-	logic [7:0] reseved;
-	logic [19:0] ppn;
+	logic [21:0] vpn;
+	logic [25:0] ppn;
 } TLBEntry;
 
 typedef struct packed
@@ -949,6 +952,8 @@ typedef struct packed
 	logic rex;
 	logic mtlc;
 	logic wrlc;
+	logic mfsel;
+	logic mtsel;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;

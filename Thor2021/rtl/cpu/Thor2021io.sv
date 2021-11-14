@@ -101,6 +101,12 @@ Value sp [0:31];
 Value lc;
 Address caregfile [0:15];
 
+integer n1;
+initial begin
+	for (n1 = 0; n1 < 64; n1 = n1 + 1)
+		regfile[n1] <= 64'd0;
+end
+
 // Instruction fetch stage vars
 reg ival;
 reg [15:0] icause;
@@ -152,7 +158,8 @@ Value imm;
 reg [2:0] xSc;
 wire takb;
 reg xpredict_taken;
-reg xJmp, xJmptgt;
+reg xJmp;
+reg [63:0] xJmptgt;
 reg xJxx;
 reg xdj;
 reg xRts, xRti;
@@ -175,6 +182,7 @@ reg xTlb;
 reg xCsr;
 reg xMtlc;
 reg xwrlc;
+reg xMfsel,xMtsel;
 reg [63:0] xlc;
 MemoryRequest memreq;
 MemoryResponse memresp;
@@ -275,9 +283,9 @@ Thor2021_decoder udec (ir, xir, deco);
 always_comb
 if (Ra==6'd0 && (dAddi | dld | dst))
   rfoa = {VALUE_SIZE{1'b0}};
-else if (Ra==xRt && xval && xrfwr)
+else if (Ra==xRt && xrfwr)
   rfoa = res;
-else if (Ra==wRt && wval && wrfwr)
+else if (Ra==wRt && wrfwr)
 	rfoa = wres;
 else
   case(Ra)
@@ -288,9 +296,9 @@ else
 always_comb
 if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
-else if (Rb==xRt && xval && xrfwr)
+else if (Rb==xRt && xrfwr)
   rfob = res;
-else if (Rb==wRt && wval && wrfwr)
+else if (Rb==wRt && wrfwr)
 	rfob = wres;
 else
   case(Rb)
@@ -301,9 +309,9 @@ else
 always_comb
 if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
-else if (Rc==xRt && xval && xrfwr)
+else if (Rc==xRt && xrfwr)
   rfoc = res;
-else if (Rc==wRt && wval && wrfwr)
+else if (Rc==wRt && wrfwr)
 	rfoc = wres;
 else
   case(Rc)
@@ -312,13 +320,13 @@ else
   endcase
 
 always_comb
-	if (xMtlc && xval && xrfwr)
+	if (xMtlc && xrfwr)
 		dlc = res;
-	else if (xwrlc && xval)
+	else if (xwrlc)
 		dlc = xlc;
-	else if (wMtlc && wres && wrfwr)
+	else if (wMtlc && wrfwr)
 		dlc = wres;
-	else if (wwrlc && wval)
+	else if (wwrlc)
 		dlc = wlc;
 	else
 		dlc = lc;
@@ -431,6 +439,11 @@ VM:
 	case(xir.vmr2.func)
 	MTLC:			res2 <= xa;
 	MFLC:			res2 <= xlc;
+	default:	res2 <= 64'd0;
+	endcase
+OSR2:
+	case(xir.r3.func)
+	MFSEL:		res2 <= memresp.res;
 	default:	res2 <= 64'd0;
 	endcase
 CSR:		res2 = csr_res;
@@ -606,11 +619,13 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-assign run = ihit && (state==RUN);
-assign advance_w = run;
-assign advance_x = (advance_w | ~wval) & ~xIsMultiCycle & run;
-assign advance_d = (advance_x | ~xval) & ihit;
-assign advance_i = (advance_d | ~dval) & ihit;
+assign run = ihit;
+assign advance_w = ihit;
+assign advance_x = ihit && (advance_w || !wval) && (state==RUN);
+assign advance_d = ihit && (advance_x || !xval);
+assign advance_i = ihit && (advance_d || !dval);
+
+reg [3:0] xx;
 
 always_ff @(posedge clk_g)
 if (rst_i) begin
@@ -634,35 +649,13 @@ if (rst_i) begin
 	memreq.sel <= 16'h0;
 end
 else begin
+	xx <= FALSE;
 	memreq.wr <= FALSE;
 	if (ld_time==TRUE && wc_time_dat==wc_time)
 		ld_time <= FALSE;
 	if (clr_wc_time_irq && !wc_time_irq)
 		clr_wc_time_irq <= FALSE;
-case (state)
-RESTART1:
-	begin
-		memresp_fifo_rd <= FALSE;
-		gdt <= 64'hFFFFFFFFFFFFFFC0;	// startup table (bit 75 to 12)
-		ip.offs <= 32'hFFFD0000;
-		ip.sel <= 32'hFF000007;				// entry 7 of the GDT
-		gie <= FALSE;
-		pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
-		plStack <= 64'hffffffffffffffff;	// PL = 255
-		istk_depth <= 4'd1;
-		wval <= INV;
-		xval <= INV;
-		dval <= INV;
-		ival <= INV;
-		lc <= 64'd0;
-		goto(RESTART2);
-	end
-RESTART2:
-	begin
-		goto(RUN);
-	end
-RUN:
-	begin
+
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Instruction Fetch stage
   // We want decodes in the IFETCH stage to be fast so they don't appear
@@ -671,9 +664,9 @@ RUN:
 	if (advance_i) begin
 		ival <= VAL;
 		ip <= next_ip;
-		if (insn.jmp.Ca==3'd0 && (insn.any.opcode==JMP || insn.any.opcode==DJMP))
+		if (insn.jmp.Ca==3'd0 && (insn.any.opcode==JMP))
 			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		else if (insn.jmp.Ca==3'd7 && (insn.any.opcode==JMP || insn.any.opcode==DJMP))
+		else if (insn.jmp.Ca==3'd7 && (insn.any.opcode==JMP))
 			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (btbe & btb_hit)
 			ip <= btb_tgt;
@@ -749,12 +742,42 @@ RUN:
 		xRex <= deco.rex;
 		xMtlc <= deco.mtlc;
 		xwrlc <= deco.wrlc;
+		xMfsel <= deco.mfsel;
+		xMtsel <= deco.mtsel;
 		xcause <= dcause;
 		xpredict_taken <= dpredict_taken;
 	end
-	else if (advance_x)
+	else if (advance_x) begin
 		inv_x();
+		xx <= 4'd1;
+	end
 
+case (state)
+RESTART1:
+	begin
+		memresp_fifo_rd <= FALSE;
+		gdt <= 64'hFFFFFFFFFFFFFFC0;	// startup table (bit 75 to 12)
+		ip.offs <= 32'hFFFD0000;
+		ip.sel <= 32'hFF000007;				// entry 7 of the GDT
+		gie <= FALSE;
+		pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
+		plStack <= 64'hffffffffffffffff;	// PL = 255
+		asid <= 8'h00;
+		istk_depth <= 4'd1;
+		wval <= INV;
+		xval <= INV;
+		dval <= INV;
+		ival <= INV;
+		wcause <= 16'h0000;
+		lc <= 64'd0;
+		goto(RESTART2);
+	end
+RESTART2:
+	begin
+		goto(RUN);
+	end
+RUN:
+	begin
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Execute stage
   // If the execute stage has been invalidated it doesn't do anything. 
@@ -774,16 +797,17 @@ RUN:
 		wa <= xa;
     if (xJxx) begin
     	if (xdj)
-    		wlc = xlc - 2'd1;
+    		wlc <= xlc - 2'd1;
     	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
-	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
+	    	caregfile[{1'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{1'b0,ir.jxx.lk}].sel <= xip.sel;
     	end
       if (bpe) begin
         if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb)) begin
-			    ival <= INV;
+			    inv_i();
 			    inv_d();
 			    inv_x();
+					xx <= 4'd2;
           ip.offs <= xip.offs + 3'd6;
           // Was selector changed? If so change it back.
 	    		if (xip.sel != ip.sel) begin
@@ -798,16 +822,17 @@ RUN:
 	    		end
         end
         else if (!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) begin
-			    ival <= INV;
+			    inv_i();
 			    inv_d();
 			    inv_x();
+					xx <= 4'd3;
 			    if (xir.jxx.Ca == 3'd0)
 			    	ip.offs <= xJmptgt;
 			    else if (xir.jxx.Ca == 3'd7)
 			    	ip.offs <= ip.offs + xJmptgt;
 			    else
 			    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
-	    		if (caregfile[xir.jmp.Ca].sel != ip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
+	    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
 	    			ip.sel <= caregfile[xir.jmp.Ca].sel;
 	    			memreq.func <= MR_LOAD;
 	    			memreq.func2 <= MR_LDDESC;
@@ -823,13 +848,14 @@ RUN:
 		    ival <= INV;
 		    inv_d();
 		    inv_x();
+				xx <= 4'd4;
 		    if (xir.jxx.Ca == 3'd0)
 		    	ip.offs <= xJmptgt;
 		    else if (xir.jxx.Ca == 3'd7)
 		    	ip.offs <= ip.offs + xJmptgt;
 		    else
 		    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
-    		if (caregfile[xir.jmp.Ca].sel != ip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
+    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
     			ip.sel <= caregfile[xir.jmp.Ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
@@ -843,18 +869,24 @@ RUN:
     end
     if (xJmp) begin
     	if (xdj)
-    		wlc = xlc - 2'd1;
+    		wlc <= xlc - 2'd1;
 	  	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{1'b0,ir.jxx.lk}].offs <= ip.offs + 3'd6;
-	    	caregfile[{1'b0,ir.jxx.lk}].sel <= ip.sel;
+	    	caregfile[{1'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{1'b0,ir.jxx.lk}].sel <= xip.sel;
 	  	end
-    	if (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
-		    ival <= INV;
+    	if (xdj ? xlc != 64'd0 : xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
+		    inv_i();
 		    inv_d();
 		    inv_x();
-	    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
+				xx <= 4'd5;
+		    if (xir.jmp.Ca==3'd0)
+		    	ip.offs <= xJmptgt;
+		    else if (xir.jmp.Ca==3'd7)
+		    	ip.offs <= xip.offs + xJmptgt;
+		    else
+	    		ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
     		// Selector changing?
-    		if (caregfile[xir.jmp.Ca].sel != ip.sel) begin
+    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
     			ip.sel <= caregfile[xir.jmp.Ca].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
@@ -868,9 +900,10 @@ RUN:
   	end
   	if (xRts) begin
   		if (xir.rts.lk != 2'd0) begin
-		    ival <= INV;
+		    inv_i();
 		    inv_d();
 		    inv_x();
+				xx <= 4'd6;
 	    	ip.offs <= caregfile[{1'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
 	  		// Selector changing?
 	  		if (caregfile[xir.rts.lk].sel != ip.sel) begin
@@ -905,7 +938,7 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
     	endcase
-    	memreq.adr <= xa + imm;
+    	memreq.adr.offs <= xa + imm;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
@@ -920,7 +953,7 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
     	endcase
-    	memreq.adr <= siea;
+    	memreq.adr.offs <= siea;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
@@ -935,7 +968,7 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
     	endcase
-    	memreq.adr <= xa + imm;
+    	memreq.adr.offs <= xa + imm;
     	memreq.dat <= xc;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
@@ -951,7 +984,7 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
     	endcase
-    	memreq.adr <= siea;
+    	memreq.adr.offs <= siea;
     	memreq.dat <= xc;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
@@ -963,9 +996,33 @@ RUN:
     	memreq.func <= MR_TLB;
     	memreq.func2 <= MR_STO;
     	memreq.sel <= 16'h00FF;
-    	memreq.adr <= xa;
+    	memreq.adr <= xa;		// must use entire adr (64 bits)
     	memreq.dat <= xb;
     	memreq.seg <= {2'd0,3'd0};
+    	memreq.wr <= TRUE;
+    	goto (WAIT_MEM1);
+  	end
+    else if (xMfsel) begin
+    	memreq.tid <= tid;
+    	tid <= tid + 2'd1;
+    	memreq.func <= MR_MFSEL;
+    	memreq.func2 <= 4'd0;
+    	memreq.sel <= 16'hFFFF;
+    	memreq.adr <= 64'd0;
+    	memreq.dat <= {59'd0,xb[4:0]};
+    	memreq.seg <= 5'd0;
+    	memreq.wr <= TRUE;
+    	goto (WAIT_MEM1);
+  	end
+    else if (xMtsel) begin
+    	memreq.tid <= tid;
+    	tid <= tid + 2'd1;
+    	memreq.func <= MR_LOAD;
+    	memreq.func2 <= MR_LDDESC;
+    	memreq.sel <= 16'hFFFF;
+    	memreq.adr <= xa;
+    	memreq.dat <= {59'd0,xb[4:0]};
+    	memreq.seg <= 5'd0;
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
   	end
@@ -973,81 +1030,6 @@ RUN:
 	else if (advance_w)
 		inv_w();
 
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  // Writeback stage
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  if (advance_w) begin
-		if (|wcause) begin
-			// IRQ level remains the same unless external IRQ present
-			if (wcause[15])
-				pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
-			else
-				pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
-			plStack <= {plStack[55:0],8'hFF};
-			cause[2'd3] <= wcause;
-			caregfile[4'h8+istk_depth] <= ip;
-			istk_depth <= istk_depth + 2'd1;
-			ip.sel <= tvec[2'd3].sel;
-			ip.offs <= tvec[2'd3].offs + {omode,6'h00};
-			inv_i();
-			inv_d();
-			inv_x();
-			inv_w();
-		end
-		else if (wval) begin
-	    if (wCsr)
-	      case(wir.csr.op)
-	      3'd1:   tWriteCSR(wa,wir.csr.regno);
-	      3'd2:   tSetbitCSR(wa,wir.csr.regno);
-	      3'd3:   tClrbitCSR(wa,wir.csr.regno);
-	      default:	;
-	      endcase
-			if (wRti) begin
-				if (|istk_depth) begin
-					pmStack <= {8'h3E,pmStack[63:8]};
-					plStack <= {8'hFF,plStack[63:8]};
-					ip <= caregfile[4'h7+istk_depth];	// 8-1
-					istk_depth <= istk_depth - 2'd1;
-					inv_i();
-					inv_d();
-					inv_x();
-					inv_w();
-				end
-			end
-			if (wRex) begin
-				if (omode <= wir[10:9]) begin
-					pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
-					plStack <= {plStack[55:0],8'hFF};
-					cause[2'd3] <= FLT_PRIV;
-					caregfile[3'd6] <= ip;
-					ip.sel <= tvec[2'd3].sel;
-					ip.offs <= tvec[2'd3].offs + {omode,6'h00};
-					inv_i();
-					inv_d();
-					inv_x();
-					inv_w();
-				end
-				else begin
-					pmStack[2:1] <= wir[10:9];	// omode
-				end
-			end
-			// Register file update
-		  if (wrfwr) begin
-		    case(wRt)
-		    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
-		    endcase
-		    regfile[wRt] <= wres;
-		    $display("regfile[%d] <= %h", wRt, wres);
-		    // Globally enable interrupts after first update of stack pointer.
-		    if (wRt==6'd63)
-		      gie <= TRUE;
-		  end
-		  if (wMtlc)
-		  	lc <= wres;
-		  else if (wwrlc)
-		  	lc <= wlc;
-		end
-  end
 	end	// RUN
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1065,7 +1047,7 @@ WAIT_MEM2:
 		if (memresp_fifo_v) begin
 			memresp_fifo_rd <= FALSE;
 			if (memresp.tid == memreq.tid) begin
-				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ) begin
+				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MFSEL) begin
 					xrfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
 						xrfwr <= TRUE;
@@ -1090,7 +1072,8 @@ INVnRUN:
   end
 INVnRUN2:
   begin
-    inv_x();
+    //inv_x();
+		xx <= 4'd7;
     goto(RUN);
   end
 
@@ -1165,6 +1148,86 @@ default:
 	goto (RESTART1);	
 endcase
 
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Writeback stage
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if (advance_w) begin
+		if (|wcause) begin
+			// IRQ level remains the same unless external IRQ present
+			if (wcause[15])
+				pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
+			else
+				pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
+			plStack <= {plStack[55:0],8'hFF};
+			cause[2'd3] <= wcause;
+			caregfile[4'h8+istk_depth] <= ip;
+			istk_depth <= istk_depth + 2'd1;
+			ip.sel <= tvec[2'd3].sel;
+			ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+			inv_i();
+			inv_d();
+			inv_x();
+			xx <= 4'd8;
+			inv_w();
+			xx <= TRUE;
+		end
+		else if (wval) begin
+	    if (wCsr)
+	      case(wir.csr.op)
+	      3'd1:   tWriteCSR(wa,wir.csr.regno);
+	      3'd2:   tSetbitCSR(wa,wir.csr.regno);
+	      3'd3:   tClrbitCSR(wa,wir.csr.regno);
+	      default:	;
+	      endcase
+			if (wRti) begin
+				if (|istk_depth) begin
+					pmStack <= {8'h3E,pmStack[63:8]};
+					plStack <= {8'hFF,plStack[63:8]};
+					ip <= caregfile[4'h7+istk_depth];	// 8-1
+					istk_depth <= istk_depth - 2'd1;
+					inv_i();
+					inv_d();
+					inv_x();
+					inv_w();
+					xx <= 4'd9;
+				end
+			end
+			if (wRex) begin
+				if (omode <= wir[10:9]) begin
+					pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
+					plStack <= {plStack[55:0],8'hFF};
+					cause[2'd3] <= FLT_PRIV;
+					caregfile[3'd6] <= ip;
+					ip.sel <= tvec[2'd3].sel;
+					ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+					inv_i();
+					inv_d();
+					inv_x();
+					inv_w();
+					xx <= 4'd10;
+				end
+				else begin
+					pmStack[2:1] <= wir[10:9];	// omode
+				end
+			end
+			// Register file update
+		  if (wrfwr) begin
+		    case(wRt)
+		    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
+		    endcase
+		    regfile[wRt] <= wres;
+		    $display("regfile[%d] <= %h", wRt, wres);
+		    // Globally enable interrupts after first update of stack pointer.
+		    if (wRt==6'd63)
+		      gie <= TRUE;
+		  end
+		  if (wMtlc)
+		  	lc <= wres;
+		  else if (wwrlc)
+		  	lc <= wlc;
+		end
+  end
+
 end
 
 task inv_i;
@@ -1194,7 +1257,7 @@ endtask
 task ex_branch;
 Address nxt_ip;
 begin
-    ival <= INV;
+    inv_i();
     inv_d();
     inv_x();
     ip <= nxt_ip;

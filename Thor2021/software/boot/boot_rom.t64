@@ -1,6 +1,7 @@
 	.set	CSR_MGDT,0x3051
 	.set	IOBASE,0xFF800000
 	.set	RODATABASE,0xFFFE0000
+	.set	LEDS,0xFFFFFFFFFF910000
 
 	.bss
 _bss_a:
@@ -28,7 +29,7 @@ MachineStart:
 #	1111_1111_1111_1100_0000_0000_0000_0000
 #	1111_1111_11_11_1100_0000
 	ldi			t0,0x8000000000000FC0		# entry number = $3C0, way = 3, write = true
-	ldi			t1,0x008E000FFC0003FF
+	ldi			t1,0x008E000FFC0FFFC0
 	tlbrw		r0,t0,t1
 #	add			t0,t0,1
 #	tlbrw		x0,t0,t1
@@ -47,7 +48,7 @@ MachineStart:
 	ldi			a1,0xFFFFFFFFFFFFFFFF	# All - debug mode only
 	sto			a1,0000*32+16[a2]
 	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
-	sto			a2,0000*32+24[a2]
+	sto			a1,0000*32+24[a2]
 	ldi			a0,001								# DS
 	ldi			a1,0xFF000000
 	mtsel		a0,a1
@@ -59,7 +60,7 @@ MachineStart:
 	ldi			a1,0x0000000000001000	# 4kB top of stack limit
 	sto			a1,0003*32+16[a2]
 	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
-	sto			a2,0003*32+24[a2]
+	sto			a1,0003*32+24[a2]
 	ldi			a0,006								# SS
 	ldi			a1,0xFF000003					#
 	mtsel		a0,a1
@@ -71,7 +72,7 @@ MachineStart:
 	ldi			a1,0x00000000007FFFFF	# 8MB
 	sto			a1,0004*32+16[a2]			# set limit
 	ldi			a1,0x86FF000000000000	# R/W non-cacheable data segment
-	sto			a2,0004*32+24[a2]
+	sto			a1,0004*32+24[a2]
 	ldi			a0,005								# HS
 	ldi			a1,0xFF000004					# Max priv.
 	mtsel		a0,a1
@@ -83,7 +84,7 @@ MachineStart:
 	ldi			a1,0x000000000001FFFF	# 128kB
 	sto			a1,0005*32+16[a2]
 	ldi			a1,0x8CFF000000000000	# R-only cacheable data segment
-	sto			a2,0005*32+24[a2]
+	sto			a1,0005*32+24[a2]
 	ldi			a0,2
 	ldi			a1,0xFF000005
 	mtsel		a0,a1
@@ -92,10 +93,42 @@ MachineStart:
 #	1111_1111_1111_1100_1000_0000_0000_0000
 #	1111_1111_11_11_1100_1000
 	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
-	ldi			t1,0x008E000FFC0003FF
+	ldi			t1,0x008E000FFC0FFFC8
 	ldi			a1,8
 	mtlc		a1
 .0001:
 	tlbrw		r0,t0,t1
 	add			t0,t0,1							# map next 4kB
 	dbra		.0001
+
+	# Map LEDS
+	# FF910000
+	# 1111_1111_10 01_0001_0000_ 0000_0000_0000
+	ldi			t0,0x8000000000000D10	# entry number = $110, way = 3, write = true
+	ldi			t1,0x008E000FF80FF910
+	tlbrw		r0,t0,t1
+
+	# Map text screen - first 16kB
+	# FFD00000
+	# 1111_1111_11 01_0000_0000 _0000_0000_0000
+	ldi			t0,0x8000000000000D00	# entry number = $100, way = 3, write = true
+	ldi			t1,0x008E000FFC0FFD00	
+	tlbrw		r0,t0,t1
+	add			t0,t0,1							# map next 4kB
+	tlbrw		r0,t0,t1
+	add			t0,t0,1							# map next 4kB
+	tlbrw		r0,t0,t1
+	add			t0,t0,1							# map next 4kB
+	tlbrw		r0,t0,t1
+
+	# Setup debug mode stack pointer. The debug stack is set to a high order
+	# address in the scratchpad memory area.
+	ldi			sp,0xFF8
+
+  ldi   	t0,0xAA
+  stb   	t0,LEDS
+  ldi   	a0,0xAA
+  stb   	a0,LEDS
+.0002:
+	bra			.0002
+

@@ -133,25 +133,26 @@ ADDIL,CMPIL:			rfwr = TRUE;
 ANDIL,ORIL,XORIL:	rfwr = TRUE;
 default:	rfwr = FALSE;
 endcase
+
 // Computing immediate constant
 case(ir.any.opcode)
-ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI:
+ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SGTI:
 	begin
 		imm = {{53{ir.ri.imm[10]}},ir.ri.imm};
 	end
-ANDI:	// Pad with ones to the right and left
+ANDI:	// Pad with ones to the left
 	begin
 		imm = {{53{1'b1}},ir.ri.imm};
 	end
-ORI,XORI:	// Pad with zeros to the right and left
+ORI,XORI,SLTUI,SGTUI:	// Pad with zeros to the left
 	begin
 		imm = {{53{1'b0}},ir.ri.imm};
 	end
 CHKI:	imm = {{42{ir[47]}},ir[47:29],ir[11:9]};
 ADDIL,CMPIL,SEQIL,SNEIL,SLTIL:
-	imm = {{41{ir[43]}},ir[43:21]};
-ANDIL:	imm = {{41{1'b1}},ir[43:21]};
-ORIL,XORIL:	imm = {{41{1'b0}},ir[43:21]};
+	imm = {{41{ir.ril.imm[22]}},ir.ril.imm};
+ANDIL:	imm = {{41{1'b1}},ir.ril.imm};
+ORIL,XORIL:	imm = {{41{1'b0}},ir.ril.imm};
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO:
 	imm = {{40{ir.ld.disp[23]}},ir.ld.disp};
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
@@ -166,17 +167,17 @@ default:
 	imm = 64'd0;
 endcase
 casez(xir.any.opcode)
-EXI7:		imm = {{34{xir[15]}},xir[15:9],ir[43:21]};
-EXI23:	imm = {{18{xir[31]}},xir[31:9],ir[43:21]};
-EXI41:	imm = {xir[47:9],ir[43:21],xir[1:0]};
-default:	;
+EXI7:		imm = {{34{xir[15]}},xir[15:9],imm[22:0]};
+EXI23:	imm = {{18{xir[31]}},xir[31:9],imm[22:0]};
+EXI41:	imm = {xir[47:9],xir[1:0],imm[22:0]};
 endcase
+
 deco.rfwr = rfwr;
 deco.Ra = Ra;
 deco.Rb = Rb;
 deco.Rc = Rc;
 deco.Rt = Rt;
-deco.is_vector = ir[8];
+deco.is_vector = ir.any.v;
 deco.imm = imm;
 
 case(ir.any.opcode)
@@ -316,10 +317,7 @@ default: 	deco.jxx = FALSE;
 endcase
 
 case(ir.any.opcode)
-DJMP:	deco.dj = TRUE;
-default: 	deco.dj = FALSE;
-endcase
-case(ir.any.opcode)
+DJMP,
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.dj = TRUE;
 default: 	deco.dj = FALSE;
@@ -344,7 +342,7 @@ DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.multi_cycle = FALSE;
 RTS:	deco.multi_cycle = TRUE;
 CACHE,CACHEX:	deco.multi_cycle = TRUE;
-LDB,LDBU,STB:	deco.multi_cycle = TRUE;
+LDB,LDBU,STB:	deco.multi_cycle = FALSE;
 LDW,LDWU,STW:	deco.multi_cycle = TRUE;
 LDT,LDTU,STT: deco.multi_cycle = TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = TRUE;
@@ -403,6 +401,8 @@ deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
+deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
+deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
 
 case(ir.any.opcode)
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU,

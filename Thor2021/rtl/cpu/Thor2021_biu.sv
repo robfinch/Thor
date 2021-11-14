@@ -141,6 +141,9 @@ parameter KYLD5 = 6'd55;
 parameter KYLD6 = 6'd56;
 parameter KYLD7 = 6'd57;
 parameter MEMORY1a = 6'd60;
+parameter MFSEL1 = 6'd61;
+parameter MEMORY5a = 6'd62;
+parameter MEMORY11a = 6'd63;
 
 integer m,n;
 genvar g;
@@ -639,6 +642,7 @@ reg wr_desc;
 reg [4:0] desc_index;
 SegDesc desc_out;
 SegDesc init_desc;
+Selector sel_out;
 always_comb
 begin
 	init_desc.base = 64'h0;
@@ -662,17 +666,19 @@ always_comb
 	limit = desc_out.limit;
 
 reg [255:0] descbuf;
-reg [255:0] desc_cache [0:31];
+Selector selbuf;
+reg [287:0] desc_cache [0:31];
 always_ff @(posedge clk)
 	if (wr_desc) begin
-		desc_cache[desc_index] <= descbuf;
+		desc_cache[desc_index] <= {selbuf,descbuf};
 		if (desc_index==5'd7) begin
 			cs_desc <= descbuf;
 			cs_desc.acr.x <= 1'b1;
 			cs_desc.acr.c <= 1'b1;
 		end
 	end
-assign desc_out = desc_cache[seg];
+assign desc_out = desc_cache[seg][255:0];
+assign sel_out = desc_cache[desc_index][287:256];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
@@ -715,6 +721,7 @@ if (rst) begin
 	memresp.res <= 128'd0;
 	memresp.ldcs <= FALSE;
 	desc_index <= 4'd0;
+  xlaten <= FALSE;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -731,6 +738,7 @@ else begin
 		begin
 			wr_desc <= TRUE;
 			descbuf <= init_desc;
+			selbuf <= 32'hFF000000;
 			desc_index <= desc_index + 2'd1;
 			if (desc_index==5'd31)
 				goto (MEMORY1);
@@ -746,7 +754,6 @@ else begin
 				waycnt <= waycnt + 2'd1;
 				// On a miss goto load I$ process unless a hit in the victim cache.
 		    iaccess <= TRUE;
-		    xlaten <= TRUE;
 				gosub (IFETCH0);
 			end
 			if (!fifoToCtrl_empty) begin
@@ -792,6 +799,7 @@ else begin
 					end
 				MR_LDDESC:
 					begin
+						selbuf <= memreq.adr[31:0];
 						desc_index <= memreq.dat[4:0];	// which descriptor gets updated
 						// Global descriptor table descriptor is loaded with a flat model
 						// based at address 0h on reset and is not modifiable.
@@ -908,6 +916,11 @@ else begin
 			  		goto (MEMORY3);
 		  		end
 				end
+			MR_MFSEL:
+				begin
+					desc_index <= memreq.dat[4:0];
+					goto (MFSEL1);
+				end
 			default:	ret();	// unknown operation
 			endcase
 	  end
@@ -959,9 +972,11 @@ else begin
 		end
 `endif
 
-	MEMORY5:
+	MEMORY5:		// Allow time for lookup
+		goto (MEMORY5a);
+
+	MEMORY5a:
 	  begin
-	    xlaten <= FALSE;
 	    dwait <= 3'd0;
 	    goto (MEMORY6);
 			if (tlbmiss) 
@@ -1042,6 +1057,7 @@ else begin
 			  	    goto (MEMORY8);
 	      		if (dce & dhit) begin
 	      			dati <= datil >> {adr_o[5:3],6'b0};
+	      			tDeactivateBus();
 			        goto (DATA_ALIGN);
 			      end
 	      	end
@@ -1088,7 +1104,8 @@ else begin
 	  begin
 	    goto (MEMORY9);
 	    xlaten <= TRUE;
-	    tEA({ea[AWID-1:4] + 2'd1,4'd0});
+	    dadr <= {dadr[AWID-1:4] + 2'd1,4'd0};
+	    //tEA({ea[AWID-1:4] + 2'd1,4'd0});
 	  end
   
 	// Wait a couple of clocks for MR_TLB lookup
@@ -1120,7 +1137,10 @@ else begin
 	  goto (MEMORY11);
 `endif
 
-	MEMORY11:
+	MEMORY11:		// Allow time for lookup
+		goto (MEMORY11a);
+
+	MEMORY11a:
 	  begin
 	    xlaten <= FALSE;
 	    dwait <= 3'd0;
@@ -1143,6 +1163,7 @@ else begin
 
 	MEMORY12:
 	  if (dhit & dce) begin
+	    tDeactivateBus();
 	  	datil <= dc_line;
 			if (memreq.func==MR_STORE || memreq.func==M_CALL) begin
 				if (ack_i) begin
@@ -1151,8 +1172,6 @@ else begin
 	  			dcache_wr <= TRUE;
 		      goto (MEMORY13);
 		      stb_o <= LOW;
-		      if (sel[63:32]==1'h0)
-				    tDeactivateBus();
 		    end
 			end
 	  	else begin
@@ -1211,6 +1230,7 @@ else begin
 
 	DATA_ALIGN:
 	  begin
+	  	tDeactivateBus();
 	  	if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI /*|| memreq.func==RTS2*/) & ~dhit & dcachable & dce)
 	  		goto (DFETCH2);
 	  	else
@@ -1235,6 +1255,8 @@ else begin
 		    			memresp.res <= dati;
 		    			descbuf <= dati;
 		    			wr_desc <= TRUE;
+		    			if (desc_index==4'd7)
+		    				memresp.ldcs <= TRUE;
 		    		end
 		    	default:	memresp.res <= 256'h0;
 		    	endcase
@@ -1395,7 +1417,7 @@ else begin
 	  		if (tlbmiss)
 	  			tTLBMiss(ea);//adr_o);
 			  // First time in, set to miss address, after that increment
-	      dadr <= {adr_o[AWID-1:6],7'h0};
+	      dadr <= {adr_o[AWID-1:6],6'h0};
 		  end
 	  end
 
@@ -1531,6 +1553,16 @@ else begin
 	  end
 `endif
 
+	MFSEL1:
+		begin
+			memresp.step <= memreq.step;
+	    memresp.cmt <= TRUE;
+			memresp.tid <= memreq.tid;
+			memresp.wr <= TRUE;
+			memresp.res <= sel_out;
+			ret();
+		end
+
 	default:
 		goto (MEMORY1);
 	endcase
@@ -1546,6 +1578,7 @@ begin
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
+	tDeactivateBus();
 	goto (MEMORY1);
 end
 endtask
@@ -1605,6 +1638,7 @@ begin
 	stb_o <= LOW;
 	we_o <= LOW;
 	sel_o <= 16'h0000;
+  xlaten <= FALSE;
 end
 endtask
 

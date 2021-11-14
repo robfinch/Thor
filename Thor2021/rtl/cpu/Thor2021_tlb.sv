@@ -39,7 +39,7 @@ import Thor2021_pkg::*;
 
 module Thor2021_TLB(rst_i, clk_i, rdy_o, asid_i, umode_i,xlaten_i,we_i,ladr_i,next_i,iacc_i,dacc_i,iadr_i,padr_o,acr_o,tlben_i,wrtlb_i,tlbadr_i,tlbdat_i,tlbdat_o,tlbmiss_o);
 parameter AWID=32;
-parameter RSTIP = {64'hFF000007_FFFD0000,1'b0};
+parameter RSTIP = {64'hFF000007_FFFD0000};
 input rst_i;
 input clk_i;
 output rdy_o;
@@ -64,6 +64,8 @@ parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
 
 Address adr_i;
+Address last_ladr, last_iadr;
+
 reg [2:0] state;
 parameter ST_RST = 3'd0;
 parameter ST_RUN = 3'd1;
@@ -99,7 +101,37 @@ edge_det u5 (
   .ee()
 );
 
-reg [63:0] tlbdat_rst, tlbdati;
+wire cd_ladr, cd_iadr;
+change_det #(.WID($bits(Address))) ucd1 (
+	.rst(rst_i),
+	.clk(clk_g),
+	.ce(1'b1),
+	.i(ladr_i),
+	.cd(cd_ladr)
+);
+
+change_det #(.WID($bits(Address))) ucd2 (
+	.rst(rst_i),
+	.clk(clk_g),
+	.ce(1'b1),
+	.i(iadr_i),
+	.cd(cd_iadr)
+);
+
+reg [5:0] dll, dli;
+always_ff @(posedge clk_g)
+	if (cd_ladr)
+		dll <= 6'd0;
+	else
+		dll <= {dll[4:0],1'b1};
+always_ff @(posedge clk_g)
+	if (cd_iadr)
+		dli <= 6'd0;
+	else
+		dli <= {dli[4:0],1'b1};
+
+TLBEntry tlbdat_rst;
+reg [63:0] tlbdati;
 reg [12:0] count;
 reg tlbwr0r, tlbwr1r, tlbwr2r, tlbwr3r;
 reg tlbeni;
@@ -126,7 +158,7 @@ if (rst_i) begin
 	tlbwr1r <= 1'b0;
 	tlbwr2r <= 1'b0;
 	tlbwr3r <= 1'b0;
-	count <= 13'h0FF0;	// Map only last 256kB
+	count <= 13'h0FC0;	// Map only last 256kB
 end
 else begin
 case(state)
@@ -141,7 +173,22 @@ case(state)
 //		13'b000: begin tlbwr0r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h0,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
 //		13'b001: begin tlbwr1r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h1,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
 //		13'b010: begin tlbwr2r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h2,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
-		13'b011: begin tlbwr3r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,20'h000FF,8'h000,2'b00,8'hFF,count[9:0]};	rcount <= count[9:0]; end // Map 16MB ROM/IO area
+		13'b011:
+			begin
+				tlbwr3r <= 1'b1; 
+				tlbdat_rst.ASID = 8'h00;
+				tlbdat_rst.G = 1'b1;
+				tlbdat_rst.D = 1'b1;
+				tlbdat_rst.A = 1'b1;
+				tlbdat_rst.U = 1'b0;
+				tlbdat_rst.C = 1'b1;
+				tlbdat_rst.R = 1'b1;
+				tlbdat_rst.W = 1'b1;
+				tlbdat_rst.X = 1'b1;
+				tlbdat_rst.vpn = {20'h3FF};
+				tlbdat_rst.ppn = {16'h03FF,count[9:0]};
+				rcount <= count[9:0];
+			end // Map 16MB ROM/IO area
 		13'b1??: begin state <= 3'b010; tlbwr0r <= 1'b0; tlbwr1r <= 1'b0; tlbwr2r <= 1'b0; tlbwr3r <= 1'b0; end
 		endcase
 		count <= count + 2'd1;
@@ -212,7 +259,7 @@ TLBRam u1 (
   .clkb(clk_g),    // input wire clkb
   .enb(xlaten_i),      // input wire enb
   .web(wr0),      // input wire [0 : 0] web
-  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+  .addrb(adr_i[21:12]),  // input wire [9 : 0] addrb
   .dinb(tadr0i),    // input wire [63 : 0] dinb
   .doutb(tadr0)  // output wire [63 : 0] doutb
 );
@@ -227,7 +274,7 @@ TLBRam u2 (
   .clkb(clk_g),    // input wire clkb
   .enb(xlaten_i),      // input wire enb
   .web(wr1),      // input wire [0 : 0] web
-  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+  .addrb(adr_i[21:12]),  // input wire [9 : 0] addrb
   .dinb(tadr1i),    // input wire [63 : 0] dinb
   .doutb(tadr1)  // output wire [63 : 0] doutb
 );
@@ -242,7 +289,7 @@ TLBRam u3 (
   .clkb(clk_g),    // input wire clkb
   .enb(xlaten_i),      // input wire enb
   .web(wr2),      // input wire [0 : 0] web
-  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+  .addrb(adr_i[21:12]),  // input wire [9 : 0] addrb
   .dinb(tadr2i),    // input wire [63 : 0] dinb
   .doutb(tadr2)  // output wire [63 : 0] doutb
 );
@@ -257,15 +304,19 @@ TLBRam u4 (
   .clkb(clk_g),    // input wire clkb
   .enb(xlaten_i),      // input wire enb
   .web(wr3),      // input wire [0 : 0] web
-  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+  .addrb(adr_i[21:12]),  // input wire [9 : 0] addrb
   .dinb(tadr3i),    // input wire [63 : 0] dinb
   .doutb(tadr3)  // output wire [63 : 0] doutb
 );
 
 always @(posedge clk_g)
 if (rst_i) begin
-  padr_o[13:0] <= rstip[13:0];
-  padr_o[AWID-1:14] <= rstip[AWID-1:14];
+  padr_o[11:0] <= rstip[11:0];
+  padr_o[AWID-1:12] <= rstip[AWID-1:12];
+  hit0 <= 1'b0;
+  hit1 <= 1'b0;
+  hit2 <= 1'b0;
+  hit3 <= 1'b0;
 end
 else begin
   if (pe_xlat) begin
@@ -277,7 +328,7 @@ else begin
 	if (next_i)
 		padr_o <= padr_o + 6'd32;
   else if (iacc_i) begin
-  	padr_o[13:0] <= iadr_i[13:0];
+  	padr_o[11:0] <= iadr_i[11:0];
 //	  if (adr_i[AWID-1:24]=={AWID-24{1'b1}}) begin
 //	    tlbmiss_o <= FALSE;
 //	    padr_o[31:14] <= adr_i[31:14];
@@ -286,41 +337,41 @@ else begin
 //	  else
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= iadr_i[31:14];
+	    padr_o[31:12] <= iadr_i[31:12];
 	    acr_o <= 4'h15;
 	    hit0 <= 1'b1;
 		end
-	  else if (tadr0.vpn==iadr_i[31:24] && (tadr0.ASID==asid_i || tadr0.G)) begin
+	  else if (tadr0.vpn==iadr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr0.ppn;
+	    padr_o[31:12] <= tadr0.ppn;
 	    acr_o <= {tadr0.C,tadr0.R,tadr0.W,tadr0.X};
 	    hit0 <= 1'b1;
 	  end
-	  else if (tadr1.vpn==iadr_i[31:24] && (tadr1.ASID==asid_i || tadr1.G)) begin
+	  else if (tadr1.vpn==iadr_i[31:22] && (tadr1.ASID==asid_i || tadr1.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr1.ppn;
+	    padr_o[31:12] <= tadr1.ppn;
 	    acr_o <= {tadr1.C,tadr1.R,tadr1.W,tadr1.X};
 	    hit1 <= 1'b1;
 	  end
-	  else if (tadr2.vpn==iadr_i[31:24] && (tadr2.ASID==asid_i || tadr2.G)) begin
+	  else if (tadr2.vpn==iadr_i[31:22] && (tadr2.ASID==asid_i || tadr2.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr2.ppn;
+	    padr_o[31:12] <= tadr2.ppn;
 	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};;
 	    hit2 <= 1'b1;
 	  end
-	  else if (tadr3.vpn==iadr_i[31:24] && (tadr3.ASID==asid_i || tadr3.G)) begin
+	  else if (tadr3.vpn==iadr_i[31:22] && (tadr3.ASID==asid_i || tadr3.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr3.ppn;
+	    padr_o[31:12] <= tadr3.ppn;
 	    acr_o <= {tadr3.C,tadr3.R,tadr3.W,tadr3.X};
 	    hit3 <= 1'b1;
 	  end
 	  else begin
 	  	padr_o[31:0] <= 32'h00000000;
-	    tlbmiss_o <= TRUE;
+	    tlbmiss_o <= dli[4] & ~cd_iadr;
 	  end
   end
   else if (dacc_i) begin
-    padr_o[13:0] <= ladr_i[13:0];
+    padr_o[11:0] <= ladr_i[11:0];
 //	  if (adr_i[AWID-1:24]=={AWID-24{1'b1}}) begin
 //	    tlbmiss_o <= FALSE;
 //	    padr_o[31:14] <= ladr_i[31:14];
@@ -329,37 +380,37 @@ else begin
 //	  else
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= ladr_i[31:14];
+	    padr_o[31:12] <= ladr_i[31:12];
 	    acr_o <= 4'h15;
 	    hit0 <= 1'b1;
 		end
-	  else if (tadr0.vpn==ladr_i[31:24] && (tadr0.ASID==asid_i || tadr0.G)) begin
+	  else if (tadr0.vpn==ladr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr0.ppn;
+	    padr_o[31:12] <= tadr0.ppn;
 	    acr_o <= {tadr0.C,tadr0.R,tadr0.W,tadr0.X};
 	    hit0 <= 1'b1;
 	  end
-	  else if (tadr1.vpn==ladr_i[31:24] && (tadr1.ASID==asid_i || tadr1.G)) begin
+	  else if (tadr1.vpn==ladr_i[31:22] && (tadr1.ASID==asid_i || tadr1.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr1.ppn;
+	    padr_o[31:12] <= tadr1.ppn;
 	    acr_o <= {tadr1.C,tadr1.R,tadr1.W,tadr1.X};
 	    hit1 <= 1'b1;
 	  end
-	  else if (tadr2.vpn==ladr_i[31:24] && (tadr2.ASID==asid_i || tadr2.G)) begin
+	  else if (tadr2.vpn==ladr_i[31:22] && (tadr2.ASID==asid_i || tadr2.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr2.ppn;
+	    padr_o[31:12] <= tadr2.ppn;
 	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};;
 	    hit2 <= 1'b1;
 	  end
-	  else if (tadr3.vpn==ladr_i[31:24] && (tadr3.ASID==asid_i || tadr3.G)) begin
+	  else if (tadr3.vpn==ladr_i[31:22] && (tadr3.ASID==asid_i || tadr3.G)) begin
 	    tlbmiss_o <= FALSE;
-	    padr_o[31:14] <= tadr3.ppn;
+	    padr_o[31:12] <= tadr3.ppn;
 	    acr_o <= {tadr3.C,tadr3.R,tadr3.W,tadr3.X};
 	    hit3 <= 1'b1;
 	  end
 	  else begin
 	  	padr_o <= 32'h0;
-	    tlbmiss_o <= TRUE;
+	    tlbmiss_o <= dll[4] & ~cd_ladr;
 	  end
   end
   else
