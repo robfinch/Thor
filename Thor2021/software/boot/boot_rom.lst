@@ -46,171 +46,173 @@ F00:0038       #	add			t0,t0,1
 F00:0039       #	tlbrw		x0,t0,t1
 F00:0040       	# Setup segments, codeseg already set at reset.
 F00:0041       	# set data segment
-F00:0042       	ldi			a2,0xFFFC00FF			# start of scratchpad area
-               S03:0000002A:  47 FE 03 00 D4 2A E0 1F 80 0F
+F00:0042       	ldi			a2,0xFFFFFFFFFFFFFFC0			# start of scratchpad area
+               S03:0000002A:  04 2A 00 F8
 F00:0043       	csrrw		r0,a2,CSR_MGDT
-               S03:00000034:  0F 00 20 0A 06 02
-F00:0044       	and			a2,a2,-256
+               S03:0000002E:  0F 80 2A 0A 06 02
+F00:0044       	sllp		a2,r0,a2,12						# align
+               S03:00000034:  02 2A A0 82 11 80
+F00:0045       	and			a2,a2,-256
                S03:0000003A:  08 AA 0A E0
-F00:0045       	ldi			a1,0x0000000000000000	# 0MB boundary
+F00:0046       	ldi			a1,0x0000000000000000	# 0MB boundary
                S03:0000003E:  04 04 00 00
-F00:0046       	sto			a1,0000*32[a2]
+F00:0047       	sto			a1,0000*32[a2]
                S03:00000042:  95 84 0A 20
-F00:0047       	sto			a1,0000*32+8[a2]
+F00:0048       	sto			a1,0000*32+8[a2]
                S03:00000046:  95 84 0A 21
-F00:0048       	ldi			a1,0xFFFFFFFFFFFFFFFF	# All - debug mode only
+F00:0049       	ldi			a1,0xFFFFFFFFFFFFFFFF	# All - debug mode only
                S03:0000004A:  04 04 E0 FF
-F00:0049       	sto			a1,0000*32+16[a2]
+F00:0050       	sto			a1,0000*32+16[a2]
                S03:0000004E:  95 84 0A 22
-F00:0050       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+F00:0051       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
                S03:00000052:  6C 00 00 00 FF 8E D4 04 00 00 00 00
-F00:0051       	sto			a1,0000*32+24[a2]
+F00:0052       	sto			a1,0000*32+24[a2]
                S03:0000005E:  95 84 0A 23
-F00:0052       	ldi			a0,001								# DS
+F00:0053       	ldi			a0,001								# DS
                S03:00000062:  04 02 20 00
-F00:0053       	ldi			a1,0xFF000000
+F00:0054       	ldi			a1,0xFF000000
                S03:00000066:  47 FC 03 00 D4 04 00 00 00 00
-F00:0054       	mtsel		a0,a1
+F00:0055       	mtsel		a0,a1
                S03:00000070:  07 00 21 00 00 52
-F00:0055       	# set stack segment
-F00:0056       	ldi			a1,0xFFFC7000					# last 4kB of bss
+F00:0056       	# set stack segment
+F00:0057       	ldi			a1,0xFFFC7000					# last 4kB of bss
                S03:00000076:  47 FE 03 00 D4 04 00 00 8E 0F
-F00:0057       	sto			a1,0003*32[a2]
+F00:0058       	sto			a1,0003*32[a2]
                S03:00000080:  95 84 0A 2C
-F00:0058       	ldi			a1,0
+F00:0059       	ldi			a1,0
                S03:00000084:  04 04 00 00
-F00:0059       	sto			a1,0003*32+8[a2]
+F00:0060       	sto			a1,0003*32+8[a2]
                S03:00000088:  95 84 0A 2D
-F00:0060       	ldi			a1,0x0000000000001000	# 4kB top of stack limit
+F00:0061       	ldi			a1,0x0000000000001000	# 4kB top of stack limit
                S03:0000008C:  D4 04 00 00 02 00
-F00:0061       	sto			a1,0003*32+16[a2]
+F00:0062       	sto			a1,0003*32+16[a2]
                S03:00000092:  95 84 0A 2E
-F00:0062       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
+F00:0063       	ldi			a1,0x8EFF000000000000	# R/W cacheable data segment
                S03:00000096:  6C 00 00 00 FF 8E D4 04 00 00 00 00
-F00:0063       	sto			a1,0003*32+24[a2]
+F00:0064       	sto			a1,0003*32+24[a2]
                S03:000000A2:  95 84 0A 2F
-F00:0064       	ldi			a0,006								# SS
+F00:0065       	ldi			a0,006								# SS
                S03:000000A6:  04 02 C0 00
-F00:0065       	ldi			a1,0xFF000003					#
+F00:0066       	ldi			a1,0xFF000003					#
                S03:000000AA:  47 FC 03 00 D4 04 60 00 00 00
-F00:0066       	mtsel		a0,a1
+F00:0067       	mtsel		a0,a1
                S03:000000B4:  07 00 21 00 00 52
-F00:0067       	# set io segment
-F00:0068       	ldi			a1,IOBASE
+F00:0068       	# set io segment
+F00:0069       	ldi			a1,IOBASE
                S03:000000BA:  47 FE 03 00 D4 04 00 00 00 00
-F00:0069       	sto			a1,0004*32[a2]
+F00:0070       	sto			a1,0004*32[a2]
                S03:000000C4:  93 84 0A 10 00 20
-F00:0070       	ldi			a1,0
+F00:0071       	ldi			a1,0
                S03:000000CA:  04 04 00 00
-F00:0071       	sto			a1,0004*32+8[a2]
+F00:0072       	sto			a1,0004*32+8[a2]
                S03:000000CE:  93 84 0A 11 00 20
-F00:0072       	ldi			a1,0x00000000007FFFFF	# 8MB
+F00:0073       	ldi			a1,0x00000000007FFFFF	# 8MB
                S03:000000D4:  46 00 D4 04 E0 FF FF 0F
-F00:0073       	sto			a1,0004*32+16[a2]			# set limit
+F00:0074       	sto			a1,0004*32+16[a2]			# set limit
                S03:000000DC:  93 84 0A 12 00 20
-F00:0074       	ldi			a1,0x86FF000000000000	# R/W non-cacheable data segment
+F00:0075       	ldi			a1,0x86FF000000000000	# R/W non-cacheable data segment
                S03:000000E2:  6C 00 00 00 FF 86 D4 04 00 00 00 00
-F00:0075       	sto			a1,0004*32+24[a2]
+F00:0076       	sto			a1,0004*32+24[a2]
                S03:000000EE:  93 84 0A 13 00 20
-F00:0076       	ldi			a0,005								# HS
+F00:0077       	ldi			a0,005								# HS
                S03:000000F4:  04 02 A0 00
-F00:0077       	ldi			a1,0xFF000004					# Max priv.
+F00:0078       	ldi			a1,0xFF000004					# Max priv.
                S03:000000F8:  47 FC 03 00 D4 04 80 00 00 00
-F00:0078       	mtsel		a0,a1
+F00:0079       	mtsel		a0,a1
                S03:00000102:  07 00 21 00 00 52
-F00:0079       	# set read-only segment
-F00:0080       	ldi			a1,RODATABASE					#
+F00:0080       	# set read-only segment
+F00:0081       	ldi			a1,RODATABASE					#
                S03:00000108:  47 FE 03 00 D4 04 00 00 C0 0F
-F00:0081       	sto			a1,0005*32[a2]
+F00:0082       	sto			a1,0005*32[a2]
                S03:00000112:  93 84 0A 14 00 20
-F00:0082       	ldi			a1,0
+F00:0083       	ldi			a1,0
                S03:00000118:  04 04 00 00
-F00:0083       	sto			a1,0005*32+8[a2]
+F00:0084       	sto			a1,0005*32+8[a2]
                S03:0000011C:  93 84 0A 15 00 20
-F00:0084       	ldi			a1,0x000000000001FFFF	# 128kB
+F00:0085       	ldi			a1,0x000000000001FFFF	# 128kB
                S03:00000122:  D4 04 E0 FF 3F 00
-F00:0085       	sto			a1,0005*32+16[a2]
+F00:0086       	sto			a1,0005*32+16[a2]
                S03:00000128:  93 84 0A 16 00 20
-F00:0086       	ldi			a1,0x8CFF000000000000	# R-only cacheable data segment
+F00:0087       	ldi			a1,0x8CFF000000000000	# R-only cacheable data segment
                S03:0000012E:  6C 00 00 00 FF 8C D4 04 00 00 00 00
-F00:0087       	sto			a1,0005*32+24[a2]
+F00:0088       	sto			a1,0005*32+24[a2]
                S03:0000013A:  93 84 0A 17 00 20
-F00:0088       	ldi			a0,2
+F00:0089       	ldi			a0,2
                S03:00000140:  04 02 40 00
-F00:0089       	ldi			a1,0xFF000005
+F00:0090       	ldi			a1,0xFF000005
                S03:00000144:  47 FC 03 00 D4 04 A0 00 00 00
-F00:0090       	mtsel		a0,a1
+F00:0091       	mtsel		a0,a1
                S03:0000014E:  07 00 21 00 00 52
-F00:0091         # Map 32kB scratchpad stack area into stack segment
-F00:0092       #	FFFC8000
-F00:0093       #	1111_1111_1111_1100_1000_0000_0000_0000
-F00:0094       #	1111_1111_11_11_1100_1000
-F00:0095       	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
+F00:0092         # Map 32kB scratchpad stack area into stack segment
+F00:0093       #	FFFC8000
+F00:0094       #	1111_1111_1111_1100_1000_0000_0000_0000
+F00:0095       #	1111_1111_11_11_1100_1000
+F00:0096       	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
                S03:00000154:  6C 00 00 00 00 80 D4 06 00 F9 01 00
-F00:0096       	ldi			t1,0x008E000FFC0FFFC8
+F00:0097       	ldi			t1,0x008E000FFC0FFFC8
                S03:00000160:  6C FC 0F 00 8E 00 D4 08 00 F9 FF 01
-F00:0097       	ldi			a1,8
+F00:0098       	ldi			a1,8
                S03:0000016C:  04 04 00 01
-F00:0098       	mtlc		a1
+F00:0099       	mtlc		a1
                S03:00000170:  52 00 01 A0
-F00:0099       .0001:
-F00:0100       	tlbrw		r0,t0,t1
+F00:0100       .0001:
+F00:0101       	tlbrw		r0,t0,t1
                S03:00000174:  07 80 81 00 00 3C
-F00:0101       	add			t0,t0,1							# map next 4kB
+F00:0102       	add			t0,t0,1							# map next 4kB
                S03:0000017A:  04 86 21 00
-F00:0102       	dbra		.0001
+F00:0103       	dbra		.0001
                S03:0000017E:  30 D8 FF FF FF FF
-F00:0103       
-F00:0104       	# Map LEDS
-F00:0105       	# FF910000
-F00:0106       	# 1111_1111_10 01_0001_0000_ 0000_0000_0000
-F00:0107       	ldi			t0,0x8000000000000D10	# entry number = $110, way = 3, write = true
+F00:0104       
+F00:0105       	# Map LEDS
+F00:0106       	# FF910000
+F00:0107       	# 1111_1111_10 01_0001_0000_ 0000_0000_0000
+F00:0108       	ldi			t0,0x8000000000000D10	# entry number = $110, way = 3, write = true
                S03:00000184:  6C 00 00 00 00 80 D4 06 00 A2 01 00
-F00:0108       	ldi			t1,0x008E000FF80FF910
+F00:0109       	ldi			t1,0x008E000FF80FF910
                S03:00000190:  6C F8 0F 00 8E 00 D4 08 00 22 FF 01
-F00:0109       	tlbrw		r0,t0,t1
+F00:0110       	tlbrw		r0,t0,t1
                S03:0000019C:  07 80 81 00 00 3C
-F00:0110       
-F00:0111       	# Map text screen - first 16kB
-F00:0112       	# FFD00000
-F00:0113       	# 1111_1111_11 01_0000_0000 _0000_0000_0000
-F00:0114       	ldi			t0,0x8000000000000D00	# entry number = $100, way = 3, write = true
+F00:0111       
+F00:0112       	# Map text screen - first 16kB
+F00:0113       	# FFD00000
+F00:0114       	# 1111_1111_11 01_0000_0000 _0000_0000_0000
+F00:0115       	ldi			t0,0x8000000000000D00	# entry number = $100, way = 3, write = true
                S03:000001A2:  6C 00 00 00 00 80 D4 06 00 A0 01 00
-F00:0115       	ldi			t1,0x008E000FFC0FFD00	
+F00:0116       	ldi			t1,0x008E000FFC0FFD00	
                S03:000001AE:  6C FC 0F 00 8E 00 D4 08 00 A0 FF 01
-F00:0116       	tlbrw		r0,t0,t1
+F00:0117       	tlbrw		r0,t0,t1
                S03:000001BA:  07 80 81 00 00 3C
-F00:0117       	add			t0,t0,1							# map next 4kB
+F00:0118       	add			t0,t0,1							# map next 4kB
                S03:000001C0:  04 86 21 00
-F00:0118       	tlbrw		r0,t0,t1
+F00:0119       	tlbrw		r0,t0,t1
                S03:000001C4:  07 80 81 00 00 3C
-F00:0119       	add			t0,t0,1							# map next 4kB
+F00:0120       	add			t0,t0,1							# map next 4kB
                S03:000001CA:  04 86 21 00
-F00:0120       	tlbrw		r0,t0,t1
+F00:0121       	tlbrw		r0,t0,t1
                S03:000001CE:  07 80 81 00 00 3C
-F00:0121       	add			t0,t0,1							# map next 4kB
+F00:0122       	add			t0,t0,1							# map next 4kB
                S03:000001D4:  04 86 21 00
-F00:0122       	tlbrw		r0,t0,t1
+F00:0123       	tlbrw		r0,t0,t1
                S03:000001D8:  07 80 81 00 00 3C
-F00:0123       
-F00:0124       	# Setup debug mode stack pointer. The debug stack is set to a high order
-F00:0125       	# address in the scratchpad memory area.
-F00:0126       	ldi			sp,0xFF8
+F00:0124       
+F00:0125       	# Setup debug mode stack pointer. The debug stack is set to a high order
+F00:0126       	# address in the scratchpad memory area.
+F00:0127       	ldi			sp,0xFF8
                S03:000001DE:  D4 7E 00 FF 01 00
-F00:0127       
-F00:0128         ldi   	t0,0xAA
+F00:0128       
+F00:0129         ldi   	t0,0xAA
                S03:000001E4:  04 06 40 15
-F00:0129         stb   	t0,LEDS
+F00:0130         stb   	t0,LEDS
                S03:000001E8:  46 FE 90 06 00 00 20 32
-F00:0130         ldi   	a0,0xAA
+F00:0131         ldi   	a0,0xAA
                S03:000001F0:  04 02 40 15
-F00:0131         stb   	a0,LEDS
+F00:0132         stb   	a0,LEDS
                S03:000001F4:  46 FE 90 02 00 00 20 32
-F00:0132       .0002:
-F00:0133       	bra			.0002
+F00:0133       .0002:
+F00:0134       	bra			.0002
                S03:000001FC:  20 00 00 E0 00 00
-F00:0134       
 F00:0135       
+F00:0136       
 
 
 Sections:

@@ -147,6 +147,7 @@ parameter VMFILL	= 8'h53;
 parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
+parameter SLLR2		= 8'h58;
 parameter CMPUI		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
@@ -285,11 +286,9 @@ parameter CLMUL		= 7'h2E;
 parameter CLMULH	= 7'h2F;
 parameter BMM			= 7'h30;
 parameter MUX			= 7'h34;
-parameter SLL			= 7'h40;
-parameter SRL			= 7'h41;
+parameter SLLP		= 7'h40;
+parameter SRLP		= 7'h41;
 parameter SRA			= 7'h42;
-parameter ROL			= 7'h43;
-parameter ROR			= 7'h44;
 
 // OSR2
 parameter REX			= 7'h10;

@@ -39,8 +39,9 @@ MachineStart:
 #	tlbrw		x0,t0,t1
 	# Setup segments, codeseg already set at reset.
 	# set data segment
-	ldi			a2,0xFFFC00FF			# start of scratchpad area
+	ldi			a2,0xFFFFFFFFFFFFFFC0			# start of scratchpad area
 	csrrw		r0,a2,CSR_MGDT
+	sllp		a2,r0,a2,12						# align
 	and			a2,a2,-256
 	ldi			a1,0x0000000000000000	# 0MB boundary
 	sto			a1,0000*32[a2]

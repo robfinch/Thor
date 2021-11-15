@@ -264,8 +264,8 @@ mnemonic mnemonics[]={
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
 
-	"mtsel",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
-	"mtsel",	{OP_NEXTREG,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x520000000007LL,6},	// 3r
+	"mtsel",	{OP_REG,OP_IMM,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	// 3r
+	"mtsel",	{OP_REG,OP_REG,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	// 3r
 
 	"mul", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x1D2LL,6},	// 3r
 	"mul", {OP_VREG,OP_VREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x1D2LL,6},
@@ -371,7 +371,9 @@ mnemonic mnemonics[]={
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x800000000002LL,6},	// 3r
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	// 3r
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R2,CPU_ALL,0,0x58,4},
-	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R2,CPU_ALL,0,0x58,4},
+	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM,0,0}, {R2,CPU_ALL,0,0x58,4},
+	"sllp",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	// 3r
+	"sllp",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	// 3r
 
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x840000000002LL,6},	// 3r
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	// 3r
@@ -386,6 +388,7 @@ mnemonic mnemonics[]={
 	"statq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
 	"statq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	// 3r
 
+	"stb",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x90LL,6},	
 	"stb",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x90LL,6},	
 	"stb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC0LL,6},	
 	"sto",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x93LL,6,0x95LL,4},	
@@ -1269,6 +1272,7 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 {
 	if (insn) {
 		switch(mnemo->ext.format) {
+		case CSR:
 		case R2:
 		case R3RI:
 			if (i==0)
@@ -1326,6 +1330,12 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 		case DIRECT:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & 0x3f));
+			break;
+		case MTSEL:
+			if (i==0)
+				*insn = *insn| (RB(op->basereg & 0x3f)) | (TB(0));
+			else if (i==1)
+				*insn = *insn| (RA(op->basereg & 0x3f));
 			break;
 		}				
 	}
@@ -1399,6 +1409,26 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 			isize = 2;
 			if (insn)
 				*insn = *insn | ((val & 0x1fLL) << 11LL);
+		}
+		else if (mnemo->ext.format==MTSEL) {
+			isize = 6;
+			if (insn)
+				*insn = *insn | RB(val & 0x1fLL) | TB(2);
+		}
+		else if (mnemo->ext.format==R2) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | RB(val & 0x1fLL) | TB(2);
+		}
+		else if (mnemo->ext.format==R3) {
+			isize = 6;
+			if (i==2) {
+				if (insn)
+					*insn = *insn | RB(val & 0x1fLL) | TB(2);
+			}
+			else if (i==3)
+				if (insn)
+					*insn = *insn | RC(val & 0x1fLL) | TC(2);
 		}
 		else {
 			if (op->type & OP_IMM11)

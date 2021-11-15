@@ -95,7 +95,6 @@ wire [1:0] memmode;
 wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
 wire MUserMode;
 reg gie;
-Instruction mir,wir;
 Value regfile [0:63];
 Value sp [0:31];
 Value lc;
@@ -131,12 +130,17 @@ wire advance_d;
 reg [3:0] dlen;
 DecodeOut deco;
 reg dpredict_taken;
-wire [5:0] Ra = deco.Ra;
-wire [5:0] Rb = deco.Rb;
-wire [5:0] Rc = deco.Rc;
-wire [5:0] Rt = deco.Rt;
+reg [5:0] Ra;
+reg [5:0] Rb;
+reg [5:0] Rc;
+reg [5:0] Rt;
 wire [1:0] Tb = deco.Tb;
 wire [1:0] Tc = deco.Tc;
+always_comb Ra = deco.Ra;
+always_comb Rb = deco.Rb;
+always_comb Rc = deco.Rc;
+always_comb Rt = deco.Rt;
+
 wire dAddi = deco.addi;
 wire dld = deco.ld;
 wire dst = deco.st;
@@ -281,7 +285,7 @@ Value bf_out;
 Thor2021_decoder udec (ir, xir, deco);
 
 always_comb
-if (Ra==6'd0 && (dAddi | dld | dst))
+if (Ra==6'd0)
   rfoa = {VALUE_SIZE{1'b0}};
 else if (Ra==xRt && xrfwr)
   rfoa = res;
@@ -296,6 +300,8 @@ else
 always_comb
 if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
+else if (Rb==6'd0)
+	rfob = {VALUE_SIZE{1'b0}};
 else if (Rb==xRt && xrfwr)
   rfob = res;
 else if (Rb==wRt && wrfwr)
@@ -309,6 +315,8 @@ else
 always_comb
 if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
+else if (Rc==6'd0)
+	rfoc = {VALUE_SIZE{1'b0}};
 else if (Rc==xRt && xrfwr)
   rfoc = res;
 else if (Rc==wRt && wrfwr)
@@ -339,6 +347,10 @@ Thor2021_eval_branch ube (xir, xa, xb, takb);
 
 wire [6:0] cntlz_out;
 cntlz64 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
+
+wire [127:0] sllro = {xb,xa} << xc[5:0];
+wire [127:0] srlro = {xb,xa} >> xc[5:0];
+wire [63:0] srao = {{64{xa[63]}},xa} >> xb[5:0];
 
 wire [127:0] mul_prod1;
 reg [127:0] mul_prod;
@@ -424,6 +436,9 @@ R2:
 	AND:	res2 = xa & xb & xc;
 	OR:		res2 = xa | xb | xc;
 	XOR:	res2 = xa ^ xb ^ xc;
+	SLLP:	res2 = sllro[127:64];
+	SRLP:	res2 = srlro[63:0];
+	SRA:	res2 = srao;
 	MUL:	res2 = mul_prod[63:0];
 	MULH:	res2 = mul_prod[127:64];
 	MULU:	res2 = mul_prod[63:0];
@@ -457,6 +472,7 @@ SUBFI,SUBFIL:	res2 = imm - xa;
 ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm;
 XORI,XORIL:		res2 = xa ^ imm;
+SLLR2:				res2 = xa << xb[5:0];
 CMPI,CMPIL:		res2 = $signed(xa) < $signed(imm) ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
 CMPUI,CMPUIL:	res2 = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
 MULI,MULIL:		res2 = mul_prod[63:0];
@@ -635,6 +651,9 @@ if (rst_i) begin
 	xval <= INV;
 	dval <= INV;
 	ival <= INV;
+	ir <= NOP_INSN;
+	xir <= NOP_INSN;
+	wir <= NOP_INSN;
 	xIsMultiCycle <= FALSE;
 	xSeg <= 3'd0;
 	tid <= 8'h00;
@@ -670,6 +689,7 @@ else begin
 			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (btbe & btb_hit)
 			ip <= btb_tgt;
+		dip <= ip;
 		dlen <= ilen;
 		dval <= ival;
 		ir <= insn;
@@ -708,7 +728,7 @@ else begin
 		xRc <= Rc;
 		xRt <= Rt;
 		xCat <= deco.Cat;
-		xip <= ip;
+		xip <= dip;
 		xlen <= dlen;
 //		xFloat <= deco.float;
 		xJmp <= deco.jmp;
@@ -770,6 +790,11 @@ RESTART1:
 		ival <= INV;
 		wcause <= 16'h0000;
 		lc <= 64'd0;
+		ir <= NOP_INSN;
+		xir <= NOP_INSN;
+		wir <= NOP_INSN;
+		xCsr <= 1'b0;
+		wCsr <= 1'b0;
 		goto(RESTART2);
 	end
 RESTART2:

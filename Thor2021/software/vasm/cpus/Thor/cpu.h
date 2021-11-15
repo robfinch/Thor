@@ -136,6 +136,7 @@ typedef struct {
 #define BL3		33
 #define J3		34
 #define JL3		35
+#define MTSEL	36
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)
