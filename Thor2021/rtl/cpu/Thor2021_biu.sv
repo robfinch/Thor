@@ -1053,12 +1053,14 @@ else begin
 	      case(memreq.func)
 	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
 	      	begin
-				    if (|sel[31:16])
+				    if (|sel[31:16] && !(dce && dhit))
 			  	    goto (MEMORY8);
-	      		if (dce & dhit) begin
-	      			dati <= datil >> {adr_o[5:3],6'b0};
+			  	  else begin
 	      			tDeactivateBus();
 			        goto (DATA_ALIGN);
+			      end
+	      		if (dce & dhit) begin
+	      			dati <= datil >> {adr_o[5:3],6'b0};
 			      end
 	      	end
 		    MR_STORE,M_CALL:

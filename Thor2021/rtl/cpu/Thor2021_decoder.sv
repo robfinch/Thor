@@ -56,10 +56,10 @@ rfwr = FALSE;
 // Target register
 case(ir.any.opcode)
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	Rt = {4'd0,ir[10:9]};
+	Rt = 6'd0;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	Rt = {4'd0,ir[10:9]};
-JMP,DJMP:			Rt = {4'd0,ir[10:9]};
+	Rt = 6'd0;
+JMP,DJMP:			Rt = 6'd0;
 default:	Rt = ir[14:9];
 endcase
 // Rc
@@ -71,7 +71,25 @@ STOS:
 default:	Rc = ir[34:29];
 endcase
 
+deco.Ravec = ir.any.v;
+deco.Rtvec = ir.any.v;
+deco.Rbvec = ir.r3.Tb==2'b01;
+deco.Rcvec = ir.r3.Tc==2'b01;
+
 // Cat
+case(ir.any.opcode)
+CSR:
+	deco.lk = ir.csr.regno[4:1];
+// Cannot update ca[0] with a branch
+JMP,DJMP:
+	deco.lk = {2'b0,ir.jxx.lk};
+JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
+	deco.lk = {2'b0,ir.jxx.lk};
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.lk = {2'b0,ir.jxx.lk};
+default: 	deco.lk = 4'd0;
+endcase
+
 case(ir.any.opcode)
 CSR:
 	case (ir.csr.op)
@@ -126,9 +144,16 @@ R3,F3,DF3,P3:
 	case(ir.r3.func)
 	default:	rfwr = TRUE;
 	endcase
+BTFLD:
+	case(ir.r3.func)
+	BFALIGN,BFFFO,BFEXTU,BFEXT,
+	ANDM,BFSET,BFCHG,BFCLR:
+		rfwr = TRUE;
+	default:	rfwr = FALSE;
+	endcase
 ADDI,SUBFI,CMPI:	rfwr = TRUE;
 ANDI,ORI,XORI:		rfwr = TRUE;
-SEQI,SNEI,SLTI:		rfwr = TRUE;
+SEQI,SNEI,SLTI,SGTI:		rfwr = TRUE;
 ADDIL,CMPIL:			rfwr = TRUE;
 ANDIL,ORIL,XORIL:	rfwr = TRUE;
 default:	rfwr = FALSE;
@@ -149,7 +174,7 @@ ORI,XORI,SLTUI,SGTUI:	// Pad with zeros to the left
 		imm = {{53{1'b0}},ir.ri.imm};
 	end
 CHKI:	imm = {{42{ir[47]}},ir[47:29],ir[11:9]};
-ADDIL,CMPIL,SEQIL,SNEIL,SLTIL:
+ADDIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL:
 	imm = {{41{ir.ril.imm[22]}},ir.ril.imm};
 ANDIL:	imm = {{41{1'b1}},ir.ril.imm};
 ORIL,XORIL:	imm = {{41{1'b0}},ir.ril.imm};
@@ -170,6 +195,14 @@ casez(xir.any.opcode)
 EXI7:		imm = {{34{xir[15]}},xir[15:9],imm[22:0]};
 EXI23:	imm = {{18{xir[31]}},xir[31:9],imm[22:0]};
 EXI41:	imm = {xir[47:9],xir[1:0],imm[22:0]};
+endcase
+
+case(ir.any.opcode)
+ADDIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL:
+	deco.ril = TRUE;
+ANDIL,ORIL,XORIL:
+	deco.ril = TRUE;
+default:	deco.ril = FALSE;
 endcase
 
 deco.rfwr = rfwr;
@@ -390,7 +423,7 @@ endcase
 deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
 deco.divalli = deco.divi|deco.divui|deco.divsui;
 
-deco.is_cbranch = ir.jxx.Ca==3'd7 && ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3;
+deco.is_cbranch = ir.jxx.Ca==3'd7 && (ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3);
 if (deco.jxx)
 	deco.jmptgt = {{44{ir.jxx.Tgthi[15]}},ir.jxx.Tgthi,ir.jxx.Tgtlo,1'b0};
 else
@@ -403,6 +436,8 @@ deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
 deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
+deco.lear = ir.any.opcode==LEA;
+deco.lean = ir.any.opcode==LEAX;
 
 case(ir.any.opcode)
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU,
@@ -414,6 +449,47 @@ VM:
 	endcase
 default:
 	deco.wrlc = FALSE;
+endcase
+
+case(ir.any.opcode)
+R2,R3:
+	deco.Rvm = ir.r3.m;
+ADD2R,AND2R,OR2R,XOR2R:
+	deco.Rvm = ir.any[31:29];
+default:
+	if (deco.ril)
+		deco.Rvm = ir.ril.m;
+	else if (deco.loadn)
+		deco.Rvm = ir.ldx.m;
+	else if (deco.storen)
+		deco.Rvm = ir.stx.m;
+	else
+		deco.Rvm = 3'd0;
+endcase
+
+case(ir.any.opcode)
+R2,R3:
+	deco.Rz = ir.r3.z;
+ADD2R,AND2R,OR2R,XOR2R:
+	deco.Rz = ir.any[28];
+default:
+	if (deco.ril)
+		deco.Rz = ir.ril.z;
+	else if (deco.loadn)
+		deco.Rz = ir.ldx.z;
+	else if (deco.storen)
+		deco.Rz = ir.stx.z;
+	else
+		deco.Rz = 1'b0;
+endcase
+
+case(ir.any.opcode)
+VM:
+	case(ir.vmr2.func)
+	MTVM:	deco.vmrfwr = TRUE;
+	default:	deco.vmrfwr = FALSE;
+	endcase
+default:	deco.vmrfwr = FALSE;
 endcase
 
 end

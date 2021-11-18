@@ -71,13 +71,21 @@ begin
 		BFCLR:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b0 : a[n]; end
 		BFSET:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b1 : a[n]; end
 		BFCHG:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ? ~a[n] : a[n]; end
-		// The following does SRL,SRA and ROR
-		BFEXT:
+		BFEXTU:
 			begin
-				o1 = {a,a} >> mb;
+				o1 = {64'd0,a} >> mb;
 				for (n = 0; n < $bits(Value); n = n + 1)
 					if (n > mw)
-						o2[n] = ir[41] ? o1[mw] : 1'b0;
+						o2[n] = 1'b0;
+					else
+						o2[n] = o1[n];
+			end
+		BFEXT:
+			begin
+				o1 = {{64{a[63]}},a} >> mb;
+				for (n = 0; n < $bits(Value); n = n + 1)
+					if (n > mw)
+						o2[n] = o1[mw];
 					else
 						o2[n] = o1[n];
 			end

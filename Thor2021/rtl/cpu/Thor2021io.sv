@@ -99,6 +99,9 @@ Value regfile [0:63];
 Value sp [0:31];
 Value lc;
 Address caregfile [0:15];
+(* ram_style="block" *)
+Value vregfile [0:63][0:63];
+reg [63:0] vm_regfile [0:7];
 
 integer n1;
 initial begin
@@ -120,12 +123,15 @@ wire btb_hit;
 Address btb_tgt;
 Address next_ip;
 wire run;
+reg [2:0] pfx_cnt;		// prefix counter
+reg [7:0] istep;
 
 // Decode stage vars
 reg dval;
 reg [15:0] dcause;
 Instruction ir;
 Address dip;
+reg dpfx;
 wire advance_d;
 reg [3:0] dlen;
 DecodeOut deco;
@@ -136,15 +142,22 @@ reg [5:0] Rc;
 reg [5:0] Rt;
 wire [1:0] Tb = deco.Tb;
 wire [1:0] Tc = deco.Tc;
+reg [2:0] Rvm;
+reg Rz;
 always_comb Ra = deco.Ra;
 always_comb Rb = deco.Rb;
 always_comb Rc = deco.Rc;
 always_comb Rt = deco.Rt;
+always_comb Rvm = deco.Rvm;
+always_comb Rz = deco.Rz;
+reg [7:0] dstep;
+reg zbit;
 
 wire dAddi = deco.addi;
 wire dld = deco.ld;
 wire dst = deco.st;
 Value rfoa, rfob, rfoc;
+reg [63:0] mask;
 reg [63:0] dlc;
 
 // Execute stage vars
@@ -155,10 +168,13 @@ Instruction xir;
 Address xip;
 reg [3:0] xlen;
 wire advance_x;
-reg [5:0] xRt,xRa,xRb,xRc,wRt,tRt;
+reg [5:0] xRt,xRa,xRb,xRc,tRt;
+reg xRtvec;
 reg [2:0] xCat;
 Value xa,xb,xc;
 Value imm;
+reg xmaskbit;
+reg xzbit;
 reg [2:0] xSc;
 wire takb;
 reg xpredict_taken;
@@ -170,8 +186,10 @@ reg xRts, xRti;
 reg xRex;
 reg xIsMultiCycle;
 reg xLdz;
+reg xLear,xLean;
 reg xrfwr;
 reg xcarfwr;
+reg xvmrfwr;
 reg xMul,xMuli;
 reg xMulu,xMului;
 reg xMulsu,xMulsui;
@@ -198,6 +216,8 @@ Value res,res2;
 Value crypto_res;
 Address cares;
 reg ld_vtmp;
+reg [7:0] xstep;
+reg xzbit;
 
 // Writeback stage vars
 reg wval;
@@ -205,7 +225,9 @@ Instruction wir;
 reg [15:0] wcause;
 wire advance_w;
 reg wrfwr;
+reg wvmrfwr;
 reg [5:0] wRt;
+reg wRtvec;
 reg wCsr;
 reg wRti;
 reg wRex;
@@ -214,6 +236,9 @@ reg wwrlc;
 reg [63:0] wlc;
 Value wa;
 Value wres;
+reg [7:0] wstep;
+reg wzbit;
+reg wmaskbit;
 
 
 // CSRs
@@ -287,6 +312,8 @@ Thor2021_decoder udec (ir, xir, deco);
 always_comb
 if (Ra==6'd0)
   rfoa = {VALUE_SIZE{1'b0}};
+else if (deco.Ravec)
+	rfoa = vregfile[Ra][dstep];
 else if (Ra==xRt && xrfwr)
   rfoa = res;
 else if (Ra==wRt && wrfwr)
@@ -302,6 +329,8 @@ if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
 else if (Rb==6'd0)
 	rfob = {VALUE_SIZE{1'b0}};
+else if (deco.Rbvec)
+	rfob = vregfile[Rb][dstep];
 else if (Rb==xRt && xrfwr)
   rfob = res;
 else if (Rb==wRt && wrfwr)
@@ -317,6 +346,8 @@ if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
 else if (Rc==6'd0)
 	rfoc = {VALUE_SIZE{1'b0}};
+else if (deco.Rcvec)
+	rfoc = vregfile[Rc][dstep];
 else if (Rc==xRt && xrfwr)
   rfoc = res;
 else if (Rc==wRt && wrfwr)
@@ -338,6 +369,12 @@ always_comb
 		dlc = wlc;
 	else
 		dlc = lc;
+
+always_comb
+	mask = vm_regfile[deco.Rvm];
+
+always_comb
+	zbit = deco.Rz;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute stage combinational logic
@@ -452,6 +489,7 @@ R2:
 	endcase
 VM:
 	case(xir.vmr2.func)
+	MTVM:			res2 <= xa;
 	MTLC:			res2 <= xa;
 	MFLC:			res2 <= xlc;
 	default:	res2 <= 64'd0;
@@ -666,6 +704,8 @@ if (rst_i) begin
 	memreq.seg <= 5'd0;
 	memreq.dat <= 128'd0;
 	memreq.sel <= 16'h0;
+	dpfx <= FALSE;
+	pfx_cnt <= 3'd0;
 end
 else begin
 	xx <= FALSE;
@@ -682,7 +722,14 @@ else begin
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	if (advance_i) begin
 		ival <= VAL;
-		ip <= next_ip;
+		if (insn.any.v && istep < vl) begin
+			istep <= istep + 2'd1;
+			ip <= ip;
+		end
+		else begin
+			istep <= 8'h00;
+			ip <= next_ip;
+		end
 		if (insn.jmp.Ca==3'd0 && (insn.any.opcode==JMP))
 			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
 		else if (insn.jmp.Ca==3'd7 && (insn.any.opcode==JMP))
@@ -692,15 +739,24 @@ else begin
 		dip <= ip;
 		dlen <= ilen;
 		dval <= ival;
+		dstep <= istep;
 		ir <= insn;
 		dpredict_taken <= ipredict_taken;
 		dcause <= icause;
-		if (irq_i > pmStack[3:1] && gie && !is_prefix(insn.any.opcode))
+		dpfx <= is_prefix(insn.any.opcode);
+		if (is_prefix(insn.any.opcode))
+			pfx_cnt <= pfx_cnt + 2'd1;
+		else
+			pfx_cnt <= 3'd0;
+		if (irq_i > pmStack[3:1] && gie && !dpfx)
 			icause <= 16'h8000|icause_i|(irq_i << 4'd8);
 		else if (wc_time_irq)
 			icause <= 16'h8000|FLT_TMR;
 		else if (insn.any.opcode==BRK)
 			icause <= FLT_BRK;
+		// Triple prefix fault.
+		else if (pfx_cnt > 3'd2)
+			icause <= 16'h8000|FLT_PFX;
 	end
 	// Wait for cache load
 	else begin
@@ -743,11 +799,14 @@ else begin
 		xStoren <= deco.storen;
 		xLdz <= deco.ldz;
 		xMemsz <= deco.memsz;
+		xLear <= deco.lear;
+		xLean <= deco.lean;
 		xSeg <= deco.seg;
 		xTlb <= deco.tlb;
 		xIsMultiCycle <= deco.multi_cycle;
 		xrfwr <= deco.rfwr;
 		xcarfwr <= deco.carfwr;
+		xvmrfwr <= deco.vmrfwr;
 		xMul <= deco.mul;
 		xMuli <= deco.muli;
 		xMulsu <= deco.mulsu;
@@ -765,6 +824,10 @@ else begin
 		xMfsel <= deco.mfsel;
 		xMtsel <= deco.mtsel;
 		xcause <= dcause;
+		xstep <= dstep;
+		xRtvec <= deco.Rtvec;
+		xmaskbit <= mask[dstep];
+		xzbit <= zbit;
 		xpredict_taken <= dpredict_taken;
 	end
 	else if (advance_x) begin
@@ -795,6 +858,8 @@ RESTART1:
 		wir <= NOP_INSN;
 		xCsr <= 1'b0;
 		wCsr <= 1'b0;
+		dpfx <= FALSE;
+		pfx_cnt <= 3'd0;
 		goto(RESTART2);
 	end
 RESTART2:
@@ -812,6 +877,7 @@ RUN:
 		wir <= xir;
 		wRt <= xRt;
 		wrfwr <= xrfwr;
+		wvmrfwr <= xvmrfwr;
 		wres <= res;
 		wlc <= xlc;
 		wCsr <= xCsr;
@@ -820,12 +886,16 @@ RUN:
 		wMtlc <= xMtlc;
 		wwrlc <= xwrlc;
 		wa <= xa;
+		wstep <= xstep;
+		wmaskbit <= xmaskbit;
+		wzbit <= xzbit;
+		wRtvec <= xRtvec;
     if (xJxx) begin
     	if (xdj)
     		wlc <= xlc - 2'd1;
     	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{1'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
-	    	caregfile[{1'b0,ir.jxx.lk}].sel <= xip.sel;
+	    	caregfile[{2'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{2'b0,ir.jxx.lk}].sel <= xip.sel;
     	end
       if (bpe) begin
         if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb)) begin
@@ -854,7 +924,7 @@ RUN:
 			    if (xir.jxx.Ca == 3'd0)
 			    	ip.offs <= xJmptgt;
 			    else if (xir.jxx.Ca == 3'd7)
-			    	ip.offs <= ip.offs + xJmptgt;
+			    	ip.offs <= xip.offs + xJmptgt;
 			    else
 			    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
 	    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
@@ -877,7 +947,7 @@ RUN:
 		    if (xir.jxx.Ca == 3'd0)
 		    	ip.offs <= xJmptgt;
 		    else if (xir.jxx.Ca == 3'd7)
-		    	ip.offs <= ip.offs + xJmptgt;
+		    	ip.offs <= xip.offs + xJmptgt;
 		    else
 		    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
     		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
@@ -896,8 +966,8 @@ RUN:
     	if (xdj)
     		wlc <= xlc - 2'd1;
 	  	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{1'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
-	    	caregfile[{1'b0,ir.jxx.lk}].sel <= xip.sel;
+	    	caregfile[{2'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{2'b0,ir.jxx.lk}].sel <= xip.sel;
 	  	end
     	if (xdj ? xlc != 64'd0 : xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
 		    inv_i();
@@ -968,6 +1038,16 @@ RUN:
     	memreq.wr <= TRUE;
     	goto (WAIT_MEM1);
     end
+    else if (xLear) begin
+    	memreq.tid <= tid;
+    	tid <= tid + 2'd1;
+    	memreq.func <= xLdz ? MR_LOADZ : MR_LOAD;
+    	memreq.func2 <= MR_LEA;
+    	memreq.adr.offs <= xa + imm;
+    	memreq.seg <= {2'd0,xSeg};
+    	memreq.wr <= TRUE;
+    	goto (WAIT_MEM1);
+    end
     else if (xLoadn) begin
     	memreq.tid <= tid;
     	tid <= tid + 2'd1;
@@ -978,6 +1058,16 @@ RUN:
     	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
     	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
     	endcase
+    	memreq.adr.offs <= siea;
+    	memreq.seg <= {2'd0,xSeg};
+    	memreq.wr <= TRUE;
+    	goto (WAIT_MEM1);
+    end
+    else if (xLean) begin
+    	memreq.tid <= tid;
+    	tid <= tid + 2'd1;
+    	memreq.func <= xLdz ? MR_LOADZ : MR_LOAD;
+    	memreq.func2 <= MR_LEA;
     	memreq.adr.offs <= siea;
     	memreq.seg <= {2'd0,xSeg};
     	memreq.wr <= TRUE;
@@ -1237,15 +1327,25 @@ endcase
 			end
 			// Register file update
 		  if (wrfwr) begin
-		    case(wRt)
-		    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
-		    endcase
-		    regfile[wRt] <= wres;
-		    $display("regfile[%d] <= %h", wRt, wres);
-		    // Globally enable interrupts after first update of stack pointer.
-		    if (wRt==6'd63)
-		      gie <= TRUE;
+		  	if (wRtvec) begin
+		  		if (wmaskbit)
+		  			vregfile[wRt][wstep] <= wres;
+		  		else if (wzbit)
+		  			vregfile[wRt][wstep] <= 64'd0;
+		  	end
+		  	else begin
+			    case(wRt)
+			    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
+			    endcase
+			    regfile[wRt] <= wres;
+			    $display("regfile[%d] <= %h", wRt, wres);
+			    // Globally enable interrupts after first update of stack pointer.
+			    if (wRt==6'd63)
+			      gie <= TRUE;
+			  end
 		  end
+		  if (wvmrfwr)
+		  	vm_regfile[wRt[2:0]] <= wres;
 		  if (wMtlc)
 		  	lc <= wres;
 		  else if (wwrlc)

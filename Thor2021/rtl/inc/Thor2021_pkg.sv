@@ -168,6 +168,7 @@ parameter LDT			= 8'h84;
 parameter LDTU		= 8'h85;
 parameter LDO			= 8'h86;
 parameter LDOS		= 8'h87;
+parameter LEA			= 8'h8A;
 
 parameter STB			= 8'h90;
 parameter STW			= 8'h91;
@@ -183,6 +184,7 @@ parameter MOV			= 8'hA7;
 parameter BTFLD		= 8'hAA;
 parameter BFALIGN		= 4'h0;
 parameter BFFFO			= 4'h1;
+parameter BFEXTU		= 4'h4;
 parameter BFEXT			= 4'h5;
 parameter ANDM			= 4'h8;
 parameter BFSET			= 4'h9;
@@ -196,6 +198,7 @@ parameter LDWUX		= 8'hB3;
 parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
+parameter LEAX		= 8'hBA;
 
 parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
@@ -464,6 +467,7 @@ parameter FLT_UNIMP	= 8'h37;
 parameter FLT_DBZ		= 8'h38;
 parameter FLT_PMA		= 8'h3D;
 parameter FLT_BRK		= 8'h3F;
+parameter FLT_PFX		= 8'hC8;
 parameter FLT_TMR		= 8'hE2;
 parameter FLT_NMI		= 8'hFE;
 
@@ -784,15 +788,13 @@ typedef struct packed
 	Address	tgtadr;
 } BTBEntry;
 
+// No unsigned codes!
 parameter MR_LDB	= 4'd0;
-parameter MR_LDBU	= 4'd1;
-parameter MR_LDW	= 4'd2;
-parameter MR_LDWU	= 4'd3;
-parameter MR_LDT	= 4'd4;
-parameter MR_LDTU	= 4'd5;
-parameter MR_LDO	= 4'd6;
-parameter MR_LDOR	= 4'd7;
-parameter MR_LDOB	= 4'd8;
+parameter MR_LDW	= 4'd1;
+parameter MR_LDT	= 4'd2;
+parameter MR_LDO	= 4'd3;
+parameter MR_LDOR	= 4'd4;
+parameter MR_LDOB	= 4'd5;
 parameter MR_LDDESC = 4'd12;
 parameter MR_LEA	= 4'd14;
 parameter MR_STB	= 4'd0;
@@ -902,6 +904,7 @@ typedef struct packed
 {
 	logic rfwr;
 	logic carfwr;
+	logic vmrfwr;
 	Value imm;
 	logic [5:0] Ra;
 	logic [5:0] Rb;
@@ -909,6 +912,12 @@ typedef struct packed
 	logic [5:0] Rt;
 	logic [1:0] Tb;
 	logic [1:0] Tc;
+	logic [2:0] Rvm;
+	logic Rz;
+	logic Ravec;
+	logic Rbvec;
+	logic Rcvec;
+	logic Rtvec;
 	logic [2:0] Cat;
 	logic is_vector;			// a vector instruction
 	logic is_cbranch;			// is a conditional branch
@@ -920,6 +929,7 @@ typedef struct packed
 	logic jxx;
 	logic dj;
 	Offset jmptgt;
+	logic [3:0] lk;
 	logic rts;
 	logic loadr;
 	logic loadn;
@@ -927,6 +937,8 @@ typedef struct packed
 	logic storen;
 	logic ldz;
 	logic [2:0] memsz;
+	logic lear;
+	logic lean;
 	logic [2:0] seg;
 	logic tlb;
 	logic multi_cycle;
@@ -953,6 +965,7 @@ typedef struct packed
 	logic wrlc;
 	logic mfsel;
 	logic mtsel;
+	logic ril;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
