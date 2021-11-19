@@ -151,6 +151,7 @@ BTFLD:
 		rfwr = TRUE;
 	default:	rfwr = FALSE;
 	endcase
+CSR:	rfwr = TRUE;
 ADDI,SUBFI,CMPI:	rfwr = TRUE;
 ANDI,ORI,XORI:		rfwr = TRUE;
 SEQI,SNEI,SLTI,SGTI:		rfwr = TRUE;
@@ -217,6 +218,15 @@ case(ir.any.opcode)
 R2,R3:	deco.Tb = ir[28:27];
 ADD2R,AND2R,OR2R,XOR2R:
 	deco.Tb = {1'b0,ir[27]};
+JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
+	deco.Tb = ir[28:27];
+DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
+	deco.Tb = ir[28:27];
+JMP,DJMP:	deco.Tb = 2'b00;
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+	deco.Tb = ir[28:27];
+STBX,STWX,STTX,STOX:
+	deco.Tb = ir[28:27];
 default:	deco.Tb = 2'b00;
 endcase
 case(ir.any.opcode)

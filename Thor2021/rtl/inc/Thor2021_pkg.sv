@@ -609,7 +609,7 @@ typedef struct packed
 	logic [15:0] Tgthi;
 	logic [2:0] Ca;
 	logic [17:0] Tgtlo;
-	logic [1:0] Rt;
+	logic [1:0] lk;
 	logic v;
 	logic [7:0] opcode;
 } jmpinst;

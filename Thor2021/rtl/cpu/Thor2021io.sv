@@ -109,6 +109,54 @@ initial begin
 		regfile[n1] <= 64'd0;
 end
 
+wire advance_w;
+Value vroa, vrob, vroc;
+Value wres2;
+wire wrvrf;
+
+vreg_blkmem uvr1 (
+  .clka(clk_g),    // input wire clka
+  .ena(advance_w),      // input wire ena
+  .wea(wrvrf),      // input wire [0 : 0] wea
+  .addra({wRt,wstep}),  // input wire [11 : 0] addra
+  .dina(wres2),    // input wire [63 : 0] dina
+  .douta(),  // output wire [63 : 0] douta
+  .clkb(~clk_g),    // input wire clkb
+  .enb(1'b1),      // input wire enb
+  .web(1'b0),      // input wire [0 : 0] web
+  .addrb({Ra,dstep}),  // input wire [11 : 0] addrb
+  .dinb(64'd0),    // input wire [63 : 0] dinb
+  .doutb(vroa)  // output wire [63 : 0] doutb
+);
+vreg_blkmem uvr2 (
+  .clka(clk_g),    // input wire clka
+  .ena(advance_w),      // input wire ena
+  .wea(wrvrf),      // input wire [0 : 0] wea
+  .addra({wRt,wstep}),  // input wire [11 : 0] addra
+  .dina(wres2),    // input wire [63 : 0] dina
+  .douta(),  // output wire [63 : 0] douta
+  .clkb(~clk_g),    // input wire clkb
+  .enb(1'b1),      // input wire enb
+  .web(1'b0),      // input wire [0 : 0] web
+  .addrb({Rb,dstep}),  // input wire [11 : 0] addrb
+  .dinb(64'd0),    // input wire [63 : 0] dinb
+  .doutb(vrob)  // output wire [63 : 0] doutb
+);
+vreg_blkmem uvr3 (
+  .clka(clk_g),    // input wire clka
+  .ena(advance_w),      // input wire ena
+  .wea(wrvrf),      // input wire [0 : 0] wea
+  .addra({wRt,wstep}),  // input wire [11 : 0] addra
+  .dina(wres2),    // input wire [63 : 0] dina
+  .douta(),  // output wire [63 : 0] douta
+  .clkb(~clk_g),    // input wire clkb
+  .enb(1'b1),      // input wire enb
+  .web(1'b0),      // input wire [0 : 0] web
+  .addrb({Rc,dstep}),  // input wire [11 : 0] addrb
+  .dinb(64'd0),    // input wire [63 : 0] dinb
+  .doutb(vroc)  // output wire [63 : 0] doutb
+);
+
 // Instruction fetch stage vars
 reg ival;
 reg [15:0] icause;
@@ -217,13 +265,11 @@ Value crypto_res;
 Address cares;
 reg ld_vtmp;
 reg [7:0] xstep;
-reg xzbit;
 
 // Writeback stage vars
 reg wval;
 Instruction wir;
 reg [15:0] wcause;
-wire advance_w;
 reg wrfwr;
 reg wvmrfwr;
 reg [5:0] wRt;
@@ -313,7 +359,7 @@ always_comb
 if (Ra==6'd0)
   rfoa = {VALUE_SIZE{1'b0}};
 else if (deco.Ravec)
-	rfoa = vregfile[Ra][dstep];
+	rfoa = vroa;
 else if (Ra==xRt && xrfwr)
   rfoa = res;
 else if (Ra==wRt && wrfwr)
@@ -330,7 +376,7 @@ if (Tb[1])
 else if (Rb==6'd0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
-	rfob = vregfile[Rb][dstep];
+	rfob = vrob;
 else if (Rb==xRt && xrfwr)
   rfob = res;
 else if (Rb==wRt && wrfwr)
@@ -347,7 +393,7 @@ if (Tc[1])
 else if (Rc==6'd0)
 	rfoc = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
-	rfoc = vregfile[Rc][dstep];
+	rfoc = vroc;
 else if (Rc==xRt && xrfwr)
   rfoc = res;
 else if (Rc==wRt && wrfwr)
@@ -616,6 +662,9 @@ always_comb
 
 wire [63:0] siea = xa + {xb << xSc};
 
+assign wrvrf = wrfwr && wRtvec && (wmaskbit||wzbit);
+assign wres2 = wzbit ? 64'd0 : wres;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Timers
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -706,6 +755,7 @@ if (rst_i) begin
 	memreq.sel <= 16'h0;
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
+	cr0 <= 64'h300000001;
 end
 else begin
 	xx <= FALSE;
@@ -829,6 +879,16 @@ else begin
 		xmaskbit <= mask[dstep];
 		xzbit <= zbit;
 		xpredict_taken <= dpredict_taken;
+		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
+			inv_i();
+			inv_d();
+			ip.offs <= deco.jmptgt;
+		end
+		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
+			inv_i();
+			inv_d();
+			ip.offs <= ip.offs + deco.jmptgt;
+		end
 	end
 	else if (advance_x) begin
 		inv_x();
@@ -860,6 +920,7 @@ RESTART1:
 		wCsr <= 1'b0;
 		dpfx <= FALSE;
 		pfx_cnt <= 3'd0;
+		cr0 <= 64'h300000001;
 		goto(RESTART2);
 	end
 RESTART2:
@@ -893,9 +954,9 @@ RUN:
     if (xJxx) begin
     	if (xdj)
     		wlc <= xlc - 2'd1;
-    	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{2'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
-	    	caregfile[{2'b0,ir.jxx.lk}].sel <= xip.sel;
+    	if (xir.jxx.lk != 2'd0) begin
+	    	caregfile[{2'b0,xir.jxx.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{2'b0,xir.jxx.lk}].sel <= xip.sel;
     	end
       if (bpe) begin
         if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb)) begin
@@ -965,9 +1026,9 @@ RUN:
     if (xJmp) begin
     	if (xdj)
     		wlc <= xlc - 2'd1;
-	  	if (ir.jxx.lk != 2'd0) begin
-	    	caregfile[{2'b0,ir.jxx.lk}].offs <= xip.offs + 3'd6;
-	    	caregfile[{2'b0,ir.jxx.lk}].sel <= xip.sel;
+	  	if (xir.jxx.lk != 2'd0) begin
+	    	caregfile[{2'b0,xir.jmp.lk}].offs <= xip.offs + 3'd6;
+	    	caregfile[{2'b0,xir.jmp.lk}].sel <= xip.sel;
 	  	end
     	if (xdj ? xlc != 64'd0 : xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
 		    inv_i();
@@ -979,14 +1040,14 @@ RUN:
 		    else if (xir.jmp.Ca==3'd7)
 		    	ip.offs <= xip.offs + xJmptgt;
 		    else
-	    		ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
+	    		ip.offs <= caregfile[{1'b0,xir.jmp.Ca}].offs + xJmptgt;
     		// Selector changing?
-    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
-    			ip.sel <= caregfile[xir.jmp.Ca].sel;
+    		if (caregfile[{1'b0,xir.jmp.Ca}].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
+    			ip.sel <= caregfile[{1'b0,xir.jmp.Ca}].sel;
     			memreq.func <= MR_LOAD;
     			memreq.func2 <= MR_LDDESC;
-    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
-    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+    			memreq.adr <= caregfile[{1'b0,xir.jmp.Ca}].sel;
+    			memreq.seg <= caregfile[{1'b0,xir.jmp.Ca}].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
     			memreq.dat <= 5'd7;		// update CS descriptor cache
     			memreq.wr <= TRUE;
     			goto (WAIT_MEM1);
@@ -999,14 +1060,14 @@ RUN:
 		    inv_d();
 		    inv_x();
 				xx <= 4'd6;
-	    	ip.offs <= caregfile[{1'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
+	    	ip.offs <= caregfile[{2'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
 	  		// Selector changing?
-	  		if (caregfile[xir.rts.lk].sel != ip.sel) begin
-    			ip.sel <= caregfile[{1'b0,xir.rts.lk}].sel;
+	  		if (caregfile[{2'b0,xir.rts.lk}].sel != xip.sel) begin
+    			ip.sel <= caregfile[{2'b0,xir.rts.lk}].sel;
 	  			memreq.func <= MR_LOAD;
 	  			memreq.func2 <= MR_LDDESC;
-	  			memreq.adr <= caregfile[xir.rts.lk].sel;
-	  			memreq.seg <= caregfile[xir.rts.lk].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+	  			memreq.adr <= caregfile[{2'b0,xir.rts.lk}].sel;
+	  			memreq.seg <= caregfile[{2'b0,xir.rts.lk}].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
 	  			memreq.dat <= 5'd7;		// update CS descriptor cache
 	  			memreq.wr <= TRUE;
 	  			goto (WAIT_MEM1);

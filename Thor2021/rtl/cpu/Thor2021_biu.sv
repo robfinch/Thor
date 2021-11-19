@@ -677,7 +677,7 @@ always_ff @(posedge clk)
 			cs_desc.acr.c <= 1'b1;
 		end
 	end
-assign desc_out = desc_cache[seg][255:0];
+assign desc_out = seg==5'd31 ? init_desc : desc_cache[seg][255:0];
 assign sel_out = desc_cache[desc_index][287:256];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -220,6 +220,7 @@ int main()
 	*pLEDS = 0x01;
 				state++;
 				FlashLEDs();
+	*pLEDS = 0x55;
 				DBGAttr = 0x7FE0F000;
 				pMem += (BIOSMEM/sizeof(int));
 				pScreen += (0xFF800000/sizeof(int));
