@@ -29,6 +29,7 @@ typedef uint64_t utaddr;
 
 /* type to store each operand */
 typedef struct {
+	unsigned char number;
   uint32_t type;
   unsigned char attr;   /* reloc attribute != REL_NONE when present */
   unsigned char format;

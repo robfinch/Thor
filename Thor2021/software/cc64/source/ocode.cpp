@@ -867,14 +867,15 @@ void OCODE::OptSll()
 	bool retargetted = false;
 	bool dorem = false;
 	bool reused = false;
+	int rg;
 
 	return;	// Under construction
-	if (oper3->mode != am_imm)
+	if (oper4->mode != am_imm)
 		return;
-	if (oper3->offset->i < 0 || oper3->offset->i > 7)
+	if (oper4->offset->i < 0 || oper4->offset->i > 7)
 		return;
 	for (ip = fwd; ip; ip = ip->fwd) {
-		if (ip->insn->IsLoad() | ip->insn->IsStore()) {
+		if (ip->insn->IsLoad() || ip->insn->IsStore()) {
 			if (ip->oper2->mode == am_indx2) {
 				if (ip->oper2->scale == 0) {
 					if (ip->oper2->sreg == oper1->preg) {
@@ -883,6 +884,9 @@ void OCODE::OptSll()
 					}
 					// Swap registers?
 					else if (ip->oper2->preg == oper1->preg) {
+						rg = ip->oper2->preg;
+						ip->oper2->preg = ip->oper2->sreg;
+						ip->oper2->sreg = rg;
 						dorem = true;
 						continue;
 					}
@@ -901,16 +905,16 @@ void OCODE::OptSll()
 				if (ip->oper4->preg == oper1->preg || ip->oper4->sreg == oper1->preg)
 					reused = true;
 			if (ip->oper1 && ip->opcode != op_label)
-				if (ip->oper1->preg == oper2->preg || ip->oper1->sreg == oper2->preg)
+				if (ip->oper1->preg == oper3->preg || ip->oper1->sreg == oper3->preg)
 					reused = true;
 			if (ip->oper2)
-				if (ip->oper2->preg == oper2->preg || ip->oper2->sreg == oper2->preg)
+				if (ip->oper2->preg == oper3->preg || ip->oper2->sreg == oper3->preg)
 					reused = true;
 			if (ip->oper3)
-				if (ip->oper3->preg == oper2->preg || ip->oper3->sreg == oper2->preg)
+				if (ip->oper3->preg == oper3->preg || ip->oper3->sreg == oper3->preg)
 					reused = true;
 			if (ip->oper4)
-				if (ip->oper4->preg == oper2->preg || ip->oper4->sreg == oper2->preg)
+				if (ip->oper4->preg == oper3->preg || ip->oper4->sreg == oper3->preg)
 					reused = true;
 			if (ip->oper1 && ip->opcode != op_label)
 				if (ip->oper1->preg == oper1->preg)
@@ -918,17 +922,17 @@ void OCODE::OptSll()
 		}
 		if (retargetted && dorem) {
 			if (ip->oper2->sreg == oper1->preg) {
-				ip->oper2->sreg = oper2->preg;
-				ip->oper2->scale = oper3->offset->i;
-				ip->oper2->scale = 1 << oper3->offset->i;
+				ip->oper2->sreg = oper3->preg;
+				ip->oper2->scale = oper4->offset->i;
+				ip->oper2->scale = 1 << oper4->offset->i;
 				optimized++;
 				this->MarkRemove();
 			}
 			// Swap registers?
 			else if (ip->oper2->preg == oper1->preg) {
 				ip->oper2->preg = ip->oper2->sreg;
-				ip->oper2->sreg = oper2->preg;
-				ip->oper2->scale = 1 << oper3->offset->i;
+				ip->oper2->sreg = oper3->preg;
+				ip->oper2->scale = 1 << oper4->offset->i;
 				optimized++;
 				this->MarkRemove();
 			}
@@ -938,17 +942,17 @@ void OCODE::OptSll()
 			return;
 	}
 	if (ip->oper2->sreg == oper1->preg) {
-		ip->oper2->sreg = oper2->preg;
-		ip->oper2->scale = oper3->offset->i;
-		ip->oper2->scale = 1 << oper3->offset->i;
+		ip->oper2->sreg = oper3->preg;
+		ip->oper2->scale = oper4->offset->i;
+		ip->oper2->scale = 1 << oper4->offset->i;
 		optimized++;
 		this->MarkRemove();
 	}
 	// Swap registers?
 	else if (ip->oper2->preg == oper1->preg) {
 		ip->oper2->preg = ip->oper2->sreg;
-		ip->oper2->sreg = oper2->preg;
-		ip->oper2->scale = 1 << oper3->offset->i;
+		ip->oper2->sreg = oper3->preg;
+		ip->oper2->scale = 1 << oper4->offset->i;
 		optimized++;
 		this->MarkRemove();
 	}

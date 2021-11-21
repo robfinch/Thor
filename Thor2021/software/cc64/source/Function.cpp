@@ -70,16 +70,16 @@ Statement *Function::ParseBody()
 		if (sym->tp->type == bt_pointer)
 			lbl += "_func";
 		else
-			lbl += "\n\t.align 16\n";
+			lbl += "\n\t.align 4\n";
 		//			gen_strlab((char *)lbl.c_str());
 		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char *)lbl.c_str(), codeseg));
 	}
 	//	put_label((unsigned int) sp->value.i);
 	else {
 		if (sym->storage_class == sc_global) {
-			lbl = "\n\t.global ";
-			lbl += *sym->mangledName;
-			lbl += "\n\t.align 16\n";
+//			lbl = "\n\t.global ";
+//			lbl += *sym->mangledName;
+			lbl = "\n\t.align 4\n";
 			if (!IsInline) {
 				ofs.printf((char*)lbl.c_str());
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst(my_strdup((char*)lbl.c_str()), codeseg));
@@ -95,7 +95,7 @@ Statement *Function::ParseBody()
 				lbl = "\n\t.local ";
 				lbl += *sym->mangledName;
 				ofs.printf((char*)lbl.c_str());
-				lbl = "\n\t.align 16\n";
+				lbl = "\n\t.align 4\n";
 				ofs.printf((char*)lbl.c_str());
 				lbl = *sym->mangledName;
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst("\n;{+", codeseg));
@@ -109,7 +109,7 @@ Statement *Function::ParseBody()
 			lbl += "_func";
 		//gen_strlab(lbl);
 	}
-	ofs.printf("\t.sdreg\tgp\n");
+	ofs.printf("\t.sdreg\t%d\n", regGP);
 	dfs.printf("B");
 	p = my_strdup((char *)lbl.c_str());
 	dfs.printf("b");
@@ -834,12 +834,12 @@ void Function::SetupReturnBlock()
 			//if (IsFar)
 			//	GenerateMonadic(op_di, 0, MakeImmediate(2));
 			ap = GetTempRegister();
-			GenerateTriadic(op_csrrw, 0, ap, makereg(regZero), MakeImmediate(0x3102));
+			GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3102));
 			GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(2 * sizeOfWord, regFP));
 			ReleaseTempRegister(ap);
 			if (IsFar) {
 				ap = GetTempRegister();
-				GenerateTriadic(op_csrrw, 0, ap, makereg(regZero), MakeImmediate(0x3103));
+				GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3103));
 				GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(3 * sizeOfWord, regFP));
 				ReleaseTempRegister(ap);
 			}
@@ -875,7 +875,7 @@ void Function::SetupReturnBlock()
 		ReleaseTempRegister(ap);
 		if (IsFar) {
 			ap = GetTempRegister();
-			GenerateTriadic(op_csrrw, 0, ap, makereg(regZero), MakeImmediate(0x311F));	// CS
+			GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x311F));	// CS
 			GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed((int64_t)40, regFP));
 			ReleaseTempRegister(ap);
 		}
@@ -1294,17 +1294,17 @@ void Function::Generate()
 	stmt->CheckReferences(&sp, &bp, &gp, &gp1);
 	if (gp != 0) {
 		Operand* ap = GetTempRegister();
-		cg.GenerateLoadConst(MakeStringAsNameConst("__data_base", dataseg), ap);
-		//GenerateDiadic(cpu.lea_op, 0, makereg(regGP), MakeStringAsNameConst("__data_start", dataseg));
-		GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
+		//cg.GenerateLoadConst(MakeStringAsNameConst("__data_base", dataseg), ap);
+		GenerateDiadic(cpu.lea_op, 0, makereg(regGP), MakeStringAsNameConst("_data_start", dataseg));
+		//GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
 		ReleaseTempRegister(ap);
 	}
 	if (gp1 != 0) {
 		Operand* ap = GetTempRegister();
-		cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
-		//GenerateDiadic(cpu.lea_op, 0, makereg(regGP1), MakeStringAsNameConst("__rodata_start", dataseg));
+		//cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
+		GenerateDiadic(cpu.lea_op, 0, makereg(regGP1), MakeStringAsNameConst("_rodata_start", dataseg));
 		//if (!compiler.os_code)
-		GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
+		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);
 	}
 	if (!IsInline)

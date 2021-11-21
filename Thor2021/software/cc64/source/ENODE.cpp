@@ -1489,7 +1489,10 @@ Operand *ENODE::GenerateShift(int flags, int size, int op)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
 	ap2 = cg.GenerateExpression(p[1], am_reg | am_ui6, sizeOfWord, 1);
-	GenerateTriadic(op, size, ap3, ap1, ap2);
+	if (op==op_sllp)
+		Generate4adic(op, size, ap3, makereg(regZero), ap1, ap2);
+	else
+		GenerateTriadic(op, size, ap3, ap1, ap2);
 	// Rotates automatically sign extend
 	if ((op == op_rol || op == op_ror) && ap2->isUnsigned)
 		switch (size) {
@@ -1514,7 +1517,10 @@ Operand *ENODE::GenerateAssignShift(int flags, int size, int op)
 	ap3 = cg.GenerateExpression(p[0], am_all & ~am_imm, size, 0);
 	ap2 = cg.GenerateExpression(p[1], am_reg | am_ui6, size, 1);
 	if (ap3->mode == am_reg) {
-		GenerateTriadic(op, size, ap3, ap3, ap2);
+		if (op==op_sllp)
+			Generate4adic(op, size, ap3, makereg(regZero), ap3, ap2);
+		else
+			GenerateTriadic(op, size, ap3, ap3, ap2);
 		mr = &regs[ap3->preg];
 		if (mr->assigned)
 			mr->modified = true;
@@ -1526,7 +1532,10 @@ Operand *ENODE::GenerateAssignShift(int flags, int size, int op)
 	}
 	ap1 = GetTempRegister();
 	GenerateLoad(ap1, ap3, size, size);
-	GenerateTriadic(op, size, ap1, ap1, ap2);
+	if (op==op_sllp)
+		Generate4adic(op, size, ap1, makereg(regZero), ap1, ap2);
+	else
+		GenerateTriadic(op, size, ap1, ap1, ap2);
 	GenStore(ap1, ap3, size);
 	ReleaseTempRegister(ap1);
 	ReleaseTempRegister(ap2);
@@ -2242,7 +2251,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_clabcon:
 //		sprintf_s(buf, sizeof(buf), ".C%s_%lld", GetNamespace(), i);
-		sprintf_s(buf, sizeof(buf), ".C%05d", (int)i);
+		sprintf_s(buf, sizeof(buf), ".%05d", (int)i);
 		DataLabels[i] = true;
 		ofs.write(buf);
 		if (rshift > 0) {

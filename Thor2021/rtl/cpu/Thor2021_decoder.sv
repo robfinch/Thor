@@ -50,8 +50,8 @@ reg rfwr;
 
 always_comb
 begin
-Ra = ir[20:15];
-Rb = ir[26:21];
+Ra = ir.r3.Ra;
+Rb = ir.r3.Rb;
 rfwr = FALSE;
 // Target register
 case(ir.any.opcode)
@@ -68,7 +68,7 @@ STB,STW,STT,STO,STOC,
 STBX,STWX,STTX,STOX,STOCX,
 STOS:
 	Rc = ir.st.Rs;
-default:	Rc = ir[34:29];
+default:	Rc = ir.r3.Rc;
 endcase
 
 deco.Ravec = ir.any.v;
@@ -157,6 +157,7 @@ ANDI,ORI,XORI:		rfwr = TRUE;
 SEQI,SNEI,SLTI,SGTI:		rfwr = TRUE;
 ADDIL,CMPIL:			rfwr = TRUE;
 ANDIL,ORIL,XORIL:	rfwr = TRUE;
+SEQIL,SNEIL,SLTIL,SGTIL:		rfwr = TRUE;
 default:	rfwr = FALSE;
 endcase
 
@@ -215,22 +216,23 @@ deco.is_vector = ir.any.v;
 deco.imm = imm;
 
 case(ir.any.opcode)
-R2,R3:	deco.Tb = ir[28:27];
+R2,R3,BTFLD:	deco.Tb = ir.r3.Tb;
 ADD2R,AND2R,OR2R,XOR2R:
 	deco.Tb = {1'b0,ir[27]};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	deco.Tb = ir[28:27];
+	deco.Tb = ir.r3.Tb;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	deco.Tb = ir[28:27];
+	deco.Tb = ir.r3.Tb;
 JMP,DJMP:	deco.Tb = 2'b00;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
-	deco.Tb = ir[28:27];
+	deco.Tb = ir.r3.Tb;
 STBX,STWX,STTX,STOX:
-	deco.Tb = ir[28:27];
+	deco.Tb = ir.r3.Tb;
 default:	deco.Tb = 2'b00;
 endcase
 case(ir.any.opcode)
-R2,R3:	deco.Tc = ir[36:35];
+R2,R3:	deco.Tc = ir.r3.Tc;
+BTFLD:	deco.Tc = ir.r3.Tc;
 default:	deco.Tc = 2'b00;
 endcase
 
@@ -313,6 +315,14 @@ case(ir.any.opcode)
 STBX,STWX,STTX,STOX:
 	deco.storen = TRUE;
 default:	deco.storen = FALSE;
+endcase
+
+case(ir.any.opcode)
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+	deco.scale = ir.ldx.Sc;
+STBX,STWX,STTX,STOX:
+	deco.scale = ir.stx.Sc;
+default:	deco.scale = 3'd0;
 endcase
 
 case(ir.any.opcode)

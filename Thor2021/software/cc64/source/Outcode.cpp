@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[313] =
+Instruction opl[315] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -110,7 +110,8 @@ Instruction opl[313] =
 { "cmp",op_cmp,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "cmpu",op_cmpu,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "com", op_com,2,1,false,am_reg,am_reg,0,0 },
-{ "csrrw", op_csrrw,1,1,false,am_reg },
+{ "csrrd", op_csrrd,1,1,false,am_reg,am_reg,am_imm },
+{ "csrrw", op_csrrw,1,1,false,am_reg,am_reg,am_imm },
 { "dc",op_dc },
 { "dec", op_dec,4,0,true,am_i5 },
 { "defcat", op_defcat,12,1,false,am_reg,am_reg,0 ,0 },
@@ -298,6 +299,7 @@ Instruction opl[313] =
 { "sle",op_sle,1,1,false,am_reg,am_reg,am_reg | am_i26,0 },
 { "sleu",op_sleu,1,1,false,am_reg,am_reg,am_reg | am_i26,0 },
 { "sll", op_sll,2,1,false,am_reg,am_reg,am_reg,0 },
+{ "sllp", op_sllp,2,1,false,am_reg,am_reg,am_reg,am_reg|am_ui6 },
 { "slt", op_slt,1,1,false,am_reg,am_reg,am_reg,0 },
 { "sltu", op_sltu,1,1,false,am_reg,am_reg,am_reg,0 },
 { "sm",op_sm },
@@ -328,7 +330,7 @@ Instruction opl[313] =
 { "swp", op_stdp, 8, false },
 { "sws", op_stds,4,0 },
 { "sxb",op_sxb,1,1,false,am_reg,am_reg,0,0 },
-{ "sxc",op_sxc,1,1,false,am_reg,am_reg,0,0 },
+{ "sxc",op_sxw,1,1,false,am_reg,am_reg,0,0 },
 { "sxh",op_sxh,1,1,false,am_reg,am_reg,0,0 },
 { "sxo",op_sxo,1,1,false,am_reg,am_reg,0,0 },
 { "sxp",op_sxp,1,1,false,am_reg,am_reg,0,0 },
@@ -577,7 +579,7 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 		return buf;
 	}
 	if (d == 'C') {
-		sprintf_s(buf, sizeof(buf), ".C%05d", lab);
+		sprintf_s(buf, sizeof(buf), ".%05d", lab);
 		if (nm == NULL)
 			ofs.printf("%s:\n", buf);
 		else if (strlen(nm) == 0) {
@@ -590,15 +592,18 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 	}
 	else {
 		sprintf_s(buf, sizeof(buf), "%.400s_%d", ns, lab);
+		ofs.printf("\t.type\t%.400s_%d,@object\n", ns, lab);
+		ofs.printf("\t.size\t%.400s_%d,", ns, lab);
+		ofs.printf("%d\n", sz);
 		if (nm == NULL)
-			ofs.printf("%s[%d]:\n", buf, sz);
+			ofs.printf("%s:\n", buf);
 		else if (strlen(nm) == 0) {
-			ofs.printf("%s[%d]:\n", buf, sz);
+			ofs.printf("%s:\n", buf);
 		}
 		else {
 			//sprintf_s(buf, sizeof(buf), "%s_%s:\n", nm, ns);
-			ofs.printf("%s[%d]: ", buf, sz);
-			ofs.printf("; %s\n", nm);
+			ofs.printf("%s: ", buf);
+			ofs.printf("# %s\n", nm);
 		}
 	}
 	return (buf);
@@ -1257,7 +1262,7 @@ void cseg()
 		if (curseg != codeseg) {
 			nl();
 			ofs.printf("\t.text\n");
-			ofs.printf("\t.align\t16\n");
+			ofs.printf("\t.align\t4\n");
 			curseg = codeseg;
 		}
 	}

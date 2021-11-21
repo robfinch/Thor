@@ -183,6 +183,7 @@ enum e_op {
 	op_ldw0i, op_ldw1i, op_ldw2i, op_ldw3i, op_chk, op_chki,
 	op_cmpu, op_bsr, op_bun,
 	op_sll, op_slli, op_srl, op_srli, op_sra, op_srai, op_asl, op_lsr, op_asli, op_lsri, op_remark,
+	op_sllp,
 	// floating point
 	op_fbeq, op_fbne, op_fbor, op_fbun, op_fblt, op_fble, op_fbgt, op_fbge,
 	op_fcvtsq, op_fcvtdq, op_fcvttq,
@@ -211,7 +212,7 @@ enum e_op {
 	// DSD9
 	op_ldt, op_ldtu,
 	op_calltgt,
-	op_csrrw, op_nop,
+	op_csrrd, op_csrrw, op_nop,
 	op_hint, op_hint2, op_rem2, op_remu,
 	// FT64
 	op_fslt, op_fsle, op_fsgt, op_fsge, op_fseq, op_fsne, op_fsun,

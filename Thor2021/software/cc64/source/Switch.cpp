@@ -663,7 +663,7 @@ void Statement::GenerateTabularSwitch(int64_t minv, int64_t maxv, Operand* ap, b
 		GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(HasDefcase ? deflbl : breaklab));
 	}
 	ReleaseTempRegister(ap2);
-	GenerateTriadic(op_sll, 0, ap, ap, MakeImmediate(4));
+	Generate4adic(op_sllp, 0, ap, makereg(regZero), ap, MakeImmediate(4));
 	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
 	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
 	//GenerateMonadic(op_bra, 0, MakeCodeLabel(defcase ? deflbl : breaklab));
@@ -676,7 +676,7 @@ void Statement::GenerateNakedTabularSwitch(int64_t minv, Operand* ap, int tablab
 {
 	if (minv != 0)
 		GenerateTriadic(op_sub, 0, ap, ap, MakeImmediate(minv));
-	GenerateTriadic(op_sll, 0, ap, ap, MakeImmediate(3));
+	Generate4adic(op_sllp, 0, ap, makereg(regZero), ap, MakeImmediate(3));
 	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
 	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
 	ReleaseTempRegister(ap);

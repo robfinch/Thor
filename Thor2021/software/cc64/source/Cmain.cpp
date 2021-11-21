@@ -159,12 +159,12 @@ int main(int argc, char **argv)
 	cpu.SupportsBBC = true;
 	cpu.SupportsBBS = true;
 	cpu.SupportsPop = false;
-	cpu.SupportsPush = true;
+	cpu.SupportsPush = false;
 	cpu.SupportsLink = false;
 	cpu.SupportsUnlink = false;
 	cpu.SupportsBitfield = false;
-	cpu.SupportsLDM = true;
-	cpu.SupportsSTM = true;
+	cpu.SupportsLDM = false;
+	cpu.SupportsSTM = false;
 	cpu.SupportsPtrdif = false;
 	cpu.SupportsEnter = false;
 	cpu.SupportsLeave = false;

@@ -572,7 +572,9 @@ void PeepList::OptConstReg()
 					for (n = 0; n < nregs; n++) {
 						if (ip->oper1->mode == am_reg && ip->oper1->preg == n) {
 							if (regs[n].sub && !regs[n].IsArg) {
-								ip->MarkRemove();
+								// This optimization optimized a register away in: sto [t0+s1]
+								// Disabled until fixed.
+								//ip->MarkRemove();
 							}
 						}
 					}
@@ -737,7 +739,7 @@ void PeepList::OptInstructions()
 			case op_push:	ip->OptPush(); break;
 			case op_seq:	ip->OptScc(); break;
 			case op_sne:	ip->OptScc(); break;
-			case op_sll:	ip->OptSll(); break;
+			case op_sllp:	ip->OptSll(); break;
 			case op_zxb:	ip->OptZxb();	break;
 			case op_zxw:	ip->OptZxw();	break;
 			}

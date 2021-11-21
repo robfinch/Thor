@@ -66,12 +66,12 @@ mnemonic mnemonics[]={
 	"bmap", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x00000000004CLL,6},	
 	"bmm", 	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x600000000002LL,6},	
 
-	"beq",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000026LL,6},
-	"beq",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000026LL,6},
+	"beq",	{OP_LK,OP_REG,OP_REG|OP_IMM,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000026LL,6},
+	"beq",	{OP_REG,OP_REG|OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000026LL,6},
 	"beqz",	{OP_LK,OP_REG,OP_IMM,0,0}, {BL3,CPU_ALL,0,0xE0000010LL,4},
 	"beqz",	{OP_REG,OP_IMM,0,0,0}, {B3,CPU_ALL,0,0xE0000010LL,4},
-	"bge",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000029LL,6},
-	"bge",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000029LL,6},
+	"bge",	{OP_LK,OP_REG,OP_REG|OP_IMM,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000029LL,6},
+	"bge",	{OP_REG,OP_REG|OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000029LL,6},
 	"bgt",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E000002BLL,6},
 	"bgt",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E000002BLL,6},
 	"ble",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E000002ALL,6},
@@ -126,6 +126,7 @@ mnemonic mnemonics[]={
 
 	"cpuid", {OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x41LL,4},
 	
+	"csrrd", {OP_REG,OP_REG,OP_IMM,0,0}, {CSR,CPU_ALL,0,0x00000000000FLL,6},
 	"csrrw", {OP_REG,OP_REG,OP_IMM,0,0}, {CSR,CPU_ALL,0,0x02000000000FLL,6},
 
 	"dbeq",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000036LL,6},
@@ -228,6 +229,7 @@ mnemonic mnemonics[]={
 
 	"ldi", {OP_REG,OP_NEXTREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD4LL,6,0x04LL,4},
 
+	"ldb",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x80LL,6},	
 	"ldb",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x80LL,6},	
 	"ldb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB0LL,6},	
 	"ldb",	{OP_VREG,OP_SEL|OP_SCNDX,OP_VMREG,0,0}, {SCNDX,CPU_ALL,0,0x1B0LL,6},	
@@ -238,8 +240,10 @@ mnemonic mnemonics[]={
 	"ldo",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x86LL,6,0x87,4},
 	"ldo",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x86LL,6,0x87,4},	
 	"ldo",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB6LL,6},	
+	"ldt",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x84LL,6},	
 	"ldt",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x84LL,6},	
 	"ldt",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB4LL,6},	
+
 	"ldtu",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x85LL,6},	
 	"ldtu",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB5LL,6},	
 	"ldw",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x82LL,6},	
@@ -247,7 +251,7 @@ mnemonic mnemonics[]={
 	"ldwu",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x83LL,6},	
 	"ldwu",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB3LL,6},	
 
-	"lea",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x86LL,6,0x8A,4},
+	"lea",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x8ALL,6},
 	"lea",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x8ALL,6},	
 	"lea",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xBALL,6},	
 
@@ -419,6 +423,7 @@ mnemonic mnemonics[]={
 /* 0000_1010_0001_0001_1111_0000_0000_0000_0000_0000_AALL */
 
 	"sxb",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A01F00000AALL,6},
+	"sxc",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A11F00000AALL,6},	/* alternate mnemonic for sxw */
 	"sxw",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A11F00000AALL,6},
 	"sxt",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A13F00000AALL,6},
 
@@ -749,6 +754,7 @@ int parse_operand(char *p,int len,operand *op,int requires)
 {
 	int rg, nrg;
 	int rv = PO_NOMATCH;
+	char ch;
 
 	TRACE("P");
 	op->attr = REL_NONE;
@@ -940,12 +946,28 @@ static int get_reloc_type(operand *op)
 
   else {  /* handle instruction relocs */
   	switch(op->format) {
+  	
+  	/* BEQ r1,r2,target */
   	case B:
-  	case BL:
+  		if (op->number > 1)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_PC;
+	          break;
+	        case REL_PLT:
+	          rtype = REL_PLTPC;
+	          break;
+	        case REL_LOCALPC:
+	          rtype = REL_LOCALPC;
+	          break;
+	        default:
+	          cpu_error(11);
+	          break;
+	      }
+      break;
+
+		/* BRA target */		
   	case B2:
-  	case BL2:
-  	case B3:
-  	case BL3:
       switch (op->attr) {
         case REL_NONE:
           rtype = REL_PC;
@@ -961,13 +983,121 @@ static int get_reloc_type(operand *op)
           break;
       }
       break;
+  		
+  	/* BEQZ r1,target */
+  	case B3:
+  		if (op->number > 0)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_PC;
+	          break;
+	        case REL_PLT:
+	          rtype = REL_PLTPC;
+	          break;
+	        case REL_LOCALPC:
+	          rtype = REL_LOCALPC;
+	          break;
+	        default:
+	          cpu_error(11);
+	          break;
+	      }
+      break;
 
+		/* BEQ LK1,r1,r2,target */
+  	case BL:
+  		if (op->number > 2)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_PC;
+	          break;
+	        case REL_PLT:
+	          rtype = REL_PLTPC;
+	          break;
+	        case REL_LOCALPC:
+	          rtype = REL_LOCALPC;
+	          break;
+	        default:
+	          cpu_error(11);
+	          break;
+	      }
+      break;
+
+		/* BRA	LK1,target */
+  	case BL2:
+  		if (op->number > 0)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_PC;
+	          break;
+	        case REL_PLT:
+	          rtype = REL_PLTPC;
+	          break;
+	        case REL_LOCALPC:
+	          rtype = REL_LOCALPC;
+	          break;
+	        default:
+	          cpu_error(11);
+	          break;
+	      }
+      break;
+
+  	/* BEQZ LK1,r1,target */
+  	case BL3:
+  		if (op->number > 1)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_PC;
+	          break;
+	        case REL_PLT:
+	          rtype = REL_PLTPC;
+	          break;
+	        case REL_LOCALPC:
+	          rtype = REL_LOCALPC;
+	          break;
+	        default:
+	          cpu_error(11);
+	          break;
+	      }
+      break;
+
+  	/* JEQ r1,r2,target */
     case J:
+    	if (op->number > 1)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_ABS;
+	          break;
+	        case REL_PLT:
+	        case REL_GLOBDAT:
+	        case REL_SECOFF:
+	          rtype = op->attr;
+	          break;
+	        default:
+	          cpu_error(11); /* reloc attribute not supported by operand */
+	          break;
+	      }
+      break;
+
+		/* JEQ LK1,r1,r1,target */ 
     case JL:
+    	if (op->number > 2)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_ABS;
+	          break;
+	        case REL_PLT:
+	        case REL_GLOBDAT:
+	        case REL_SECOFF:
+	          rtype = op->attr;
+	          break;
+	        default:
+	          cpu_error(11); /* reloc attribute not supported by operand */
+	          break;
+	      }
+      break;
+
+		/* JMP target */
     case J2:
-    case JL2:
-    case J3:
-    case JL3:
       switch (op->attr) {
         case REL_NONE:
           rtype = REL_ABS;
@@ -982,6 +1112,61 @@ static int get_reloc_type(operand *op)
           break;
       }
       break;
+
+		/* JMP LK1,target */
+    case JL2:
+    	if (op->number > 0)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_ABS;
+	          break;
+	        case REL_PLT:
+	        case REL_GLOBDAT:
+	        case REL_SECOFF:
+	          rtype = op->attr;
+	          break;
+	        default:
+	          cpu_error(11); /* reloc attribute not supported by operand */
+	          break;
+	      }
+      break;
+
+		/* JEQZ r1,target */
+    case J3:
+    	if (op->number > 0)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_ABS;
+	          break;
+	        case REL_PLT:
+	        case REL_GLOBDAT:
+	        case REL_SECOFF:
+	          rtype = op->attr;
+	          break;
+	        default:
+	          cpu_error(11); /* reloc attribute not supported by operand */
+	          break;
+	      }
+      break;
+
+		/* JEQZ LK1,r1,target */
+    case JL3:
+    	if (op->number > 1)
+	      switch (op->attr) {
+	        case REL_NONE:
+	          rtype = REL_ABS;
+	          break;
+	        case REL_PLT:
+	        case REL_GLOBDAT:
+	        case REL_SECOFF:
+	          rtype = op->attr;
+	          break;
+	        default:
+	          cpu_error(11); /* reloc attribute not supported by operand */
+	          break;
+	      }
+      break;
+
     default:
       switch (op->attr) {
         case REL_NONE:
@@ -1071,7 +1256,6 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
       	/* Unconditional jump */
         case J2:
         case JL2:
-        	printf("val=%08llx\r\n", val);
 		      add_extnreloc_masked(reloclist,base,val,reloctype,
                            11,18,0,0x7fffeLL);
 		      add_extnreloc_masked(reloclist,base,val,reloctype,
@@ -1366,7 +1550,7 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 }
 
 static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
-	operand *op, int64_t val, int constexpr, int i, int selector)
+	operand *op, int64_t val, int constexpr, int i, char selector)
 {
 	size_t isize;
 
@@ -1514,6 +1698,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 					selector = select_selector(op->basereg & 0x3f, 0);
 			}
 			isize = 6;
+			*insn |= (selector & 7LL) << 45LL;
 			goto j2;
 			if (mnemo->ext.short_opcode && is_nbit(val,8)) {
 				isize = 4;
@@ -1522,6 +1707,7 @@ j1:
 					*insn = *insn | ((val & 0x7ffLL) << 21LL);
 					*insn = *insn & ~0xff;	/* clear opcode */
 					*insn = *insn | mnemo->ext.short_opcode;
+					*insn |= (selector & 7LL) << 29LL;
 				}
 				return (isize);
 			}
@@ -1594,7 +1780,7 @@ j2:
 /* Evaluate branch operands excepting GPRs which are handled earlier.
 	Returns 1 if the branch was processed, 0 if illegal branch format.
 */
-static int eval_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t val, int* isize, int i)
+static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t val, int* isize, int i)
 {
 	*isize = 6;
 
@@ -1609,12 +1795,10 @@ static int eval_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t val
 					*insn |= RB(val) | TB(2);
 					break;
 				case 2:
-			  	if (insn) {
-			  		uint64_t tgt;
-			  		*insn |= CA(7);
-			  		tgt = (((val >> 1LL) & 0xfLL) << 11LL) | (((val >> 5LL) & 0xffffLL) << 32LL);
-			  		*insn |= tgt;
-			  	}
+		  		uint64_t tgt;
+		  		*insn |= CA(7);
+		  		tgt = (((val >> 1LL) & 0xfLL) << 11LL) | (((val >> 5LL) & 0xffffLL) << 32LL);
+		  		*insn |= tgt;
 			  	break;
 				}
 			}
@@ -1901,6 +2085,8 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 		TRACE("F");
     op = *(ip->op[i]);
     /* reflect the format back into the operand */
+    ip->op[i]->number = i;
+    op.number = i;
     op.format = mnemo->ext.format;
 
       /* special case: operand omitted and use this operand's type + 1
@@ -1999,7 +2185,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 			TRACE("Etho3:");
 			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i, selector);
     }
-    else if (eval_branch(insn, mnemo, &op, val, &isize, i)) {
+    else if (encode_branch(insn, mnemo, &op, val, &isize, i)) {
 			TRACE("Etho4:");
     	;
     }
@@ -2070,6 +2256,13 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 				}
   		}
   		else {
+  			if (selector==-1) {
+  				if (op.selector >= 0)
+  					selector = op.selector;
+  				else
+  					selector = select_selector(op.basereg & 0x3f, 0);
+  			}
+  			*insn |= (selector & 7LL) << 45LL;
 	    	if (0 && is_nbit(val,8) && (mnemo->ext.opcode==0x86LL || mnemo->ext.opcode==0x93LL)) {
 	    		isize = 4;
 	    		if (insn) {

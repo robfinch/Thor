@@ -1400,10 +1400,14 @@ Operand* CodeGenerator::GenerateImmToMemAssign(Operand* ap1, Operand* ap2, int s
 		GenerateStore(makereg(regZero), ap1, ssize);
 	}
 	else {
-		if (!isRiscv && ap2->offset->nodetype == en_icon && ap2->offset->i >= -32 && ap2->offset->i < 32) {
-			GenerateStore(ap2, ap1, ssize);
-		}
-		else {
+		//if (ap2->offset->nodetype == en_icon && ap2->offset->i >= -32 && ap2->offset->i < 32) {
+		//	GenerateStore(ap2, ap1, ssize);
+		//}
+		//else
+		if (ap2->offset->nodetype == en_icon && ap2->offset->i == 0)
+			GenerateStore(makereg(regZero), ap1, ssize);
+		else
+		{
 			ap3 = GetTempRegister();
 			GenerateLoadConst(ap2, ap3);
 			GenerateStore(ap3, ap1, ssize);
@@ -2198,9 +2202,9 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_udiv:   ap1 = node->GenDivMod(flags,size,op_divu); goto retpt;
   case en_mod:    ap1 = node->GenDivMod(flags,size,op_rem); goto retpt;
   case en_umod:   ap1 = node->GenDivMod(flags,size,op_remu); goto retpt;
-  case en_asl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
-  case en_shl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
-  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
+  case en_asl:    ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
+  case en_shl:    ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
+  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
   case en_asr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shru:   ap1 = node->GenerateShift(flags,size,op_srl); goto retpt;
@@ -2250,7 +2254,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_asand:  ap1 = node->GenerateAssignLogic(flags,size,op_and); goto retpt;
   case en_asor:   ap1 = node->GenerateAssignLogic(flags,size,op_or); goto retpt;
 	case en_asxor:  ap1 = node->GenerateAssignLogic(flags,size,op_xor); goto retpt;
-  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sll)); goto retpt;
+  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sllp)); goto retpt;
   case en_asrsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sra)); goto retpt;
 	case en_asrshu: ap1 = (node->GenerateAssignShift(flags,size,op_srl)); goto retpt;
   case en_asmul: ap1 = GenerateAssignMultiply(node,flags,size,op_mul); goto retpt;

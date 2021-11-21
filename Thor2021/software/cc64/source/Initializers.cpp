@@ -148,7 +148,8 @@ void doinit(SYM *sp)
 		}
 		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.type\t%s,@object\n", (char *)sp->name->c_str());
 		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.size\t%s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
-//		strcat_s(lbl, sizeof(lbl), sp->name->c_str());
+		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
+		//		strcat_s(lbl, sizeof(lbl), sp->name->c_str());
 //		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "[xxx%d]", sp->tp->size);
 		if (sp->tp->IsSkippable()) {
 			patchpoint = ofs.tellp();

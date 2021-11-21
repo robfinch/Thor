@@ -90,6 +90,7 @@ parameter MUL9 = 6'd14;
 parameter DELAY5 = 6'd15; 
 parameter DELAY6 = 6'd16; 
 
+reg [5:0] rst_cnt;
 wire [1:0] omode;
 wire [1:0] memmode;
 wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
@@ -105,8 +106,11 @@ reg [63:0] vm_regfile [0:7];
 
 integer n1;
 initial begin
-	for (n1 = 0; n1 < 64; n1 = n1 + 1)
+	for (n1 = 0; n1 < 64; n1 = n1 + 1) begin
 		regfile[n1] <= 64'd0;
+		caregfile[n1 % 16].offs <= 32'd0;
+		caregfile[n1 % 16].sel <= 32'd0;
+	end
 end
 
 wire advance_w;
@@ -188,8 +192,8 @@ reg [5:0] Ra;
 reg [5:0] Rb;
 reg [5:0] Rc;
 reg [5:0] Rt;
-wire [1:0] Tb = deco.Tb;
-wire [1:0] Tc = deco.Tc;
+reg [1:0] Tb;
+reg [1:0] Tc;
 reg [2:0] Rvm;
 reg Rz;
 always_comb Ra = deco.Ra;
@@ -198,6 +202,8 @@ always_comb Rc = deco.Rc;
 always_comb Rt = deco.Rt;
 always_comb Rvm = deco.Rvm;
 always_comb Rz = deco.Rz;
+always_comb Tb = deco.Tb;
+always_comb Tc = deco.Tc;
 reg [7:0] dstep;
 reg zbit;
 
@@ -286,6 +292,8 @@ reg [7:0] wstep;
 reg wzbit;
 reg wmaskbit;
 
+reg tCsr;
+reg uCsr;
 
 // CSRs
 reg [63:0] cr0;
@@ -365,11 +373,13 @@ else if (Ra==xRt && xrfwr)
 else if (Ra==wRt && wrfwr)
 	rfoa = wres;
 else
+	rfoa = regfile[Ra];
+/*
   case(Ra)
   6'd63:  rfoa = sp [{omode,ilvl}];
   default:    rfoa = regfile[Ra];
   endcase
-
+*/
 always_comb
 if (Tb[1])
 	rfob = {{57{Tb[0]}},Tb[0],Rb};
@@ -382,11 +392,13 @@ else if (Rb==xRt && xrfwr)
 else if (Rb==wRt && wrfwr)
 	rfob = wres;
 else
+	rfob = regfile[Rb];
+/*	
   case(Rb)
   6'd63:  rfob = sp [{omode,ilvl}];
   default:    rfob = regfile[Rb];
   endcase
-
+*/
 always_comb
 if (Tc[1])
 	rfoc = {{57{Tc[0]}},Tc[0],Rc};
@@ -399,10 +411,13 @@ else if (Rc==xRt && xrfwr)
 else if (Rc==wRt && wrfwr)
 	rfoc = wres;
 else
+	rfoc = regfile[Rc];
+/*
   case(Rc)
   6'd63:  rfoc = sp [{omode,ilvl}];
   default:    rfoc = regfile[Rc];
   endcase
+*/
 
 always_comb
 	if (xMtlc && xrfwr)
@@ -722,9 +737,17 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+wire stall_x = (xLoadr||xLoadn) && (Ra==xRt || Rb==xRt || Rc==xRt) && xval;
+reg clr_stall_x;
+always @(posedge clk_g)
+	if (INVnRUN)
+		clr_stall_x <= stall_x;
+	else
+		clr_stall_x <= FALSE;
+
 assign run = ihit;
 assign advance_w = ihit;
-assign advance_x = ihit && (advance_w || !wval) && (state==RUN);
+assign advance_x = ihit && (advance_w || !wval) && (state==RUN) && !(wCsr && wval) && !tCsr && !uCsr && (!stall_x||clr_stall_x);
 assign advance_d = ihit && (advance_x || !xval);
 assign advance_i = ihit && (advance_d || !dval);
 
@@ -743,6 +766,7 @@ if (rst_i) begin
 	wir <= NOP_INSN;
 	xIsMultiCycle <= FALSE;
 	xSeg <= 3'd0;
+	xSc <= 3'd0;
 	tid <= 8'h00;
 	memreq.tid <= 8'h00;
 	memreq.step <= 6'd0;
@@ -756,6 +780,9 @@ if (rst_i) begin
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
 	cr0 <= 64'h300000001;
+	rst_cnt <= 6'd0;
+	tCsr <= 1'b0;
+	uCsr <= 1'b0;
 end
 else begin
 	xx <= FALSE;
@@ -800,7 +827,7 @@ else begin
 			pfx_cnt <= 3'd0;
 		if (irq_i > pmStack[3:1] && gie && !dpfx)
 			icause <= 16'h8000|icause_i|(irq_i << 4'd8);
-		else if (wc_time_irq)
+		else if (wc_time_irq && gie && !dpfx)
 			icause <= 16'h8000|FLT_TMR;
 		else if (insn.any.opcode==BRK)
 			icause <= FLT_BRK;
@@ -833,6 +860,7 @@ else begin
 		xRb <= Rb;
 		xRc <= Rc;
 		xRt <= Rt;
+		xSc <= deco.scale;
 		xCat <= deco.Cat;
 		xip <= dip;
 		xlen <= dlen;
@@ -918,13 +946,17 @@ RESTART1:
 		wir <= NOP_INSN;
 		xCsr <= 1'b0;
 		wCsr <= 1'b0;
+		tCsr <= 1'b0;
+		uCsr <= 1'b0;
 		dpfx <= FALSE;
 		pfx_cnt <= 3'd0;
 		cr0 <= 64'h300000001;
+		xSc <= 3'd0;
 		goto(RESTART2);
 	end
 RESTART2:
 	begin
+		rst_cnt <= 6'd0;
 		goto(RUN);
 	end
 RUN:
@@ -966,16 +998,7 @@ RUN:
 					xx <= 4'd2;
           ip.offs <= xip.offs + 3'd6;
           // Was selector changed? If so change it back.
-	    		if (xip.sel != ip.sel) begin
-	    			ip.sel <= xip.sel;
-	    			memreq.func <= MR_LOAD;
-	    			memreq.func2 <= MR_LDDESC;
-	    			memreq.adr <= xip.sel;
-	    			memreq.seg <= xip.sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
-	    			memreq.dat <= 5'd7;		// update CS descriptor cache
-	    			memreq.wr <= TRUE;
-	    			goto (WAIT_MEM1);
-	    		end
+          tChangeIPSel(xip.sel);
         end
         else if (!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) begin
 			    inv_i();
@@ -987,17 +1010,9 @@ RUN:
 			    else if (xir.jxx.Ca == 3'd7)
 			    	ip.offs <= xip.offs + xJmptgt;
 			    else
-			    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
-	    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
-	    			ip.sel <= caregfile[xir.jmp.Ca].sel;
-	    			memreq.func <= MR_LOAD;
-	    			memreq.func2 <= MR_LDDESC;
-	    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
-	    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
-	    			memreq.dat <= 5'd7;		// update CS descriptor cache
-	    			memreq.wr <= TRUE;
-	    			goto (WAIT_MEM1);
-	    		end
+			    	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+	    		if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7)
+  	  			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
         end
       end
       else if (xdj ? (takb && xlc != 64'd0) : takb) begin
@@ -1010,17 +1025,9 @@ RUN:
 		    else if (xir.jxx.Ca == 3'd7)
 		    	ip.offs <= xip.offs + xJmptgt;
 		    else
-		    	ip.offs <= caregfile[xir.jmp.Ca].offs + xJmptgt;
-    		if (caregfile[xir.jmp.Ca].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
-    			ip.sel <= caregfile[xir.jmp.Ca].sel;
-    			memreq.func <= MR_LOAD;
-    			memreq.func2 <= MR_LDDESC;
-    			memreq.adr <= caregfile[xir.jmp.Ca].sel;
-    			memreq.seg <= caregfile[xir.jmp.Ca].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
-    			memreq.dat <= 5'd7;		// update CS descriptor cache
-    			memreq.wr <= TRUE;
-    			goto (WAIT_MEM1);
-    		end
+		    	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+    		if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7)
+    			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
       end
     end
     if (xJmp) begin
@@ -1042,16 +1049,8 @@ RUN:
 		    else
 	    		ip.offs <= caregfile[{1'b0,xir.jmp.Ca}].offs + xJmptgt;
     		// Selector changing?
-    		if (caregfile[{1'b0,xir.jmp.Ca}].sel != xip.sel && xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7) begin
-    			ip.sel <= caregfile[{1'b0,xir.jmp.Ca}].sel;
-    			memreq.func <= MR_LOAD;
-    			memreq.func2 <= MR_LDDESC;
-    			memreq.adr <= caregfile[{1'b0,xir.jmp.Ca}].sel;
-    			memreq.seg <= caregfile[{1'b0,xir.jmp.Ca}].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
-    			memreq.dat <= 5'd7;		// update CS descriptor cache
-    			memreq.wr <= TRUE;
-    			goto (WAIT_MEM1);
-    		end
+    		if (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)
+    			tChangeIPSel(caregfile[{1'b0,xir.jmp.Ca}].sel);
     	end
   	end
   	if (xRts) begin
@@ -1062,16 +1061,7 @@ RUN:
 				xx <= 4'd6;
 	    	ip.offs <= caregfile[{2'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
 	  		// Selector changing?
-	  		if (caregfile[{2'b0,xir.rts.lk}].sel != xip.sel) begin
-    			ip.sel <= caregfile[{2'b0,xir.rts.lk}].sel;
-	  			memreq.func <= MR_LOAD;
-	  			memreq.func2 <= MR_LDDESC;
-	  			memreq.adr <= caregfile[{2'b0,xir.rts.lk}].sel;
-	  			memreq.seg <= caregfile[{2'b0,xir.rts.lk}].sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
-	  			memreq.dat <= 5'd7;		// update CS descriptor cache
-	  			memreq.wr <= TRUE;
-	  			goto (WAIT_MEM1);
-	  		end
+	  		tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
   		end
   	if (xMtlc)
   		wlc <= res;
@@ -1244,7 +1234,7 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-    goto(INVnRUN2);
+    goto(RUN);
   end
 INVnRUN2:
   begin
@@ -1335,11 +1325,12 @@ endcase
 			else
 				pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 			plStack <= {plStack[55:0],8'hFF};
-			cause[2'd3] <= wcause;
+			cause[2'd3] <= wcause & 16'h80FF;
 			caregfile[4'h8+istk_depth] <= ip;
 			istk_depth <= istk_depth + 2'd1;
 			ip.sel <= tvec[2'd3].sel;
 			ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+			tChangeIPSel(tvec[2'd3].sel);
 			inv_i();
 			inv_d();
 			inv_x();
@@ -1359,12 +1350,13 @@ endcase
 				if (|istk_depth) begin
 					pmStack <= {8'h3E,pmStack[63:8]};
 					plStack <= {8'hFF,plStack[63:8]};
-					ip <= caregfile[4'h7+istk_depth];	// 8-1
+					ip.offs <= caregfile[4'h7+istk_depth].offs;	// 8-1
 					istk_depth <= istk_depth - 2'd1;
 					inv_i();
 					inv_d();
 					inv_x();
 					inv_w();
+					tChangeIPSel(caregfile[4'h7+istk_depth].sel);
 					xx <= 4'd9;
 				end
 			end
@@ -1374,8 +1366,8 @@ endcase
 					plStack <= {plStack[55:0],8'hFF};
 					cause[2'd3] <= FLT_PRIV;
 					caregfile[3'd6] <= ip;
-					ip.sel <= tvec[2'd3].sel;
 					ip.offs <= tvec[2'd3].offs + {omode,6'h00};
+					tChangeIPSel(tvec[2'd3].sel);
 					inv_i();
 					inv_d();
 					inv_x();
@@ -1395,9 +1387,11 @@ endcase
 		  			vregfile[wRt][wstep] <= 64'd0;
 		  	end
 		  	else begin
+		  		/*
 			    case(wRt)
 			    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
 			    endcase
+			    */
 			    regfile[wRt] <= wres;
 			    $display("regfile[%d] <= %h", wRt, wres);
 			    // Globally enable interrupts after first update of stack pointer.
@@ -1413,6 +1407,11 @@ endcase
 		  	lc <= wlc;
 		end
   end
+
+	if (ihit) begin
+		tCsr <= wCsr & wval;
+		uCsr <= tCsr;
+	end
 
 end
 
@@ -1437,6 +1436,24 @@ endtask
 task inv_w;
 begin
   wval <= INV;
+end
+endtask
+
+// Called to load a new CS descriptor if the CS changes.
+
+task tChangeIPSel;
+input Selector sel;
+begin
+	if (sel != xip.sel) begin
+		ip.sel <= sel;
+		memreq.func <= MR_LOAD;
+		memreq.func2 <= MR_LDDESC;
+		memreq.adr <= sel;
+		memreq.seg <= sel[23] ? 5'd17 : 5'd31;	// LDT or GDT
+		memreq.dat <= 5'd7;		// update CS descriptor cache
+		memreq.wr <= TRUE;
+		goto (WAIT_MEM1);
+	end
 end
 endtask
 
@@ -1479,7 +1496,20 @@ begin
 		CSR_TICK:	res = tick;
 		CSR_CAUSE:	res = cause[regno[13:12]];
 		CSR_MTVEC:	res = tvec[regno[1:0]];
-		CSR_MCA:
+		CSR_UCA:
+			if (regno[4:1]==4'd7)
+				case(regno[0])
+				1'b0:	res = xip.offs;
+				1'b1:	res = xip.sel;
+				endcase
+			else if (regno[4:1] < 4'd8)
+				case(regno[0])
+				1'b0:	res = caregfile[regno[4:1]].offs;
+				1'b1:	res = caregfile[regno[4:1]].sel;
+				endcase
+			else
+				res = 64'd0;
+		CSR_MCA,CSR_HCA,CSR_SCA:
 			if (regno[4:1]==4'd7)
 				case(regno[0])
 				1'b0:	res = xip.offs;
@@ -1525,12 +1555,17 @@ begin
 		CSR_MBADADDR:	badaddr[regno[13:12]] <= val;
 		CSR_CAUSE:	cause[regno[13:12]] <= val;
 		CSR_MTVEC:	tvec[regno[1:0]] <= val;
-		CSR_MCA:
-			if (regno[4:1] != 4'd7)
+		CSR_UCA:
+			if (regno[4:1] < 4'd8)
 				case(regno[0])
-				1'b0:	caregfile[regno[4:1]].offs = val;
-				1'b1:	caregfile[regno[4:1]].sel = val;
+				1'b0:	caregfile[regno[4:1]].offs <= val;
+				1'b1:	caregfile[regno[4:1]].sel <= val;
 				endcase
+		CSR_MCA,CSR_SCA,CSR_HCA:
+			case(regno[0])
+			1'b0:	caregfile[regno[4:1]].offs <= val;
+			1'b1:	caregfile[regno[4:1]].sel <= val;
+			endcase
 		CSR_MPLSTACK:	plStack <= val;
 		CSR_MPMSTACK:	pmStack <= val;
 		CSR_MVSTEP:	estep <= val;

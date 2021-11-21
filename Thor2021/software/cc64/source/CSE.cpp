@@ -57,7 +57,7 @@ int CSE::OptimizationDesireability()
 	// If the function name can be optimized to a register then
 	// a 16-bit compressed JAL can be used.
 	if (exp->nodetype == en_cnacon)// && !opt_size)
-		return (uses);
+		return (0);
 	// If the expression is volatile eg. reading I/O we don't want to
 	// replace it.
 	if (exp->isVolatile)

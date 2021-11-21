@@ -378,7 +378,10 @@ Operand* ThorCodeGenerator::GenerateGe(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	GenerateTriadic(op_sge, 0, ap3, ap1, ap2);
+	if (ap2->mode == am_imm)
+		GenerateTriadic(op_sgt, 0, ap3, ap1, MakeImmediate(ap2->offset->i-1));
+	else
+		GenerateTriadic(op_sge, 0, ap3, ap1, ap2);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -809,7 +812,7 @@ void ThorCodeGenerator::GenerateBge(Operand* ap1, Operand* ap2, int label)
 		if (ap2->offset->i >= -32 && ap2->offset->i < 32)
 			GenerateTriadic(op_bge, 0, ap1, ap2, MakeCodeLabel(label));
 		else {
-			GenerateTriadic(op_sge, 0, ap3, ap1, ap2);
+			GenerateTriadic(op_sgt, 0, ap3, ap1, MakeImmediate(ap2->offset->i-1));
 			GenerateTriadic(op_bne, 0, ap3, makereg(regZero), MakeCodeLabel(label));
 		}
 		ReleaseTempReg(ap3);
@@ -824,7 +827,7 @@ void ThorCodeGenerator::GenerateBle(Operand* ap1, Operand* ap2, int label)
 
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
-		GenerateTriadic(op_sge, 0, ap3, ap2, ap1);
+		GenerateTriadic(op_slt, 0, ap3, ap1, MakeImmediate(ap2->offset->i+1));
 		GenerateTriadic(op_bne, 0, ap3, makereg(regZero), MakeCodeLabel(label));
 		ReleaseTempReg(ap3);
 	}
@@ -1585,7 +1588,7 @@ void ThorCodeGenerator::LinkAutonew(ENODE *node)
 
 Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab)
 { 
-	Operand *ap, *ap2;
+	Operand *ap, *ap2,* ap3;
 	Function *sym;
 	Function *o_fn;
 	SYM *s;
@@ -1750,18 +1753,20 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
 				GenerateDiadic(op_mtbase, 0, makereg(regCS), ap2);
 				ReleaseTempRegister(ap2);
 			}
+			ap->MakeLegal(am_reg, sizeOfWord);
+			GenerateTriadic(op_csrrw, 0, makereg(0), ap, MakeImmediate(0x3108));	// ca4
 			if (sym && sym->IsLeaf) {
 				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, ap);
+					GenerateMonadic(op_jmp, 0, MakeIndirect(136));
 				else
-					GenerateDiadic(op_jsr, 0, makereg(regLR), ap);
+					GenerateDiadic(op_jsr, 0, makereg(regLR), MakeIndirect(136));
 				currentFn->doesJAL = true;
 			}
 			else {
 				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, ap);
+					GenerateMonadic(op_jmp, 0, MakeIndirect(136));
 				else
-					GenerateDiadic(op_jsr, 0, makereg(regLR), ap);
+					GenerateDiadic(op_jsr, 0, makereg(regLR), MakeIndirect(136));
 				currentFn->doesJAL = true;
 			}
 			GenerateMonadic(op_bex,0,MakeDataLabel(throwlab,regZero));

@@ -468,6 +468,8 @@ int Operand::OptRegConst(int regclass, bool tally)
 	if (this == nullptr)
 		return (0);
 
+	//if (regs[sreg].number != regZero)
+	//	return(0);
 	mr = &regs[preg];
 	if (regclass & am_imm) {
 		if (mode == am_reg) {
