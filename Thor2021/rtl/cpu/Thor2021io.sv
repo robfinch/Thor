@@ -275,6 +275,31 @@ Address cares;
 reg ld_vtmp;
 reg [7:0] xstep;
 
+// Memory
+reg mval;
+Instruction mir;
+Address mip;
+reg advance_m;
+reg [15:0] mcause;
+Address mbadAddr;
+reg mrfwr;
+reg mvmrfwr;
+reg [5:0] mRt;
+reg mStset,mStmov,mStfnd,mStcmp;
+reg mRtvec;
+reg mCsr;
+reg mRti;
+reg mRex;
+reg mMtlc;
+reg mwrlc;
+reg mLoad;
+reg [63:0] mlc;
+Value ma;
+Value mres;
+reg [7:0] mstep;
+reg mzbit;
+reg mmaskbit;
+
 // Writeback stage vars
 reg wval;
 Instruction wir;
@@ -284,6 +309,7 @@ Address wbadAddr;
 reg wrfwr;
 reg wvmrfwr;
 reg [5:0] wRt;
+reg wStset,wStmov,wStfnd,wStcmp;
 reg wRtvec;
 reg wCsr;
 reg wRti;
@@ -376,6 +402,8 @@ else if (deco.Ravec)
 	rfoa = vroa;
 else if (Ra==xRt && xrfwr && xval)
   rfoa = res;
+else if (Ra==mRt && mrfwr && mval)
+	rfoa = mres;
 else if (Ra==wRt && wrfwr && wval)
 	rfoa = wres;
 else
@@ -395,6 +423,8 @@ else if (deco.Rbvec)
 	rfob = vrob;
 else if (Rb==xRt && xrfwr && xval)
   rfob = res;
+else if (Rb==mRt && mrfwr && mval)
+	rfob = mres;
 else if (Rb==wRt && wrfwr && wval)
 	rfob = wres;
 else
@@ -416,6 +446,8 @@ else if (Rc==xRt && xrfwr && xval)
   rfoc = res;
 else if (Rc==wRt && wrfwr && wval)
 	rfoc = wres;
+else if (Rc==mRt && mrfwr && mval)
+	rfoc = mres;
 else
 	rfoc = regfile[Rc];
 /*
@@ -430,6 +462,10 @@ always_comb
 		dlc = res;
 	else if (xwrlc && xval)
 		dlc = xlc;
+	else if (mMtlc && mrfwr && mval)
+		dlc = mres;
+	else if (mwrlc && mval)
+		dlc = mlc;
 	else if (wMtlc && wrfwr && wval)
 		dlc = wres;
 	else if (wwrlc && wval)
@@ -773,16 +809,22 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 reg [2:0] clr_stall_x;
-wire stall_d = (deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) && (|xcause || xRti || xRex);
+wire stall_i = !ihit;
+wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) && (|xcause || xRti || xRex || |mcause || mRti || mRex)) ||
+								(xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) ||
+								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt}) && mval && mRt!=6'd0) ||
+								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ;
+
 wire stall_x = 1'b0;//((xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) && !clr_stall_x[2]);// ||
 //							  (wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0)) &&
 //							  state!=RUN;
 
 assign run = ihit;
-always_comb	advance_w = ihit && (state==RUN||state==INVnRUN) && (!stall_x);
-always_comb advance_x = ihit && (advance_w || !wval) && (state==RUN) && !(wCsr && wval) && !tCsr && !uCsr && (!stall_x);
-always_comb advance_d = ihit && (advance_x || !xval) && !stall_d;
-always_comb advance_i = ihit && (advance_d || !dval);
+always_comb	advance_w = !stall_i && (state==RUN) && (!stall_x);
+always_comb advance_m = !stall_i && (advance_w) && (!stall_x);
+always_comb advance_x = !stall_i && (advance_m) && (state==RUN) && !(mCsr && mval) && !(wCsr && wval) && !tCsr && !uCsr && (!stall_x);
+always_comb advance_d = !stall_i && (advance_x) && !stall_d;
+always_comb advance_i = !stall_i && (advance_d);
 
 reg [3:0] xx;	// debug marker
 
@@ -807,6 +849,7 @@ else begin
 	tDecode();
 	tStateMachine();
 	tExecute();
+	tMemory();
 	tWriteback();
 
 	if (ihit) begin
@@ -841,6 +884,13 @@ begin
 end
 endtask
 
+task inv_m;
+begin
+  mval <= INV;
+  mcause <= 16'h0;
+end
+endtask
+
 task inv_w;
 begin
   wval <= INV;
@@ -853,10 +903,12 @@ begin
 	ld_time <= FALSE;
 	wval <= INV;
 	xval <= INV;
+	mval <= INV;
 	dval <= INV;
 	ival <= INV;
 	ir <= NOP_INSN;
 	xir <= NOP_INSN;
+	mir <= NOP_INSN;
 	wir <= NOP_INSN;
 	xIsMultiCycle <= FALSE;
 	xMem <= FALSE;
@@ -882,6 +934,7 @@ begin
 	cr0 <= 64'h300000001;
 	rst_cnt <= 6'd0;
 	xCsr <= 1'b0;
+	mCsr <= 1'b0;
 	wCsr <= 1'b0;
 	tCsr <= 1'b0;
 	uCsr <= 1'b0;
@@ -899,6 +952,7 @@ begin
 	icause <= 16'h0000;
 	dcause <= 16'h0000;
 	xcause <= 16'h0000;
+	mcause <= 16'h0000;
 	wcause <= 16'h0000;
 	lc <= 64'd0;
 	wLoad <= FALSE;
@@ -939,19 +993,20 @@ WAIT_MEM2:
 	begin
 		if (memresp_fifo_v) begin
 			memresp_fifo_rd <= FALSE;
-			xLoad <= FALSE;
-			if (xStset|xStmov)
-				xrfwr <= TRUE;
+			mLoad <= FALSE;
+			mres <= memresp.res;
+			if (mStset|mStmov)
+				mrfwr <= TRUE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MFSEL) begin
-					xrfwr <= FALSE;
+					mrfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
-						xrfwr <= TRUE;
+						mrfwr <= TRUE;
 					end
 				end
 				if (|memresp.cause) begin
-					xcause <= memresp.cause;
-					xbadAddr <= memresp.badAddr;
+					wcause <= memresp.cause;
+					wbadAddr <= memresp.badAddr;
 				end
 				goto (INVnRUN);
 			end
@@ -964,13 +1019,6 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-		wRt <= xRt;
-  	wres <= res;
-		wval <= TRUE;
-		wrfwr <= xrfwr;
-		wcause <= xcause;
-		wbadAddr <= xbadAddr;
-		clr_stall_x <= 3'b111;
     goto(RUN);
   end
 INVnRUN2:
@@ -1387,25 +1435,27 @@ endtask
 task tExecute;
 begin
 	if (advance_x) begin
-		wval <= xval;
-		wir <= xir;
-		wip <= xip;
-		wRt <= xRt;
-		wrfwr <= xrfwr;
-		wvmrfwr <= xvmrfwr;
-		wLoad <= xLoad;
-		wres <= res;
-		wlc <= xlc;
-		wCsr <= xCsr;
-		wRti <= xRti;
-		wRex <= xRex;
-		wMtlc <= xMtlc;
-		wwrlc <= xwrlc;
-		wa <= xa;
-		wstep <= xstep;
-		wmaskbit <= xmaskbit;
-		wzbit <= xzbit;
-		wRtvec <= xRtvec;
+		mval <= xval;
+		mir <= xir;
+		mip <= xip;
+		mRt <= xRt;
+		mrfwr <= xrfwr;
+		mvmrfwr <= xvmrfwr;
+		mLoad <= xLoad;
+		mStset <= xStset;
+		mStmov <= xStmov;
+		mres <= res;
+		mlc <= xlc;
+		mCsr <= xCsr;
+		mRti <= xRti;
+		mRex <= xRex;
+		mMtlc <= xMtlc;
+		mwrlc <= xwrlc;
+		ma <= xa;
+		mstep <= xstep;
+		mmaskbit <= xmaskbit;
+		mzbit <= xzbit;
+		mRtvec <= xRtvec;
 		if (xval) begin
 	    if (xJxx) begin
 	    	if (xdj)
@@ -1495,6 +1545,39 @@ begin
 
 		end	// xval
 	end	// advance_x
+	else if (advance_m)
+		inv_m();
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Memory stage
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task tMemory;
+begin
+	if (advance_m) begin
+		wval <= mval;
+		wir <= mir;
+		wip <= mip;
+		wRt <= mRt;
+		wrfwr <= mrfwr;
+		wvmrfwr <= mvmrfwr;
+		wLoad <= mLoad;
+		wStset <= mStset;
+		wStmov <= mStmov;
+		wres <= mres;
+		wlc <= mlc;
+		wCsr <= mCsr;
+		wRti <= mRti;
+		wRex <= mRex;
+		wMtlc <= mMtlc;
+		wwrlc <= mwrlc;
+		wa <= ma;
+		wstep <= mstep;
+		wmaskbit <= mmaskbit;
+		wzbit <= mzbit;
+		wRtvec <= mRtvec;
+	end
 	else if (advance_w)
 		inv_w();
 end
@@ -1524,9 +1607,9 @@ begin
 				inv_i();
 				inv_d();
 				inv_x();
-				xx <= 4'd8;
+				inv_m();
 				inv_w();
-				xx <= TRUE;
+				xx <= 4'd8;
 			end
 			else begin
 				if (wRti) begin
@@ -1538,6 +1621,7 @@ begin
 						inv_i();
 						inv_d();
 						inv_x();
+						inv_m();
 						inv_w();
 						tChangeIPSel(caregfile[4'h7+istk_depth].sel);
 						xx <= 4'd9;
@@ -1561,6 +1645,7 @@ begin
 						inv_i();
 						inv_d();
 						inv_x();
+						inv_m();
 						inv_w();
 						xx <= 4'd10;
 					end

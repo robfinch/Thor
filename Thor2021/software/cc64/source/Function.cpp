@@ -724,20 +724,29 @@ void Function::UnlinkStack(int64_t amt)
 		GenerateMonadic(op_hint, 0, MakeImmediate(begin_stack_unlink));
 	if (cpu.SupportsLeave) {
 	}
-	else if (!IsLeaf && doesJAL) {
+	else if (!IsLeaf) {
+		if (doesJAL) {
+			if (alstk) {
+				ap = GetTempRegister();
+				GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(2 * sizeOfWord, regFP));
+				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+				ReleaseTempRegister(ap);
+				if (IsFar) {
+					ap = GetTempRegister();
+					GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(3 * sizeOfWord, regFP));
+					GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3103));
+					ReleaseTempRegister(ap);
+				}
+				GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
+				GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
+			}
+		}
+	}
+	// Else leaf routine, reverse any stack allocation but do not pop link register
+	else {
 		if (alstk) {
 			GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
 			GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
-			ap = GetTempRegister();
-			GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(2 * sizeOfWord, regFP));
-			GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
-			ReleaseTempRegister(ap);
-			if (IsFar) {
-				ap = GetTempRegister();
-				GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(3 * sizeOfWord, regFP));
-				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3103));
-				ReleaseTempRegister(ap);
-			}
 		}
 	}
 	cg.GenerateUnlink(amt);
@@ -745,8 +754,6 @@ void Function::UnlinkStack(int64_t amt)
 	}
 	else if (!IsLeaf && doesJAL) {
 		if (!alstk) {
-			GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
-			GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
 			ap = GetTempRegister();
 			GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(2 * sizeOfWord, regFP));
 			GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
@@ -757,6 +764,8 @@ void Function::UnlinkStack(int64_t amt)
 				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3103));
 				ReleaseTempRegister(ap);
 			}
+			GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
+			GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
 		}
 	}
 	//	GenerateTriadic(op_add,0,makereg(regSP),makereg(regSP),MakeImmediate(3*sizeOfWord));
@@ -1074,8 +1083,8 @@ void Function::GenerateReturn(Statement* stmt)
 		else if (cpu.SupportsLeave)
 			toAdd = 0;
 	}
-	else if (currentFn->IsLeaf)
-		toAdd = 0;
+	//else if (currentFn->IsLeaf)
+	//	toAdd = 0;
 
 	if (epilog) {
 		epilog->Generate();
