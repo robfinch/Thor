@@ -60,6 +60,10 @@ JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	Rt = 6'd0;
 JMP,DJMP:			Rt = 6'd0;
+STB,STW,STT,STO,STOC,STOS:
+	Rt = 6'd0;
+STBX,STWX,STTX,STOX,STOCX:
+	Rt = 6'd0;
 default:	Rt = ir[14:9];
 endcase
 // Rc
@@ -158,6 +162,11 @@ SEQI,SNEI,SLTI,SGTI:		rfwr = TRUE;
 ADDIL,CMPIL:			rfwr = TRUE;
 ANDIL,ORIL,XORIL:	rfwr = TRUE;
 SEQIL,SNEIL,SLTIL,SGTIL:		rfwr = TRUE;
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS:
+	rfwr = TRUE;
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+	rfwr = TRUE;
+LEA,LEAX:	rfwr = TRUE;
 default:	rfwr = FALSE;
 endcase
 
@@ -270,8 +279,8 @@ endcase
 
 case(ir.any.opcode)
 CACHE,CACHEX,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.ld = TRUE;
 default:	deco.ld = FALSE;
 endcase
@@ -285,42 +294,42 @@ endcase
 
 case(ir.any.opcode)
 CACHE,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR:
 	deco.loadr = TRUE;
 default:	deco.loadr = FALSE;
 endcase
 
 case(ir.any.opcode)
 CACHEX,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.loadn = TRUE;
 default:	deco.loadn = FALSE;
 endcase
 
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STOS,
-STBX,STWX,STTX,STOX:
+STB,STW,STT,STO,STOS,STOC,
+STBX,STWX,STTX,STOX,STOCX:
 	deco.st = TRUE;
 default:	deco.st = FALSE;
 endcase
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STOS:
+STB,STW,STT,STO,STOC,STOS:
 	deco.storer = TRUE;
 default:	deco.storer = FALSE;
 endcase
 
 case(ir.any.opcode)
-STBX,STWX,STTX,STOX:
+STBX,STWX,STTX,STOCX,STOX:
 	deco.storen = TRUE;
 default:	deco.storen = FALSE;
 endcase
 
 case(ir.any.opcode)
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.scale = ir.ldx.Sc;
-STBX,STWX,STTX,STOX:
+STBX,STWX,STTX,STOCX,STOX:
 	deco.scale = ir.stx.Sc;
 default:	deco.scale = 3'd0;
 endcase
@@ -380,27 +389,33 @@ deco.rts = ir.any.opcode==RTS;
 
 // Detect multi-cycle operations
 case(ir.any.opcode)
-R2:
-	case(ir.r2.func)
+R2,R3:
+	case(ir.r3.func)
 	MUL,MULH:	deco.multi_cycle = TRUE;
 	DIV:			deco.multi_cycle = TRUE;
 	default:	deco.multi_cycle = FALSE;
 	endcase
+OSR2:
+	case(ir.r3.func)
+	TLBRW:		deco.multi_cycle = TRUE;
+	MTSEL:		deco.multi_cycle = TRUE;
+	default:	deco.multi_cycle = FALSE;
+	endcase
 MULI,MULIL:		deco.multi_cycle = TRUE;
 DIVI,DIVIL:		deco.multi_cycle = TRUE;
-JMP,DJMP:			deco.multi_cycle = FALSE;
-JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	deco.multi_cycle = FALSE;
-DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	deco.multi_cycle = FALSE;
-RTS:	deco.multi_cycle = TRUE;
 CACHE,CACHEX:	deco.multi_cycle = TRUE;
-LDB,LDBU,STB:	deco.multi_cycle = FALSE;
+LDB,LDBU,STB:	deco.multi_cycle = TRUE;
 LDW,LDWU,STW:	deco.multi_cycle = TRUE;
 LDT,LDTU,STT: deco.multi_cycle = TRUE;
+LDO,LDOS,LDOR:		deco.multi_cycle = TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = TRUE;
+LDOX,LDORX:		deco.multi_cycle = TRUE;
+STO,STOS,STOC:		deco.multi_cycle = TRUE;
+STOX,STOCX:		deco.multi_cycle = TRUE;
+LEA,LEAX:		deco.multi_cycle = TRUE;
+STMOV,STFND,STCMP,STSET:			deco.multi_cycle = TRUE;
 default:	deco.multi_cycle = FALSE;
 endcase
 
@@ -467,6 +482,7 @@ VM:
 	MTLC:	deco.wrlc = FALSE;	// MTLC will update LC in Thor2021io.sv
 	default:	deco.wrlc = FALSE;
 	endcase
+STSET:	deco.wrlc = TRUE;
 default:
 	deco.wrlc = FALSE;
 endcase
@@ -511,6 +527,13 @@ VM:
 	endcase
 default:	deco.vmrfwr = FALSE;
 endcase
+
+deco.mem = deco.ld|deco.loadr|deco.storer|deco.loadn|deco.storen|deco.lear|deco.lean|deco.tlb;
+deco.load = deco.ld|deco.loadr|deco.loadn|deco.lear|deco.lean|deco.tlb;
+deco.stset = ir.any.opcode==STSET;
+deco.stmov = ir.any.opcode==STMOV;
+deco.stfnd = ir.any.opcode==STFND;
+deco.stcmp = ir.any.opcode==STCMP;
 
 end
 

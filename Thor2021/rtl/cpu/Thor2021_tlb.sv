@@ -338,7 +338,7 @@ else begin
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= iadr_i[31:12];
-	    acr_o <= 4'h15;
+	    acr_o <= 4'hF;
 	    hit0 <= 1'b1;
 		end
 	  else if (tadr0.vpn==iadr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin
@@ -381,7 +381,7 @@ else begin
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= ladr_i[31:12];
-	    acr_o <= 4'h15;
+	    acr_o <= 4'hF;
 	    hit0 <= 1'b1;
 		end
 	  else if (tadr0.vpn==ladr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin

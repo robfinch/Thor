@@ -160,11 +160,13 @@ reg [4:0] icnt;
 reg [4:0] dcnt;
 Address iadr;
 reg keyViolation = 1'b0;
+reg xlaten;
 
 MemoryRequest memreq,imemreq;
 reg memreq_rd = 0;
 MemoryResponse memresp;
 reg zero_data = 0;
+Value movdat;
 
 MemSegDesc cs_desc;
 Address csip;
@@ -180,36 +182,35 @@ Address afilt;
 always_comb
 	seg = memreq.seg;
 	
-// Filter out the segment selection from the request address
 always_comb
-	for (m = -1; m < $bits(Address); m = m + 1)
-		if (m > 53)
-			afilt[m] = 1'b0;
-		else
-			afilt[m] = memreq.adr[m];
+	afilt.offs = (memreq.func==MR_MOVST) ? memreq.dat : memreq.adr;
 
 always_comb
- 	ea = {afilt >> shr_ma};	// Keep same segment
+ 	ea.offs = {afilt.offs >> shr_ma};	// Keep same selector
 
-reg [7:-1] ealow;
-wire [3:0] segsel = ea >> ({arange,3'b0} + 4'd8);
-wire [3:0] ea_acr = pe ? desc_out[15:12] : 4'hF;
-wire [3:0] pc_acr = cs_desc.acr[15:12];
+reg [7:0] ealow;
+SegDesc desc_out;
+SegACR ea_acr;
+SegACR pc_acr;
+always_comb
+	ea_acr = (pe & xlaten) ? desc_out.acr : 20'h9EFF8;
+always_comb
+	pc_acr = cs_desc.acr;
 
 reg [63:0] sel;
 reg [63:0] nsel;
 reg [255:0] dat, dati;
 reg [127:0] datis;
-always_comb datis <= dati >> {ealow[3:-1],2'b0};
+always_comb datis = dati >> {ealow[3:0],3'b0};
 `ifdef CPU_B64
 reg [15:0] sel;
 reg [127:0] dat, dati;
-wire [63:0] datis = dati >> {ealow[2:-1],2'b0};
+wire [63:0] datis = dati >> {ealow[2:0],3'b0};
 `endif
 `ifdef CPU_B32
 reg [7:0] sel;
 reg [63:0] dat, dati;
-wire [63:0] datis = dati >> {ealow[1:-1],2'b0};
+wire [63:0] datis = dati >> {ealow[1:0],3'b0};
 `endif
 
 // Build an insert mask for data cache store operations.
@@ -598,7 +599,6 @@ always_ff @(posedge clk)
 // MR_TLB
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-reg xlaten;
 reg tlben, tlbwr;
 wire tlbmiss;
 wire tlbrdy;
@@ -640,7 +640,6 @@ Thor2021_TLB utlb (
 reg [63:0] limit;
 reg wr_desc;
 reg [4:0] desc_index;
-SegDesc desc_out;
 SegDesc init_desc;
 Selector sel_out;
 always_comb
@@ -750,6 +749,7 @@ else begin
 		  icnt <= 5'd0;
 		  dcnt <= 5'd0;
 		  shr_ma <= 6'd0;
+		  dcachable <= FALSE;
 			if (!ihit && fifoToCtrl_empty) begin
 				waycnt <= waycnt + 2'd1;
 				// On a miss goto load I$ process unless a hit in the victim cache.
@@ -772,7 +772,7 @@ else begin
 	MEMORY2:
 		begin
 			memresp.cause <= {8'h00,FLT_NONE};
-			memresp.badAddr <= 33'd0;
+			memresp.badAddr <= memreq.adr;	// Handy for debugging
 			memresp.ldcs <= FALSE;
 			memresp.mtsel <= memreq.func==MR_LOAD && memreq.func2 == MR_LDDESC;
 			ealow <= ea[7:0];
@@ -785,7 +785,7 @@ else begin
     			tlbwr <= TRUE;
 					goto (TLB1);
 				end
-			MR_LOAD,MR_LOADZ:
+			MR_LOAD,MR_LOADZ,MR_MOVLD:
 				case(memreq.func2)
 				MR_LEA:
 					begin
@@ -820,17 +820,8 @@ else begin
 					end
 				default:
 					begin
-			    	if (afilt > limit && bounds_chk) begin
-							memresp.tid <= memreq.tid;
-							memresp.step <= memreq.step;
-							memresp.res <= memreq.adr;
-					    memresp.cmt <= TRUE;
-							memresp.wr <= TRUE;
-							memresp.res <= 128'd0;
-							memresp.badAddr <= memreq.adr;
-			    		memresp.cause <= FLT_SGB;
-							goto (MEMORY1);
-			    	end
+			    	if (afilt > limit && bounds_chk)
+			    		tBoundsViolation(memreq.adr);
 			    	else begin
 				    	daccess <= TRUE;
 	    		  	tEA(ea);
@@ -843,17 +834,8 @@ else begin
 				endcase
 			M_JALI:
 				begin
-		    	if (afilt > limit && bounds_chk) begin
-						memresp.tid <= memreq.tid;
-						memresp.step <= memreq.step;
-						memresp.res <= memreq.adr;
-				    memresp.cmt <= TRUE;
-						memresp.wr <= TRUE;
-						memresp.res <= 128'd0;
-						memresp.badAddr <= memreq.adr;
-		    		memresp.cause <= FLT_SGB;
-						goto (MEMORY1);
-		    	end
+		    	if (afilt > limit && bounds_chk)
+		    		tBoundsViolation(memreq.adr);
 		    	else begin
 			    	daccess <= TRUE;
 	    		  tEA(ea);
@@ -894,17 +876,8 @@ else begin
 			*/
 			MR_STORE,M_CALL:
 				begin
-					if (afilt > limit && bounds_chk) begin
-						memresp.tid <= memreq.tid;
-						memresp.step <= memreq.step;
-						memresp.res <= memreq.adr;
-				    memresp.cmt <= TRUE;
-						memresp.wr <= TRUE;
-						memresp.res <= 128'd0;
-						memresp.badAddr <= memreq.adr;
-			    	memresp.cause <= FLT_SGB;
-						goto (MEMORY1);
-			    end
+					if (afilt > limit && bounds_chk)
+		    		tBoundsViolation(memreq.adr);
 			    else begin
 			    	daccess <= TRUE;
 	    		  tEA(ea);
@@ -913,6 +886,21 @@ else begin
 			      sel <= zero_data ? 32'h0001 << ea[3:0] : {32'h0,memreq.sel} << ea[3:0];
 			      // Shift output data into position
 	    		  dat <= zero_data ? 256'd0 : {128'd0,memreq.dat} << {ea[3:0],3'b0};
+			  		goto (MEMORY3);
+		  		end
+				end
+			MR_MOVST:
+				begin
+					if (afilt > limit && bounds_chk)
+		    		tBoundsViolation(afilt.offs);
+			    else begin
+			    	daccess <= TRUE;
+	    		  tEA(ea);
+	      		xlaten <= TRUE;
+	      		// Setup proper select lines
+			      sel <= {16'h0,memreq.sel} << ea[3:0];
+			      // Shift output data into position
+	    		  dat <= {128'd0,memresp.res} << {ea[3:0],3'b0};
 			  		goto (MEMORY3);
 		  		end
 				end
@@ -990,18 +978,25 @@ else begin
 //	      sel_o <= sel[15:0];
 	      dat_o <= dat[127:0];
 	      case(memreq.func)
-	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
+	      MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
 	      	begin
 	     			sr_o <= memreq.func2==MR_LDOR;
-  	    		if (dhit) begin
-  	    			tDeactivateBus();
-      				sr_o <= LOW;
+	     			if (tlbacr[1]) begin
+	  	    		if (dhit) begin
+	  	    			tDeactivateBus();
+	      				sr_o <= LOW;
+		      		end
 	      		end
+	      		else
+	      			tReadViolation(ea);
 	      	end
-	      MR_STORE,M_CALL:
+	      MR_STORE,MR_MOVST,M_CALL:
 	      	begin
       			cr_o <= memreq.func2==MR_STOC;
-	      		we_o <= HIGH;
+	      		if (tlbacr[2])
+		      		we_o <= HIGH;
+		      	else
+		      		tWriteViolation(ea);
 	      	end
 	      default:  ;
 	      endcase
@@ -1018,7 +1013,7 @@ else begin
 	    dce & dhit:
 		    begin
 		    	datil <= dc_line;
-		  		if (memreq.func==MR_STORE || memreq.func==M_CALL) begin
+		  		if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
 		  			if (ack_i) begin
 			  			dci <= (dc_line & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
 			  			dc_wway <= dc_rway;
@@ -1051,7 +1046,7 @@ else begin
 		begin
 		  if (~ack_i) begin
 	      case(memreq.func)
-	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
+	      MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
 	      	begin
 				    if (|sel[31:16] && !(dce && dhit))
 			  	    goto (MEMORY8);
@@ -1063,7 +1058,7 @@ else begin
 	      			dati <= datil >> {adr_o[5:3],6'b0};
 			      end
 	      	end
-		    MR_STORE,M_CALL:
+		    MR_STORE,MR_MOVST,M_CALL:
 		    	begin
 				    if (|sel[31:16])
 	  			    goto (MEMORY8);
@@ -1151,7 +1146,7 @@ else begin
 			if (tlbmiss)
 				tTLBMiss(ea);
 			else begin
-				if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce)
+				if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce)
 		 			tDeactivateBus();
 				else begin
 	      	stb_o <= HIGH;
@@ -1167,7 +1162,7 @@ else begin
 	  if (dhit & dce) begin
 	    tDeactivateBus();
 	  	datil <= dc_line;
-			if (memreq.func==MR_STORE || memreq.func==M_CALL) begin
+			if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
 				if (ack_i) begin
 	  			dci <= (dc_line & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
 	  			dc_wway <= dc_rway;
@@ -1192,13 +1187,13 @@ else begin
 	  if (~ack_i) begin
 	    begin
 	      case(memreq.func)
-	      MR_LOAD,MR_LOADZ,M_JALI://,RTS2:
+	      MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
 	      	begin
 	      		if (dhit & dce)
 	      			dati <= datil >> {adr_o[5:3],6'b0};
 		        goto (DATA_ALIGN);
 	      	end
-		    MR_STORE,M_CALL:
+		    MR_STORE,MR_MOVST,M_CALL:
 		    	begin
 		    		if (memreq.func2==MR_STPTR) begin	// STPTR
 				    	if (~|ea[AWID-5:0]) begin
@@ -1233,8 +1228,12 @@ else begin
 	DATA_ALIGN:
 	  begin
 	  	tDeactivateBus();
-	  	if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI /*|| memreq.func==RTS2*/) & ~dhit & dcachable & dce)
+	  	if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI || memreq.func==MR_MOVLD/*|| memreq.func==RTS2*/) & ~dhit & dcachable & tlbacr[3] & dce)
 	  		goto (DFETCH2);
+	  	else if (memreq.func==MR_MOVLD) begin
+	  		memreq.func <= MR_MOVST;
+	  		goto (MEMORY2);
+	  	end
 	  	else
 	    	ret();
 			memresp.step <= memreq.step;
@@ -1243,7 +1242,7 @@ else begin
 			memresp.wr <= TRUE;
 			sr_o <= LOW;
 	    case(memreq.func)
-	    MR_LOAD:
+	    MR_LOAD,MR_MOVLD:
 	    	begin
 		    	case(memreq.func2)
 		    	MR_LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
@@ -1570,12 +1569,57 @@ else begin
 	endcase
 end
 
+task tBoundsViolation;
+input Address ba;
+begin
+	memresp.tid <= memreq.tid;
+	memresp.step <= memreq.step;
+	memresp.res <= memreq.adr;
+  memresp.cmt <= TRUE;
+	memresp.wr <= TRUE;
+	memresp.res <= 128'd0;
+	memresp.badAddr <= ba;
+	memresp.cause <= 16'h8000|FLT_SGB;
+	goto (MEMORY1);
+end
+endtask
+
 task tTLBMiss;
 input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= {8'h80,FLT_TLBMISS};
+  memresp.cause <= 16'h8000|FLT_TLBMISS;
+	memresp.tid <= memreq.tid;
+  memresp.badAddr <= ba;
+  memresp.wr <= TRUE;
+	memresp.res <= 128'd0;
+	tDeactivateBus();
+	goto (MEMORY1);
+end
+endtask
+
+task tWriteViolation;
+input Address ba;
+begin
+	memresp.step <= memreq.step;
+	memresp.cmt <= TRUE;
+  memresp.cause <= 16'h8000|FLT_WRV;
+	memresp.tid <= memreq.tid;
+  memresp.badAddr <= ba;
+  memresp.wr <= TRUE;
+	memresp.res <= 128'd0;
+	tDeactivateBus();
+	goto (MEMORY1);
+end
+endtask
+
+task tReadViolation;
+input Address ba;
+begin
+	memresp.step <= memreq.step;
+	memresp.cmt <= TRUE;
+  memresp.cause <= 16'h8000|FLT_RDV;
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -1588,18 +1632,15 @@ endtask
 task tEA;
 input Address iea;
 begin
-  if ((memreq.func==MR_STORE || memreq.func==M_CALL) && !ea_acr[1]) begin
-    memresp.cause <= {8'h80,FLT_WRV};
-    memresp.badAddr <= iea;
-  end
-  else if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI /*|| memreq.func==RTS2*/) && !ea_acr[2]) begin
-    memresp.cause <= {8'h80,FLT_RDV};
-    memresp.badAddr <= iea;
-  end
+  if ((memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) && !ea_acr.w)
+  	tWriteViolation(iea);
+  else if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI /*|| memreq.func==RTS2*/) && !ea_acr.r)
+  	tReadViolation(iea);
 //	if (iea[AWID-1:24]=={AWID-24{1'b1}})
 //		dadr <= iea;
 //	else
 		dadr <= iea[AWID-1:0] + {desc_out.base,6'd0};
+	dcachable <= ea_acr.c;
 end
 endtask
 
@@ -1610,9 +1651,9 @@ begin
   // PMA Check
   for (n = 0; n < 8; n = n + 1)
     if (adr_o[31:4] >= PMA_LB[n] && adr_o[31:4] <= PMA_UB[n]) begin
-      if ((memreq.func==MR_STORE && !PMA_AT[n][1]) || ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI /*|| memreq.func==RTS2*/) && !PMA_AT[n][2]))
+      if (((memreq.func==MR_STORE || memreq.func==MR_MOVST) && !PMA_AT[n][1]) || ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI /*|| memreq.func==RTS2*/) && !PMA_AT[n][2]))
 		    memresp.cause <= {8'h80,FLT_PMA};
-		  dcachable <= PMA_AT[n][3];
+		  dcachable <= dcachable & PMA_AT[n][3];
     end
 end
 endtask
