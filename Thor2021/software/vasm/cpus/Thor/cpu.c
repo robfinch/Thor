@@ -86,8 +86,8 @@ mnemonic mnemonics[]={
 	"bleu",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E000002ELL,6},
 	"bltu",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E000002CLL,6},
 	"bltu",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E000002CLL,6},
-	"bne",	{OP_LK,OP_REG,OP_REG|OP_IMM7,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000027LL,6},
-	"bne",	{OP_REG,OP_REG|OP_IMM7,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000027LL,6},
+	"bne",	{OP_LK,OP_REG,OP_REG|OP_IMM,OP_IMM,0}, {BL,CPU_ALL,0,0x0000E0000027LL,6},
+	"bne",	{OP_REG,OP_REG|OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,0x0000E0000027LL,6},
 	"bnez",	{OP_LK,OP_REG,OP_IMM,0,0}, {BL3,CPU_ALL,0,0xE0000012LL,4},
 	"bnez",	{OP_REG,OP_IMM,0,0,0}, {B3,CPU_ALL,0,0xE0000012LL,4},
 
@@ -375,7 +375,7 @@ mnemonic mnemonics[]={
 
 	"sgt", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xDBLL,6,0x1B,4},
 	"sgtu", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xDFLL,6,0x1F,4},
-	"slt", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD8LL,6,0x18,4},
+	"slt", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD3LL,6,0x18,4},
 	"slt", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x400000000002LL,6},	
 
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x800000000002LL,6},	
@@ -413,11 +413,13 @@ mnemonic mnemonics[]={
 	"stw",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x91LL,6},	
 	"stw",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC1LL,6},	
 
-	"sub", {OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
-	"sub", {OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
-	"sub", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x0A0000000102LL,6},	
-	"sub", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x0A0000000102LL,6},	
-	"sub", {OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"sub", {OP_REG,OP_REG,OP_REG|OP_IMM,OP_REG|OP_IMM,OP_VMREG}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"sub", {OP_REG,OP_REG,OP_REG|OP_IMM,OP_REG|OP_IMM,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"sub", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM,OP_VREG|OP_REG|OP_IMM,0}, {R3,CPU_ALL,0,0x0A0000000102LL,6},	
+	"sub", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM,OP_VREG|OP_REG|OP_IMM,OP_VMREG}, {R3,CPU_ALL,0,0x0A0000000102LL,6},	
+	"sub", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"sub", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD4LL,6,0x04LL,4,FLG_NEGIMM},
+
 	"subf", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x1D5LL,6},
 	"subf", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD5LL,6},
 /* 0000_1010_0001_0001_1111_0000_0000_0000_0000_0000_AALL */
@@ -760,6 +762,7 @@ int parse_operand(char *p,int len,operand *op,int requires)
 	op->attr = REL_NONE;
 	op->selector = -1;
 	op->value = NULL;
+	op->scale = 0;
 
 	if (requires==OP_NEXTREG) {
     op->type = OP_REG;
@@ -1554,6 +1557,8 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 {
 	size_t isize;
 
+	if (mnemo->ext.flags & FLG_NEGIMM)
+		val = -val;	/* ToDo: check here for value overflow */
 	if (constexpr) {
 		if (mnemo->ext.format==DIRECT) {
 			if (selector==-1) {
@@ -1626,17 +1631,17 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 		else if (mnemo->ext.format==R2) {
 			isize = 4;
 			if (insn)
-				*insn = *insn | RB(val & 0x1fLL) | TB(2);
+				*insn = *insn | RB(val & 0x3fLL) | TB(2);
 		}
 		else if (mnemo->ext.format==R3) {
 			isize = 6;
 			if (i==2) {
 				if (insn)
-					*insn = *insn | RB(val & 0x1fLL) | TB(2);
+					*insn = *insn | RB(val & 0x3fLL) | TB(2);
 			}
 			else if (i==3)
 				if (insn)
-					*insn = *insn | RC(val & 0x1fLL) | TC(2);
+					*insn = *insn | RC(val & 0x3fLL) | TC(2);
 		}
 		else if (mnemo->ext.format==J2) {
 			isize = 6;

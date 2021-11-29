@@ -141,7 +141,7 @@ R1,F1,DF1,P1:
 	default:	rfwr = TRUE;
 	endcase
 R2,F2,DF2,P2:
-	case(ir.r2.func)
+	case(ir.r3.func)
 	default:	rfwr = TRUE;
 	endcase
 R3,F3,DF3,P3:
@@ -427,7 +427,7 @@ deco.mului = FALSE;
 deco.mulsui = FALSE;
 case(ir.any.opcode)
 R2:
-	case(ir.r2.func)
+	case(ir.r3.func)
 	MUL,MULH:			deco.mul = TRUE;
 	MULU,MULUH:		deco.mulu = TRUE;
 	MULSU,MULSUH:	deco.mulsu = TRUE;
@@ -448,7 +448,7 @@ deco.divui = FALSE;
 deco.divsui = FALSE;
 case(ir.any.opcode)
 R2:
-	case(ir.r2.func)
+	case(ir.r3.func)
 	DIV:	deco.div = TRUE;
 	DIVU:	deco.divu = TRUE;
 	DIVSU:	deco.divsu = TRUE;
@@ -467,6 +467,7 @@ else
 deco.csr = ir.any.opcode==CSR;
 deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
+deco.sync = ir.any.opcode==CSR || ir.any.opcode==SYNC;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;

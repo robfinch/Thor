@@ -258,7 +258,7 @@ reg [2:0] xSeg;
 reg [2:0] xMemsz;
 reg xTlb;
 reg xStset, xStmov, xStfnd, xStcmp;
-reg xCsr;
+reg xCsr,xSync;
 reg xMtlc;
 reg xwrlc;
 reg xMfsel,xMtsel;
@@ -287,7 +287,7 @@ reg mvmrfwr;
 reg [5:0] mRt;
 reg mStset,mStmov,mStfnd,mStcmp;
 reg mRtvec;
-reg mCsr;
+reg mCsr,mSync;
 reg mRti;
 reg mRex;
 reg mMtlc;
@@ -311,7 +311,7 @@ reg wvmrfwr;
 reg [5:0] wRt;
 reg wStset,wStmov,wStfnd,wStcmp;
 reg wRtvec;
-reg wCsr;
+reg wCsr,wSync;
 reg wRti;
 reg wRex;
 reg wMtlc;
@@ -324,8 +324,10 @@ reg [7:0] wstep;
 reg wzbit;
 reg wmaskbit;
 
-reg tCsr;
-reg uCsr;
+// Trailer stage vars
+reg advance_t;
+reg tSync;
+reg uSync,vSync;
 
 // CSRs
 reg [63:0] cr0;
@@ -806,6 +808,7 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // If the target of a load operation is used by the next instruction, then
 // execution of that instruction needs to be delayed until the load is
 // complete.
+// A synchronizing instruction causes a stall until the sync clears.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 reg [2:0] clr_stall_x;
@@ -813,18 +816,16 @@ wire stall_i = !ihit;
 wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) && (|xcause || xRti || xRex || |mcause || mRti || mRex)) ||
 								(xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) ||
 								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt}) && mval && mRt!=6'd0) ||
-								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ;
-
-wire stall_x = 1'b0;//((xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) && !clr_stall_x[2]);// ||
-//							  (wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0)) &&
-//							  state!=RUN;
+								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ||
+								(xSync && xval) || (mSync && mval) || (wSync && wval) || tSync || uSync || vSync;
 
 assign run = ihit;
-always_comb	advance_w = !stall_i && (state==RUN) && (!stall_x);
-always_comb advance_m = !stall_i && (advance_w) && (!stall_x);
-always_comb advance_x = !stall_i && (advance_m) && (state==RUN) && !(mCsr && mval) && !(wCsr && wval) && !tCsr && !uCsr && (!stall_x);
-always_comb advance_d = !stall_i && (advance_x) && !stall_d;
-always_comb advance_i = !stall_i && (advance_d);
+always_comb advance_t = !stall_i && (state==RUN);
+always_comb	advance_w = advance_t;
+always_comb advance_m = advance_w;
+always_comb advance_x = advance_m;
+always_comb advance_d = advance_x && !stall_d;
+always_comb advance_i = advance_d;
 
 reg [3:0] xx;	// debug marker
 
@@ -838,12 +839,7 @@ if (rst_i) begin
 	goto (RESTART1);
 end
 else begin
-	xx <= FALSE;
-	memreq.wr <= FALSE;
-	if (ld_time==TRUE && wc_time_dat==wc_time)
-		ld_time <= FALSE;
-	if (clr_wc_time_irq && !wc_time_irq)
-		clr_wc_time_irq <= FALSE;
+	tOnce();
 
 	tInsnFetch();
 	tDecode();
@@ -851,11 +847,7 @@ else begin
 	tExecute();
 	tMemory();
 	tWriteback();
-
-	if (ihit) begin
-		tCsr <= wCsr & wval;
-		uCsr <= tCsr;
-	end
+	tSyncTrailer();
 
 end
 
@@ -898,6 +890,9 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tReset;
 begin
 	ld_time <= FALSE;
@@ -936,8 +931,8 @@ begin
 	xCsr <= 1'b0;
 	mCsr <= 1'b0;
 	wCsr <= 1'b0;
-	tCsr <= 1'b0;
-	uCsr <= 1'b0;
+	tSync <= 1'b0;
+	uSync <= 1'b0;
 	wLoad <= FALSE;
 	clr_stall_x <= 3'b0;
 	memresp_fifo_rd <= FALSE;
@@ -959,6 +954,21 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Once per clock operations.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tOnce;
+begin
+	xx <= 4'h0;
+	memreq.wr <= FALSE;
+	if (ld_time==TRUE && wc_time_dat==wc_time)
+		ld_time <= FALSE;
+	if (clr_wc_time_irq && !wc_time_irq)
+		clr_wc_time_irq <= FALSE;
+end
+endtask
+
 task tStateMachine;
 begin
 case (state)
@@ -975,8 +985,6 @@ RESTART2:
 RUN:
 	begin
 		clr_stall_x <= {clr_stall_x[1:0],1'b0};
-		if (stall_x)
-			tExMem();
 	end	// RUN
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1129,7 +1137,7 @@ begin
 			ip <= btb_tgt;
 		dip <= ip;
 		dlen <= ilen;
-		dval <= ival;
+		dval <= VAL;
 		dstep <= istep;
 		ir <= insn;
 		dpredict_taken <= ipredict_taken;
@@ -1221,6 +1229,7 @@ begin
 		xDivsu <= deco.divsu;
 		xDivi <= deco.divalli;
 		xCsr <= deco.csr;
+		xSync <= deco.sync;
 		xRti <= deco.rti;
 		xRex <= deco.rex;
 		xMtlc <= deco.mtlc;
@@ -1233,15 +1242,21 @@ begin
 		xmaskbit <= mask[dstep];
 		xzbit <= zbit;
 		xpredict_taken <= dpredict_taken;
+		// The BTB might have predicted the correct address following the branch, so
+		// do not invalidate unless flow is changing.
 		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
-			inv_i();
-			inv_d();
-			ip.offs <= deco.jmptgt;
+			if (ip.offs != deco.jmptgt) begin
+				inv_i();
+				inv_d();
+				ip.offs <= deco.jmptgt;
+			end
 		end
 		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
-			inv_i();
-			inv_d();
-			ip.offs <= ip.offs + deco.jmptgt;
+			if (ip.offs != dip.offs + deco.jmptgt) begin
+				inv_i();
+				inv_d();
+				ip.offs <= dip.offs + deco.jmptgt;
+			end
 		end
 	end
 	else if (advance_x) begin
@@ -1447,6 +1462,7 @@ begin
 		mres <= res;
 		mlc <= xlc;
 		mCsr <= xCsr;
+		mSync <= xSync;
 		mRti <= xRti;
 		mRex <= xRex;
 		mMtlc <= xMtlc;
@@ -1568,6 +1584,7 @@ begin
 		wres <= mres;
 		wlc <= mlc;
 		wCsr <= mCsr;
+		wSync <= mSync;
 		wRti <= mRti;
 		wRex <= mRex;
 		wMtlc <= mMtlc;
@@ -1683,6 +1700,22 @@ begin
 			end	// wcause
 		end		// wval
   end			// advance_w
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Trailer Stage
+//
+// Used for instruction synchronization.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tSyncTrailer;
+begin
+	if (advance_t) begin
+		tSync <= wSync & wval;
+		uSync <= tSync;
+		vSync <= uSync;
+	end
 end
 endtask
 

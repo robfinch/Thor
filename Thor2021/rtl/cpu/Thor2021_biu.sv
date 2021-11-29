@@ -178,7 +178,6 @@ Address ea;
 Address afilt;
 
 // Get segment selection
-// +9 has extra +1 to account for addresses starting at :-1]
 always_comb
 	seg = memreq.seg;
 	

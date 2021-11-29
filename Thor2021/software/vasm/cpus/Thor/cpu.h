@@ -94,7 +94,10 @@ typedef struct {
   size_t len;
   uint64_t short_opcode;
   size_t short_len;
+  unsigned int flags;
 } mnemonic_extension;
+
+#define FLG_NEGIMM	1
 
 #define EXI7	0x46
 #define EXI23	0x47
