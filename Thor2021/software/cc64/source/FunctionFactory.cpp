@@ -14,8 +14,8 @@ Function* FunctionFactory::MakeFunction(int symnum, SYM* sp, bool isPascal)
 			sym->IsCoroutine = false;
 			sym->alloced = true;
 			sym->valid = TRUE;
-			sym->NumParms = -1;
-			sym->numa = -1;
+			sym->NumParms = 0;	// was -1
+			sym->numa = 0;	// was -1
 			sym->params.SetOwner(symnum);
 			sym->proto.SetOwner(symnum);
 			sym->UsesTemps = true;

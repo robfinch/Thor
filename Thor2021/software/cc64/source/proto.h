@@ -4,7 +4,7 @@
 TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool promote, bool typecast);
 
 // Register.cpp
-bool IsArgumentReg(int regno);
+int IsArgReg(int regno);
 bool IsCalleeSave(int regno);
 int IsTempReg(int rg);
 

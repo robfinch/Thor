@@ -251,7 +251,7 @@ void BasicBlock::ComputeLiveVars()
 		if (ip->opcode == op_label)
 			continue;
 		// Call and jal may return a value in $v0,$v1.
-		if (ip->opcode == op_call || ip->opcode == op_jal) {
+		if (ip->opcode == op_call || ip->opcode == op_jal || ip->opcode == op_jsr) {
 			kill->add(1);
 			gen->add(1);
 			kill->add(2);
@@ -269,7 +269,7 @@ void BasicBlock::ComputeLiveVars()
 					kill->add(tr);
 				}
 			}
-			if (tr >= regFirstArg && tr <= regLastArg)
+			if (IsArgReg(tr))
 				gen->add(tr);
 			// There could be a second target
 			tr = rg2;
@@ -282,7 +282,7 @@ void BasicBlock::ComputeLiveVars()
 						kill->add(tr);
 					}
 				}
-				if (tr >= regFirstArg && tr <= regLastArg)
+				if (IsArgReg(tr))
 					gen->add(tr);
 			}
 		}

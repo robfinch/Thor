@@ -161,6 +161,7 @@ enum e_op {
 	op_bltu, op_bleu, op_bgtu, op_bgeu,
 	op_bltui, op_bleui, op_blti, op_blei, op_bgti, op_bgtui, op_bgei, op_bgeui,
 	op_bbs, op_bbc, op_beqz, op_bnez,
+	op_dbra,
 
 	op_brz, op_brnz, op_br,
 	op_ldft, op_stft,
@@ -232,6 +233,7 @@ enum e_op {
 	op_rtl, op_rtx, op_enter, op_leave, op_base, op_enter_far, op_leave_far,
 	op_mfbase, op_mtbase, op_di, op_defcat,
 	op_ptrdif, op_isnullptr,
+	op_mtlc,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt,
 	op_wydendx,

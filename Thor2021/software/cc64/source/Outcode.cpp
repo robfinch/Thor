@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[315] =
+Instruction opl[317] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -112,6 +112,7 @@ Instruction opl[315] =
 { "com", op_com,2,1,false,am_reg,am_reg,0,0 },
 { "csrrd", op_csrrd,1,1,false,am_reg,am_reg,am_imm },
 { "csrrw", op_csrrw,1,1,false,am_reg,am_reg,am_imm },
+{ "dbra",op_dbra,3,0,false,am_direct,0,0,0 },
 { "dc",op_dc },
 { "dec", op_dec,4,0,true,am_i5 },
 { "defcat", op_defcat,12,1,false,am_reg,am_reg,0 ,0 },
@@ -235,6 +236,7 @@ Instruction opl[315] =
 { "movs", op_movs },
 { "mtbase", op_mtbase,1,0,false,am_reg,am_reg | am_ui6,0,0 },
 { "mtfp", op_mtfp },
+{ "mtlc", op_mtlc,1,0,false,am_reg,0,0,0 },
 { "mul",op_mul,18,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "mulf",op_mulf,1,1,false,am_reg,am_reg,am_reg | am_imm,0 },
 { "mulu", op_mulu, 10, 1, false, am_reg, am_reg, am_reg | am_imm, 0 },
@@ -404,6 +406,9 @@ char *RegMoniker(int regno)
 	if (rg = IsTempReg(regno)) {
 		sprintf_s(&buf[n][0], 20, "t%d", rg-1);// tmpregs[rg - 1]);
 	}
+	else if (rg = IsArgReg(regno)) {
+		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
+	}
 	else
 		if (regno==regCS)
 			sprintf_s(&buf[n][0], 20, "$b15");
@@ -464,6 +469,9 @@ char *RegMoniker2(int regno)
 	n = (n + 1) & 3;
 	if (rg = IsTempReg(regno)) {
 		sprintf_s(&buf[n][0], 20, "t%d", rg-1);// tmpregs[rg - 1]);
+	}
+	else if (rg = IsArgReg(regno)) {
+		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
 	}
 	else
 		if (regno == regCS)

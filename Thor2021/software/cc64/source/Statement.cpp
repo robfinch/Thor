@@ -51,6 +51,7 @@ extern TYP              stdfunc;
 int Statement::throwlab = 0;
 int Statement::oldthrow = 0;
 int Statement::olderthrow = 0;
+bool Statement::lc_in_use = false;
 
 static SYM *makeint(char *name)
 {
@@ -1231,11 +1232,62 @@ void Statement::GenerateUntil()
 	contlab = lab1;
 }
 
+bool Statement::IsDecByOne()
+{
+	if (incrExpr->pfl->nodetype != en_assub)
+		return (false);
+	if (incrExpr->pfl->p[1]->nodetype != en_icon)
+		return (false);
+	if (incrExpr->pfl->p[1]->i != 1)
+		return (false);
+	return (true);
+}
 
-void Statement::GenerateFor()
+bool Statement::IsNEZeroTest()
+{
+	if (exp->nodetype != en_ne)
+		return (false);
+	if (exp->p[1]->nodetype != en_icon)
+		return (false);
+	if (exp->p[1]->i != 0)
+		return (false);
+	return (true);
+}
+
+bool Statement::IsInitNonZero()
+{
+	if (initExpr->p[1]->nodetype != en_icon)
+		return (false);
+	if (initExpr->p[1]->i == 0)
+		return (false);
+	return (true);
+}
+
+bool Statement::FindLoopVar(int64_t i)
+{
+	if (s1)
+		if (s1->FindLoopVar(i))
+			return (true);
+	if (s2)
+		if (s2->FindLoopVar(i))
+			return (true);
+	if (initExpr)
+		if (initExpr->FindLoopVar(i))
+			return (true);
+	if (exp)
+		if (exp->FindLoopVar(i))
+			return (true);
+	if (incrExpr)
+		if (incrExpr->FindLoopVar(i))
+			return (true);
+	return (false);
+}
+
+void Statement::GenerateCountedLoop()
 {
 	int old_break, old_cont, exit_label, loop_label;
-	OCODE *loophead;
+	OCODE* loophead;
+	Operand* ap;
 
 	old_break = breaklab;
 	old_cont = contlab;
@@ -1245,9 +1297,64 @@ void Statement::GenerateFor()
 	if (compiler.ipoll)
 		GenerateZeradic(op_pfi);
 	initstack();
+	if (initExpr != NULL) {
+		ap = cg.GenerateExpression(initExpr, am_reg, initExpr->GetNaturalSize(), 0);
+		GenerateMonadic(op_mtlc, 0, ap);
+		ReleaseTempRegister(ap);
+	}
+	loophead = currentFn->pl.tail;
+	GenerateLabel(loop_label);
+	if (compiler.ipoll)
+		GenerateZeradic(op_pfi);
+	if (s1 != NULL)
+	{
+		breaklab = exit_label;
+		looplevel++;
+		s1->Generate();
+		looplevel--;
+	}
+	GenerateLabel(contlab);
+	GenerateMonadic(op_dbra, 0, cg.MakeCodeLabel(loop_label));
+	if (!opt_nocgo)
+		currentFn->pl.OptLoopInvariants(loophead);
+	breaklab = old_break;
+	contlab = old_cont;
+	GenerateLabel(exit_label);
+}
+
+void Statement::GenerateFor()
+{
+	int old_break, old_cont, exit_label, loop_label;
+	OCODE* loophead;
+
+	old_break = breaklab;
+	old_cont = contlab;
+	loop_label = nextlabel++;
+	exit_label = nextlabel++;
+	contlab = nextlabel++;
+	// Disabled for now until loop counter is saved and restored at
+	// function entry / exit.
+	if (false && !lc_in_use) {
+		if (initExpr->nodetype == en_assign) {
+			if (initExpr->p[0]->nodetype == en_regvar) {
+				if (IsDecByOne() && IsNEZeroTest() && IsInitNonZero()) {
+					if (!s1->FindLoopVar(initExpr->p[0]->rg)) {
+						lc_in_use = true;
+						currentFn->UsesLoopCounter = true;
+						GenerateCountedLoop();
+						lc_in_use = false;
+						return;
+					}
+				}
+			}
+		}
+	}
+	if (compiler.ipoll)
+		GenerateZeradic(op_pfi);
+	initstack();
 	if (initExpr != NULL)
 		ReleaseTempRegister(cg.GenerateExpression(initExpr, am_all | am_novalue
-			, initExpr->GetNaturalSize(),0));
+			, initExpr->GetNaturalSize(), 0));
 	loophead = currentFn->pl.tail;
 	if (!opt_nocgo && !opt_size) {
 		if (exp != NULL) {
@@ -1908,7 +2015,7 @@ void Statement::GenerateFuncBody()
 	s1->Generate();
 }
 
-void Statement::Generate()
+void Statement::Generate(int opt)
 {
 	Operand *ap;
 	Statement *stmt;
@@ -2026,9 +2133,13 @@ void Statement::Generate()
 			stmt->GenerateSwitch();
 			break;
 		case st_case:
+			if (opt)
+				return;
 			stmt->GenerateCase();
 			break;
 		case st_default:
+			if (opt)
+				return;
 			stmt->GenerateDefault();
 			break;
 		case st_empty:

@@ -1453,6 +1453,9 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 }
 
 // Store entire argument list onto stack
+// large_arg_count is used only if push is supported. It is less expensive to
+// use a push instruction rather than subtracting from the sp and using stores
+// if there are only a small number of arguments (<3).
 //
 int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 {
@@ -1483,6 +1486,7 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	}
 	if (nn > 2)
 		large_argcount = true;
+	large_argcount = true;	// disable for now
 	maxnn = nn;
 	for(--nn, i = 0; nn >= 0; --nn,i++ )
   {
@@ -1661,26 +1665,18 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
 				ReleaseTempRegister(ap2);
 			}
 			if (sym && sym->IsLeaf) {
-				if (isRiscv)
-					GenerateMonadic(op_call, 0, MakeDirect(node->p[0]));
-				else {
-					sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
-					if (flags & am_jmp)
-						GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
-					else
-						GenerateDiadic(op_jsr, 0, makereg(regLR), MakeDirect(node->p[0]));
-				}
+				sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
+				if (flags & am_jmp)
+					GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
+				else
+					GenerateDiadic(op_jsr, 0, makereg(regLR), MakeDirect(node->p[0]));
 				currentFn->doesJAL = true;
 			}
 			else {
-				if (isRiscv)
-					GenerateMonadic(op_call, 0, MakeDirect(node->p[0]));
-				else {
-					if (flags & am_jmp)
-						GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
-					else
-						GenerateDiadic(op_jsr, 0, makereg(regLR), MakeDirect(node->p[0]));
-				}
+				if (flags & am_jmp)
+					GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
+				else
+					GenerateDiadic(op_jsr, 0, makereg(regLR), MakeDirect(node->p[0]));
 				currentFn->doesJAL = true;
 			}
 			GenerateMonadic(op_bex,0,MakeDataLabel(throwlab,regZero));

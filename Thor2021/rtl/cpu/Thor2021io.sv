@@ -741,7 +741,9 @@ Thor2021_biu ubiu
 always_comb
 	insn = ic_line >> {ip.offs[5:1],4'd0};
 
-wire [63:0] siea = xa + {xb << xSc};
+reg [63:0] siea;
+always_comb
+	siea = xa + {xb << xSc};
 
 assign wrvrf = wrfwr && wRtvec && (wmaskbit||wzbit);
 assign wres2 = wzbit ? 64'd0 : wres;
@@ -1475,7 +1477,7 @@ begin
 		if (xval) begin
 	    if (xJxx) begin
 	    	if (xdj)
-	    		wlc <= xlc - 2'd1;
+	    		mlc <= xlc - 2'd1;
 	    	if (xir.jxx.lk != 2'd0) begin
 		    	caregfile[{2'b0,xir.jxx.lk}].offs <= xip.offs + 3'd6;
 		    	caregfile[{2'b0,xir.jxx.lk}].sel <= xip.sel;
@@ -1522,7 +1524,7 @@ begin
 	    end
 	    if (xJmp) begin
 	    	if (xdj)
-	    		wlc <= xlc - 2'd1;
+	    		mlc <= xlc - 2'd1;
 		  	if (xir.jmp.lk != 2'd0) begin
 		    	caregfile[{2'b0,xir.jmp.lk}].offs <= xip.offs + 3'd6;
 		    	caregfile[{2'b0,xir.jmp.lk}].sel <= xip.sel;
@@ -1554,7 +1556,7 @@ begin
 		  		tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
 	  		end
 	  	if (xMtlc)
-	  		wlc <= res;
+	  		mlc <= res;
 	  	end
 
 			tExMem();

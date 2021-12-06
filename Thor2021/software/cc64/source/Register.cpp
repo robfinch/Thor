@@ -114,8 +114,6 @@ static short int breg_stack_ptr;
 static short int breg_alloc_ptr;
 
 //char tmpregs[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-char argregs[32];
-char tmpregs[32];
 char tmpfpregs[] = {1,2,3,4,5,6,7,8,9,10};
 char tmppregs[] = { 1,2,3,4,5,6,7,8,9,10 };
 char tmpvregs[] = {1,2,3,4,5,6,7,8,9,10};
@@ -134,54 +132,42 @@ int save_rap[20];
 
 int NumTempRegs()
 {
-	if (isRiscv)
-		return (7);
-	else
-		return (8);
+	return (cpu.NumTmpRegs);
 	if (currentFn->IsLeaf)
 		return (regLastTemp - 1 + 1);
 	else
 		return (regLastTemp - regFirstTemp + 1);
 }
 
-void initRegs()
+void CPU::InitRegs()
 {
-	argregs[0] = 1;
-	argregs[1] = 2;
-	argregs[2] = 21;
-	argregs[3] = 22;
-	argregs[4] = 23;
-	argregs[5] = 24;
-	argregs[6] = 25;
-	argregs[7] = 26;
-	argregs[8] = 27;
-	argregs[9] = 28;
+	cpu.NumArgRegs = 10;
+	cpu.argregs[0] = 1;
+	cpu.argregs[1] = 2;
+	cpu.argregs[2] = 21;
+	cpu.argregs[3] = 22;
+	cpu.argregs[4] = 23;
+	cpu.argregs[5] = 24;
+	cpu.argregs[6] = 25;
+	cpu.argregs[7] = 26;
+	cpu.argregs[8] = 27;
+	cpu.argregs[9] = 28;
+
+	cpu.NumTmpRegs = 8;
+	cpu.tmpregs[0] = 3;
+	cpu.tmpregs[1] = 4;
+	cpu.tmpregs[2] = 5;
+	cpu.tmpregs[3] = 6;
+	cpu.tmpregs[4] = 7;
+	cpu.tmpregs[5] = 8;
+	cpu.tmpregs[6] = 9;
+	cpu.tmpregs[7] = 10;
 }
 
 void initRegStack()
 {
 	int i;
 	Function *sym = currentFn;
-
-	if (isRiscv) {
-		tmpregs[0] = 5;
-		tmpregs[1] = 6;
-		tmpregs[2] = 7;
-		tmpregs[3] = 28;
-		tmpregs[4] = 29;
-		tmpregs[5] = 30;
-		tmpregs[6] = 31;
-	}
-	else {
-		tmpregs[0] = 3;
-		tmpregs[1] = 4;
-		tmpregs[2] = 5;
-		tmpregs[3] = 6;
-		tmpregs[4] = 7;
-		tmpregs[5] = 8;
-		tmpregs[6] = 9;
-		tmpregs[7] = 10;
-	}
 
 	next_reg = regFirstTemp;
 	next_reg = 0;
@@ -242,7 +228,7 @@ int IsTempReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < NumTempRegs(); nn++) {
-		if (rg == tmpregs[nn])
+		if (rg == cpu.tmpregs[nn])
 			return (nn+1);
 	}
 	return (0);
@@ -253,7 +239,7 @@ int IsArgReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < 10; nn++) {
-		if (rg == argregs[nn])
+		if (rg == cpu.argregs[nn])
 			return (nn + 1);
 	}
 	return (0);
@@ -398,7 +384,7 @@ Operand *GetTempRegister()
 	int number;
 	int nr, nn;
 
-	number = reg_in_use[tmpregs[next_reg]];
+	number = reg_in_use[cpu.tmpregs[next_reg]];
 	if (number >= 0) {// && number < rap[wrapno]) {
 		/*
 		nr = next_reg;
@@ -414,16 +400,16 @@ Operand *GetTempRegister()
 			}
 		}
 		*/
-		SpillRegister(makereg(tmpregs[next_reg]),number);
+		SpillRegister(makereg(cpu.tmpregs[next_reg]),number);
 	}
 	TRACE(printf("GetTempRegister:r%d\r\n", next_reg);)
-    reg_in_use[tmpregs[next_reg]] = reg_alloc_ptr;
+    reg_in_use[cpu.tmpregs[next_reg]] = reg_alloc_ptr;
     ap = allocOperand();
     ap->mode = am_reg;
-    ap->preg = tmpregs[next_reg];
+    ap->preg = cpu.tmpregs[next_reg];
 	ap->pdeep = ap->deep;
     ap->deep = reg_alloc_ptr;
-    reg_alloc[reg_alloc_ptr].reg = tmpregs[next_reg];
+    reg_alloc[reg_alloc_ptr].reg = cpu.tmpregs[next_reg];
     reg_alloc[reg_alloc_ptr].Operand = ap;
     reg_alloc[reg_alloc_ptr].f.isPushed = 'F';
 	if (next_reg++ >= NumTempRegs()) {// regLastTemp) {

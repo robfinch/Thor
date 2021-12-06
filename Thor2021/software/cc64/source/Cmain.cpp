@@ -84,7 +84,6 @@ int main(int argc, char **argv)
 	txtoStream ofs;
 	Int128 aa, bb, cc, qq, rr;
 
-	initRegs();
 	aa = Int128::Convert(0x769bdd5fLL);
 	bb = Int128::Convert(0xbcc6f09eLL);
 	Int128::Mul(&cc, &aa, &bb);
@@ -184,6 +183,7 @@ int main(int argc, char **argv)
 	cpu.sto_op = op_sto;
 	cpu.stt_op = op_stt;
 	cpu.stw_op = op_stw;
+	cpu.InitRegs();
 //	printf("c64 starting...\r\n");
 	while(--argc) {
     if( **++argv == '-')

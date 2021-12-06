@@ -1015,6 +1015,27 @@ void ENODE::update()
 // ============================================================================
 // ============================================================================
 
+bool ENODE::FindLoopVar(int64_t ii)
+{
+	if (p[0])
+		if (p[0]->FindLoopVar(ii))
+			return (true);
+	if (p[1])
+		if (p[1]->FindLoopVar(ii))
+			return (true);
+	if (p[2])
+		if (p[2]->FindLoopVar(ii))
+			return (true);
+	if (p[3])
+		if (p[3]->FindLoopVar(ii))
+			return (true);
+	if (nodetype == en_regvar) {
+		if (rg == ii)
+			return (true);
+	}
+	return (false);
+}
+
 Operand *ENODE::MakeDataLabel(int lab, int ndxreg)
 {
 	return (compiler.of.MakeDataLabel(lab, ndxreg));

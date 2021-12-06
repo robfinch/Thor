@@ -324,6 +324,7 @@ public:
 	unsigned int hasParameters : 1;
 	unsigned int hasDefaultCatch : 1;	// programmer coded a default catch
 	unsigned int IsCoroutine : 1;
+	unsigned int UsesLoopCounter : 1;
 	uint8_t NumRegisterVars;
 	__int8 NumParms;
 	__int8 NumFixedAutoParms;
@@ -375,6 +376,7 @@ public:
 	bool ProtoTypesMatch(TypeArray *typearray);
 	bool ParameterTypesMatch(Function *sym);
 	bool ParameterTypesMatch(TypeArray *typearray);
+	int BPLAssignReg(SYM* sp1, int reg, bool* noParmOffset);
 	void BuildParameterList(int *num, int*numa, int* ellipos);
 	void AddParameters(SYM *list);
 	void AddProto(SYM *list);
@@ -718,6 +720,8 @@ public:
 	void update();
 
 	// Code generation
+	bool FindLoopVar(int64_t);
+
 	Operand *MakeDataLabel(int lab, int ndxreg);
 	Operand *MakeCodeLabel(int lab);
 	Operand *MakeStringAsNameConst(char *s, e_sg seg);
@@ -1209,7 +1213,7 @@ public:
 	Operand *GenExpr(ENODE *node);
 	bool IsPascal(ENODE *ep);
 	void LinkAutonew(ENODE *node);
-	int PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat, int* push_count, bool large_argcount=false);
+	int PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat, int* push_count, bool large_argcount=true);
 	int PushArguments(Function *func, ENODE *plist);
 	void PopArguments(Function *func, int howMany, bool isPascal = true);
 	Operand* GenerateSafeLand(ENODE *, int flags, int op);
@@ -1647,6 +1651,7 @@ public:
 	static int throwlab;
 	static int oldthrow;
 	static int olderthrow;
+	static bool lc_in_use;
 	
 	Statement* MakeStatement(int typ, int gt);
 
@@ -1708,6 +1713,11 @@ public:
 	void GenerateFirstcall();
 	void GenerateWhile();
 	void GenerateUntil();
+	bool IsDecByOne();
+	bool IsNEZeroTest();
+	bool IsInitNonZero();
+	bool FindLoopVar(int64_t);
+	void GenerateCountedLoop();
 	void GenerateFor();
 	void GenerateForever();
 	void GenerateIf();
@@ -1724,8 +1734,7 @@ public:
 	bool IsOneHotSwitch();
 	void GetMinMaxSwitchValue(int64_t* min, int64_t* max);
 	void GenerateSwitchSearch(Case* cases, Operand*, Operand*, int, int, int, int, int, bool, bool);
-	void GenerateSwitchLo(Case* cases, Operand*, Operand*, int, int, int, bool, bool);
-	void GenerateSwitchLop1(Case* cases, Operand*, Operand*, int, int, int, bool, bool);
+	void GenerateSwitchLo(Case* cases, Operand*, Operand*, int, int, int, bool, bool, bool last_case);
 	void GenerateSwitchLop2(Case* cases, Operand*, Operand*, int, int, int, bool, bool);
 	void GenerateNakedTabularSwitch(int64_t, Operand*, int);
 	void GenerateTry();
@@ -1737,7 +1746,7 @@ public:
 	void GenerateLinearSwitch();
 	void GenerateTabularSwitch(int64_t, int64_t, Operand*, bool, int, int);
 	void GenerateYield();
-	void Generate();
+	void Generate(int opt = 0);
 	void CheckReferences(int* sp, int* bp, int* gp, int* gp1);
 	void CheckCompoundReferences(int* sp, int* bp, int* gp, int* gp1);
 	// Debugging
@@ -1937,6 +1946,10 @@ class CPU
 public:
 	std::string fileExt;
 	int nregs;
+	int NumArgRegs;
+	int NumTmpRegs;
+	int argregs[32];
+	int tmpregs[32];
 	bool SupportsBand;
 	bool SupportsBor;
 	bool SupportsBBS;
@@ -1969,6 +1982,7 @@ public:
 	int stt_op;
 	int stw_op;
 	int stb_op;
+	void InitRegs();
 };
 
 //#define SYM     struct sym

@@ -874,7 +874,7 @@ void Function::SetupReturnBlock()
 	// Store the catch handler address at 16[$FP]
 	if (exceptions) {
 		ap = GetTempRegister();
-		sprintf_s(buf, sizeof(buf), ".C%05lld", defCatchLabel);
+		sprintf_s(buf, sizeof(buf), ".%05lld", defCatchLabel);
 		DataLabels[defCatchLabel] = true;
 		defCatchLabelPatchPoint = currentFn->pl.tail;
 		GenerateDiadic(cpu.ldi_op, 0, ap, MakeStringAsNameConst(buf, codeseg));
@@ -1628,6 +1628,23 @@ Function *Function::FindExactMatch(int mm, std::string name, int rettype, TypeAr
 	return (nullptr);
 }
 
+int Function::BPLAssignReg(SYM* sp1, int reg, bool* noParmOffset)
+{
+	if (reg >= cpu.NumArgRegs)
+		sp1->IsRegister = false;
+	if (sp1->IsRegister && sp1->tp->size < 11) {
+		sp1->reg = sp1->IsAuto ? cpu.argregs[reg] | 0x8000 : cpu.argregs[reg];
+		if ((cpu.argregs[reg] & 0x8000) == 0) {
+			*noParmOffset = true;
+			sp1->value.i = -1;
+		}
+		reg++;
+	}
+	else
+		sp1->IsRegister = false;
+	return (reg);
+}
+
 void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 {
 	int64_t poffset;
@@ -1656,7 +1673,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 		oldnames[np] = names[np];
 	onp = nparms;
 	nparms = 0;
-	reg = regFirstArg;
+	reg = 0;
 	fpreg = regFirstArg;
 	preg = regFirstArg;
 	// Parameters will be inserted into the symbol's parameter list when
@@ -1666,6 +1683,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	np = pd.ParameterDeclaration::Parse(1, false);
 	*num += np;
 	*numa = 0;
+	*ellipos = -1;
 	if (pd.ellip >= 0)
 		*ellipos = pd.ellip;
 	dfs.printf("B");
@@ -1682,48 +1700,12 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 		sp1->IsParameter = true;
 		sp1->value.i = poffset;
 		noParmOffset = false;
-		if (sp1->tp->IsFloatType()) {
-			if (reg > regLastArg)
-				sp1->IsRegister = false;
-			if (sp1->IsRegister && sp1->tp->size < 11) {
-				sp1->reg = sp1->IsAuto ? argregs[reg] | 0x8000 : argregs[reg];
-				reg++;
-				if ((reg & 0x8000) == 0) {
-					noParmOffset = true;
-					sp1->value.i = -1;
-				}
-			}
-			else
-				sp1->IsRegister = false;
-		}
-		else if (sp1->tp->IsPositType()) {
-			if (reg > regLastArg)
-				sp1->IsRegister = false;
-			if (sp1->IsRegister && sp1->tp->size < 11) {
-				sp1->reg = sp1->IsAuto ? argregs[reg] | 0x8000 : argregs[reg];
-				reg++;
-				if ((reg & 0x8000) == 0) {
-					noParmOffset = true;
-					sp1->value.i = -1;
-				}
-			}
-			else
-				sp1->IsRegister = false;
-		}
-		else {
-			if (reg > regLastArg)
-				sp1->IsRegister = false;
-			if (sp1->IsRegister && sp1->tp->size < 11) {
-				sp1->reg = sp1->IsAuto ? argregs[reg] | 0x8000 : argregs[reg];
-				reg++;
-				if ((reg & 0x8000) == 0) {
-					noParmOffset = true;
-					sp1->value.i = -1;
-				}
-			}
-			else
-				sp1->IsRegister = false;
-		}
+		if (sp1->tp->IsFloatType())
+			reg = BPLAssignReg(sp1, reg, &noParmOffset);
+		else if (sp1->tp->IsPositType())
+			reg = BPLAssignReg(sp1, reg, &noParmOffset);
+		else
+			reg = BPLAssignReg(sp1, reg, &noParmOffset);
 		if (!sp1->IsRegister)// && !sp1->IsInline)
 			*numa += 1;
 		// Check for aggregate types passed as parameters. Structs
@@ -1753,18 +1735,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 					sp1->IsAuto = false;
 					sp1->next = 0;
 					sp1->IsRegister = true;
-					if (reg > regLastArg)
-						sp1->IsRegister = false;
-					if (sp1->IsRegister && sp1->tp->size < 11) {
-						sp1->reg = sp1->IsAuto ? argregs[reg] | 0x8000 : argregs[reg];
-						preg++;
-						if ((reg & 0x8000) == 0) {
-							noParmOffset = true;
-							sp1->value.i = -1;
-						}
-					}
-					else
-						sp1->IsRegister = false;
+					reg = BPLAssignReg(sp1, reg, &noParmOffset);
 					// record parameter list
 					params.insert(sp1);
 					//		nparms++;

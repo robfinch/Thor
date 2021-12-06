@@ -519,7 +519,7 @@ Operand* CodeGenerator::GenerateRegvarDereference(ENODE* node, TYP* tp, bool isR
 	// For parameters we want Rn, for others [Rn]
 	// This seems like an error earlier in the compiler
 	// See setting val_flag in ParseExpressions
-	ap1->mode = (node->rg >= regFirstArg && node->rg <= regLastArg) ? am_reg : am_ind;
+	ap1->mode = (IsArgReg(node->rg)) ? am_reg : am_ind;
 	//		ap1->mode = node->p[0]->tp->val_flag ? am_reg : am_ind;
 	ap1->preg = node->rg;
 	ap1->tp = node->tp;
@@ -537,7 +537,7 @@ Operand* CodeGenerator::GenerateFPRegvarDereference(ENODE* node, TYP* tp, bool i
 	/*error(ERR_DEREF)*/;
 	ap1 = allocOperand();
 	ap1->isPtr = isRefType;
-	ap1->mode = node->rg < regFirstArg ? am_ind : am_reg;
+	ap1->mode = (IsArgReg(node->rg)) ? am_reg : am_ind;
 	ap1->preg = node->rg;
 	ap1->tp = tp;
 	switch (node->tp->type) {
@@ -559,7 +559,7 @@ Operand* CodeGenerator::GeneratePositRegvarDereference(ENODE* node, TYP* tp, boo
 	/*error(ERR_DEREF)*/;
 	ap1 = allocOperand();
 	ap1->isPtr = isRefType;
-	ap1->mode = (node->rg >= regFirstArg && node->rg <= regLastArg) ? am_preg : am_ind;
+	ap1->mode = (IsArgReg(node->rg)) ? am_reg : am_ind;
 	ap1->preg = node->rg;
 	ap1->tp = tp;
 	switch (node->tp->type) {
