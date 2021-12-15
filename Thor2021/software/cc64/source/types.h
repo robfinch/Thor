@@ -1050,6 +1050,7 @@ public:
 	void OptSxw();
 	void OptZxb();
 	void OptZxw();
+	int TargetDistance(int64_t i);
 
 	static OCODE *loadHex(txtiStream& ifs);
 	void store(txtoStream& ofs);

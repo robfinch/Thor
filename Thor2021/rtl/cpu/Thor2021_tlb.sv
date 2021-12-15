@@ -101,20 +101,21 @@ edge_det u5 (
   .ee()
 );
 
+// Detect a change in the page number
 wire cd_ladr, cd_iadr;
-change_det #(.WID($bits(Address))) ucd1 (
+change_det #(.WID($bits(Address)-12)) ucd1 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(ladr_i),
+	.i(ladr_i[$bits(Address)-1:12]),
 	.cd(cd_ladr)
 );
 
-change_det #(.WID($bits(Address))) ucd2 (
+change_det #(.WID($bits(Address)-12)) ucd2 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(iadr_i),
+	.i(iadr_i[$bits(Address)-1:12]),
 	.cd(cd_iadr)
 );
 
@@ -185,7 +186,9 @@ case(state)
 				tlbdat_rst.R = 1'b1;
 				tlbdat_rst.W = 1'b1;
 				tlbdat_rst.X = 1'b1;
-				tlbdat_rst.vpn = {20'h3FF};
+				// FFFC0000
+				// 1111_1111_11_ 11_1100_0000 _0000_0000_0000
+				tlbdat_rst.vpn = {22'h3FF};
 				tlbdat_rst.ppn = {16'h03FF,count[9:0]};
 				rcount <= count[9:0];
 			end // Map 16MB ROM/IO area
@@ -339,7 +342,6 @@ else begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= iadr_i[31:12];
 	    acr_o <= 4'hF;
-	    hit0 <= 1'b1;
 		end
 	  else if (tadr0.vpn==iadr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin
 	    tlbmiss_o <= FALSE;
@@ -356,7 +358,7 @@ else begin
 	  else if (tadr2.vpn==iadr_i[31:22] && (tadr2.ASID==asid_i || tadr2.G)) begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= tadr2.ppn;
-	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};;
+	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};
 	    hit2 <= 1'b1;
 	  end
 	  else if (tadr3.vpn==iadr_i[31:22] && (tadr3.ASID==asid_i || tadr3.G)) begin
@@ -382,7 +384,6 @@ else begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= ladr_i[31:12];
 	    acr_o <= 4'hF;
-	    hit0 <= 1'b1;
 		end
 	  else if (tadr0.vpn==ladr_i[31:22] && (tadr0.ASID==asid_i || tadr0.G)) begin
 	    tlbmiss_o <= FALSE;
@@ -399,7 +400,7 @@ else begin
 	  else if (tadr2.vpn==ladr_i[31:22] && (tadr2.ASID==asid_i || tadr2.G)) begin
 	    tlbmiss_o <= FALSE;
 	    padr_o[31:12] <= tadr2.ppn;
-	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};;
+	    acr_o <= {tadr2.C,tadr2.R,tadr2.W,tadr2.X};
 	    hit2 <= 1'b1;
 	  end
 	  else if (tadr3.vpn==ladr_i[31:22] && (tadr3.ASID==asid_i || tadr3.G)) begin

@@ -27,10 +27,10 @@ SECTIONS {
 		_etext = .;
 	} >BIOS_CODE
 	.rodata : {
-		_start_rodata = .;
+		_rodata_start = .;
 		_SDA2_BASE_ = .;
 		*(.rodata);
 		. = ALIGN(4);
-		_end_rodata = .;
+		_rodata_end = .;
 	} >BIOS_RODATA
 }

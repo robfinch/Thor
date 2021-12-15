@@ -736,11 +736,11 @@ void ThorCodeGenerator::GenerateBeq(Operand* ap1, Operand* ap2, int label)
 		GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
 	else {
 		if (ap2->mode == am_reg && ap1->mode == am_reg) {
-			if (ap2->preg == 0)
-				GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
-			else if (ap1->preg == 0)
-				GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(label));
-			else
+			//if (ap2->preg == 0)
+			//	GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
+			//else if (ap1->preg == 0)
+			//	GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(label));
+			//else
 				GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
 		}
 		else {
@@ -765,11 +765,11 @@ void ThorCodeGenerator::GenerateBne(Operand* ap1, Operand* ap2, int label)
 	}
 	else {
 		if (ap2->mode == am_reg && ap1->mode == am_reg) {
-			if (ap2->preg == 0)
-				GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
-			else if (ap1->preg == 0)
-				GenerateDiadic(op_bnez, 0, ap2, MakeCodeLabel(label));
-			else
+			//if (ap2->preg == 0)
+			//	GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
+			//else if (ap1->preg == 0)
+			//	GenerateDiadic(op_bnez, 0, ap2, MakeCodeLabel(label));
+			//else
 				GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
 		}
 		else {
@@ -1146,7 +1146,7 @@ static void SaveRegisterSet(SYM *sym)
 		GenerateTriadic(op_sub,0,makereg(regSP),makereg(regSP),cg.MakeImmediate(mm*sizeOfWord));
 		mm = 0;
 		for (nn = 1 + (sym->tp->btpp->type!=bt_void ? 1 : 0); nn < 31; nn++) {
-			GenerateDiadic(cpu.sto_op,0,makereg(nn),cg.MakeIndexed(mm,regSP));
+			cg.GenerateStore(makereg(nn),cg.MakeIndexed(mm,regSP),sizeOfWord);
 			mm += sizeOfWord;
 		}
 	}
@@ -1162,7 +1162,7 @@ static void RestoreRegisterSet(SYM * sym)
 	if (!cpu.SupportsPop || true) {
 		mm = 0;
 		for (nn = 1 + (sym->tp->btpp->type!=bt_void ? 1 : 0); nn < 31; nn++) {
-			GenerateDiadic(cpu.ldo_op,0,makereg(nn),cg.MakeIndexed(mm,regSP));
+			cg.GenerateLoad(makereg(nn),cg.MakeIndexed(mm,regSP),sizeOfWord,sizeOfWord);
 			mm += sizeOfWord;
 		}
 		mm = sym->tp->btpp->type!=bt_void ? 29 : 30;
@@ -1203,7 +1203,7 @@ void SaveRegisterVars(CSet *rmask)
 				// nn = nregs - 1 - regno
 				// regno = -(nn - nregs + 1);
 				// regno = nregs - 1 - nn
-				GenerateDiadic(cpu.sto_op, 0, makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP));
+				cg.GenerateStore(makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP), sizeOfWord);
 				cnt += sizeOfWord;
 			}
 		}
@@ -1219,7 +1219,8 @@ void SaveFPRegisterVars(CSet *rmask)
 		cnt = 0;
 		GenerateTriadic(op_sub,0,makereg(regSP),makereg(regSP),cg.MakeImmediate(rmask->NumMember()*8));
 		for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
-			GenerateDiadic(op_sto, 0, makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP));
+			cg.GenerateStore(makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP), sizeOfWord);
+//			GenerateDiadic(op_sto, 0, makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP));
 			cnt += sizeOfWord;
 		}
 	}
@@ -1234,7 +1235,8 @@ void SavePositRegisterVars(CSet* rmask)
 		cnt = 0;
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
 		for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
-			GenerateDiadic(op_psto, 0, makefpreg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP));
+			cg.GenerateStore(makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP), sizeOfWord);
+//			GenerateDiadic(op_psto, 0, makefpreg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP));
 			cnt += sizeOfWord;
 		}
 	}
@@ -1262,7 +1264,7 @@ static void RestoreRegisterVars()
 			cnt = 0;
 			save_mask->resetPtr();
 			for (nn = save_mask->nextMember(); nn >= 0; nn = save_mask->nextMember()) {
-				GenerateDiadic(cpu.ldo_op, 0, makereg(nn), cg.MakeIndexed(cnt, regSP));
+				cg.GenerateLoad(makereg(nn), cg.MakeIndexed(cnt, regSP), sizeOfWord, sizeOfWord);
 				cnt += sizeOfWord;
 			}
 			GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(cnt2));
@@ -1419,27 +1421,27 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 							ap3 = GetTempRegister();
 							regs[ap3->preg].IsArg = true;
 							GenerateLoadConst(ap, ap3);
-	         		GenerateDiadic(cpu.sto_op,0,ap3,MakeIndexed(stkoffs,regSP));
+	         		cg.GenerateStore(ap3,MakeIndexed(stkoffs,regSP),sizeOfWord);
 							ReleaseTempReg(ap3);
 						}
 						else {
-							GenerateDiadic(cpu.sto_op, 0, makereg(0), MakeIndexed(stkoffs, regSP));
+							cg.GenerateStore(makereg(0), MakeIndexed(stkoffs, regSP), sizeOfWord);
 						}
 						nn = 1;
 					}
 					else {
 						if (ap->typep==&stddouble || ap->mode==am_reg) {
 							*isFloat = true;
-							GenerateDiadic(cpu.sto_op,0,ap,MakeIndexed(stkoffs,regSP));
+							cg.GenerateStore(ap,MakeIndexed(stkoffs,regSP),sizeOfWord);
 							nn = sz/sizeOfWord;
 						}
 						else if (ap->typep == &stdposit || ap->mode == am_reg) {
-							GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(stkoffs, regSP));
+							cg.GenerateStore(ap, MakeIndexed(stkoffs, regSP), sizeOfWord);
 							nn = 1;
 						}
 						else {
 							regs[ap->preg].IsArg = true;
-							GenerateDiadic(cpu.sto_op,0,ap,MakeIndexed(stkoffs,regSP));
+							cg.GenerateStore(ap,MakeIndexed(stkoffs,regSP),sizeOfWord);
 							nn = 1;
 						}
 					}

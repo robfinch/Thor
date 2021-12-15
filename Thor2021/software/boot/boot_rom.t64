@@ -1,3 +1,4 @@
+	.set	CSR_MTVEC,0x3030
 	.set	CSR_MGDT,0x3051
 	.set	IOBASE,0xFF800000
 	.set	RODATABASE,0xFFFE0000
@@ -95,11 +96,12 @@ MachineStart:
 #	1111_1111_11_11_1100_1000
 	ldi			t0,0x8000000000000FC8		# entry number = $, way = 3, write = true
 	ldi			t1,0x008E000FFC0FFFC8
-	ldi			a1,8
+	ldi			a1,7
 	mtlc		a1
 .0001:
 	tlbrw		r0,t0,t1
 	add			t0,t0,1							# map next 4kB
+	add			t1,t1,1
 	dbra		.0001
 
 	# Map LEDS
@@ -109,18 +111,40 @@ MachineStart:
 	ldi			t1,0x008E000FF80FF910
 	tlbrw		r0,t0,t1
 
-	# Map text screen - first 16kB
-	# FFD00000
-	# 1111_1111_11 01_0000_0000 _0000_0000_0000
-	ldi			t0,0x8000000000000D00	# entry number = $100, way = 3, write = true
-	ldi			t1,0x008E000FFC0FFD00	
+	# Map text screen - first 24kB
+	# FF800000
+	# 1111_1111_10 00_0000_0000 _0000_0000_0000
+	ldi			t0,0x8000000000000C00	# entry number = $000, way = 3, write = true
+	ldi			t1,0x008E000FF80FF800
+	ldi			a1,5
+	mtlc		a1
+.0003:
 	tlbrw		r0,t0,t1
 	add			t0,t0,1							# map next 4kB
+	add			t1,t1,1
+	dbra		.0003
+
+	# Map text registers
+	ldi			t0,0x8000000000000C1D	# entry number = $000, way = 3, write = true
+	ldi			t1,0x008E000FF80FF81D
 	tlbrw		r0,t0,t1
-	add			t0,t0,1							# map next 4kB
+
+	# Map Sprite registers
+	ldi			t0,0x8000000000000CB0	# entry number = $0B0, way = 3, write = true
+	ldi			t1,0x008E000FF80FF8B0
 	tlbrw		r0,t0,t1
-	add			t0,t0,1							# map next 4kB
-	tlbrw		r0,t0,t1
+
+	# Setup trap vector
+	lea			a1,IRQRout
+	csrrw		r0,a1,CSR_MTVEC
+	csrrw		r0,a1,CSR_MTVEC+2
+	csrrw		r0,a1,CSR_MTVEC+4
+	csrrw		r0,a1,CSR_MTVEC+6
+	ldi			a1,0xFF000000
+	csrrw		r0,a1,CSR_MTVEC+1
+	csrrw		r0,a1,CSR_MTVEC+3
+	csrrw		r0,a1,CSR_MTVEC+5
+	csrrw		r0,a1,CSR_MTVEC+7
 
 	# Setup debug mode stack pointer. The debug stack is set to a high order
 	# address in the scratchpad memory area.
@@ -133,6 +157,30 @@ MachineStart:
 .0002:
 	jmp			_main
 	bra			.0002
+	
+	.align	8
+IRQRout:
+	ldi			a1,0x03FFFE0003FF0055
+	sto			a1,0xff800000
+	.align	6
+IRQRoutM1:
+	ldi			a1,0x03FFFE0003FF0053
+	sto			a1,0xff800000
+	.align	6
+IRQRoutM2:
+	ldi			a1,0x03FFFE0003FF0048
+	sto			a1,0xff800000
+	.align	6
+IRQRoutM3:
+	ldi			a1,0x03FFFE0003FF004D
+	sto			a1,0xff800000
+.0004:
+	bra			.0004
 	.type		MachineStart,@function
 	.size		MachineStart,$-MachineStart
 
+_MapPage:
+	tlbrw		a0,a0,a1
+	rts
+	.type		_MapPage,@function
+	.size		_MapPage,$-_MapPage

@@ -628,8 +628,41 @@ void OCODE::OptBeq()
 	}
 }
 
+int OCODE::TargetDistance(int64_t i)
+{
+	OCODE* ip;
+	int count;
+
+	count = 1;
+	for (ip = this->back; ip; ip = ip->back) {
+		if (ip->opcode == op_label) {
+			if ((int64_t)ip->oper1 == i)
+				return (count);
+		}
+		count++;
+	}
+	for (ip = this->fwd; ip; ip = ip->fwd) {
+		if (ip->opcode == op_label) {
+			if ((int64_t)ip->oper1 == i)
+				return (count);
+		}
+		count++;
+	}
+	return (0x7fffffffL);
+}
+
+
 void OCODE::OptBne()
 {
+	if (oper2->mode == am_reg && oper2->preg == regZero) {
+		if (TargetDistance(oper3->offset->i) < 512) {
+			opcode = op_bnez;
+			insn = Instruction::Get(op_bnez);
+			oper2 = oper3;
+			oper3 = nullptr;
+			return;
+		}
+	}
 	if (back && back->opcode == op_cmp && back->oper3->preg == regZero) {
 		if (back->back && back->back->opcode & 0x7fff == cpu.ldi_op) {
 			if (back->back->oper1->preg == back->oper2->preg) {
@@ -651,14 +684,25 @@ void OCODE::OptBne()
 void OCODE::OptBra()
 {
 	OCODE *p;
+	bool opt = false;
 
 	for (p = fwd; p && (p->opcode == op_label); p = p->fwd)
 		if (oper1->offset->i == (int)p->oper1) {
 			MarkRemove();
 			optimized++;
+			opt = true;
 			break;
 		}
 	OptUctran();
+	if (!opt) {
+		if (TargetDistance(oper1->offset->i) < 512) {
+			opcode = op_beqz;
+			insn = Instruction::Get(op_beqz);
+			oper2 = oper1;
+			oper1 = makereg(regZero);
+			return;
+		}
+	}
 	return;
 }
 

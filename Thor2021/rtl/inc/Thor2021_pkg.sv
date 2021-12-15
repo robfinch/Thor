@@ -169,6 +169,7 @@ parameter LDTU		= 8'h85;
 parameter LDO			= 8'h86;
 parameter LDOS		= 8'h87;
 parameter LEA			= 8'h8A;
+parameter LDOR		= 8'h8B;
 
 parameter STB			= 8'h90;
 parameter STW			= 8'h91;
@@ -176,6 +177,10 @@ parameter STT			= 8'h92;
 parameter STO			= 8'h93;
 parameter STOC		= 8'h94;
 parameter STOS		= 8'h95;
+parameter STSET		= 8'h98;
+parameter STMOV		= 8'h99;
+parameter STCMP		= 8'h9A;
+parameter STFND		= 8'h9B;
 parameter CACHE		= 8'h9F;
 
 parameter SYS			= 8'hA5;
@@ -199,6 +204,7 @@ parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
 parameter LEAX		= 8'hBA;
+parameter LDORX		= 8'hBB;
 
 parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
@@ -417,6 +423,8 @@ parameter M_CALL	= 4'd6;
 parameter MR_LOADZ = 4'd7;		// unsigned load
 parameter MR_MFSEL = 4'd8;
 parameter MR_MTSEL = 4'd9;
+parameter MR_MOVLD = 4'd10;
+parameter MR_MOVST = 4'd11;
 
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_SEMA	= 16'h?00C;
@@ -847,8 +855,8 @@ typedef struct packed
 	logic R;
 	logic W;
 	logic X;
-	logic [21:0] vpn;
-	logic [25:0] ppn;
+	logic [21:0] vpn;		// bits 22 to 43
+	logic [25:0] ppn;		// bits 12 to 37
 } TLBEntry;
 
 typedef struct packed
@@ -930,8 +938,9 @@ typedef struct packed
 	logic st;
 	logic jmp;
 	logic jxx;
+	logic jxz;
 	logic dj;
-	Offset jmptgt;
+	logic [63:0] jmptgt;
 	logic [3:0] lk;
 	logic rts;
 	logic loadr;
@@ -939,12 +948,18 @@ typedef struct packed
 	logic storer;
 	logic storen;
 	logic ldz;
+	logic mem;
+	logic load;
 	logic [2:0] memsz;
 	logic lear;
 	logic lean;
 	logic [2:0] seg;
 	logic [2:0] scale;
 	logic tlb;
+	logic stset;
+	logic stmov;
+	logic stfnd;
+	logic stcmp;
 	logic multi_cycle;
 	logic mul;
 	logic muli;
@@ -965,6 +980,7 @@ typedef struct packed
 	logic csr;
 	logic rti;
 	logic rex;
+	logic sync;
 	logic mtlc;
 	logic wrlc;
 	logic mfsel;

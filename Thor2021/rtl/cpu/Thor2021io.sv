@@ -235,7 +235,8 @@ wire takb;
 reg xpredict_taken;
 reg xJmp;
 reg [63:0] xJmptgt;
-reg xJxx;
+reg xJxx, xJxz;
+reg xPredictableBranch;
 reg xdj;
 reg xRts, xRti;
 reg xRex;
@@ -299,6 +300,9 @@ Value mres;
 reg [7:0] mstep;
 reg mzbit;
 reg mmaskbit;
+Address mJmptgt;
+reg mtakb;
+reg mExBranch;
 
 // Writeback stage vars
 reg wval;
@@ -323,6 +327,9 @@ Value wres;
 reg [7:0] wstep;
 reg wzbit;
 reg wmaskbit;
+Address wJmptgt;
+reg wtakb;
+reg wExBranch;
 
 // Trailer stage vars
 reg advance_t;
@@ -339,7 +346,7 @@ Value scratch [0:3];
 reg [63:0] tick;
 reg [63:0] wc_time;			// wall-clock time
 reg [63:0] mtimecmp;
-Address tvec [0:3];
+reg [63:0] tvec [0:7];
 reg [15:0] cause [0:3];
 Address badaddr [0:3];
 reg [63:0] mexrout;
@@ -627,8 +634,8 @@ SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
 SGTI,SGTIL:		res2 = $signed(xa) > $signed(imm);
 SLTUI,SLTUIL:	res2 = xa < imm;
 SGTUI,SGTUIL:	res2 = xa > imm;
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDOS,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDOS,LEA,
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LEAX:
 							res2 = memresp.res;
 STSET:							
 	case(xir[31:29])
@@ -670,10 +677,10 @@ Thor2021_BTB_x1 ubtb
 (
 	.rst(rst_i),
 	.clk(clk_g),
-	.wr(),
-	.wip(),
-	.wtgt(),
-	.takb(),
+	.wr(wExbranch & wval),
+	.wip(wip),
+	.wtgt(wJmptgt),
+	.takb(wtakb),
 	.rclk(~clk_g),
 	.ip(ip),
 	.tgt(btb_tgt),
@@ -817,8 +824,8 @@ reg [2:0] clr_stall_x;
 wire stall_i = !ihit;
 wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) && (|xcause || xRti || xRex || |mcause || mRti || mRex)) ||
 								(xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) ||
-								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt}) && mval && mRt!=6'd0) ||
-								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ||
+//								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt}) && mval && mRt!=6'd0) ||
+//								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ||
 								(xSync && xval) || (mSync && mval) || (wSync && wval) || tSync || uSync || vSync;
 
 assign run = ihit;
@@ -907,6 +914,7 @@ begin
 	xir <= NOP_INSN;
 	mir <= NOP_INSN;
 	wir <= NOP_INSN;
+	xrfwr <= FALSE;
 	xIsMultiCycle <= FALSE;
 	xMem <= FALSE;
 	xLoad <= FALSE;
@@ -916,6 +924,16 @@ begin
 	xStcmp <= FALSE;
 	xStmov <= FALSE;
 	xStfnd <= FALSE;
+	xJxx <= FALSE;
+	xJmp <= FALSE;
+	xJxz <= FALSE;
+	xdj <= FALSE;
+	xPredictableBranch <= FALSE;
+	xRt <= 6'd0;
+	xRti <= FALSE;
+	mRti <= FALSE;
+	xRex <= FALSE;
+	mRex <= FALSE;
 	tid <= 8'h00;
 	memreq.tid <= 8'h00;
 	memreq.step <= 6'd0;
@@ -928,13 +946,18 @@ begin
 	memreq.sel <= 16'h0;
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
-	cr0 <= 64'h300000001;
+//	cr0 <= 64'h300000001;
+	cr0 <= 64'h200000001;
 	rst_cnt <= 6'd0;
 	xCsr <= 1'b0;
 	mCsr <= 1'b0;
 	wCsr <= 1'b0;
+	wSync <= 1'b0;
+	mSync <= 1'b0;
+	xSync <= 1'b0;
 	tSync <= 1'b0;
 	uSync <= 1'b0;
+	vSync <= 1'b0;
 	wLoad <= FALSE;
 	clr_stall_x <= 3'b0;
 	memresp_fifo_rd <= FALSE;
@@ -953,6 +976,8 @@ begin
 	wcause <= 16'h0000;
 	lc <= 64'd0;
 	wLoad <= FALSE;
+	mExBranch <= FALSE;
+	wExBranch <= FALSE;
 end
 endtask
 
@@ -1193,10 +1218,10 @@ begin
 		xSc <= deco.scale;
 		xCat <= deco.Cat;
 		xip <= dip;
-		xlen <= dlen;
 //		xFloat <= deco.float;
 		xJmp <= deco.jmp;
 		xJxx <= deco.jxx;
+		xJxz <= deco.jxz;
 		xdj <= deco.dj;
 		xRts <= deco.rts;
 		xJmptgt <= deco.jmptgt;
@@ -1246,14 +1271,15 @@ begin
 		xpredict_taken <= dpredict_taken;
 		// The BTB might have predicted the correct address following the branch, so
 		// do not invalidate unless flow is changing.
-		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
+		xPredictableBranch <= (ir.jxx.Ca==3'd0 || ir.jxx.Ca==3'd7);
+		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
 				inv_i();
 				inv_d();
 				ip.offs <= deco.jmptgt;
 			end
 		end
-		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken) begin	// Jxx, DJxx
+		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != dip.offs + deco.jmptgt) begin
 				inv_i();
 				inv_d();
@@ -1474,76 +1500,43 @@ begin
 		mmaskbit <= xmaskbit;
 		mzbit <= xzbit;
 		mRtvec <= xRtvec;
+		mtakb <= takb;
+		mExBranch <= FALSE;
 		if (xval) begin
-	    if (xJxx) begin
+	    if (xJxx|xJxz) begin
+	    	mExBranch <= TRUE;
 	    	if (xdj)
 	    		mlc <= xlc - 2'd1;
 	    	if (xir.jxx.lk != 2'd0) begin
-		    	caregfile[{2'b0,xir.jxx.lk}].offs <= xip.offs + 3'd6;
+		    	caregfile[{2'b0,xir.jxx.lk}].offs <= xip.offs + xlen;
 		    	caregfile[{2'b0,xir.jxx.lk}].sel <= xip.sel;
 	    	end
 	      if (bpe) begin
-	        if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb)) begin
+	        if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb) && xPredictableBranch) begin
 				    inv_i();
 				    inv_d();
 				    inv_x();
 						xx <= 4'd2;
-	          ip.offs <= xip.offs + 3'd6;
+	          ip.offs <= xip.offs + xlen;
 	          // Was selector changed? If so change it back.
 	          tChangeIPSel(xip.sel);
 	        end
-	        else if (!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) begin
-				    inv_i();
-				    inv_d();
-				    inv_x();
-						xx <= 4'd3;
-				    if (xir.jxx.Ca == 3'd0)
-				    	ip.offs <= xJmptgt;
-				    else if (xir.jxx.Ca == 3'd7)
-				    	ip.offs <= xip.offs + xJmptgt;
-				    else
-				    	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
-		    		if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7)
-	  	  			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
-	        end
+	        else if ((!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) || !xPredictableBranch)
+	        	tBranch(4'd3);
 	      end
-	      else if (xdj ? (takb && xlc != 64'd0) : takb) begin
-			    inv_i();
-			    inv_d();
-			    inv_x();
-					xx <= 4'd4;
-			    if (xir.jxx.Ca == 3'd0)
-			    	ip.offs <= xJmptgt;
-			    else if (xir.jxx.Ca == 3'd7)
-			    	ip.offs <= xip.offs + xJmptgt;
-			    else
-			    	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
-	    		if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7)
-	    			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
-	      end
+	      else if (xdj ? (takb && xlc != 64'd0) : takb)
+	      	tBranch(4'd4);
 	    end
 	    if (xJmp) begin
+	    	mExBranch <= TRUE;
 	    	if (xdj)
 	    		mlc <= xlc - 2'd1;
 		  	if (xir.jmp.lk != 2'd0) begin
-		    	caregfile[{2'b0,xir.jmp.lk}].offs <= xip.offs + 3'd6;
+		    	caregfile[{2'b0,xir.jmp.lk}].offs <= xip.offs + xlen;
 		    	caregfile[{2'b0,xir.jmp.lk}].sel <= xip.sel;
 		  	end
-	    	if (xdj ? xlc != 64'd0 : xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)	begin // ==0,7 was already done at ifetch
-			    inv_i();
-			    inv_d();
-			    inv_x();
-					xx <= 4'd5;
-			    if (xir.jmp.Ca==3'd0)
-			    	ip.offs <= xJmptgt;
-			    else if (xir.jmp.Ca==3'd7)
-			    	ip.offs <= xip.offs + xJmptgt;
-			    else
-		    		ip.offs <= caregfile[{1'b0,xir.jmp.Ca}].offs + xJmptgt;
-	    		// Selector changing?
-	    		if (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7)
-	    			tChangeIPSel(caregfile[{1'b0,xir.jmp.Ca}].sel);
-	    	end
+	    	if (xdj ? (xlc != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
+	    		tBranch(4'd5);
 	  	end
 	  	if (xRts) begin
 	  		if (xir.rts.lk != 2'd0) begin
@@ -1555,9 +1548,9 @@ begin
 		  		// Selector changing?
 		  		tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
 	  		end
+	  	end
 	  	if (xMtlc)
 	  		mlc <= res;
-	  	end
 
 			tExMem();
 
@@ -1596,6 +1589,9 @@ begin
 		wmaskbit <= mmaskbit;
 		wzbit <= mzbit;
 		wRtvec <= mRtvec;
+		wtakb <= mtakb;
+		wJmptgt <= mJmptgt;
+		wExBranch <= mExBranch;
 	end
 	else if (advance_w)
 		inv_w();
@@ -1620,9 +1616,8 @@ begin
 				badaddr[2'd3] <= wbadAddr;
 				caregfile[4'h8+istk_depth] <= ip;
 				istk_depth <= istk_depth + 2'd1;
-				ip.sel <= tvec[2'd3].sel;
-				ip.offs <= tvec[2'd3].offs + {omode,6'h00};
-				tChangeIPSel(tvec[2'd3].sel);
+				ip.offs <= tvec[3'd6] + {omode,6'h00};
+				tChangeIPSel(tvec[3'd7][31:0]);
 				inv_i();
 				inv_d();
 				inv_x();
@@ -1659,8 +1654,8 @@ begin
 						plStack <= {plStack[55:0],8'hFF};
 						cause[2'd3] <= FLT_PRIV;
 						caregfile[3'd6] <= ip;
-						ip.offs <= tvec[2'd3].offs + {omode,6'h00};
-						tChangeIPSel(tvec[2'd3].sel);
+						ip.offs <= tvec[3'd6] + {omode,6'h00};
+						tChangeIPSel(tvec[3'd7][31:0]);
 						inv_i();
 						inv_d();
 						inv_x();
@@ -1739,6 +1734,34 @@ begin
 end
 endtask
 
+task tBranch;
+input [3:0] yy;
+begin
+  inv_i();
+  inv_d();
+  inv_x();
+	xx <= yy;
+  if (xir.jxx.Ca == 3'd0) begin
+  	ip.offs <= xJmptgt;
+  	mJmptgt.offs <= xJmptgt;
+  end
+  else if (xir.jxx.Ca == 3'd7) begin
+  	ip.offs <= xip.offs + xJmptgt;
+  	mJmptgt.offs <= xip.offs + xJmptgt;
+  end
+  else begin
+  	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+  	mJmptgt.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+  end
+  mJmptgt.sel <= xip.sel;
+	if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7) begin
+		tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
+		if (caregfile[{1'b0,xir.jxx.Ca}].sel != xip.sel)
+			mJmptgt.sel <= caregfile[{1'b0,xir.jxx.Ca}].sel;
+	end
+end
+endtask
+
 task ex_branch;
 Address nxt_ip;
 begin
@@ -1777,7 +1800,7 @@ begin
 		CSR_MBADADDR:	res = badaddr[regno[13:12]];
 		CSR_TICK:	res = tick;
 		CSR_CAUSE:	res = cause[regno[13:12]];
-		CSR_MTVEC:	res = tvec[regno[1:0]];
+		CSR_MTVEC:	res = tvec[regno[2:0]];
 		CSR_UCA:
 			if (regno[4:1]==4'd7)
 				case(regno[0])
@@ -1836,7 +1859,7 @@ begin
 		CSR_ASID: 	asid <= val;
 		CSR_MBADADDR:	badaddr[regno[13:12]] <= val;
 		CSR_CAUSE:	cause[regno[13:12]] <= val;
-		CSR_MTVEC:	tvec[regno[1:0]] <= val;
+		CSR_MTVEC:	tvec[regno[2:0]] <= val;
 		CSR_UCA:
 			if (regno[4:1] < 4'd8)
 				case(regno[0])

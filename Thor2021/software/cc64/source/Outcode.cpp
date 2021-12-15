@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[317] =
+Instruction opl[319] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -200,6 +200,7 @@ Instruction opl[317] =
 { "ldi",op_ldi,1,1,false,am_reg,am_imm,0,0 },
 { "ldm", op_ldm,20,1,true,am_mem,0,0,0 },
 { "ldo", op_ldo,4,1,true,am_reg,am_mem,0,0 },
+{ "ldos", op_ldos,4,1,true,am_reg,am_mem,0,0 },
 { "ldou", op_ldou,4,1,true,am_reg,am_mem,0,0 },
 { "ldp", op_ldp,4,1,true,am_reg,am_mem,0,0 },
 { "ldpu", op_ldpu,4,1,true,am_reg,am_mem,0,0 },
@@ -321,6 +322,7 @@ Instruction opl[317] =
 { "stm", op_stm,20,1,true,am_mem,0,0,0 },
 { "sto",op_sto,4,0,true,am_reg,am_mem,0,0 },
 { "stop", op_stop },
+{ "stos",op_stos,4,0,true,am_reg,am_mem,0,0 },
 { "stp",op_stp,4,0,true,am_reg,am_mem,0,0 },
 { "stt",op_stt,4,0,true,am_reg,am_mem,0,0 },
 { "stw",op_stw,4,0,true,am_reg,am_mem,0,0 },

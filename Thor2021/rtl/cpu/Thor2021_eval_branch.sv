@@ -44,7 +44,7 @@ input Value b;
 output reg takb;
 
 always_comb
-case(inst.jxx.opcode)
+case(inst.any.opcode)
 JEQ: 	takb = a == b;
 JNE: 	takb = a != b;
 JLT: 	takb = $signed(a) < $signed(b);

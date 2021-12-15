@@ -3,13 +3,14 @@
 extern int DBGAttr;
 int xx[32], yy[32], dx[32], dy[32];
 int state;
-
 //extern int DBGAttr;
 extern void SieveOfEratosthenes();
 extern int rand();
 extern void srand(unsigned int);
 extern void DBGDisplayChar(char);
 extern void DBGDisplayAsciiStringCRLF(char *);
+extern void MapPage(register int a0, register int a1);
+
 /*
 void __interrupt syscall()
 {
@@ -22,6 +23,47 @@ void __interrupt ext_irq()
 }
 */
 
+// Map pages that are not already setup.
+
+void MapPages()
+{
+	int m;
+	unsigned int a0, a1;
+
+	// 64k at 0xFFFCxxxx
+	a0 = 0x8000000000000FC0;	// fixed way, entry $3C0, write = true
+	a1 = 0x008E000FFC0FFFC0;
+	for (m = 0; m < 16; m++) {
+		MapPage(a0,a1);
+		a0++;
+		a1++;
+	}
+	// 128k at 0x00300000
+	// 0x300000
+	// 0x0000_0000_00_11_0000_0000_ 0000_0000_0000
+	//   1111_1111_10 00_0000_0000 _0000_0000_0000
+	a0 = 0x8000000000008300;	// choose random way, entry $300, write = true
+	a1 = 0x008E000000000300;
+	for (m = 0; m < 32; m++) {
+		MapPage(a0,a1);
+		a0++;
+		a1++;
+	}
+	// 4MB low memory
+	a0 = 0x8000000000000000;	// way = 0, entry $000, write = true
+	a1 = 0x008E000000000000;
+	for (m = 0; m < 1024; m++) {
+		MapPage(a0,a1);
+		a0++;
+		a1++;
+	}
+}
+
+void UnmapPage(int pgno)
+{
+	MapPage(pgno,0x00800000003FFFFF);
+}
+
 int my_abs(register int a)
 {
 	if (a < 0) a = -a;
@@ -30,10 +72,11 @@ int my_abs(register int a)
 
 void my_srand(register int a, register int b)
 {
-	int* pRand = 0;
+	int:32* pRand = 0;
 	int ch;
-		
-	pRand += (0xFF940000/sizeof(int));
+
+	MapPage(0x8000000000000D40,0x008E000FF80FF940);		
+	pRand += (0xFF940000/sizeof(int:32));
 	for (ch = 0; ch < 256; ch++) {
 		pRand[1] = ch;
 		pRand[2] = a;
@@ -43,12 +86,15 @@ void my_srand(register int a, register int b)
 
 int my_rand(register int ch)
 {
-	int* pRand = 0;
+	int:32* pRand = 0;
 	int r;
 	
-	pRand += (0xFF940000/sizeof(int));
+	MapPage(0x8000000000000D40,0x0086000FF80FF940);		
+	pRand += (0xFF940000/sizeof(int:32));
 	pRand[1] = ch;
 	r = *pRand;
+	*pRand = r;
+	*pRand = r;
 	*pRand = r;
 	return (r);
 }
@@ -86,6 +132,12 @@ void PutTetra(int n)
 	PutWyde(n);
 }
 
+void PutOcta(int n)
+{
+	PutTetra(n >> 32);
+	PutTetra(n);
+}
+
 void FlashLEDs()
 {
 	int* pLEDS = 0;
@@ -97,23 +149,43 @@ void FlashLEDs()
 		*pLEDS = n >> 13;
 }
 
+void ShowSprites(int which)
+{
+	int:32 *pSprEN = 0xFF8B03C0;
+	MapPage(0x8000000000000CB0,0x008E000FF80FF8B0);
+	*pSprEN = which;
+	UnmapPage(0x8000000000000CB0);
+}
+
 // Give each sprite its own color.
 
 void SetSpriteColor()
 {
 	int:16* pSpr = 0;
 	int m,n,c,k;
+	int* pScreen = 0;
 
+	pScreen += (0xFF800000/sizeof(int));
+	pScreen[10] = DBGAttr|'A';
+	pScreen[11] = DBGAttr + 'A';
 	pSpr += (0x00300000/sizeof(int:16));
+	pScreen[12] = DBGAttr + 'A';
 	for (m = 0; m < 32; m++) {
+		pScreen[11] = DBGAttr + 'A' + m;
 		c = my_rand(0);
 		k = m * 2048;
-		for (n = 0; n < 2048; n++)
+		for (n = 0; n < 2048; n++) {
+			if ((n & 15) == 0) {
+				PutWyde(n);
+				DBGDisplayChar('\r');
+			}
 			pSpr[k + n] = c;
+		}
 	}
 	// Make a boxed X shape
 	c = 0x7fff;
 	for (m = 0; m < 32; m++) {
+		pScreen[12] = DBGAttr + 'A' + m;
 		k = m * 2048;
 		for (n = 0; n < 56; n++)	// Top
 			pSpr[k + n] = c;
@@ -128,12 +200,16 @@ void SetSpriteColor()
 		for (n = 0; n < 36; n++)
 			pSpr[k + n * 55 + 55] = c;
 	}
+	pScreen[13] = DBGAttr + 'A' + m;
 	// Delay a bit to allow some vertical sync times to occur.
 	for (m = 0; m < 1000000; m++)
 		;
+	pScreen[14] = DBGAttr + 'A' + m;
 	// Turn off Vertical Sync DMA trigger.
+	MapPage(0x8000000000000CB0,0x008E000FF80FF8B0);
 	int:32 *pSprVDT = 0xFF8B03D8;
 	*pSprVDT = 0;
+	UnmapPage(0x8000000000000CB0);
 }
 
 void SetSpritePosAndSpeed()
@@ -141,6 +217,7 @@ void SetSpritePosAndSpeed()
 	int:16* pSpr16 = 0;
 	int n;
 	
+	MapPage(0x8000000000000CB0,0x008E000FF80FF8B0);
 	pSpr16 += (0xFF8B0000/sizeof(int:16));
 	for (n = 0; n < 32; n++) 
 	{
@@ -152,6 +229,7 @@ void SetSpritePosAndSpeed()
 		pSpr16[n*8+1] = yy[n];
 		pSpr16[n*8+2] = 0x2a30;		// set size 48x42
 	}
+	UnmapPage(0x8000000000000CB0);
 }
 
 void MoveSprites()
@@ -161,7 +239,9 @@ void MoveSprites()
 	int m,n;
 	int j,k,a,b;
 	int t;
-	
+
+	// Map sprite registers	
+	MapPage(0x8000000000000CB0,0x008E000FF80FF8B0);
 	pSpr16 += (0xFF8B0000/sizeof(int:16));
 	pScreen += (0xFF800000/sizeof(int));
 
@@ -209,19 +289,21 @@ int main()
 	int* pScreen = 0;
 	int* pMem = 0;
 	int n, m;
-	char* bootstr = "rfPower SoC Booting...";
+	char* bootstr = "Thor2021 SoC Booting...";
 	char *btstr = 0xFFFE0000;
 
 //	forever {
 //		switch(state) {
 //		case 0:
+	ShowSprites(0x00);
+	MapPages();
 	int* pLEDS = 0;
 	pLEDS += (0xFF910000/sizeof(int));
 	*pLEDS = 0x01;
 				state++;
 				FlashLEDs();
 	*pLEDS = 0x55;
-				DBGAttr = 0x7FE0F000;
+				DBGAttr = 0x03FFFE0003FF0000;
 				pMem += (BIOSMEM/sizeof(int));
 				pScreen += (0xFF800000/sizeof(int));
 			//	for (n = 0; n < 64 * 33; n++)
@@ -242,19 +324,32 @@ int main()
 					pScreen[6] = DBGAttr|'D';
 
 				DBGCRLF();
-				DBGDisplayChar('E');
-				DBGDisplayChar('F');
-				DBGDisplayChar('G');
-				PutWyde(0x1234);
-				//DBGDisplayAsciiStringCRLF(bootstr);
+				PutTetra(&DBGAttr);
+				DBGDisplayChar(' ');
+				PutTetra(0x87654321);
+				DBGDisplayChar(' ');
+				__asm {
+					csrrd	a0,r0,0x3036
+					sub		sp,sp,8
+					sto		a0,[sp]
+					jsr		lk1,_PutTetra
+				}
+				ShowSprites(0xFFFFFF00);
+				DBGDisplayChar(' ');
+//				DBGDisplayAsciiStringCRLF(bootstr);
 					DBGDisplayChar('\r');
 					DBGDisplayChar('\n');
-					PutWyde(btstr[0]);
+					PutWyde(bootstr[0]);
 					DBGDisplayChar('\r');
 					DBGDisplayChar('\n');
 				DBGDisplayChar(' ');
-				
+			
 				my_srand(1234,4567);
+				for (n = 0; n < 200; n++) {
+					PutTetra(my_rand(0));
+					DBGDisplayChar(' ');
+				}
+				
 				SetSpriteColor();
 				
 //		case 1:
@@ -264,7 +359,8 @@ int main()
 //		case 2:
 			forever {
 				MoveSprites();
-
+			}
+			forever {
 		//	pMem[5] = (int)ext_irq|0x48000002;
 		//	pMem[12] = (int)syscall|0x48000002;
 			//SieveOfEratosthenes();

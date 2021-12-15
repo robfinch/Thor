@@ -981,7 +981,7 @@ else begin
 	      	begin
 	     			sr_o <= memreq.func2==MR_LDOR;
 	     			if (tlbacr[1]) begin
-	  	    		if (dhit) begin
+	  	    		if (dhit & ~tlbacr[3]) begin
 	  	    			tDeactivateBus();
 	      				sr_o <= LOW;
 		      		end
@@ -1009,7 +1009,7 @@ else begin
 	    ic_invall:	ret();
 	    dc_invline:	ret();
 	    dc_invall:	ret();
-	    dce & dhit:
+	    dce & dhit & tlbacr[3]:
 		    begin
 		    	datil <= dc_line;
 		  		if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
@@ -1047,13 +1047,13 @@ else begin
 	      case(memreq.func)
 	      MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
 	      	begin
-				    if (|sel[31:16] && !(dce && dhit))
+				    if (|sel[31:16] && !(dce && dhit && tlbacr[3]))
 			  	    goto (MEMORY8);
 			  	  else begin
 	      			tDeactivateBus();
 			        goto (DATA_ALIGN);
 			      end
-	      		if (dce & dhit) begin
+	      		if (dce & dhit & tlbacr[3]) begin
 	      			dati <= datil >> {adr_o[5:3],6'b0};
 			      end
 	      	end
@@ -1145,7 +1145,7 @@ else begin
 			if (tlbmiss)
 				tTLBMiss(ea);
 			else begin
-				if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce)
+				if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce && tlbacr[3])
 		 			tDeactivateBus();
 				else begin
 	      	stb_o <= HIGH;
@@ -1158,7 +1158,7 @@ else begin
 	  end
 
 	MEMORY12:
-	  if (dhit & dce) begin
+	  if (dhit & dce & tlbacr[3]) begin
 	    tDeactivateBus();
 	  	datil <= dc_line;
 			if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
@@ -1188,7 +1188,7 @@ else begin
 	      case(memreq.func)
 	      MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
 	      	begin
-	      		if (dhit & dce)
+	      		if (dhit & dce & tlbacr[3])
 	      			dati <= datil >> {adr_o[5:3],6'b0};
 		        goto (DATA_ALIGN);
 	      	end

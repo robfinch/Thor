@@ -171,7 +171,21 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 1:	GenerateDiadic(cpu.ldbu_op, 0, ap3, ap1); break;
 			case 2:	GenerateDiadic(cpu.ldwu_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldtu_op, 0, ap3, ap1); break;
-			case 8: GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
+			case 8: 
+				if (ap1->mode == am_indx) {
+					if (ap1->offset->nodetype == en_icon) {
+						if (ap1->offset->i > -128 && ap1->offset->i < 127) {
+							GenerateDiadic(op_ldos, 0, ap3, ap1);
+							break;
+						}
+					}
+				}
+				else if (ap1->mode == am_ind) {
+					GenerateDiadic(op_ldos, 0, ap3, ap1);
+					break;
+				}
+				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
+				break;
 			}
     }
     else {
@@ -180,7 +194,21 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 1:	GenerateDiadic(cpu.ldb_op, 0, ap3, ap1); break;
 			case 2:	GenerateDiadic(cpu.ldw_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldt_op, 0, ap3, ap1); break;
-			case 8:	GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
+			case 8:	
+				if (ap1->mode == am_indx) {
+					if (ap1->offset->nodetype == en_icon) {
+						if (ap1->offset->i > -128 && ap1->offset->i < 127) {
+							GenerateDiadic(op_ldos, 0, ap3, ap1);
+							break;
+						}
+					}
+				}
+				else if (ap1->mode == am_ind) {
+					GenerateDiadic(op_ldos, 0, ap3, ap1);
+					break;
+				}
+				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
+				break;
 			}
     }
 	ap3->memref = true;
@@ -232,7 +260,21 @@ void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size)
 		case 1: GenerateDiadic(cpu.stb_op, 0, ap1, ap3); break;
 		case 2: GenerateDiadic(cpu.stw_op, 0, ap1, ap3); break;
 		case 4: GenerateDiadic(cpu.stt_op, 0, ap1, ap3); break;
-		case 8: GenerateDiadic(cpu.sto_op, 0, ap1, ap3); break;
+		case 8:
+			if (ap3->mode == am_indx) {
+				if (ap3->offset->nodetype == en_icon) {
+					if (ap3->offset->i > -128 && ap3->offset->i < 127) {
+						GenerateDiadic(op_stos, 0, ap1, ap3);
+						return;
+					}
+				}
+			}
+			else if (ap3->mode == am_ind) {
+				GenerateDiadic(op_stos, 0, ap1, ap3);
+				return;
+			}
+			GenerateDiadic(cpu.sto_op, 0, ap1, ap3);
+			break;
 		default:
 			;
 		}

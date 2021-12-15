@@ -55,6 +55,8 @@ Rb = ir.r3.Rb;
 rfwr = FALSE;
 // Target register
 case(ir.any.opcode)
+JEQZ,JNEZ,DJEQZ,DJNEZ:
+	Rt = 6'd0;
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	Rt = 6'd0;
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
@@ -85,7 +87,7 @@ case(ir.any.opcode)
 CSR:
 	deco.lk = ir.csr.regno[4:1];
 // Cannot update ca[0] with a branch
-JMP,DJMP:
+JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
 	deco.lk = {2'b0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.lk = {2'b0,ir.jxx.lk};
@@ -106,7 +108,7 @@ CSR:
 	default:	deco.carfwr = FALSE;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP:
+JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
 	deco.carfwr = ir.jxx.lk != 2'd0;
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.carfwr = ir.jxx.lk != 2'd0;
@@ -125,7 +127,7 @@ CSR:
 			deco.Cat = 3'd0;
 	default:	deco.Cat = 3'd0;
 	endcase
-JMP,DJMP:
+JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
 	deco.Cat = {1'b0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.Cat = {1'b0,ir.jxx.lk};
@@ -156,15 +158,17 @@ BTFLD:
 	default:	rfwr = FALSE;
 	endcase
 CSR:	rfwr = TRUE;
-ADDI,SUBFI,CMPI:	rfwr = TRUE;
+ADDI,SUBFI,CMPI,MULI,DIVI,MULUI:
+	rfwr = TRUE;
 ANDI,ORI,XORI:		rfwr = TRUE;
 SEQI,SNEI,SLTI,SGTI:		rfwr = TRUE;
-ADDIL,CMPIL:			rfwr = TRUE;
+ADDIL,SUBFIL,CMPIL,MULIL,DIVIL,MULUIL:
+	rfwr = TRUE;
 ANDIL,ORIL,XORIL:	rfwr = TRUE;
 SEQIL,SNEIL,SLTIL,SGTIL:		rfwr = TRUE;
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR:
 	rfwr = TRUE;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	rfwr = TRUE;
 LEA,LEAX:	rfwr = TRUE;
 ADD2R,AND2R,OR2R,XOR2R:
@@ -174,7 +178,7 @@ endcase
 
 // Computing immediate constant
 case(ir.any.opcode)
-ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SGTI:
+ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SGTI,MULI,DIVI:
 	begin
 		imm = {{53{ir.ri.imm[10]}},ir.ri.imm};
 	end
@@ -182,7 +186,7 @@ ANDI:	// Pad with ones to the left
 	begin
 		imm = {{53{1'b1}},ir.ri.imm};
 	end
-ORI,XORI,SLTUI,SGTUI:	// Pad with zeros to the left
+ORI,XORI,SLTUI,SGTUI,MULUI:	// Pad with zeros to the left
 	begin
 		imm = {{53{1'b0}},ir.ri.imm};
 	end
@@ -191,15 +195,15 @@ ADDIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL:
 	imm = {{41{ir.ril.imm[22]}},ir.ril.imm};
 ANDIL:	imm = {{41{1'b1}},ir.ril.imm};
 ORIL,XORIL:	imm = {{41{1'b0}},ir.ril.imm};
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LEA:
 	imm = {{40{ir.ld.disp[23]}},ir.ld.disp};
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LEAX:
 	imm = {{56{ir.ldx.disp[7]}},ir.ldx.disp};
 STB,STW,STT,STO:
 	imm = {{40{ir.st.disp[23]}},ir.st.disp};
 STBX,STWX,STTX,STOX:
 	imm = {{56{ir.stx.disp[7]}},ir.stx.disp};
-LDOS:	imm = {{56{ir.sts.disp[7]}},ir.lds.disp};
+LDOS:	imm = {{56{ir.lds.disp[7]}},ir.lds.disp};
 STOS:	imm = {{56{ir.sts.disp[7]}},ir.sts.disp};
 default:
 	imm = 64'd0;
@@ -211,7 +215,7 @@ EXI41:	imm = {xir[47:9],xir[1:0],imm[22:0]};
 endcase
 
 case(ir.any.opcode)
-ADDIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL:
+ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL,MULUIL:
 	deco.ril = TRUE;
 ANDIL,ORIL,XORIL:
 	deco.ril = TRUE;
@@ -235,9 +239,9 @@ JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.Tb = ir.r3.Tb;
 JMP,DJMP:	deco.Tb = 2'b00;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LEAX:
 	deco.Tb = ir.r3.Tb;
-STBX,STWX,STTX,STOX:
+STBX,STWX,STTX,STOX,STOCX:
 	deco.Tb = ir.r3.Tb;
 default:	deco.Tb = 2'b00;
 endcase
@@ -281,6 +285,7 @@ endcase
 
 case(ir.any.opcode)
 CACHE,CACHEX,
+LEA,LEAX,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.ld = TRUE;
@@ -329,7 +334,7 @@ default:	deco.storen = FALSE;
 endcase
 
 case(ir.any.opcode)
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LEAX:
 	deco.scale = ir.ldx.Sc;
 STBX,STWX,STTX,STOCX,STOX:
 	deco.scale = ir.stx.Sc;
@@ -342,7 +347,7 @@ LDW,LDWU,STW:	deco.memsz = wyde;
 LDT,LDTU,STT:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
-LDTX,LDTUX,STT:		deco.memsz = tetra;
+LDTX,LDTUX,STTX:	deco.memsz = tetra;
 default:	deco.memsz = octa;
 endcase
 
@@ -350,21 +355,25 @@ case(ir.any.opcode)
 LDB,LDBU:	deco.seg = ir.ld.seg;
 LDW,LDWU:	deco.seg = ir.ld.seg;
 LDT,LDTU:	deco.seg = ir.ld.seg;
-LDO:			deco.seg = ir.ld.seg;
+LDO,LEA:	deco.seg = ir.ld.seg;
+LDOR:			deco.seg = ir.ld.seg;
 LDOS:			deco.seg = ir.lds.seg;
 LDBX,LDBUX:	deco.seg = ir.ldx.seg;
 LDWX,LDWUX:	deco.seg = ir.ldx.seg;
 LDTX,LDTUX:	deco.seg = ir.ldx.seg;
-LDOX:			deco.seg = ir.ldx.seg;
+LDOX,LEAX:	deco.seg = ir.ldx.seg;
+LDORX:		deco.seg = ir.ldx.seg;
 STB:			deco.seg = ir.st.seg;
 STW:			deco.seg = ir.st.seg;
 STT:			deco.seg = ir.st.seg;
 STO:			deco.seg = ir.st.seg;
+STOC:			deco.seg = ir.st.seg;
 STOS:			deco.seg = ir.sts.seg;
 STBX:			deco.seg = ir.stx.seg;
 STWX:			deco.seg = ir.stx.seg;
 STTX:			deco.seg = ir.stx.seg;
 STOX:			deco.seg = ir.stx.seg;
+STOCX:		deco.seg = ir.stx.seg;
 default:	deco.seg = 3'd0;
 endcase
 
@@ -381,6 +390,7 @@ default: 	deco.jxx = FALSE;
 endcase
 
 case(ir.any.opcode)
+DJEQZ,DJNEZ,
 DJMP,
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
 	deco.dj = TRUE;
@@ -409,14 +419,13 @@ CACHE,CACHEX:	deco.multi_cycle = TRUE;
 LDB,LDBU,STB:	deco.multi_cycle = TRUE;
 LDW,LDWU,STW:	deco.multi_cycle = TRUE;
 LDT,LDTU,STT: deco.multi_cycle = TRUE;
-LDO,LDOS,LDOR:		deco.multi_cycle = TRUE;
+LDO,LDOS,LDOR,LEA:		deco.multi_cycle = TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = TRUE;
-LDOX,LDORX:		deco.multi_cycle = TRUE;
+LDOX,LDORX,LEAX:	deco.multi_cycle = TRUE;
 STO,STOS,STOC:		deco.multi_cycle = TRUE;
 STOX,STOCX:		deco.multi_cycle = TRUE;
-LEA,LEAX:		deco.multi_cycle = TRUE;
 STMOV,STFND,STCMP,STSET:			deco.multi_cycle = TRUE;
 default:	deco.multi_cycle = FALSE;
 endcase
@@ -461,8 +470,11 @@ deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
 deco.divalli = deco.divi|deco.divui|deco.divsui;
 
 deco.is_cbranch = ir.jxx.Ca==3'd7 && (ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3);
+deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ || ir.any.opcode==DJEQZ || ir.any.opcode==DJNEZ;
 if (deco.jxx)
 	deco.jmptgt = {{44{ir.jxx.Tgthi[15]}},ir.jxx.Tgthi,ir.jxx.Tgtlo,1'b0};
+else if (deco.jxz)
+	deco.jmptgt = {{51{ir[28]}},ir[28:21],ir[14:11],1'b0};
 else
 	deco.jmptgt = {{30{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	
@@ -478,6 +490,7 @@ deco.lear = ir.any.opcode==LEA;
 deco.lean = ir.any.opcode==LEAX;
 
 case(ir.any.opcode)
+DJEQZ,DJNEZ,
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU,
 DJMP:	deco.wrlc = TRUE;
 VM:
