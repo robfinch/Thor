@@ -122,8 +122,10 @@ wire wrvrf;
 reg ival;
 reg [15:0] icause;
 Instruction insn;
+Instruction micro_ir;
 reg advance_i;
 Address ip;
+reg [5:0] micro_ip;
 wire ipredict_taken;
 wire ihit;
 wire [639:0] ic_line;
@@ -260,7 +262,7 @@ reg [2:0] xMemsz;
 reg xTlb;
 reg xStset, xStmov, xStfnd, xStcmp;
 reg xCsr,xSync;
-reg xMtlc;
+reg xMtlc,xMtlk;
 reg xwrlc;
 reg xMfsel,xMtsel;
 reg [63:0] xlc;
@@ -283,6 +285,7 @@ Address mip;
 reg advance_m;
 reg [15:0] mcause;
 Address mbadAddr;
+Address mlk;
 reg mrfwr;
 reg mvmrfwr;
 reg [5:0] mRt;
@@ -292,7 +295,8 @@ reg mCsr,mSync;
 reg mRti;
 reg mRex;
 reg mMtlc;
-reg mwrlc;
+reg mwrlc, mwrlk;
+reg [1:0] mlkno;
 reg mLoad;
 reg [63:0] mlc;
 Value ma;
@@ -310,6 +314,7 @@ Instruction wir;
 Address wip;
 reg [15:0] wcause;
 Address wbadAddr;
+Address wlk;
 reg wrfwr;
 reg wvmrfwr;
 reg [5:0] wRt;
@@ -319,7 +324,8 @@ reg wCsr,wSync;
 reg wRti;
 reg wRex;
 reg wMtlc;
-reg wwrlc;
+reg wwrlc, wwrlk;
+reg [1:0] wlkno;
 reg wLoad;
 reg [63:0] wlc;
 Value wa;
@@ -453,10 +459,10 @@ else if (deco.Rcvec)
 	rfoc = vroc;
 else if (Rc==xRt && xrfwr && xval)
   rfoc = res;
-else if (Rc==wRt && wrfwr && wval)
-	rfoc = wres;
 else if (Rc==mRt && mrfwr && mval)
 	rfoc = mres;
+else if (Rc==wRt && wrfwr && wval)
+	rfoc = wres;
 else
 	rfoc = regfile[Rc];
 /*
@@ -612,6 +618,13 @@ OSR2:
 	default:	res2 = 64'd0;
 	endcase
 CSR:		res2 = csr_res;
+MFLK:		
+	if (mwrlk && mlkno=={xir[15],~xir[15]} && mval)
+		res2 = mlk.offs;
+	else if (wwrlk && wlkno=={xir[15],~xir[15]} && wval)
+		res2 = wlk.offs;
+	else
+		res2 = caregfile[{2'd0,xir[15],~xir[15]}].offs;
 BTFLD:	res2 = bf_out;
 ADD2R:				res2 = xa + xb;
 AND2R:				res2 = xa & xb;
@@ -978,6 +991,12 @@ begin
 	wLoad <= FALSE;
 	mExBranch <= FALSE;
 	wExBranch <= FALSE;
+	mlk <= 64'd0;
+	wlk <= 64'd0;
+	mlkno <= 2'd0;
+	wlkno <= 2'd0;
+	xMtlk <= FALSE;
+	micro_ip <= 6'd0;
 end
 endtask
 
@@ -1152,21 +1171,75 @@ begin
 		end
 		else if ((insn.any.opcode==STSET || insn.any.opcode==STMOV || insn.any.opcode==STFND || insn.any.opcode==STCMP) && lc != 64'd0)
 			ip <= ip;
+		else if (micro_ip != 6'd0) begin
+			case(micro_ip)
+			// POP Ra
+			6'd1:		begin micro_ip <= 6'd2; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
+			6'd2:		begin micro_ip <= 6'd0; ir <= {11'h008,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd2; end							// ADD $SP,$SP,#8
+			// POP Ra,Rb
+			6'd3:		begin micro_ip <= 6'd4; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
+			6'd4:		begin micro_ip <= 6'd5; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
+			6'd5:		begin micro_ip <= 6'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; end							// ADD $SP,$SP,#16
+			// POP Ra,Rb,Rc
+			6'd6:		begin micro_ip <= 6'd7; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
+			6'd7:		begin micro_ip <= 6'd8; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
+			6'd8:		begin micro_ip <= 6'd9; ir <= {3'd6,8'h10,6'd63,micro_ir[26:21],1'b0,LDOS}; end	// LDOS $Rc,[$SP]
+			6'd9:		begin micro_ip <= 6'd0; ir <= {11'h018,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; end							// ADD $SP,$SP,#24
+			// PUSH Ra
+			6'd10:	begin micro_ip <= 6'd11; ir <= {11'h7F8,6'd63,6'd63,1'b0,ADDI}; end							// ADD $SP,$SP,#-8
+			6'd11:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd2; end	// STOS $Ra,[$SP]
+			// PUSH Ra,Rb
+			6'd12:	begin micro_ip <= 6'd13; ir <= {11'h7F0,6'd63,6'd63,1'b0,ADDI}; end								// ADD $SP,$SP,#-16
+			6'd13:	begin micro_ip <= 6'd14; ir <= {3'd6,8'h00,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,[$SP]
+			6'd14:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h08,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; end		// STOS $Ra,8[$SP]
+			// PUSH Ra,Rb,Rc
+			6'd15:	begin micro_ip <= 6'd16; ir <= {11'h7E8,6'd63,6'd63,1'b0,ADDI}; end								// ADD $SP,$SP,#-24
+			6'd16:	begin micro_ip <= 6'd17; ir <= {3'd6,8'h00,6'd63,micro_ir[26:21],1'b0,STOS}; end	// STOS $Rc,[$SP]
+			6'd17:	begin micro_ip <= 6'd18; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,8[$SP]
+			6'd18:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h10,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; end		// STOS $Ra,16[$SP]
+			// ENTER
+			6'd32: 	begin micro_ip <= 6'd33; ir <= {11'h7C0,6'd63,6'd63,1'b0,ADDI}; end						// ADD $SP,$SP,#-64
+			6'd33:	begin micro_ip <= 6'd34; ir <= {3'd6,8'h00,6'd63,6'd62,1'b0,STOS}; end				// STOS $FP,[$SP]
+			6'd34:	begin micro_ip <= 6'd35; ir <= {2'd0,6'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
+			6'd35:	begin micro_ip <= 6'd36; ir <= {3'd6,8'h10,6'd63,6'd03,STOS}; end							// STO $T0,16[$SP]
+			6'd36:	begin micro_ip <= 6'd37; ir <= {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
+			6'd37:	begin micro_ip <= 6'd38; ir <= {3'd6,8'h18,6'd63,6'd03,STOS}; end							// STO $T0,24[$SP]
+			6'd38:	begin micro_ip <= 6'd39; ir <= {3'd6,8'h20,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,32[$SP]
+			6'd39:	begin micro_ip <= 6'd40; ir <= {3'd6,8'h28,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,40[$SP]
+			6'd40: 	begin micro_ip <= 6'd41; ir <= {11'h000,6'd62,6'd62,1'b0,ADDI}; end						// ADD $FP,$SP,#0
+			6'd41: 	begin micro_ip <= 6'd00; ir <= {4'hF,micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + 3'd4; end // SUB $SP,$SP,#Amt
+			default:	;
+			endcase
+		end
 		else begin
 			istep <= 8'h00;
 			ip <= next_ip;
 		end
-		if (insn.jmp.Ca==3'd0 && (insn.any.opcode==JMP))
-			ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		else if (insn.jmp.Ca==3'd7 && (insn.any.opcode==JMP))
-			ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		else if (btbe & btb_hit)
+		if (btbe & btb_hit)
 			ip <= btb_tgt;
+		case(insn.any.opcode)
+		POP:		begin micro_ip <= 6'd1; ip <= ip; end
+		POP2R:	begin micro_ip <= 6'd3; ip <= ip; end
+		POP3R:	begin micro_ip <= 6'd6; ip <= ip; end
+		PUSH:		begin micro_ip <= 6'd10; ip <= ip; end
+		PUSH2R:	begin micro_ip <= 6'd12; ip <= ip; end
+		PUSH3R:	begin micro_ip <= 6'd15; ip <= ip; end
+		ENTER:	begin micro_ip <= 6'd32; ip <= ip; end
+		JMP:
+			if (insn.jmp.Ca==3'd0)
+				ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
+			else if (insn.jmp.Ca==3'd7)
+				ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
+		default:	;
+		endcase
 		dip <= ip;
 		dlen <= ilen;
 		dval <= VAL;
 		dstep <= istep;
-		ir <= insn;
+		if (micro_ip==6'd0) begin
+			ir <= insn;
+			micro_ir <= insn;
+		end
 		dpredict_taken <= ipredict_taken;
 		dcause <= icause;
 		dpfx <= is_prefix(insn.any.opcode);
@@ -1266,6 +1339,7 @@ begin
 		xcause <= dcause;
 		xstep <= dstep;
 		xRtvec <= deco.Rtvec;
+		xMtlk <= deco.mtlk;
 		xmaskbit <= mask[dstep];
 		xzbit <= zbit;
 		xpredict_taken <= dpredict_taken;
@@ -1470,6 +1544,90 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tJxx;
+begin
+  if (xJxx|xJxz) begin
+  	mExBranch <= TRUE;
+  	if (xdj)
+  		mlc <= xlc - 2'd1;
+  	if (xir.jxx.lk != 2'd0) begin
+  		mwrlk <= TRUE;
+  		mlk.offs <= xip.offs + xlen;
+  		mlk.sel <= xip.sel;
+  		mlkno <= xir.jxx.lk;
+  	end
+    if (bpe) begin
+      if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb) && xPredictableBranch) begin
+		    inv_i();
+		    inv_d();
+		    inv_x();
+				xx <= 4'd2;
+        ip.offs <= xip.offs + xlen;
+        // Was selector changed? If so change it back.
+        tChangeIPSel(xip.sel);
+      end
+      else if ((!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) || !xPredictableBranch)
+      	tBranch(4'd3);
+    end
+    else if (xdj ? (takb && xlc != 64'd0) : takb)
+    	tBranch(4'd4);
+  end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tJmp;
+begin
+  if (xJmp) begin
+  	mExBranch <= TRUE;
+  	if (xdj)
+  		mlc <= xlc - 2'd1;
+  	if (xir.jmp.lk != 2'd0) begin
+  		mwrlk <= TRUE;
+  		mlk.offs <= xip.offs + xlen;
+  		mlk.sel <= xip.sel;
+  		mlkno <= xir.jmp.lk;
+  	end
+  	if (xdj ? (xlc != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
+  		tBranch(4'd5);
+	end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tRts;
+begin
+	if (xRts) begin
+		if (xir.rts.lk != 2'd0) begin
+	    inv_i();
+	    inv_d();
+	    inv_x();
+			xx <= 4'd6;
+			if (mwrlk && mlkno==xir.rts.lk && mval) begin
+				ip.offs <= mlk.offs + {xir.rts.cnst,1'b0};
+	  		tChangeIPSel(mlk.sel);
+			end
+			else if (wwrlk && wlkno==xir.rts.lk && wval) begin
+				ip.offs <= wlk.offs + {xir.rts.cnst,1'b0};
+	  		tChangeIPSel(wlk.sel);
+			end
+			else begin
+	  		ip.offs <= caregfile[{2'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
+				// Selector changing?
+				tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
+			end
+		end
+	end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute stage
 // If the execute stage has been invalidated it doesn't do anything. 
 // Must be after INVnRUN state code.
@@ -1495,6 +1653,8 @@ begin
 		mRex <= xRex;
 		mMtlc <= xMtlc;
 		mwrlc <= xwrlc;
+		mwrlk <= FALSE;
+		mlkno <= 2'd0;
 		ma <= xa;
 		mstep <= xstep;
 		mmaskbit <= xmaskbit;
@@ -1503,54 +1663,17 @@ begin
 		mtakb <= takb;
 		mExBranch <= FALSE;
 		if (xval) begin
-	    if (xJxx|xJxz) begin
-	    	mExBranch <= TRUE;
-	    	if (xdj)
-	    		mlc <= xlc - 2'd1;
-	    	if (xir.jxx.lk != 2'd0) begin
-		    	caregfile[{2'b0,xir.jxx.lk}].offs <= xip.offs + xlen;
-		    	caregfile[{2'b0,xir.jxx.lk}].sel <= xip.sel;
-	    	end
-	      if (bpe) begin
-	        if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb) && xPredictableBranch) begin
-				    inv_i();
-				    inv_d();
-				    inv_x();
-						xx <= 4'd2;
-	          ip.offs <= xip.offs + xlen;
-	          // Was selector changed? If so change it back.
-	          tChangeIPSel(xip.sel);
-	        end
-	        else if ((!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) || !xPredictableBranch)
-	        	tBranch(4'd3);
-	      end
-	      else if (xdj ? (takb && xlc != 64'd0) : takb)
-	      	tBranch(4'd4);
-	    end
-	    if (xJmp) begin
-	    	mExBranch <= TRUE;
-	    	if (xdj)
-	    		mlc <= xlc - 2'd1;
-		  	if (xir.jmp.lk != 2'd0) begin
-		    	caregfile[{2'b0,xir.jmp.lk}].offs <= xip.offs + xlen;
-		    	caregfile[{2'b0,xir.jmp.lk}].sel <= xip.sel;
-		  	end
-	    	if (xdj ? (xlc != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
-	    		tBranch(4'd5);
-	  	end
-	  	if (xRts) begin
-	  		if (xir.rts.lk != 2'd0) begin
-			    inv_i();
-			    inv_d();
-			    inv_x();
-					xx <= 4'd6;
-		    	ip.offs <= caregfile[{2'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
-		  		// Selector changing?
-		  		tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
-	  		end
-	  	end
+			tJxx();
+	    tJmp();
+	  	tRts();
 	  	if (xMtlc)
 	  		mlc <= res;
+	  	if (xMtlk) begin
+	  		mwrlk <= TRUE;
+	  		mlk.offs <= xc;
+	  		mlk.sel <= xip.sel;
+	  		mlkno <= {xir[15],~xir[15]};
+	  	end
 
 			tExMem();
 
@@ -1578,12 +1701,15 @@ begin
 		wStmov <= mStmov;
 		wres <= mres;
 		wlc <= mlc;
+		wlk <= mlk;
+		wlkno <= mlkno;
 		wCsr <= mCsr;
 		wSync <= mSync;
 		wRti <= mRti;
 		wRex <= mRex;
 		wMtlc <= mMtlc;
 		wwrlc <= mwrlc;
+		wwrlk <= mwrlk;
 		wa <= ma;
 		wstep <= mstep;
 		wmaskbit <= mmaskbit;
@@ -1626,6 +1752,8 @@ begin
 				xx <= 4'd8;
 			end
 			else begin
+		  	if (wwrlk)
+		    	caregfile[{2'b0,wlkno}] <= wlk;
 				if (wRti) begin
 					if (|istk_depth) begin
 						pmStack <= {8'h3E,pmStack[63:8]};
@@ -1750,25 +1878,37 @@ begin
   	mJmptgt.offs <= xip.offs + xJmptgt;
   end
   else begin
-  	ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
-  	mJmptgt.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+  	if (mwrlk && {2'd0,mlkno}==xir.jxx.Ca && mval) begin
+  		ip.offs <= mlk.offs + xJmptgt;
+  		mJmptgt.offs <= mlk.offs + xJmptgt;
+  	end
+  	else if (wwrlk && {2'd0,wlkno}==xir.jxx.Ca && wval) begin
+  		ip.offs <= wlk.offs + xJmptgt;
+  		mJmptgt.offs <= wlk.offs + xJmptgt;
+  	end
+  	else begin
+  		ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+	  	mJmptgt.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
+	  end
   end
   mJmptgt.sel <= xip.sel;
 	if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7) begin
-		tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
-		if (caregfile[{1'b0,xir.jxx.Ca}].sel != xip.sel)
-			mJmptgt.sel <= caregfile[{1'b0,xir.jxx.Ca}].sel;
+		if (mwrlk && {2'd0,mlkno}==xir.jxx.Ca && mval) begin
+			tChangeIPSel(mlk.sel);
+			if (mlk.sel != xip.sel)
+				mJmptgt.sel <= mlk.sel;
+		end
+		else if (wwrlk && {2'd0,wlkno}==xir.jxx.Ca && wval) begin
+			tChangeIPSel(wlk.sel);
+			if (wlk.sel != xip.sel)
+				mJmptgt.sel <= wlk.sel;
+		end
+		else begin
+			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
+			if (caregfile[{1'b0,xir.jxx.Ca}].sel != xip.sel)
+				mJmptgt.sel <= caregfile[{1'b0,xir.jxx.Ca}].sel;
+		end
 	end
-end
-endtask
-
-task ex_branch;
-Address nxt_ip;
-begin
-    inv_i();
-    inv_d();
-    inv_x();
-    ip <= nxt_ip;
 end
 endtask
 
@@ -1978,7 +2118,7 @@ begin
   LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   STT:		$display("STT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.st.Ra);
-  STO:		$display("STO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.st.Ra);
+  STO:		$display("STO r%d,%d[r%d]", ir.st.Rs, ir.st.disp, ir.st.Ra);
   RTS:   	$display("RTS #%d", ir.rts.cnst);
   endcase
 end

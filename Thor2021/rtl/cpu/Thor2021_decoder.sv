@@ -70,17 +70,24 @@ default:	Rt = ir[14:9];
 endcase
 // Rc
 case(ir.any.opcode)
-STB,STW,STT,STO,STOC,
-STBX,STWX,STTX,STOX,STOCX,
-STOS:
+STB,STW,STT,STO,STOC:
 	Rc = ir.st.Rs;
+STBX,STWX,STTX,STOX,STOCX:
+	Rc = ir.stx.Rs;
+STOS:
+	Rc = ir.sts.Rs;
+MTLK:			Rc = ir[14:9];
 default:	Rc = ir.r3.Rc;
 endcase
 
 deco.Ravec = ir.any.v;
 deco.Rtvec = ir.any.v;
 deco.Rbvec = ir.r3.Tb==2'b01;
-deco.Rcvec = ir.r3.Tc==2'b01;
+case(ir.any.opcode)
+R2,R3:	deco.Rcvec = ir.r3.Tc==2'b01;
+BTFLD:	deco.Rcvec = ir.r3.Tc==2'b01;
+default:	deco.Rcvec = 1'b0;
+endcase
 
 // Cat
 case(ir.any.opcode)
@@ -121,19 +128,19 @@ case(ir.any.opcode)
 CSR:
 	case (ir.csr.op)
 	CSRRW:
-		if (ir.csr.regno[11:4]==8'h10)	// 0x3100 to 0x310F
-			deco.Cat = ir.csr.regno[3:1];
+		if (ir.csr.regno[11:4]==8'h10 || ir.csr.regno[11:4]==8'h11)	// 0x3100 to 0x311F
+			deco.Cat = ir.csr.regno[4:1];
 		else
-			deco.Cat = 3'd0;
-	default:	deco.Cat = 3'd0;
+			deco.Cat = 4'd0;
+	default:	deco.Cat = 4'd0;
 	endcase
 JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
-	deco.Cat = {1'b0,ir.jxx.lk};
+	deco.Cat = {2'b0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
-	deco.Cat = {1'b0,ir.jxx.lk};
+	deco.Cat = {2'b0,ir.jxx.lk};
 DJBC,DJBS,DJEQ,DJNE,DJLT,DJGE,DJLE,DJGT,DJLTU,DJGEU,DJLEU,DJGTU:
-	deco.Cat = {1'b0,ir.jxx.lk};
-default: 	deco.Cat = 3'd0;
+	deco.Cat = {2'b0,ir.jxx.lk};
+default: 	deco.Cat = 4'd0;
 endcase
 
 // Detecting register file update
@@ -158,6 +165,7 @@ BTFLD:
 	default:	rfwr = FALSE;
 	endcase
 CSR:	rfwr = TRUE;
+MFLK:	rfwr = TRUE;
 ADDI,SUBFI,CMPI,MULI,DIVI,MULUI:
 	rfwr = TRUE;
 ANDI,ORI,XORI:		rfwr = TRUE;
@@ -550,6 +558,8 @@ deco.stset = ir.any.opcode==STSET;
 deco.stmov = ir.any.opcode==STMOV;
 deco.stfnd = ir.any.opcode==STFND;
 deco.stcmp = ir.any.opcode==STCMP;
+deco.mflk = ir.any.opcode==MFLK;
+deco.mtlk = ir.any.opcode==MTLK;
 
 end
 

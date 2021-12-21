@@ -148,6 +148,8 @@ parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
 parameter SLLR2		= 8'h58;
+parameter MFLK		= 8'h5E;
+parameter MTLK		= 8'h5F;
 parameter CMPUI		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
@@ -195,6 +197,10 @@ parameter ANDM			= 4'h8;
 parameter BFSET			= 4'h9;
 parameter BFCHG			= 4'hA;
 parameter BFCLR			= 4'hB;
+parameter PUSH		= 8'hAC;
+parameter PUSH2R	= 8'hAD;
+parameter PUSH3R	= 8'hAE;
+parameter ENTER		= 8'hAF;
 
 parameter LDBX		= 8'hB0;
 parameter LDBUX		= 8'hB1;
@@ -205,6 +211,10 @@ parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
 parameter LEAX		= 8'hBA;
 parameter LDORX		= 8'hBB;
+
+parameter POP			= 8'hBC;
+parameter POP2R		= 8'hBD;
+parameter POP3R		= 8'hBE;
 
 parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
@@ -929,7 +939,7 @@ typedef struct packed
 	logic Rbvec;
 	logic Rcvec;
 	logic Rtvec;
-	logic [2:0] Cat;
+	logic [3:0] Cat;
 	logic is_vector;			// a vector instruction
 	logic is_cbranch;			// is a conditional branch
 	logic float;
@@ -986,6 +996,8 @@ typedef struct packed
 	logic mfsel;
 	logic mtsel;
 	logic ril;
+	logic mflk;
+	logic mtlk;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;

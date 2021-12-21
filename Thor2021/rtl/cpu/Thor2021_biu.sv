@@ -981,7 +981,7 @@ else begin
 	      	begin
 	     			sr_o <= memreq.func2==MR_LDOR;
 	     			if (tlbacr[1]) begin
-	  	    		if (dhit & ~tlbacr[3]) begin
+	  	    		if (dhit & tlbacr[3]) begin
 	  	    			tDeactivateBus();
 	      				sr_o <= LOW;
 		      		end

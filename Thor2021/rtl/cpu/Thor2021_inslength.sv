@@ -156,6 +156,8 @@ MEMSB:	o = 4'h2;
 MEMDB:	o = 4'h2;
 WFI:		o = 4'h2;
 SEI:		o = 4'h2;
+MFLK:		o = 4'h2;
+MTLK:		o = 4'h2;
 default:	o = 4'h2;
 endcase
 
