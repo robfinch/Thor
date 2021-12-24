@@ -1878,7 +1878,7 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
 void ThorCodeGenerator::GenerateUnlink(int64_t amt)
 {
 	if (cpu.SupportsLeave) {
-		GenerateMonadic(currentFn->IsFar ? op_leave_far : op_leave, 0, MakeImmediate(amt,0));
+		GenerateMonadic(op_leave, 0, MakeImmediate(amt,0));
 	}
 	else if (cpu.SupportsUnlink)
 		GenerateZeradic(op_unlk);

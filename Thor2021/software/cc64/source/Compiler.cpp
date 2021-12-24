@@ -38,7 +38,7 @@ extern void doInitCleanup();
 
 int Compiler::GetReturnBlockSize()
 {
-	return (12 * sizeOfWord);
+	return (8 * sizeOfWord);
 }
 
 int Compiler::main2(int argc, char **argv)

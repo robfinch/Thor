@@ -603,6 +603,12 @@ R2:
 	DIVU:	res2 = qo;
 	DIVSU:	res2 = qo;
 	MUX:	res2 = mux_out;
+	SLT:	res2 = $signed(xa) < $signed(xb);
+	SGE:	res2 = $signed(xa) >= $signed(xb);
+	SLTU:	res2 = xa < xb;
+	SGEU:	res2 = xa >= xb;
+	SEQ:	res2 = xa == xb;
+	SNE:	res2 = xa != xb;
 	default:			res2 = 64'd0;
 	endcase
 VM:
@@ -960,7 +966,7 @@ begin
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
 //	cr0 <= 64'h300000001;
-	cr0 <= 64'h200000001;
+	cr0 <= 64'h000000001;
 	rst_cnt <= 6'd0;
 	xCsr <= 1'b0;
 	mCsr <= 1'b0;
@@ -1165,6 +1171,7 @@ task tInsnFetch;
 begin
 	if (advance_i) begin
 		ival <= VAL;
+		dlen <= ilen;
 		if (insn.any.v && istep < vl) begin
 			istep <= istep + 2'd1;
 			ip <= ip;
@@ -1175,28 +1182,37 @@ begin
 			case(micro_ip)
 			// POP Ra
 			6'd1:		begin micro_ip <= 6'd2; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
-			6'd2:		begin micro_ip <= 6'd0; ir <= {11'h008,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd2; end							// ADD $SP,$SP,#8
+			6'd2:		begin micro_ip <= 6'd0; ir <= {11'h008,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd2; dlen <= 4'd2; end							// ADD $SP,$SP,#8
 			// POP Ra,Rb
 			6'd3:		begin micro_ip <= 6'd4; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
 			6'd4:		begin micro_ip <= 6'd5; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
-			6'd5:		begin micro_ip <= 6'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; end							// ADD $SP,$SP,#16
+			6'd5:		begin micro_ip <= 6'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end							// ADD $SP,$SP,#16
 			// POP Ra,Rb,Rc
 			6'd6:		begin micro_ip <= 6'd7; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; end	// LDOS $Ra,[$SP]
 			6'd7:		begin micro_ip <= 6'd8; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
 			6'd8:		begin micro_ip <= 6'd9; ir <= {3'd6,8'h10,6'd63,micro_ir[26:21],1'b0,LDOS}; end	// LDOS $Rc,[$SP]
-			6'd9:		begin micro_ip <= 6'd0; ir <= {11'h018,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; end							// ADD $SP,$SP,#24
+			6'd9:		begin micro_ip <= 6'd0; ir <= {11'h018,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end							// ADD $SP,$SP,#24
 			// PUSH Ra
 			6'd10:	begin micro_ip <= 6'd11; ir <= {11'h7F8,6'd63,6'd63,1'b0,ADDI}; end							// ADD $SP,$SP,#-8
-			6'd11:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd2; end	// STOS $Ra,[$SP]
+			6'd11:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd2; dlen <= 4'd2; end	// STOS $Ra,[$SP]
 			// PUSH Ra,Rb
 			6'd12:	begin micro_ip <= 6'd13; ir <= {11'h7F0,6'd63,6'd63,1'b0,ADDI}; end								// ADD $SP,$SP,#-16
 			6'd13:	begin micro_ip <= 6'd14; ir <= {3'd6,8'h00,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,[$SP]
-			6'd14:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h08,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; end		// STOS $Ra,8[$SP]
+			6'd14:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h08,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end		// STOS $Ra,8[$SP]
 			// PUSH Ra,Rb,Rc
 			6'd15:	begin micro_ip <= 6'd16; ir <= {11'h7E8,6'd63,6'd63,1'b0,ADDI}; end								// ADD $SP,$SP,#-24
 			6'd16:	begin micro_ip <= 6'd17; ir <= {3'd6,8'h00,6'd63,micro_ir[26:21],1'b0,STOS}; end	// STOS $Rc,[$SP]
 			6'd17:	begin micro_ip <= 6'd18; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,8[$SP]
-			6'd18:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h10,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; end		// STOS $Ra,16[$SP]
+			6'd18:	begin micro_ip <= 6'd0;  ir <= {3'd6,8'h10,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end		// STOS $Ra,16[$SP]
+			// LEAVE
+			6'd20:	begin micro_ip <= 6'd21; ir <= {11'h000,6'd62,6'd63,1'b0,ADDI};	end						// ADD $SP,$FP,#0
+			6'd21:	begin micro_ip <= 6'd22; ir <= {3'd6,8'h00,6'd63,6'd62,1'b0,LDOS}; end				// LDOS $FP,[$SP]
+			6'd22:	begin micro_ip <= 6'd23; ir <= {3'd6,8'h10,6'd63,6'd03,LDOS}; end							// LDO $T0,16[$SP]
+			6'd23:	begin micro_ip <= 6'd24; ir <= {2'd0,6'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
+			6'd24:	begin micro_ip <= 6'd25; ir <= {3'd6,8'h18,6'd63,6'd03,LDOS}; end							// LDO $T0,24[$SP]
+			6'd25:	begin micro_ip <= 6'd26; ir <= {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
+			6'd26: 	begin micro_ip <= 6'd27; ir <= {4'h0,micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
+			6'd27:	begin micro_ip <= 6'd0;  ir <= {2'd0,micro_ir[11:9],2'd1,1'b0,RTS}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end
 			// ENTER
 			6'd32: 	begin micro_ip <= 6'd33; ir <= {11'h7C0,6'd63,6'd63,1'b0,ADDI}; end						// ADD $SP,$SP,#-64
 			6'd33:	begin micro_ip <= 6'd34; ir <= {3'd6,8'h00,6'd63,6'd62,1'b0,STOS}; end				// STOS $FP,[$SP]
@@ -1206,8 +1222,8 @@ begin
 			6'd37:	begin micro_ip <= 6'd38; ir <= {3'd6,8'h18,6'd63,6'd03,STOS}; end							// STO $T0,24[$SP]
 			6'd38:	begin micro_ip <= 6'd39; ir <= {3'd6,8'h20,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,32[$SP]
 			6'd39:	begin micro_ip <= 6'd40; ir <= {3'd6,8'h28,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,40[$SP]
-			6'd40: 	begin micro_ip <= 6'd41; ir <= {11'h000,6'd62,6'd62,1'b0,ADDI}; end						// ADD $FP,$SP,#0
-			6'd41: 	begin micro_ip <= 6'd00; ir <= {4'hF,micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + 3'd4; end // SUB $SP,$SP,#Amt
+			6'd40: 	begin micro_ip <= 6'd41; ir <= {11'h000,6'd63,6'd62,1'b0,ADDI}; end						// ADD $FP,$SP,#0
+			6'd41: 	begin micro_ip <= 6'd00; ir <= {4'hF,micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + 3'd4; dlen <= 4'd4; end // SUB $SP,$SP,#Amt
 			default:	;
 			endcase
 		end
@@ -1217,23 +1233,24 @@ begin
 		end
 		if (btbe & btb_hit)
 			ip <= btb_tgt;
-		case(insn.any.opcode)
-		POP:		begin micro_ip <= 6'd1; ip <= ip; end
-		POP2R:	begin micro_ip <= 6'd3; ip <= ip; end
-		POP3R:	begin micro_ip <= 6'd6; ip <= ip; end
-		PUSH:		begin micro_ip <= 6'd10; ip <= ip; end
-		PUSH2R:	begin micro_ip <= 6'd12; ip <= ip; end
-		PUSH3R:	begin micro_ip <= 6'd15; ip <= ip; end
-		ENTER:	begin micro_ip <= 6'd32; ip <= ip; end
-		JMP:
-			if (insn.jmp.Ca==3'd0)
-				ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-			else if (insn.jmp.Ca==3'd7)
-				ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
-		default:	;
-		endcase
+		if (micro_ip==6'd0)
+			case(insn.any.opcode)
+			POP:		begin micro_ip <= 6'd1; ip <= ip; end
+			POP2R:	begin micro_ip <= 6'd3; ip <= ip; end
+			POP3R:	begin micro_ip <= 6'd6; ip <= ip; end
+			PUSH:		begin micro_ip <= 6'd10; ip <= ip; end
+			PUSH2R:	begin micro_ip <= 6'd12; ip <= ip; end
+			PUSH3R:	begin micro_ip <= 6'd15; ip <= ip; end
+			ENTER:	begin micro_ip <= 6'd32; ip <= ip; end
+			LEAVE:	begin micro_ip <= 6'd20; ip <= ip; end
+			JMP:
+				if (insn.jmp.Ca==3'd0)
+					ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
+				else if (insn.jmp.Ca==3'd7)
+					ip.offs <= ip.offs + {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
+			default:	;
+			endcase
 		dip <= ip;
-		dlen <= ilen;
 		dval <= VAL;
 		dstep <= istep;
 		if (micro_ip==6'd0) begin
@@ -1247,15 +1264,18 @@ begin
 			pfx_cnt <= pfx_cnt + 2'd1;
 		else
 			pfx_cnt <= 3'd0;
-		if (irq_i > pmStack[3:1] && gie && !dpfx)
-			icause <= 16'h8000|icause_i|(irq_i << 4'd8);
-		else if (wc_time_irq && gie && !dpfx)
-			icause <= 16'h8000|FLT_TMR;
-		else if (insn.any.opcode==BRK)
-			icause <= FLT_BRK;
-		// Triple prefix fault.
-		else if (pfx_cnt > 3'd2)
-			icause <= 16'h8000|FLT_PFX;
+		// Interrupts disabled while running micro-code.
+		if (micro_ip==6'd0) begin
+			if (irq_i > pmStack[3:1] && gie && !dpfx)
+				icause <= 16'h8000|icause_i|(irq_i << 4'd8);
+			else if (wc_time_irq && gie && !dpfx)
+				icause <= 16'h8000|FLT_TMR;
+			else if (insn.any.opcode==BRK)
+				icause <= FLT_BRK;
+			// Triple prefix fault.
+			else if (pfx_cnt > 3'd2)
+				icause <= 16'h8000|FLT_PFX;
+		end
 	end
 	// Wait for cache load
 	else begin
@@ -1552,7 +1572,7 @@ begin
   	mExBranch <= TRUE;
   	if (xdj)
   		mlc <= xlc - 2'd1;
-  	if (xir.jxx.lk != 2'd0) begin
+  	if (xir.jxx.lk != 2'd0 && (xdj ? (takb && xlc != 64'd0) : takb)) begin
   		mwrlk <= TRUE;
   		mlk.offs <= xip.offs + xlen;
   		mlk.sel <= xip.sel;

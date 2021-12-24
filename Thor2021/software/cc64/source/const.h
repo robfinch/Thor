@@ -233,7 +233,7 @@ enum e_op {
 	op_rtl, op_rtx, op_enter, op_leave, op_base, op_enter_far, op_leave_far,
 	op_mfbase, op_mtbase, op_di, op_defcat,
 	op_ptrdif, op_isnullptr,
-	op_mtlc,
+	op_mtlc, op_mflk, op_mtlk,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt,
 	op_wydendx,

@@ -731,7 +731,8 @@ void Function::UnlinkStack(int64_t amt)
 			if (alstk) {
 				ap = GetTempRegister();
 				cg.GenerateLoad(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
-				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+				//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+				GenerateDiadic(op_mtlk, 0, makereg(regLR), ap);
 				ReleaseTempRegister(ap);
 				if (IsFar) {
 					ap = GetTempRegister();
@@ -758,7 +759,8 @@ void Function::UnlinkStack(int64_t amt)
 		if (!alstk) {
 			ap = GetTempRegister();
 			cg.GenerateLoad(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
-			GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+			//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+			GenerateDiadic(op_mtlk, 0, makereg(regLR), ap);
 			ReleaseTempRegister(ap);
 			if (IsFar) {
 				ap = GetTempRegister();
@@ -794,13 +796,13 @@ void Function::SetupReturnBlock()
 	if (cpu.SupportsEnter)
 	{
 		if (stkspace < 32767) {
-			GenerateMonadic(IsFar ? op_enter_far : op_enter, 0, MakeImmediate(stkspace));
+			GenerateMonadic(op_enter, 0, MakeImmediate(stkspace));
 			//			GenerateMonadic(op_link, 0, MakeImmediate(stkspace));
 						//spAdjust = pl.tail;
 			alstk = true;
 		}
 		else {
-			GenerateMonadic(IsFar ? op_enter_far : op_enter, 0, MakeImmediate(32760));
+			GenerateMonadic(op_enter, 0, MakeImmediate(32760));
 			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(stkspace - 32760));
 			//GenerateMonadic(op_link, 0, MakeImmediate(SizeofReturnBlock() * sizeOfWord));
 			alstk = true;
@@ -845,7 +847,8 @@ void Function::SetupReturnBlock()
 			//if (IsFar)
 			//	GenerateMonadic(op_di, 0, MakeImmediate(2));
 			ap = GetTempRegister();
-			GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3102));
+			//GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3102));
+			GenerateDiadic(op_mflk, 0, makereg(regLR), ap);
 			cg.GenerateStore(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord);
 			ReleaseTempRegister(ap);
 			if (IsFar) {

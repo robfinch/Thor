@@ -141,6 +141,10 @@ typedef struct {
 #define J3		34
 #define JL3		35
 #define MTSEL	36
+#define MTLK	37
+#define MFLK	38
+#define ENTER	39
+#define LEAVE	40
 
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define RA(x)		(((x) & 0x3fLL) << 15LL)

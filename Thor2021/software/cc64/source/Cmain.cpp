@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 	cpu.SupportsLDM = false;
 	cpu.SupportsSTM = false;
 	cpu.SupportsPtrdif = false;
-	cpu.SupportsEnter = false;
+	cpu.SupportsEnter = true;
 	cpu.SupportsLeave = false;
 	cpu.SupportsIndexed = true;
 	cpu.Addsi = false;

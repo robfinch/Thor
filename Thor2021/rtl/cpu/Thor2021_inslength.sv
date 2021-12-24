@@ -68,7 +68,7 @@ SGTI:		o = 4'd4;
 SLTUI:	o = 4'd4;
 SLTUIL:	o = 4'd6;
 SGTUIL:	o = 4'd6;
-SGTUI:	o = 4'd6;
+SGTUI:	o = 4'd4;
 ADD2R:	o = 4'd4;
 AND2R:	o = 4'd4;
 OR2R:		o = 4'd4;
@@ -158,6 +158,14 @@ WFI:		o = 4'h2;
 SEI:		o = 4'h2;
 MFLK:		o = 4'h2;
 MTLK:		o = 4'h2;
+ENTER:	o = 4'h4;
+LEAVE:	o = 4'h4;
+PUSH:		o = 4'h2;
+POP:		o = 4'h2;
+PUSH2R:	o = 4'h4;
+PUSH3R:	o = 4'h4;
+POP2R:	o = 4'h4;
+POP3R:	o = 4'h4;
 default:	o = 4'h2;
 endcase
 

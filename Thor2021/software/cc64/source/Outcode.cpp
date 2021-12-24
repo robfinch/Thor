@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[319] =
+Instruction opl[321] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -230,6 +230,7 @@ Instruction opl[319] =
 { "lws", op_ldds,4,1,true },
 { "mfbase", op_mfbase,1,0,false,am_reg,am_reg | am_ui6,0,0 },
 { "mffp",op_mffp },
+{ "mflk", op_mflk,1,0,false,am_reg,am_reg,0,0 },
 { "mod", op_mod,68,1, false,am_reg,am_reg,am_reg|am_imm,0 },
 { "modu", op_modu,68,1,false,am_reg,am_reg,am_reg,0 },
 { "mov", op_mov,1,1,false,am_reg,am_reg,0,0 },
@@ -238,6 +239,7 @@ Instruction opl[319] =
 { "mtbase", op_mtbase,1,0,false,am_reg,am_reg | am_ui6,0,0 },
 { "mtfp", op_mtfp },
 { "mtlc", op_mtlc,1,0,false,am_reg,0,0,0 },
+{ "mtlk", op_mtlk,1,0,false,am_reg,am_reg,0,0 },
 { "mul",op_mul,18,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "mulf",op_mulf,1,1,false,am_reg,am_reg,am_reg | am_imm,0 },
 { "mulu", op_mulu, 10, 1, false, am_reg, am_reg, am_reg | am_imm, 0 },

@@ -197,8 +197,10 @@ mnemonic mnemonics[]={
 	"enor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM,OP_VREG|OP_REG|OP_IMM,0}, {R3,CPU_ALL,0,0x040000000102LL,6},	
 	"enor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM,OP_VREG|OP_REG|OP_IMM,OP_VMREG}, {R3,CPU_ALL,0,0x040000000102LL,6},	
 	"enor", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x040000000002LL,6},	
+	
+	"enter", {OP_IMM,0,0,0,0}, {ENTER,CPU_ALL,0,0xAFLL,4},
 
-	"int",	{OP_IMM,OP_IMM,0,0,0}, {INT,CPU_ALL,0,0xA6,4},
+	"int",	{OP_IMM,OP_IMM,0,0,0}, {INT,CPU_ALL,0,0xA6LL,4},
 
 	"jeq",	{OP_LK,OP_REG,OP_REG|OP_IMM,OP_CAREGIND,0}, {JL,CPU_ALL,0,0x000000000026LL,6},
 	"jeq",	{OP_REG,OP_REG|OP_IMM,OP_CAREGIND,0,0}, {J,CPU_ALL,0,0x000000000026LL,6},
@@ -261,9 +263,13 @@ mnemonic mnemonics[]={
 	"lea",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x8ALL,6},	
 	"lea",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xBALL,6},	
 
+	"leave", {OP_IMM,0,0,0,0}, {LEAVE,CPU_ALL,0,0xBFLL,4},
+
 	"max",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x520000000002LL,6},	
 	"memdb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF9,2},
 	"memsb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF8,2},
+	"mflk",		{OP_LK,OP_REG,0,0,0}, {MFLK,CPU_ALL,0,0x5ELL,2},
+	"mflk",		{OP_REG,OP_LK,0,0,0}, {MFLK,CPU_ALL,0,0x5ELL,2},
 	"mfsel",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	
 	"mfsel",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	
@@ -280,6 +286,7 @@ mnemonic mnemonics[]={
 	"movzxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0813F00000AALL,6},
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
+	"mtlk",		{OP_LK,OP_REG,0,0,0}, {MTLK,CPU_ALL,0,0x5FLL,2},
 
 	"mtsel",	{OP_REG,OP_IMM,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
 	"mtsel",	{OP_REG,OP_REG,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
@@ -1568,6 +1575,11 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==1)
 				*insn = *insn| (RA(op->basereg & 0x3f));
 			break;
+		case MTLK:
+		case MFLK:
+			if (i==0||i==1)
+				*insn = *insn| (RT(op->basereg & 0x3f));
+			break;
 		}				
 	}
 }
@@ -1668,6 +1680,16 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 			if (insn)
 				*insn = *insn | ((val & 0x3ffffLL) << 11LL) | (((val >> 18LL) & 0xffffLL) << 32LL);
 		}
+		else if (mnemo->ext.format==ENTER) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((-val & 0x7fffffLL) << 9LL);
+		}
+		else if (mnemo->ext.format==LEAVE) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((val & 0x7fffffLL) << 9LL);
+		}
 		else {
 			if (op->type & OP_IMM11)
 				isize = 4;
@@ -1751,6 +1773,16 @@ j1:
 			isize = 4;
 			if (insn)
 				*insn = *insn | RB(val & 0x1fLL) | TB(2);
+		}
+		else if (mnemo->ext.format==ENTER) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((-val & 0x7fffffLL) << 9LL);
+		}
+		else if (mnemo->ext.format==LEAVE) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((val & 0x7fffffLL) << 9LL);
 		}
 		else {
 			if (op->type & OP_IMM11) {
@@ -2170,7 +2202,12 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
  					if (i==0)
  						*insn = *insn| RT(op.basereg & 0x3);
  					break;
- 				default:
+ 				case MTLK:
+ 				case MFLK:
+					if (i==0||i==1)
+ 						*insn = *insn| (((op.basereg-1) & 0x1) << 15LL);
+ 					break;
+				default:
  					cpu_error(18);
 				}				
 			}
