@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 	cpu.SupportsSTM = false;
 	cpu.SupportsPtrdif = false;
 	cpu.SupportsEnter = true;
-	cpu.SupportsLeave = false;
+	cpu.SupportsLeave = true;
 	cpu.SupportsIndexed = true;
 	cpu.Addsi = false;
 	cpu.mov_op = op_mov;

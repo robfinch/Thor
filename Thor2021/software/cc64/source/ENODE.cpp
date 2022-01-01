@@ -798,15 +798,13 @@ CSE *ENODE::OptInsertRef(int duse)
 			if (first) {
 				// look for register nodes
 				int j = p[0]->rg;
-				if ((p[0]->nodetype == en_regvar) &&
-					(j >= regFirstRegvar && j <= regLastRegvar))
+				if ((p[0]->nodetype == en_regvar) && IsSavedReg(j))
 				{
 					csp->voidf = false;
 					csp->AccUses(3);
 					csp->AccDuses(1);
 				}
-				if ((p[0]->nodetype == en_regvar) &&
-					(j >= regFirstArg && j <= regLastArg))
+				if ((p[0]->nodetype == en_regvar) && IsArgReg(j))
 				{
 					csp->voidf = false;
 				}

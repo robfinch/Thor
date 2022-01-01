@@ -38,9 +38,10 @@
 
 import Thor2021_pkg::*;
 
-module Thor2021_decoder(ir, xir, deco);
+module Thor2021_decoder(ir, xir, xval, deco);
 input Instruction ir;
 input Instruction xir;
+input xval;
 output DecodeOut deco;
 
 integer n;
@@ -65,6 +66,8 @@ JMP,DJMP:			Rt = 6'd0;
 STB,STW,STT,STO,STOC,STOS:
 	Rt = 6'd0;
 STBX,STWX,STTX,STOX,STOCX:
+	Rt = 6'd0;
+EXI7,EXI23,EXI41:
 	Rt = 6'd0;
 default:	Rt = ir[14:9];
 endcase
@@ -179,7 +182,7 @@ LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR:
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	rfwr = TRUE;
 LEA,LEAX:	rfwr = TRUE;
-ADD2R,AND2R,OR2R,XOR2R:
+ADD2R,AND2R,OR2R,XOR2R,SLT2R:
 	rfwr = TRUE;
 default:	rfwr = FALSE;
 endcase
@@ -187,22 +190,18 @@ endcase
 // Computing immediate constant
 case(ir.any.opcode)
 ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SGTI,MULI,DIVI:
-	begin
-		imm = {{53{ir.ri.imm[10]}},ir.ri.imm};
-	end
+	imm = {{53{ir.ri.imm[10]}},ir.ri.imm};
 ANDI:	// Pad with ones to the left
-	begin
-		imm = {{53{1'b1}},ir.ri.imm};
-	end
-ORI,XORI,SLTUI,SGTUI,MULUI:	// Pad with zeros to the left
-	begin
-		imm = {{53{1'b0}},ir.ri.imm};
-	end
+	imm = {{53{1'b1}},ir.ri.imm};
+CMPUI,ORI,XORI,SLTUI,SGTUI,MULUI,DIVUI:	// Pad with zeros to the left
+	imm = {{53{1'b0}},ir.ri.imm};
 CHKI:	imm = {{42{ir[47]}},ir[47:29],ir[11:9]};
 ADDIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL:
-	imm = {{41{ir.ril.imm[22]}},ir.ril.imm};
-ANDIL:	imm = {{41{1'b1}},ir.ril.imm};
-ORIL,XORIL:	imm = {{41{1'b0}},ir.ril.imm};
+	imm = ir.any.v ? {{41{ir.ril.imm[22]}},ir.rilv.imm} : {{37{ir.ril.imm[26]}},ir.ril.imm};
+CMPUIL,SLTUIL,SGTUIL,MULUIL:
+	imm = ir.any.v ? {{41{1'b0}},ir.rilv.imm} : {{37{1'b0}},ir.ril.imm};
+ANDIL:	imm = ir.any.v ? {{41{1'b1}},ir.rilv.imm} : {{37{1'b1}},ir.ril.imm};
+ORIL,XORIL:	imm = ir.any.v ? {{41{1'b0}},ir.rilv.imm} : {{37{1'b0}},ir.ril.imm};
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LEA:
 	imm = {{40{ir.ld.disp[23]}},ir.ld.disp};
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LEAX:
@@ -216,11 +215,12 @@ STOS:	imm = {{56{ir.sts.disp[7]}},ir.sts.disp};
 default:
 	imm = 64'd0;
 endcase
-casez(xir.any.opcode)
-EXI7:		imm = {{34{xir[15]}},xir[15:9],imm[22:0]};
-EXI23:	imm = {{18{xir[31]}},xir[31:9],imm[22:0]};
-EXI41:	imm = {xir[47:9],xir[1:0],imm[22:0]};
-endcase
+if (xval)
+	casez(xir.any.opcode)
+	EXI7:		imm = {{34{xir[15]}},xir[15:9],imm[22:0]};
+	EXI23:	imm = {{18{xir[31]}},xir[31:9],imm[22:0]};
+	EXI41:	imm = {xir[47:9],xir[1:0],imm[22:0]};
+	endcase
 
 case(ir.any.opcode)
 ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SGTIL,MULIL,DIVIL,MULUIL:
@@ -240,7 +240,7 @@ deco.imm = imm;
 
 case(ir.any.opcode)
 R2,R3,BTFLD:	deco.Tb = ir.r3.Tb;
-ADD2R,AND2R,OR2R,XOR2R:
+ADD2R,AND2R,OR2R,XOR2R,SLT2R:
 	deco.Tb = {1'b0,ir[27]};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT,JLTU,JGEU,JLEU,JGTU:
 	deco.Tb = ir.r3.Tb;
@@ -293,7 +293,6 @@ endcase
 
 case(ir.any.opcode)
 CACHE,CACHEX,
-LEA,LEAX,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.ld = TRUE;
@@ -341,6 +340,9 @@ STBX,STWX,STTX,STOCX,STOX:
 default:	deco.storen = FALSE;
 endcase
 
+deco.ldoo = ir.any.opcode==LDOO || ir.any.opcode==LDOOX;
+deco.stoo = ir.any.opcode==STOO || ir.any.opcode==STOOX;
+
 case(ir.any.opcode)
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LEAX:
 	deco.scale = ir.ldx.Sc;
@@ -356,6 +358,8 @@ LDT,LDTU,STT:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
+LDOO,LDOOX:				deco.memsz = hexi;
+STOO,STOOX:				deco.memsz = hexi;
 default:	deco.memsz = octa;
 endcase
 
@@ -363,13 +367,13 @@ case(ir.any.opcode)
 LDB,LDBU:	deco.seg = ir.ld.seg;
 LDW,LDWU:	deco.seg = ir.ld.seg;
 LDT,LDTU:	deco.seg = ir.ld.seg;
-LDO,LEA:	deco.seg = ir.ld.seg;
+LDO:			deco.seg = ir.ld.seg;
 LDOR:			deco.seg = ir.ld.seg;
 LDOS:			deco.seg = ir.lds.seg;
 LDBX,LDBUX:	deco.seg = ir.ldx.seg;
 LDWX,LDWUX:	deco.seg = ir.ldx.seg;
 LDTX,LDTUX:	deco.seg = ir.ldx.seg;
-LDOX,LEAX:	deco.seg = ir.ldx.seg;
+LDOX:			deco.seg = ir.ldx.seg;
 LDORX:		deco.seg = ir.ldx.seg;
 STB:			deco.seg = ir.st.seg;
 STW:			deco.seg = ir.st.seg;
@@ -427,11 +431,11 @@ CACHE,CACHEX:	deco.multi_cycle = TRUE;
 LDB,LDBU,STB:	deco.multi_cycle = TRUE;
 LDW,LDWU,STW:	deco.multi_cycle = TRUE;
 LDT,LDTU,STT: deco.multi_cycle = TRUE;
-LDO,LDOS,LDOR,LEA:		deco.multi_cycle = TRUE;
+LDO,LDOS,LDOR:		deco.multi_cycle = TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = TRUE;
-LDOX,LDORX,LEAX:	deco.multi_cycle = TRUE;
+LDOX,LDORX:				deco.multi_cycle = TRUE;
 STO,STOS,STOC:		deco.multi_cycle = TRUE;
 STOX,STOCX:		deco.multi_cycle = TRUE;
 STMOV,STFND,STCMP,STSET:			deco.multi_cycle = TRUE;
@@ -444,20 +448,24 @@ deco.mulsu = FALSE;
 deco.muli = FALSE;
 deco.mului = FALSE;
 deco.mulsui = FALSE;
+deco.mulfi = FALSE;
+deco.mulf = FALSE;
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
 	MUL,MULH:			deco.mul = TRUE;
 	MULU,MULUH:		deco.mulu = TRUE;
 	MULSU,MULSUH:	deco.mulsu = TRUE;
+	MULF:					deco.mulf = TRUE;
 	default:	;
 	endcase
 MULI,MULIL:		deco.muli = TRUE;
 MULUI,MULUIL:	deco.mului = TRUE;
+MULFI:				deco.mulfi = TRUE;
 default:	;
 endcase
-deco.mulall = deco.mul|deco.mulu|deco.mulsu|deco.muli|deco.mului|deco.mulsui;
-deco.mulalli = deco.muli|deco.mului|deco.mulsui;
+deco.mulall = deco.mul|deco.mulu|deco.mulsu|deco.muli|deco.mului|deco.mulsui|deco.mulf;
+deco.mulalli = deco.muli|deco.mului|deco.mulsui|deco.mulfi;
 
 deco.div = FALSE;
 deco.divu = FALSE;
@@ -514,11 +522,11 @@ endcase
 case(ir.any.opcode)
 R2,R3:
 	deco.Rvm = ir.r3.m;
-ADD2R,AND2R,OR2R,XOR2R:
+ADD2R,AND2R,OR2R,XOR2R,SLT2R:
 	deco.Rvm = ir.any[31:29];
 default:
-	if (deco.ril)
-		deco.Rvm = ir.ril.m;
+	if (deco.ril & ir.any.v)
+		deco.Rvm = ir.rilv.m;
 	else if (deco.loadn)
 		deco.Rvm = ir.ldx.m;
 	else if (deco.storen)
@@ -530,11 +538,11 @@ endcase
 case(ir.any.opcode)
 R2,R3:
 	deco.Rz = ir.r3.z;
-ADD2R,AND2R,OR2R,XOR2R:
+ADD2R,AND2R,OR2R,XOR2R,SLT2R:
 	deco.Rz = ir.any[28];
 default:
-	if (deco.ril)
-		deco.Rz = ir.ril.z;
+	if (deco.ril & ir.any.v)
+		deco.Rz = ir.rilv.z;
 	else if (deco.loadn)
 		deco.Rz = ir.ldx.z;
 	else if (deco.storen)
@@ -552,14 +560,16 @@ VM:
 default:	deco.vmrfwr = FALSE;
 endcase
 
-deco.mem = deco.ld|deco.loadr|deco.storer|deco.loadn|deco.storen|deco.lear|deco.lean|deco.tlb;
-deco.load = deco.ld|deco.loadr|deco.loadn|deco.lear|deco.lean|deco.tlb;
+deco.mem = deco.ld|deco.loadr|deco.storer|deco.loadn|deco.storen|deco.tlb;
+deco.load = deco.ld|deco.loadr|deco.loadn|deco.tlb;
 deco.stset = ir.any.opcode==STSET;
 deco.stmov = ir.any.opcode==STMOV;
 deco.stfnd = ir.any.opcode==STFND;
 deco.stcmp = ir.any.opcode==STCMP;
 deco.mflk = ir.any.opcode==MFLK;
 deco.mtlk = ir.any.opcode==MTLK;
+deco.enter = ir.any.opcode==ENTER;
+deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.jxx || deco.jxz || deco.rts;
 
 end
 

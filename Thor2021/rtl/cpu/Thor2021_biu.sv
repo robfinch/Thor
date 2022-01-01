@@ -188,6 +188,7 @@ always_comb
  	ea.offs = {afilt.offs >> shr_ma};	// Keep same selector
 
 reg [7:0] ealow;
+(* mark_debug="true" *)
 SegDesc desc_out;
 SegACR ea_acr;
 SegACR pc_acr;
@@ -196,9 +197,11 @@ always_comb
 always_comb
 	pc_acr = cs_desc.acr;
 
+reg [1:0] strips;
 reg [63:0] sel;
 reg [63:0] nsel;
 reg [255:0] dat, dati;
+reg [511:0] dati512;
 reg [127:0] datis;
 always_comb datis = dati >> {ealow[3:0],3'b0};
 `ifdef CPU_B64
@@ -770,6 +773,7 @@ else begin
 
 	MEMORY2:
 		begin
+			strips <= 2'd0;
 			memresp.cause <= {8'h00,FLT_NONE};
 			memresp.badAddr <= memreq.adr;	// Handy for debugging
 			memresp.ldcs <= FALSE;
@@ -816,6 +820,19 @@ else begin
 	      		// Setup proper select lines
 			      sel <= 32'hFFFFFFFF;
 						goto (MEMORY3);
+					end
+				MR_LDOO:
+					begin
+			    	if (afilt > limit && bounds_chk)
+			    		tBoundsViolation(memreq.adr);
+			    	else begin
+				    	daccess <= TRUE;
+	    		  	tEA(ea);
+		      		xlaten <= TRUE;
+		      		// Setup proper select lines
+				      sel <= 32'hFFFFFFFF;
+				  		goto (MEMORY3);
+			  		end
 					end
 				default:
 					begin
@@ -974,6 +991,8 @@ else begin
 	      stb_o <= HIGH;
 	      for (n = 0; n < 16; n = n + 1)
 	      	sel_o[n] <= sel[n];
+	      if (memreq.func==MR_LOAD && memreq.func2==MR_LDOO)
+	      	sel_o <= 16'hFFFF;
 //	      sel_o <= sel[15:0];
 	      dat_o <= dat[127:0];
 	      case(memreq.func)
@@ -1034,6 +1053,7 @@ else begin
 		      goto (MEMORY7);
 		      stb_o <= LOW;
 		      dati <= dat_i;
+		      dati512 <= {dat_i,dati512[511:128]};
 		      if (sel[31:16]==1'h0) begin
 		      	tDeactivateBus();
 		      end
@@ -1055,6 +1075,9 @@ else begin
 			      end
 	      		if (dce & dhit & tlbacr[3]) begin
 	      			dati <= datil >> {adr_o[5:3],6'b0};
+	      			dati512 <= datil;
+	      			tDeactivateBus();
+			        goto (DATA_ALIGN);
 			      end
 	      	end
 		    MR_STORE,MR_MOVST,M_CALL:
@@ -1098,7 +1121,16 @@ else begin
 
 	MEMORY8:
 	  begin
-	    goto (MEMORY9);
+      if (memreq.func==MR_LOAD && memreq.func2==MR_LDOO) begin
+       	if (strips != 2'd3) begin
+      		strips <= strips + 2'd1;
+	    		goto (MEMORY3);
+	    	end
+	    	else
+	    		goto(DATA_ALIGN);
+      end
+      else
+	    	goto (MEMORY9);
 	    xlaten <= TRUE;
 	    dadr <= {dadr[AWID-1:4] + 2'd1,4'd0};
 	    //tEA({ea[AWID-1:4] + 2'd1,4'd0});
@@ -1250,6 +1282,7 @@ else begin
 		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
 		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
 		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOO:	begin memresp.res <= dati512; end
 		    	MR_LDDESC:
 		    		begin
 		    			memresp.res <= dati;
@@ -1270,6 +1303,7 @@ else begin
 		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
 		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
 		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDOO:	begin memresp.res <= dati512; end
 		    	MR_LDDESC:
 		    		begin
 		    			memresp.res <= dati;
@@ -1638,7 +1672,7 @@ begin
 //	if (iea[AWID-1:24]=={AWID-24{1'b1}})
 //		dadr <= iea;
 //	else
-		dadr <= iea[AWID-1:0] + {desc_out.base,6'd0};
+		dadr <= iea.offs + {desc_out.base,6'd0};
 	dcachable <= ea_acr.c;
 end
 endtask

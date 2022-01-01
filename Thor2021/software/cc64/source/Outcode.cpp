@@ -413,6 +413,9 @@ char *RegMoniker(int regno)
 	else if (rg = IsArgReg(regno)) {
 		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
 	}
+	else if (rg = IsSavedReg(regno)) {
+		sprintf_s(&buf[n][0], 20, "s%d", rg - 1);
+	}
 	else
 		if (regno==regCS)
 			sprintf_s(&buf[n][0], 20, "$b15");
@@ -476,6 +479,9 @@ char *RegMoniker2(int regno)
 	}
 	else if (rg = IsArgReg(regno)) {
 		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
+	}
+	else if (rg = IsSavedReg(regno)) {
+		sprintf_s(&buf[n][0], 20, "s%d", rg - 1);
 	}
 	else
 		if (regno == regCS)

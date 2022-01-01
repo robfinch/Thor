@@ -48,13 +48,17 @@ int IdentifyKeyword()
 			return lastst = kw_inout;
 	}
 
-	// bit,break,byte
-	if (p[0]=='b' && p[1]=='r' && p[2]=='e' && p[3]=='a' && p[4]=='k' && p[5]=='\0')
-		return lastst = kw_break;
-	if (p[0]=='b' && p[1]=='y' && p[2]=='t' && p[3]=='e' && p[4]=='\0')
-		return lastst = kw_byte;
-	if (p[0] == 'b' && p[1] == 'i' && p[2] == 't' && p[3] == '\0')
-		return lastst = kw_bit;
+	// bit,break,byte,bool
+	if (p[0] == 'b') {
+		if (p[1] == 'r' && p[2] == 'e' && p[3] == 'a' && p[4] == 'k' && p[5] == '\0')
+			return lastst = kw_break;
+		if (p[1] == 'y' && p[2] == 't' && p[3] == 'e' && p[4] == '\0')
+			return lastst = kw_byte;
+		if (p[1] == 'i' && p[2] == 't' && p[3] == '\0')
+			return lastst = kw_bit;
+		if (p[1] == 'o' && p[2] == 'o' && p[3] == 'l' && p[4] == '\0')
+			return lastst = kw_bool;
+	}
 
 	// while,wchar_t
 	if (p[0]=='w') {

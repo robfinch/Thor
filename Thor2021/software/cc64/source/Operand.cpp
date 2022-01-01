@@ -408,7 +408,7 @@ void Operand::MakeLegal(int flags, int size)
 			ReleaseTempReg(ap2);
 			return;
 		case am_imm:
-			GenerateTriadic(op_sne, 0, this, makereg(regZero), this);
+			Generate4adic(op_sne, 0, this, makereg(regZero), this, cg.MakeImmediate(1));
 			return;
 		case am_reg:
 			ap1 = cg.MakeBoolean(this);

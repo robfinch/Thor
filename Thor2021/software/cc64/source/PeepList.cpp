@@ -79,6 +79,56 @@ OCODE* PeepList::FindTarget(OCODE *ip, int reg, OCODE* eip)
 	return (nullptr);
 }
 
+bool PeepList::UsesOnlyArgRegs() const
+{
+	OCODE* ip;
+
+	for (ip = head; ip; ip = ip->fwd) {
+		if (ip->opcode != op_label && ip->opcode != op_rem) {
+			if (ip->oper1) {
+				if (ip->oper1->preg > 0 && !IsArgReg(ip->oper1->preg))
+					return (false);
+				if (ip->oper1->sreg > 0 && !IsArgReg(ip->oper1->sreg))
+					return (false);
+			}
+			if (ip->oper2) {
+				if (ip->oper2->preg > 0 && !IsArgReg(ip->oper2->preg))
+					return (false);
+				if (ip->oper2->sreg > 0 && !IsArgReg(ip->oper2->sreg))
+					return (false);
+			}
+			if (ip->oper3) {
+				if (ip->oper3->preg > 0 && !IsArgReg(ip->oper3->preg))
+					return (false);
+				if (ip->oper3->sreg > 0 && !IsArgReg(ip->oper3->sreg))
+					return (false);
+			}
+			if (ip->oper4) {
+				if (ip->oper4->preg > 0 && !IsArgReg(ip->oper4->preg))
+					return (false);
+				if (ip->oper4->sreg > 0 && !IsArgReg(ip->oper4->sreg))
+					return (false);
+			}
+		}
+	}
+	return (true);
+}
+
+void PeepList::RemoveEnterLeave()
+{
+	OCODE* ip;
+
+	for (ip = head; ip; ip = ip->fwd) {
+		if (ip->opcode == op_enter)
+			ip->MarkRemove();
+		if (ip->opcode == op_leave) {
+			ip->opcode = op_rts;
+			ip->insn = ip->insn->Get(op_rts);
+			ip->oper1 = nullptr;
+		}
+	}
+}
+
 void PeepList::InsertBefore(OCODE *an, OCODE *cd)
 {
 	cd->fwd = an;

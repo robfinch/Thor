@@ -297,6 +297,7 @@ mnemonic mnemonics[]={
 	"mul", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x0C0000000102LL,6},	
 	"mul", {OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x0C0000000002LL,6},	
 	"mul", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD2,6,0x06LL,4},
+	"muladd", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x0C0000000002LL,6},	
 
 	"mulf", {OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x2A0000000002LL,6},	
 	"mulf", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0x15LL,4},
@@ -309,7 +310,7 @@ mnemonic mnemonics[]={
 	"nand", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x000000000102LL,6},	
 	"nand", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x000000000002LL,6},	
 
-	"neg", {OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"neg", {OP_REG,OP_NEXTREG,OP_REG,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
 
 	"nop",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF1,2},
 
@@ -380,18 +381,24 @@ mnemonic mnemonics[]={
 	"seq", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x4C0000000102LL,6},	
 	"seq", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x1D6LL,6},
 	"seq", {OP_VREG,OP_VREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x1D6LL,6},
-	"seq", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x4C0000000002LL,6},	
+	"seq", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x4C0000000002LL,6},	
+	"seq", {OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x4C0000000002LL,6},	
 	"seq", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD6LL,6,0x16,4},
 
 	"sge", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x420000000102LL,6},	
-	"sge", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x420000000002LL,6},	
+	"sge", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x420000000002LL,6},	
+	"sge", {OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x420000000002LL,6},	
 	"sgeu", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x460000000102LL,6},	
-	"sgeu", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x460000000002LL,6},	
+	"sgeu", {OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x460000000002LL,6},	
+	"sgeu", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x460000000002LL,6},	
 
 	"sgt", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xDBLL,6,0x1BLL,4},
 	"sgtu", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xDFLL,6,0x1FLL,4},
 	"slt", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD3LL,6,0x18LL,4},
-	"slt", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x400000000002LL,6},	
+	"slt", {OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0xD3LL,6},
+	"slt", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0xD3LL,6},
+	"slt", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x4ELL,4},	
+//	"slt", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x400000000002LL,6},	
 
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
@@ -400,7 +407,8 @@ mnemonic mnemonics[]={
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 
-	"sne", {OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x4E0000000002LL,6},	
+	"sne", {OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x4E0000000002LL,6},	
+	"sne", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x4E0000000002LL,6},	
 	"sne", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD7LL,6,0x17,4},
 
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x840000000002LL,6},	
@@ -1585,7 +1593,7 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 }
 
 static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
-	operand *op, int64_t val, int constexpr, int i, char selector)
+	operand *op, int64_t val, int constexpr, int i, char selector, char vector)
 {
 	size_t isize;
 
@@ -1697,7 +1705,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 				isize = 6;
 			if (!is_nbit(val,11)) {
 				isize = 6;
-				if (!is_nbit(val,23)) {
+				if (!is_nbit(val,vector ? 23 : 27)) {
 					if (prefix)
 						*prefix = ((val >> 23LL) << 9LL) | EXI7;
 					isize = (2<<8)|6;
@@ -1730,7 +1738,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 				case (4<<8)|6:
 				case (6<<8)|6:
 				case (8<<8)|6:
-					*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+					*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					break;
 				}
 			}
@@ -1796,35 +1804,35 @@ j2:
 				if (abits < 24) {
 					isize = 6;
 					if (insn)
-						*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+						*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					if (prefix)
 						*prefix = 0;
 				}
 				else if (abits < 31) {
 					isize = (2<<8)|6;
 					if (insn)
-						*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+						*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					if (prefix)
 						*prefix = ((val >> 23LL) << 9LL) | EXI7;
 				}
 				else if (abits < 46) {
 					isize = (4<<8)|6;
 					if (insn)
-						*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+						*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					if (prefix)
 						*prefix = ((val >> 23LL) << 9LL) | EXI23;
 				}
 				else if (abits < 64) {
 					isize = (6<<8)|6;
 					if (insn)
-						*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+						*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					if (prefix)
 						*prefix = ((val >> 25LL) << 9LL) | EXI41 | ((val >> 23) & 3LL);
 				}
 				else {
 					isize = (8<<8)|6;
 					if (insn)
-						*insn = *insn | ((val & 0x7fffffLL) << 21LL);
+						*insn = *insn | ((val & (vector ? 0x7fffffLL : 0x7ffffffLL)) << 21LL);
 					if (prefix)
 						*prefix = ((val >> 23LL) << 9LL) | EXI55;
 				}
@@ -2122,6 +2130,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 	char selector = -1;
 	int constexpr;
 	int reg = 0;
+	char vector_insn = 0;
 
 	TRACE("Eto:");
 	isize = mnemo->ext.len;
@@ -2133,6 +2142,16 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 
 	if (prefix)
 		*prefix = 0;
+
+	// Detect a vector instruction
+  for (i=0; i<MAX_OPERANDS && ip->op[i]!=NULL; i++) {
+  	if (ip->op[i]->type==OP_VREG) {
+  		vector_insn = 1;
+  		if (insn)
+  			*insn |= 0x100;
+  		break;
+  	}
+	}
 
   for (i=0; i<MAX_OPERANDS && ip->op[i]!=NULL; i++) {
     operand *pop;
@@ -2245,7 +2264,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
 			TRACE("Etho3:");
-			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i, selector);
+			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i, selector, vector_insn);
     }
     else if (encode_branch(insn, mnemo, &op, val, &isize, i)) {
 			TRACE("Etho4:");
@@ -2326,6 +2345,14 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
   					selector = select_selector(op.basereg & 0x3f, 0);
   			}
   			*insn |= (selector & 7LL) << 45LL;
+    		if (insn) {
+	    		if (i==0)
+	    			*insn |= (RT(op.basereg & 0x3f));
+	    		else if (i==1) {
+	    			*insn |= (RA(op.basereg & 0x3f));
+	    			*insn |= (val & 0xffffffLL) << 21LL;
+	    		}
+    		}
 	    	if (0 && is_nbit(val,8) && (mnemo->ext.opcode==0x86LL || mnemo->ext.opcode==0x93LL)) {
 	    		isize = 4;
 	    		if (insn) {

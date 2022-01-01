@@ -180,7 +180,7 @@ int CSETable::AllocateGPRegisters()
 	int pass;
 	int reg;
 
-	reg = regFirstRegvar;
+	reg = 0;
 	for (pass = 0; pass < 4; pass++) {
 		for (csp = First(); csp; csp = Next()) {
 			if (csp->OptimizationDesireability() > 0) {
@@ -190,11 +190,11 @@ int CSETable::AllocateGPRegisters()
 						{
 						case 0:
 						case 1:
-						case 2:	alloc = (csp->OptimizationDesireability() >= 3) && reg <= regLastRegvar; break;
-						case 3: alloc = (csp->OptimizationDesireability() >= 3) && reg <= regLastRegvar; break;
+						case 2:	alloc = (csp->OptimizationDesireability() >= 3) && reg < cpu.NumSavedRegs; break;
+						case 3: alloc = (csp->OptimizationDesireability() >= 3) && reg < cpu.NumSavedRegs; break;
 						}
 						if (alloc)
-							csp->reg = reg++;
+							csp->reg = cpu.saved_regs[reg++];
 						else
 							csp->reg = -1;
 					}
@@ -212,7 +212,7 @@ int CSETable::AllocateFPRegisters()
 	int pass;
 	int reg;
 
-	reg = regFirstRegvar;
+	reg = 0;
 	for (pass = 0; pass < 4; pass++) {
 		for (csp = First(); csp; csp = Next()) {
 			if (csp->OptimizationDesireability() > 0) {
@@ -222,12 +222,12 @@ int CSETable::AllocateFPRegisters()
 						{
 						case 0:
 						case 1:
-						case 2:	alloc = (csp->OptimizationDesireability() >= 4) && reg <= regLastRegvar; break;
-						case 3: alloc = (csp->OptimizationDesireability() >= 4) && reg <= regLastRegvar; break;
+						case 2:	alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
+						case 3: alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
 							//    					if(( csp->duses > csp->uses / (8 << nn)) && reg < regLastRegvar )	// <- address register assignments
 						}
 						if (alloc) {
-							csp->reg = reg++;
+							csp->reg = cpu.saved_regs[reg++];
 							//csp->reg |= 0x20;
 						}
 						else
@@ -247,7 +247,7 @@ int CSETable::AllocatePositRegisters()
 	int pass;
 	int reg;
 
-	reg = regFirstRegvar;
+	reg = 0;
 	for (pass = 0; pass < 4; pass++) {
 		for (csp = First(); csp; csp = Next()) {
 			if (csp->OptimizationDesireability() > 0) {
@@ -257,12 +257,12 @@ int CSETable::AllocatePositRegisters()
 						{
 						case 0:
 						case 1:
-						case 2:	alloc = (csp->OptimizationDesireability() >= 4) && reg <= regLastRegvar; break;
-						case 3: alloc = (csp->OptimizationDesireability() >= 4) && reg <= regLastRegvar; break;
+						case 2:	alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
+						case 3: alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
 							//    					if(( csp->duses > csp->uses / (8 << nn)) && reg < regLastRegvar )	// <- address register assignments
 						}
 						if (alloc) {
-							csp->reg = reg++;
+							csp->reg = cpu.saved_regs[reg++];
 							csp->reg |= 0x40;
 						}
 						else

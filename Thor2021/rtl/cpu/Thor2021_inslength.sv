@@ -149,7 +149,6 @@ CACHEX:	o = 4'd6;
 8'hE?:	o = 4'd6;
 NOP:		o = 4'd2;
 RTS:		o = 4'd2;
-RTE:		o = 4'd2;
 BCD:		o = 4'h6;
 SYNC:		o = 4'h2;
 MEMSB:	o = 4'h2;
@@ -166,6 +165,9 @@ PUSH2R:	o = 4'h4;
 PUSH3R:	o = 4'h4;
 POP2R:	o = 4'h4;
 POP3R:	o = 4'h4;
+LDCTX:	o = 4'h2;
+STCTX:	o = 4'h2;
+SLT2R:	o = 4'h4;
 default:	o = 4'h2;
 endcase
 

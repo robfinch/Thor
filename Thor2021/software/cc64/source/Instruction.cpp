@@ -79,7 +79,8 @@ bool Instruction::IsFlowControl()
 		opcode == op_bnor ||
 		//opcode == op_ibne ||
 		//opcode == op_dbnz ||
-		opcode == op_bchk
+		opcode == op_bchk ||
+		opcode == op_leave
 		)
 		return (true);
 	return (false);

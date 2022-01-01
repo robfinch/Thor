@@ -101,7 +101,7 @@ enum e_sym {
 	kw_icache, kw_dcache, kw_thread,
 	kw_void, kw_char, kw_float, kw_double, kw_triple,
 	kw_struct, kw_union, kw_class,
-	kw_long, kw_short, kw_unsigned, kw_auto, kw_extern,
+	kw_bool, kw_long, kw_short, kw_unsigned, kw_auto, kw_extern,
 	kw_register, kw_typedef, kw_static, kw_goto, kw_return,
 	kw_sizeof, kw_break, kw_continue, kw_if, kw_else, kw_elsif,
 	kw_for, kw_forever, kw_signed,

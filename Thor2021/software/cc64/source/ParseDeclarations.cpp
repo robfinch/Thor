@@ -380,6 +380,22 @@ void Declaration::ParseBit()
 	bit_max = 64;
 }
 
+void Declaration::ParseBool()
+{
+	//printf("Enter ParseInt\r\n");
+	head = TYP::Make(bt_bit, sizeOfWord);
+	tail = head;
+	if (head == nullptr)
+		return;
+	head->isUnsigned = TRUE;
+	head->isVolatile = isVolatile;
+	head->isIO = isIO;
+	head->isBits = true;
+	NextToken();
+	head->size = 8;
+	bit_max = 64;
+}
+
 void Declaration::ParseFloat()
 {
 //	head = TYP::Copy(&stddouble);
@@ -797,6 +813,7 @@ int Declaration::ParseSpecifier(TABLE* table, SYM** sym, e_sc sc)
 			// the 'signed' keyword
 			//
 			case kw_bit:	ParseBit(); goto lxit;
+			case kw_bool:	ParseBool(); goto lxit;
 			case kw_byte:   ParseByte(); goto lxit;
 			case kw_char:	ParseChar(); goto lxit;
 			case kw_int8:	ParseInt8(); goto lxit;
@@ -2387,7 +2404,7 @@ void GlobalDeclaration::Parse()
 		case kw_int8: case kw_int16: case kw_int32: case kw_int64: case kw_int40: case kw_int80:
 		case kw_byte: case kw_char: case kw_int: case kw_short: case kw_unsigned: case kw_signed:
         case kw_long: case kw_struct: case kw_union: case kw_class:
-				case kw_enum: case kw_void: case kw_bit:
+				case kw_enum: case kw_void: case kw_bit: case kw_bool:
 				case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
                 lc_static += declare(NULL,&gsyms[0],sc_global,lc_static,bt_struct, &symo);
@@ -2561,7 +2578,7 @@ ENODE *AutoDeclaration::Parse(SYM *parent, TABLE *ssyms)
                 NextToken();
         case kw_exception:
 		case kw_volatile: case kw_const:
-		case kw_bit:
+		case kw_bit: case kw_bool:
 		case kw_int8: case kw_int16: case kw_int32: case kw_int64: case kw_int40: case kw_int80:
 		case kw_byte: case kw_char: case kw_int: case kw_short: case kw_unsigned: case kw_signed:
         case kw_long: case kw_struct: case kw_union: case kw_class:
@@ -2672,7 +2689,7 @@ dfs.printf("B");
 		case kw_int8: case kw_int16: case kw_int32: case kw_int64: case kw_int40: case kw_int80:
 		case kw_byte: case kw_char: case kw_int: case kw_short: case kw_unsigned: case kw_signed:
     case kw_long: case kw_struct: case kw_union: case kw_class:
-		case kw_enum: case kw_void: case kw_bit:
+		case kw_enum: case kw_void: case kw_bit: case kw_bool:
 		case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
 dfs.printf("C");

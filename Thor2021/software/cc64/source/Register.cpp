@@ -162,6 +162,18 @@ void CPU::InitRegs()
 	cpu.tmpregs[5] = 8;
 	cpu.tmpregs[6] = 9;
 	cpu.tmpregs[7] = 10;
+
+	cpu.NumSavedRegs = 10;
+	cpu.saved_regs[0] = 11;
+	cpu.saved_regs[1] = 12;
+	cpu.saved_regs[2] = 13;
+	cpu.saved_regs[3] = 14;
+	cpu.saved_regs[4] = 15;
+	cpu.saved_regs[5] = 16;
+	cpu.saved_regs[6] = 17;
+	cpu.saved_regs[7] = 18;
+	cpu.saved_regs[8] = 19;
+	cpu.saved_regs[9] = 20;
 }
 
 void initRegStack()
@@ -240,6 +252,17 @@ int IsArgReg(int rg)
 
 	for (nn = 0; nn < 10; nn++) {
 		if (rg == cpu.argregs[nn])
+			return (nn + 1);
+	}
+	return (0);
+}
+
+int IsSavedReg(int rg)
+{
+	int nn;
+
+	for (nn = 0; nn < 10; nn++) {
+		if (rg == cpu.saved_regs[nn])
 			return (nn + 1);
 	}
 	return (0);

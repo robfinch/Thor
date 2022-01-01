@@ -940,26 +940,26 @@ void Function::GenerateReturn(Statement* stmt)
 			ap = cg.GenerateExpression(stmt->exp, am_reg | am_imm, sizeOfWord, 1);
 		GenerateMonadic(op_hint, 0, MakeImmediate(2));
 		if (ap->mode == am_imm)
-			GenerateDiadic(cpu.ldi_op, 0, makereg(regFirstArg), ap);
+			GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[0]), ap);
 		else if (ap->mode == am_reg) {
 			if (sym->tp->btpp && (sym->tp->btpp->type == bt_struct || sym->tp->btpp->type == bt_union || sym->tp->btpp->type == bt_class)) {
 				if ((sz = sym->tp->btpp->size) > sizeOfWord) {
 					p = params.Find("_pHiddenStructPtr", false);
 					if (p) {
 						if (p->IsRegister)
-							GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), makereg(p->reg));
+							GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), makereg(p->reg));
 						else
-							GenerateDiadic(cpu.ldo_op, 0, makereg(regFirstArg), MakeIndexed(p->value.i, regFP));
+							GenerateDiadic(cpu.ldo_op, 0, makereg(cpu.argregs[0]), MakeIndexed(p->value.i, regFP));
 						ap2 = GetTempRegister();
 						GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(sym->tp->btpp->size));
 						if (cpu.SupportsPush) {
 							GenerateMonadic(op_push, 0, ap2);
 							GenerateMonadic(op_push, 0, ap);
-							GenerateMonadic(op_push, 0, makereg(1));
+							GenerateMonadic(op_push, 0, makereg(cpu.argregs[0]));
 						}
 						else {
 							GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
-							GenerateDiadic(cpu.sto_op, 0, makereg(1), MakeIndirect(regSP));
+							GenerateDiadic(cpu.sto_op, 0, makereg(cpu.argregs[0]), MakeIndirect(regSP));
 							GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(sizeOfWord, regSP));
 							GenerateDiadic(cpu.sto_op, 0, ap2, MakeIndexed(sizeOfWord * 2, regSP));
 						}
@@ -985,41 +985,41 @@ void Function::GenerateReturn(Statement* stmt)
 							GenLoad(makereg(regFirstArg), MakeIndirect(ap->preg), 1, 1);
 					}
 					else
-						GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+						GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 				}
 			}
 			else {
 				if (sym->tp->btpp->IsFloatType() || sym->tp->btpp->IsPositType())
-					GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+					GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 				else if (sym->tp->btpp->IsVectorType())
 					GenerateDiadic(cpu.mov_op, 0, makevreg(regFirstArg), ap);
 				else
-					GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+					GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 			}
 		}
 		else if (ap->mode == am_reg) {
 			if (isFloat)
-				GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 			else
-				GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 		}
 		else if (ap->mode == am_reg) {
 			if (isPosit)
-				GenerateDiadic(cpu.mov_op, 0, compiler.of.makepreg(regFirstArg), ap);
+				GenerateDiadic(cpu.mov_op, 0, compiler.of.makepreg(cpu.argregs[0]), ap);
 			else
-				GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 		}
 		else if (ap->typep == &stddouble) {
 			if (isFloat)
-				GenerateDiadic(op_ldf, 'd', makereg(regFirstArg), ap);
+				GenerateDiadic(op_ldf, 'd', makereg(cpu.argregs[0]), ap);
 			else
-				GenerateDiadic(cpu.ldo_op, 0, makereg(regFirstArg), ap);
+				GenerateDiadic(cpu.ldo_op, 0, makereg(cpu.argregs[0]), ap);
 		}
 		else {
 			if (sym->tp->btpp->IsVectorType())
 				GenLoad(makevreg(regFirstArg), ap, sizeOfWord, sizeOfWord);
 			else
-				GenLoad(makereg(regFirstArg), ap, sizeOfWord, sizeOfWord);
+				GenLoad(makereg(cpu.argregs[0]), ap, sizeOfWord, sizeOfWord);
 		}
 		ReleaseTempRegister(ap);
 	}
@@ -1309,14 +1309,14 @@ void Function::Generate()
 	if (gp != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__data_base", dataseg), ap);
-		GenerateDiadic(cpu.lea_op, 0, makereg(regGP), MakeStringAsNameConst("_data_start", dataseg));
+		GenerateDiadic(op_lea, 0, makereg(regGP), MakeStringAsNameConst("_bss_start", dataseg));
 		//GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
 		ReleaseTempRegister(ap);
 	}
 	if (gp1 != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
-		GenerateDiadic(cpu.lea_op, 0, makereg(regGP1), MakeStringAsNameConst("_rodata_start", dataseg));
+		GenerateDiadic(op_lea, 0, makereg(regGP1), MakeStringAsNameConst("_rodata_start", dataseg));
 		//if (!compiler.os_code)
 		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);

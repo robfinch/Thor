@@ -282,6 +282,8 @@ void Function::PeepOpt()
 		hasBPReferences = (pl.CountBPReferences() != 0);
 		hasGPReferences = (pl.CountGPReferences() != 0);
 
+		if (pl.UsesOnlyArgRegs())
+			pl.RemoveEnterLeave();
 		if (!hasBPReferences)
 			pl.RemoveLinkUnlink();
 		if (IsLeaf && !hasSPReferences && !hasBPReferences)

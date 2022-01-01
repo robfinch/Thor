@@ -93,6 +93,7 @@ extern int TempInvalidate(int*, int*);
 extern void TempRevalidate(int sp, int fsp, int psp);
 extern int GetTempMemSpace();
 extern bool IsArgumentReg(int);
+extern int IsSavedReg(int);
 extern Operand* GenerateFunctionCall(ENODE* node, int flags);
 
 // Utility

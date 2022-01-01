@@ -139,6 +139,7 @@ parameter EXI7		= 8'h46;
 parameter EXI23		= 8'h47;
 parameter EXI55		= 8'h49;
 parameter EXIM		= 8'h4A;
+parameter SLT2R		= 8'h4E;
 parameter DIVUI		= 8'h4F;
 
 parameter CMPI		= 8'h50;
@@ -172,6 +173,8 @@ parameter LDO			= 8'h86;
 parameter LDOS		= 8'h87;
 parameter LEA			= 8'h8A;
 parameter LDOR		= 8'h8B;
+parameter LDOO		= 8'h8C;
+parameter LDCTX		= 8'h8D;
 
 parameter STB			= 8'h90;
 parameter STW			= 8'h91;
@@ -179,10 +182,12 @@ parameter STT			= 8'h92;
 parameter STO			= 8'h93;
 parameter STOC		= 8'h94;
 parameter STOS		= 8'h95;
+parameter STOO		= 8'h96;
 parameter STSET		= 8'h98;
 parameter STMOV		= 8'h99;
 parameter STCMP		= 8'h9A;
 parameter STFND		= 8'h9B;
+parameter STCTX		= 8'h9D;
 parameter CACHE		= 8'h9F;
 
 parameter SYS			= 8'hA5;
@@ -209,8 +214,10 @@ parameter LDWUX		= 8'hB3;
 parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
+parameter LDOOX		= 8'hB7;
 parameter LEAX		= 8'hBA;
 parameter LDORX		= 8'hBB;
+parameter LEAVE		= 8'hBF;
 
 parameter POP			= 8'hBC;
 parameter POP2R		= 8'hBD;
@@ -221,6 +228,7 @@ parameter STWX		= 8'hC1;
 parameter STTX		= 8'hC2;
 parameter STOX		= 8'hC3;
 parameter STOCX		= 8'hC4;
+parameter STOOX		= 8'hC6;
 parameter CACHEX	= 8'hCF;
 
 parameter LDxX		= 8'hB0;
@@ -245,7 +253,7 @@ parameter SGTUIL	= 8'hDF;
 
 parameter NOP			= 8'hF1;
 parameter RTS			= 8'hF2;
-parameter RTE			= 8'hF3;
+parameter CARRY		= 8'hF3;
 parameter BCD			= 8'hF5;
 parameter SYNC		= 8'hF7;
 parameter MEMSB		= 8'hF8;
@@ -283,6 +291,7 @@ parameter DIV			= 7'h10;
 parameter DIVU		= 7'h11;
 parameter DIVSU		= 7'h12;
 parameter PTRDIF	= 7'h14;
+parameter MULF		= 7'h15;
 parameter MULSU		= 7'h16;
 parameter CHK			= 7'h19;
 parameter BYTNDX	= 7'h1A;
@@ -531,6 +540,16 @@ typedef struct packed
 typedef struct packed
 {
 	logic [15:0] pad;
+	logic [26:0] imm;
+	logic [5:0] Ra;
+	logic [5:0] Rt;
+	logic v;
+	logic [7:0] opcode;
+} rilinst;
+
+typedef struct packed
+{
+	logic [15:0] pad;
 	logic [2:0] m;
 	logic z;
 	logic [22:0] imm;
@@ -538,7 +557,7 @@ typedef struct packed
 	logic [5:0] Rt;
 	logic v;
 	logic [7:0] opcode;
-} rilinst;
+} rilvinst;
 
 typedef struct packed
 {
@@ -778,6 +797,7 @@ typedef union packed
 	r2inst r2;
 	r1inst r1;
 	rilinst ril;
+	rilvinst rilv;
 	riinst ri;
 	jxxinst jxx;
 	jmpinst jmp;
@@ -816,6 +836,7 @@ parameter MR_LDT	= 4'd2;
 parameter MR_LDO	= 4'd3;
 parameter MR_LDOR	= 4'd4;
 parameter MR_LDOB	= 4'd5;
+parameter MR_LDOO = 4'd6;
 parameter MR_LDDESC = 4'd12;
 parameter MR_LEA	= 4'd14;
 parameter MR_STB	= 4'd0;
@@ -823,6 +844,7 @@ parameter MR_STW	= 4'd1;
 parameter MR_STT	= 4'd2;
 parameter MR_STO	= 4'd3;
 parameter MR_STOC	= 4'd4;
+parameter MR_STOO	= 4'd5;
 parameter MR_STPTR	= 4'd8;
 
 typedef struct packed
@@ -848,7 +870,7 @@ typedef struct packed
 	logic empty;
 	logic [15:0] cause;
 	Address badAddr;
-	logic [127:0] res;
+	logic [511:0] res;
 	logic cmt;
 	logic ldcs;
 	logic mtsel;
@@ -957,6 +979,8 @@ typedef struct packed
 	logic loadn;
 	logic storer;
 	logic storen;
+	logic ldoo;
+	logic stoo;
 	logic ldz;
 	logic mem;
 	logic load;
@@ -987,6 +1011,8 @@ typedef struct packed
 	logic divsui;
 	logic divall;
 	logic divalli;
+	logic mulf;
+	logic mulfi;
 	logic csr;
 	logic rti;
 	logic rex;
@@ -998,6 +1024,8 @@ typedef struct packed
 	logic ril;
 	logic mflk;
 	logic mtlk;
+	logic enter;
+	logic flowchg;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -1120,7 +1148,7 @@ ADDI,SUBFI,MULI,ANDI,ORI,XORI,ADCI,SBCFI,MULUI,CSR:
 	Source1Valid = isn.ri.Ra==6'd0;
 OSR2:
 	case(isn.r2.func)
-	RTE:	Source1Valid = isn.r2.Ra==6'd0;
+	RTI:	Source1Valid = isn.r2.Ra==6'd0;
 	SEI:	Source1Valid = isn.r2.Ra==6'd0;
 	REX:	Source1Valid = isn.r2.Ra==6'd0;
 	default: Source1Valid = TRUE;
@@ -1208,7 +1236,7 @@ ADDI,SUBFI,MULI,ANDI,ORI,XORI,ADCI,SBCFI,MULUI,CSR:
 	Source2Valid = TRUE;
 OSR2:
 	case(isn.r2.func)
-	RTE:	Source2Valid = TRUE;
+	RTI:	Source2Valid = TRUE;
 	SEI:	Source2Valid = TRUE;
 	REX:	Source2Valid = TRUE;
 	default: Source2Valid = TRUE;

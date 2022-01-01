@@ -259,10 +259,12 @@ public:
 	void RemoveLinkUnlink();
 	void RemoveGPLoad();
 	void RemoveRegsave();
+	void RemoveEnterLeave();
 	void flush();
 	void SetLabelReference();
 	void EliminateUnreferencedLabels();
 	OCODE* FindTarget(OCODE *ip, int reg, OCODE* eip = nullptr);
+	bool UsesOnlyArgRegs() const;
 
 	void Dump(char *msg);
 	BasicBlock *Blockize();
@@ -1818,6 +1820,7 @@ public:
 	void ParseNaked();
 	void ParseShort();
 	void ParseLong();
+	void ParseBool();
 	void ParseBit();
 	void ParseInt();
 	void ParseInt64();
@@ -1949,8 +1952,10 @@ public:
 	int nregs;
 	int NumArgRegs;
 	int NumTmpRegs;
+	int NumSavedRegs;
 	int argregs[32];
 	int tmpregs[32];
+	int saved_regs[32];
 	bool SupportsBand;
 	bool SupportsBor;
 	bool SupportsBBS;
