@@ -129,7 +129,7 @@ void Declaration::SetType(SYM *sp)
 		}
 	}
 	else {
-		sp->tp = TYP::Make(bt_long,sizeOfWord);
+		sp->tp = TYP::Make(bt_int,sizeOfInt);
 		sp->tp->lst.head = sp->GetIndex();
 		sp->tp->lst.headp = sp;
 	}
@@ -306,11 +306,11 @@ void Declaration::ParseInt()
 {
 //printf("Enter ParseInt\r\n");
 	if (isUnsigned) {
-		head = TYP::Make(bt_ulong,sizeOfWord);
+		head = TYP::Make(bt_uint,sizeOfInt);
 		tail = head;
 	}
 	else {
-		head = TYP::Make(bt_long,sizeOfWord);
+		head = TYP::Make(bt_int,sizeOfInt);
 		tail = head;
 	}
 	bit_max = 64;
@@ -576,11 +576,11 @@ void Declaration::ParseInt32()
 void Declaration::ParseInt64()
 {
 	if (isUnsigned) {
-		head = (TYP *)TYP::Make(bt_ulong,8);
+		head = (TYP *)TYP::Make(bt_uint,sizeOfInt);
 		tail = head;
 	}
 	else {
-		head = (TYP *)TYP::Make(bt_long,8);
+		head = (TYP *)TYP::Make(bt_int,sizeOfInt);
 		tail = head;
 	}
 	bit_max = 64;
@@ -694,7 +694,7 @@ SYM *Declaration::ParseId()
 //					head = tail = maketype(bt_long,4);
 	}
 	else {
-		head = (TYP *)TYP::Make(bt_long,sizeOfWord);
+		head = (TYP *)TYP::Make(bt_int,sizeOfInt);
 		tail = head;
 		bit_max = head->precision;
 	}

@@ -624,9 +624,10 @@ public:
 	bool IsEqual(TypeArray *);
 	bool IsLong(int);
 	bool IsShort(int);
+	bool IsInt(int);
 	bool IsChar(int);
 	bool IsByte(int);
-	bool IsInt(int);
+	bool IsIntType(int);
 	void Clear();
 	TypeArray *Alloc();
 	void Print(txtoStream *);
@@ -741,7 +742,6 @@ public:
 	void GenStore(Operand *ap1, Operand *ap3, int size);
 	static void GenRedor(Operand *ap1, Operand *ap2);
 	Operand *GenIndex(bool neg);
-	Operand *GenHook(int flags, int size);
 	Operand *GenSafeHook(int flags, int size);
 	Operand *GenerateShift(int flags, int size, int op);
 	Operand *GenMultiply(int flags, int size, int op);
@@ -1113,6 +1113,7 @@ public:
 	void GenMemop(int op, Operand *ap1, Operand *ap2, int ssize, int typ);
 	void GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size);
 	void GenerateStore(Operand *ap1, Operand *ap3, int size);
+	Operand* GenerateHook(ENODE*, int flags, int size);
 	virtual Operand* GenerateSafeLand(ENODE *, int flags, int op);
 	virtual void GenerateBranchTrue(Operand* ap, int label);
 	virtual void GenerateBranchFalse(Operand* ap, int label);

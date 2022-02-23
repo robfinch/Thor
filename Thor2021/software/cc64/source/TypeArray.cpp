@@ -85,13 +85,17 @@ bool TypeArray::IsShort(int typ)
 {
 	return (typ==bt_short || typ==bt_ushort);
 }
+bool TypeArray::IsInt(int typ)
+{
+  return (typ == bt_int || typ == bt_uint);
+}
 bool TypeArray::IsLong(int typ)
 {
 	return (typ==bt_long || typ==bt_ulong);
 }
-bool TypeArray::IsInt(int typ)
+bool TypeArray::IsIntType(int typ)
 {
-	return (IsChar(typ)||IsShort(typ)||IsLong(typ)||IsByte(typ));
+	return (IsChar(typ)||IsShort(typ)||IsLong(typ)||IsByte(typ)||IsInt(typ));
 }
 
 bool TypeArray::IsEqual(TypeArray *ta)
@@ -130,10 +134,14 @@ bool TypeArray::IsEqual(TypeArray *ta)
         continue;
       if (t==bt_ushort && tat==bt_short)
         continue;
+      if (t == bt_int && tat == bt_uint)
+        continue;
+      if (t == bt_uint && tat == bt_int)
+        continue;
       if (IsChar(t) && IsChar(tat))
         continue;
 	  // Loose type matching
-	  if (IsInt(t) && IsInt(tat))
+	  if (IsIntType(t) && IsIntType(tat))
 		  continue;
       dfs.printf("F2");
       return false;

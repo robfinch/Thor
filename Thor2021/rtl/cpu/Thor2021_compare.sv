@@ -5,7 +5,8 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2021_bitfield.sv
+//	Thor2021_Compare.sv
+//
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -37,76 +38,39 @@
 
 import Thor2021_pkg::*;
 
-module Thor2021_bitfield(ir, a, b, c, o);
-input Instruction ir;
-input Value a;
-input Value b;
-input Value c;
-output Value o;
+module Thor2021_compare(a, b, o);
+input [127:0] a;
+input [127:0] b;
+output reg [127:0] o;
 
-reg [127:0] o1, o2, o3;
-wire [5:0] mw = c[5:0];
-wire [5:0] mb = b[5:0];
-wire [5:0] me = c[5:0];
-wire [6:0] func = ir[47:41];
-Value imm = ir[28:21];
-Value mask;
-wire [6:0] ffoo;
-
-ffo96 u1 ({32'h0,o1},ffoo);
-
-integer nn, n;
-always_comb
-	for (nn = 0; nn < $bits(Value); nn = nn + 1)
-		mask[nn] <= (nn >= mb) ^ (nn <= me) ^ (me >= mb);
+wire [11:0] dfco;
+DFPCompare128 udfc1 (
+	.a(a),
+	.b(b),
+	.o(dfco)
+);
 
 always_comb
 begin
-	o1 = 128'd0;
-	o2 = 128'd0;
-	case(ir.any.opcode)
-	BTFLD:
-		case(func)
-		ANDM:		begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  a[n] : 1'b0; end
-		BFCLR:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b0 : a[n]; end
-		BFSET:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ?  1'b1 : a[n]; end
-		BFCHG:	begin for (n = 0; n < $bits(Value); n = n + 1) o2[n] = mask[n] ? ~a[n] : a[n]; end
-		BFEXTU:
-			begin
-				o1 = {64'd0,a} >> mb;
-				for (n = 0; n < $bits(Value); n = n + 1)
-					if (n > mw)
-						o2[n] = 1'b0;
-					else
-						o2[n] = o1[n];
-			end
-		BFEXT:
-			begin
-				o1 = {{64{a[63]}},a} >> mb;
-				for (n = 0; n < $bits(Value); n = n + 1)
-					if (n > mw)
-						o2[n] = o1[mw];
-					else
-						o2[n] = o1[n];
-			end
-		BFALIGN:
-			begin
-				o1 = {64'd0,a} << mb;
-				for (n = 0; n < $bits(Value); n = n + 1) o2[n] = (mask[n] ? o1[n] : 1'b0);
-			end
-		BFFFO:
-			begin
-				for (n = 0; n < $bits(Value); n = n + 1)
-					o1[n] = mask[n] ? a[n] : 1'b0;
-				o2 = (ffoo==7'd127) ? -64'd1 : ffoo - mb;	// ffoo returns 127 if no one was found
-			end
-		default:	o2 = 64'd0;
-		endcase
-	default:	o2 = 64'd0;
-	endcase
+	o = 'd0;
+	o[0] = a==b;
+	o[1] = $signed(a) < $signed(b);
+	o[2] = $signed(a) < $signed(b) || a==b;
+	o[5] = a < b;
+	o[6] = a <= b;
+	o[8] = a != b;
+	o[9] = $signed(a) >= $signed(b);
+	o[10] = $signed(a) > $signed(b);
+	o[32] = dfco[0];	// equal
+	o[33] = dfco[1];	// less than
+	o[34] = dfco[2];	// less than or equal
+	o[35] = dfco[3];	// magnitude less than
+	o[36] = dfco[4];	// unordered
+	o[37] = dfco[5];	// not equal
+	o[38] = dfco[6];	// not less than (greater than or equal)
+	o[39] = dfco[7];	// not less than or equal (greater than)
+	o[40] = dfco[8];	// not magnitude less than (magnitude greater than or equal)
+	o[41] = dfco[9];	// not unordered (ordered)
 end
-
-always_comb
-	o = o2;
 
 endmodule

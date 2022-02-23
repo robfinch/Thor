@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -1276,12 +1276,13 @@ else begin
 	    MR_LOAD,MR_MOVLD:
 	    	begin
 		    	case(memreq.func2)
-		    	MR_LDB:	begin memresp.res <= {{56{datis[7]}},datis[7:0]}; end
-		    	MR_LDW:	begin memresp.res <= {{48{datis[15]}},datis[15:0]}; end
-		    	MR_LDT:	begin memresp.res <= {{32{datis[31]}},datis[31:0]}; end
-		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
-		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
-		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDB:	begin memresp.res <= {{120{datis[7]}},datis[7:0]}; end
+		    	MR_LDW:	begin memresp.res <= {{112{datis[15]}},datis[15:0]}; end
+		    	MR_LDT:	begin memresp.res <= {{96{datis[31]}},datis[31:0]}; end
+		    	MR_LDO:	begin memresp.res <= {{64{datis[63]}},datis[63:0]}; end
+		    	MR_LDH:	begin memresp.res <= datis[127:0]; end
+		    	MR_LDOR:	begin memresp.res <= {{64{datis[63]}},datis[63:0]}; end
+		    	MR_LDOB:	begin memresp.res <= {{64{datis[63]}},datis[63:0]}; end
 		    	MR_LDOO:	begin memresp.res <= dati512; end
 		    	MR_LDDESC:
 		    		begin
@@ -1297,12 +1298,13 @@ else begin
 	    MR_LOADZ:
 	    	begin
 		    	case(memreq.func2)
-		    	MR_LDB:	begin memresp.res <= {56'd0,datis[7:0]}; end
-		    	MR_LDW:	begin memresp.res <= {48'd0,datis[15:0]}; end
-		    	MR_LDT:	begin memresp.res <= {32'd0,datis[31:0]}; end
-		    	MR_LDO:	begin memresp.res <= datis[63:0]; end
-		    	MR_LDOR:	begin memresp.res <= datis[63:0]; end
-		    	MR_LDOB:	begin memresp.res <= datis[63:0]; end
+		    	MR_LDB:	begin memresp.res <= {120'd0,datis[7:0]}; end
+		    	MR_LDW:	begin memresp.res <= {112'd0,datis[15:0]}; end
+		    	MR_LDT:	begin memresp.res <= {96'd0,datis[31:0]}; end
+		    	MR_LDO:	begin memresp.res <= {64'd0,datis[63:0]}; end
+		    	MR_LDH:	begin memresp.res <= datis[127:0]; end
+		    	MR_LDOR:	begin memresp.res <= {64'd0,datis[63:0]}; end
+		    	MR_LDOB:	begin memresp.res <= {64'd0,datis[63:0]}; end
 		    	MR_LDOO:	begin memresp.res <= dati512; end
 		    	MR_LDDESC:
 		    		begin

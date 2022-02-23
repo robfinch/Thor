@@ -289,7 +289,7 @@ j1:
                  	dfs.printf("Found in base class\n");
         				  if (exact) {
            				  //sp = sp->FindRisingMatch();
-        				    sp = Function::FindExactMatch(TABLE::matchno, na, bt_long, typearray)->sym;
+        				    sp = Function::FindExactMatch(TABLE::matchno, na, bt_int, typearray)->sym;
         				    if (sp) {
 											if (gSearchCnt < 100) {
 												gSearchSyms[gSearchCnt] = sp;
@@ -355,7 +355,7 @@ j1:
 
 SYM *gsearch(std::string name)
 {
-	return (gsearch2(name, bt_long, nullptr, false));
+	return (gsearch2(name, bt_int, nullptr, false));
 }
 
 
@@ -618,7 +618,7 @@ void SYM::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
 		value.i = -(ilc + nbytes + head->roundSize());// + parentBytes);
 	}
 	if (head == nullptr) {
-		head = TYP::Make(bt_long, sizeOfWord);
+		head = TYP::Make(bt_int, sizeOfInt);
 	}
 	head->struct_offset = value.i;
 }
@@ -702,6 +702,10 @@ j1:
 		case bt_ushort:
 		case bt_short:
 			nbytes = initshort(this,opt);
+			break;
+		case bt_uint:
+		case bt_int:
+			nbytes = initint(this, opt);
 			break;
 		case bt_pointer:
 			if (tp->val_flag)

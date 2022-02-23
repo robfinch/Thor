@@ -4,9 +4,10 @@
 enum e_bt {
 	bt_none,
 	bt_byte, bt_ubyte, bt_bit, bt_bool,
-	bt_char, bt_short, bt_long, bt_float, bt_double, bt_triple, bt_quad, bt_posit, bt_pointer,
+	bt_char, bt_short, bt_int, bt_long, 
+	bt_float, bt_double, bt_triple, bt_quad, bt_decimal, bt_posit, bt_pointer,
 	bt_ichar, bt_iuchar, bt_i128,
-	bt_uchar, bt_ushort, bt_ulong,
+	bt_uchar, bt_ushort, bt_uint, bt_ulong,
   bt_unsigned, bt_vector, bt_vector_mask,
   bt_array, bt_struct, bt_union, bt_class, bt_enum, bt_void,
   bt_func, bt_ifunc, bt_label,
@@ -20,11 +21,17 @@ enum e_node {
 				en_cast,				/* typecase */
 				en_nop,
 		en_list, en_aggregate,
+
 		en_cbu, en_ccu, en_chu,
 		en_cubu, en_cucu, en_cuhu,
 		en_cbw, en_ccw, en_chw,
 		en_cubw, en_cucw, en_cuhw,
 		en_cucwp, en_ccwp, en_cuc,
+		
+		en_cbl, en_ccl, en_chl,
+		en_cubl, en_cucl, en_cuhl,
+		en_cuclp, en_cclp,
+		en_cuwl,
 
     en_cbc, en_cbh, en_cbuc, en_cubc,
 		en_cch,
@@ -428,8 +435,9 @@ enum e_hint {
 #define AL_BYTE			1
 #define AL_CHAR         2
 #define AL_SHORT        4
-#define AL_LONG         8
-#define AL_POINTER      8
+#define AL_INT					8
+#define AL_LONG         16
+#define AL_POINTER      16
 #define AL_FLOAT        8
 #define AL_DOUBLE       8
 #define AL_POSIT				8

@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -59,20 +59,8 @@ JBC:	takb = ~a[b[5:0]];
 JBS:	takb =  a[b[5:0]];
 JEQZ:	takb = a == 64'd0;
 JNEZ:	takb = a != 64'd0;
-DJEQ:	takb = a == b;
-DJNE:	takb = a != b;
-DJLT:	takb = $signed(a) < $signed(b);
-DJGE:	takb = $signed(a) >= $signed(b);
-DJLE:	takb = $signed(a) <= $signed(b);
-DJGT:	takb = $signed(a) > $signed(b);
-DJLTU: 	takb = a < b;
-DJGEU: 	takb = a >= b;
-DJLEU:	takb = a <= b;
-DJGTU:takb = a > b;
-DJBC:	takb = ~a[b[5:0]];
-DJBS:	takb =  a[b[5:0]];
-DJEQZ:	takb = a == 64'd0;
-DJNEZ:	takb = a != 64'd0;
+DJMP:	takb = a != 64'd0;
+MJNEZ:	takb = a != 64'd0;
 default:  takb = 1'b0;
 endcase
 

@@ -38,7 +38,7 @@ extern void doInitCleanup();
 
 int Compiler::GetReturnBlockSize()
 {
-	return (8 * sizeOfWord);
+	return (4 * sizeOfWord);
 }
 
 int Compiler::main2(int argc, char **argv)
@@ -165,14 +165,19 @@ void Compiler::AddStandardTypes()
 	pint = p;
 	p->precision = sizeOfWord * 8;
 
-	p = TYP::Make(bt_long,sizeOfWord);
+	p = TYP::Make(bt_decimal, sizeOfDecimal);
+	stddecimal = *p;
+	pint = p;
+	p->precision = sizeOfDecimal * 8;
+
+	p = TYP::Make(bt_int,sizeOfInt);
 	stdint = *p;
 	pint = p;
-	p->precision = sizeOfWord * 8;
+	p->precision = sizeOfInt * 8;
   
-	p = TYP::Make(bt_long,sizeOfWord);
+	p = TYP::Make(bt_int,sizeOfInt);
 	p->isUnsigned = true;
-	p->precision = sizeOfWord * 8;
+	p->precision = sizeOfInt * 8;
 	stduint = *p;
   
 	p = TYP::Make(bt_long,sizeOfWord);
@@ -331,12 +336,12 @@ void Compiler::AddStandardTypes()
 	stdexception = *p;
 
 	p = allocTYP();
-	p->type = bt_long;
-	p->typeno = bt_long;
+	p->type = bt_int;
+	p->typeno = bt_int;
 	p->val_flag = 1;
-	p->size = 8;
+	p->size = sizeOfInt;
 	p->bit_width = nullptr;
-	p->precision = 64;
+	p->precision = sizeOfInt * 8;
 	stdconst = *p;
 
 	p = allocTYP();

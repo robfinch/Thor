@@ -130,6 +130,69 @@ void CodeGenerator::GenerateComment(char *cm)
 	GenerateMonadic(op_rem2,0,MakeStringAsNameConst(cm,codeseg));
 }
 
+//
+// Generate code to evaluate a condition operator node (?:)
+//
+Operand* CodeGenerator::GenerateHook(ENODE* inode, int flags, int size)
+{
+	Operand* ap1, * ap2, * ap3;
+	int false_label, end_label;
+	ENODE* node;
+	bool voidResult;
+
+	false_label = nextlabel++;
+	end_label = nextlabel++;
+	//flags = (flags & am_reg) | am_volatile;
+	flags |= am_volatile;
+	//ip1 = currentFn->pl.tail;
+	//ap2 = cg.GenerateExpression(p[1]->p[1], flags, size);
+	//n1 = currentFn->pl.Count(ip1);
+	//if (opt_nocgo)
+	//	n1 = 9999;
+	//ReleaseTempReg(ap2);
+	//currentFn->pl.tail = ip1;
+	//currentFn->pl.tail->fwd = nullptr;
+	voidResult = inode->p[0]->etype == bt_void;
+	cg.GenerateFalseJump(inode->p[0], false_label, 0);
+	node = inode->p[1];
+	ap3 = GetTempRegister();
+	ap1 = cg.GenerateExpression(node->p[0], flags, size, 0);
+	if (!voidResult)
+		switch (ap1->mode) {
+		case am_reg:
+			GenerateDiadic(op_mov, 0, ap3, ap1);
+			break;
+		case am_imm:
+			GenerateLoadConst(ap3, ap1);
+			break;
+		default:
+			GenerateLoad(ap3, ap1, sizeOfWord, sizeOfWord);
+			break;
+		}
+	ReleaseTempRegister(ap1);
+	GenerateDiadic(op_bra, 0, MakeCodeLabel(end_label), 0);
+	GenerateLabel(false_label);
+	ap2 = cg.GenerateExpression(node->p[1], flags, size, 1);
+	if (!Operand::IsSameType(ap1, ap2) && !voidResult)
+		error(ERR_MISMATCH);
+	if (!voidResult)
+		switch (ap2->mode) {
+		case am_reg:
+			GenerateDiadic(op_mov, 0, ap3, ap2);
+			break;
+		case am_imm:
+			GenerateLoadConst(ap3, ap2);
+			break;
+		default:
+			GenerateLoad(ap3, ap2, sizeOfWord, sizeOfWord);
+			break;
+		}
+	ReleaseTempRegister(ap2);
+	GenerateLabel(end_label);
+	ap3->MakeLegal(flags, size);
+	return (ap3);
+}
+
 
 void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size)
 {
@@ -186,6 +249,7 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 				}
 				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
 				break;
+			case 16:	GenerateDiadic(op_ldh, 0, ap3, ap1); break;
 			}
     }
     else {
@@ -209,6 +273,7 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 				}
 				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
 				break;
+			case 16:	GenerateDiadic(op_ldh, 0, ap3, ap1); break;
 			}
     }
 	ap3->memref = true;
@@ -275,6 +340,7 @@ void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size)
 			}
 			GenerateDiadic(cpu.sto_op, 0, ap1, ap3);
 			break;
+		case 16:	GenerateDiadic(op_sth, 0, ap1, ap3); break;
 		default:
 			;
 		}
@@ -1365,9 +1431,9 @@ Operand *CodeGenerator::GenerateAggregateAssign(ENODE *node1, ENODE *node2)
 	//DumpStructEnodes(node2);
 	base = GenerateExpression(node1,am_reg,sizeOfWord,0);
 	base2 = GenerateExpression(node2, am_reg, sizeOfWord,1);
-	GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), base);
-	GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg+1), base2);
-	GenerateDiadic(cpu.ldi_op, 0, makereg(regFirstArg+2), MakeImmediate(node2->esize));
+	GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), base);
+	GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[1]), base2);
+	GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[2]), MakeImmediate(node2->esize));
 //	GenerateDiadic(op_ldi, 0, makereg(regFirstArg + 2), MakeImmediate(node1->esize));
 	if (isRiscv)
 		GenerateMonadic(op_call, 0, MakeStringAsNameConst("__aacpy", codeseg));
@@ -2111,7 +2177,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_i2q:
     ap1 = GetTempFPRegister();	
     ap2 = GenerateExpression(node->p[0],am_reg,8,rhs);
-		GenerateTriadic(op_csrrw,0,makereg(0),MakeImmediate(0x18),ap2);
+		GenerateTriadic(op_csrrw,0,makereg(regZero),MakeImmediate(0x18),ap2);
 		GenerateZeradic(op_nop);
 		GenerateZeradic(op_nop);
     GenerateDiadic(op_itof,'q',ap1,makereg(63));
@@ -2328,7 +2394,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		goto retpt;
 
 	case en_cond:
-		ap1 = node->GenHook(flags, size);
+		ap1 = GenerateHook(node, flags, size);
 		goto retpt;
 	case en_safe_cond:
 		ap1 = (node->GenSafeHook(flags, size));

@@ -95,6 +95,10 @@ void put_ty(TYP *tp, int isco)
                 case bt_enum:
                         lfs.printf("enum ");
                         goto ucont;
+                case bt_int:
+                case bt_uint:
+                  lfs.printf("Int");
+                  break;
                 case bt_long:
                         lfs.printf("Long");
                         break;

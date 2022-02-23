@@ -59,7 +59,7 @@ static SYM *makeint(char *name)
 	TYP *tp;
 
 	sp = allocSYM();
-	tp = TYP::Make(bt_long, 8);
+	tp = TYP::Make(bt_int, sizeOfInt);
 	tp->sname = new std::string("");
 	tp->isUnsigned = FALSE;
 	tp->isVolatile = FALSE;
@@ -1749,11 +1749,11 @@ void Statement::GenerateThrow()
 		initstack();
 		ap = cg.GenerateExpression(exp, am_all, 8, 0);
 		if (ap->mode == am_imm)
-			GenerateDiadic(cpu.ldi_op, 0, makereg(regFirstArg), ap);
+			GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[0]), ap);
 		else if (ap->mode != am_reg)
-			GenerateDiadic(cpu.ldo_op, 0, makereg(regFirstArg), ap);
+			GenerateDiadic(cpu.ldo_op, 0, makereg(cpu.argregs[0]), ap);
 		else if (ap->preg != 1)
-			GenerateDiadic(cpu.mov_op, 0, makereg(regFirstArg), ap);
+			GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
 		ReleaseTempRegister(ap);
 		// If a system exception is desired create an appropriate BRK instruction.
 		if (num == bt_exception) {
@@ -1767,7 +1767,7 @@ void Statement::GenerateThrow()
 			}
 			return;
 		}
-		GenerateDiadic(cpu.ldi_op, 0, makereg(regFirstArg+1), MakeImmediate(num));
+		GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[1]), MakeImmediate(num));
 	}
 	// Jump to handler address.
 	//GenerateMonadic(op_brk, 0, MakeImmediate(239));

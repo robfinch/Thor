@@ -3,7 +3,7 @@
 
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -111,6 +111,8 @@ extern int sizeOfFPS;
 extern int sizeOfFPT;
 extern int sizeOfFPD;
 extern int sizeOfFPQ;
+extern int sizeOfInt;
+extern int sizeOfDecimal;
 extern int sizeOfPosit;
 extern int maxVL;
 extern MachineReg regs[3072];
@@ -195,6 +197,7 @@ extern bool dogen;
 
 extern TYP stdvoid;
 extern TYP stdbit;
+extern TYP stddecimal;
 extern TYP stdint;
 extern TYP stduint;
 extern TYP stdlong;

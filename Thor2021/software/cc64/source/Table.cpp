@@ -125,7 +125,7 @@ void TABLE::insert(SYM *sp)
   // look at the return type parameter anyway, so we just set it to bt_long
   // if tp isn't set.
 	if (nm.length() > 0)
-		nn = tab->Find(nm, sp->tp ? sp->tp->typeno : bt_long, ta, true);
+		nn = tab->Find(nm, sp->tp ? sp->tp->typeno : bt_int, ta, true);
 	else
 		nn = 0;
 	if(nn == 0) {
@@ -273,7 +273,7 @@ int TABLE::Find(std::string na,__int16 rettype, TypeArray *typearray, bool exact
 
 int TABLE::Find(std::string na)
 {
-	return Find(na,(__int16)bt_long,nullptr,false);
+	return Find(na,(__int16)bt_int,nullptr,false);
 }
 
 
@@ -340,7 +340,7 @@ int TABLE::FindRising(std::string na)
 
 SYM *TABLE::Find(std::string na, bool opt)
 {
-	Find(na,(__int16)bt_long,nullptr,false);
+	Find(na,(__int16)bt_int,nullptr,false);
 	if (matchno==0)
 		return (nullptr);
 	return (match[matchno-1]);

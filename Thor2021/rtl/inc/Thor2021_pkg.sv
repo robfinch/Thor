@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -104,6 +104,7 @@ parameter XOR2R		= 8'h1E;
 parameter SGTUI		= 8'h1F;
 
 parameter JMP			= 8'h20;
+parameter DJMP		= 8'h21;
 parameter JBC			= 8'h24;
 parameter JBS			= 8'h25;
 parameter JEQ			= 8'h26;
@@ -116,20 +117,6 @@ parameter JLTU		= 8'h2C;
 parameter JGEU		= 8'h2D;
 parameter JLEU		= 8'h2E;
 parameter JGTU		= 8'h2F;
-
-parameter DJMP		= 8'h30;
-parameter DJBC		= 8'h34;
-parameter DJBS		= 8'h35;
-parameter DJEQ		= 8'h36;
-parameter DJNE		= 8'h37;
-parameter DJLT		= 8'h38;
-parameter DJGE		= 8'h39;
-parameter DJLE		= 8'h3A;
-parameter DJGT		= 8'h3B;
-parameter DJLTU		= 8'h3C;
-parameter DJGEU		= 8'h3D;
-parameter DJLEU		= 8'h3E;
-parameter DJGTU		= 8'h3F;
 
 parameter DIVI		= 8'h40;
 parameter CPUID		= 8'h41;
@@ -171,6 +158,7 @@ parameter LDT			= 8'h84;
 parameter LDTU		= 8'h85;
 parameter LDO			= 8'h86;
 parameter LDOS		= 8'h87;
+parameter LLA			= 8'h88;
 parameter LEA			= 8'h8A;
 parameter LDOR		= 8'h8B;
 parameter LDOO		= 8'h8C;
@@ -215,6 +203,7 @@ parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
 parameter LDOOX		= 8'hB7;
+parameter LLAX		= 8'hB8;
 parameter LEAX		= 8'hBA;
 parameter LDORX		= 8'hBB;
 parameter LEAVE		= 8'hBF;

@@ -703,6 +703,21 @@ void GenerateLong(int64_t val)
 		genst_cumulative += 8;
 }
 
+void GenerateInt(int64_t val)
+{
+	if (gentype == longgen && outcol < 56) {
+		ofs.printf(",%I64d", val);
+		outcol += 10;
+	}
+	else {
+		nl();
+		ofs.printf("\t.8byte\t%I64d", val);
+		gentype = longgen;
+		outcol = 25;
+	}
+	genst_cumulative += 8;
+}
+
 void GenerateFloat(Float128 *val)
 { 
 	if (val==nullptr)

@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -77,13 +77,15 @@ int address_bits = 32;
 int maxVL = 64;
 int nregs = 128;
 
-int64_t sizeOfWord = 8;
+int64_t sizeOfWord = 16;
 int sizeOfFP = 8;
 int sizeOfFPS = 4;
 int sizeOfFPD = 8;
 int sizeOfFPT = 12;
 int sizeOfFPQ = 16;
 int sizeOfPtr = 8;
+int sizeOfInt = 8;
+int sizeOfDecimal = 16;
 int sizeOfPosit = 8;
 
 std::ifstream *ifs;

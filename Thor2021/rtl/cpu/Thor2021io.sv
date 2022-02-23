@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -90,6 +90,12 @@ parameter MUL9 = 6'd14;
 parameter DELAY5 = 6'd15; 
 parameter DELAY6 = 6'd16;
 parameter DELAYN = 6'd17;
+parameter IFETCH = 6'd20;
+parameter DECODE = 6'd21;
+parameter EXECUTE = 6'd22;
+parameter MEMORY = 6'd23;
+parameter WRITEBACK = 6'd24;
+parameter SYNC = 6'd25;
 
 reg [5:0] rst_cnt;
 wire [1:0] omode;
@@ -98,11 +104,11 @@ wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
 wire MUserMode;
 reg gie;
 reg [511:0] regfile [0:31];
-reg [63:0] preg [0:7];
+Value r58;
+reg [127:0] preg [0:7];
 reg [15:0] cio;
 reg [7:0] delay_cnt;
 Value sp, t0;
-Value lc;
 Address caregfile [0:15];
 (* ram_style="block" *)
 Value vregfile [0:63][0:63];
@@ -157,10 +163,13 @@ reg dpredict_taken;
 reg [5:0] Ra;
 reg [5:0] Rb;
 reg [5:0] Rc;
+reg [5:0] Rc1;
 reg [5:0] Rt;
 reg [1:0] Tb;
 reg [1:0] Tc;
 reg [2:0] Rvm;
+reg [3:0] Ca;
+reg [3:0] Ct;
 reg Rz;
 always_comb Ra = deco.Ra;
 always_comb Rb = deco.Rb;
@@ -170,6 +179,9 @@ always_comb Rvm = deco.Rvm;
 always_comb Rz = deco.Rz;
 always_comb Tb = deco.Tb;
 always_comb Tc = deco.Tc;
+always_comb Ca = deco.Ca;
+always_comb Ct = deco.Ct;
+reg [3:0] distk_depth;
 reg [7:0] dstep;
 reg zbit;
 
@@ -177,8 +189,8 @@ wire dAddi = deco.addi;
 wire dld = deco.ld;
 wire dst = deco.st;
 Value rfoa, rfob, rfoc0, rfoc1, rfop;
+Address rfoca;
 reg [63:0] mask;
-reg [63:0] dlc;
 
 vreg_blkmem uvr1 (
   .clka(clk_g),    // input wire clka
@@ -232,12 +244,16 @@ Address xip;
 reg [3:0] xlen;
 reg advance_x;
 reg [5:0] xRt,xRa,xRb,xRc,tRt;
+reg [3:0] xCt;
+reg [2:0] xistk_depth;
 reg [2:0] xcioreg;
 reg [1:0] xcio;
 reg xRtvec;
 reg [2:0] xCat;
 Value xa,xb,xc0,xc1,pn;
 Value imm;
+Address xca;
+Address xcares;
 reg xmaskbit;
 reg xzbit;
 reg [2:0] xSc;
@@ -248,13 +264,14 @@ reg [63:0] xJmptgt;
 reg xJxx, xJxz;
 reg xPredictableBranch;
 reg xdj;
+reg xmjnez;
 reg xRts, xRti;
 reg xRex;
 reg xFlowchg;
 reg xIsMultiCycle;
 reg xLdz;
 reg xLear,xLean;
-reg xMem, xLoad;
+reg xMem, xLoad, xLdoo;
 reg xrfwr;
 reg xcarfwr;
 reg xvmrfwr;
@@ -271,23 +288,22 @@ reg xStoo;
 reg [2:0] xSeg;
 reg [2:0] xMemsz;
 reg xTlb;
-reg xStset, xStmov, xStfnd, xStcmp;
+reg xBset, xStmov, xStfnd, xStcmp;
 reg xCsr,xSync;
-reg xMtlc,xMtlk;
-reg xwrlc;
+reg xMtlk;
 reg xMfsel,xMtsel;
-reg [63:0] xlc;
 MemoryRequest memreq;
 MemoryResponse memresp;
 reg memresp_fifo_rd;
 wire memresp_fifo_empty;
 wire memresp_fifo_v;
 reg [7:0] tid;
-reg [64:0] res,res2;
+reg [128:0] res,res2;
 Value crypto_res, carry_res;
 Address cares;
 reg ld_vtmp;
 reg [7:0] xstep;
+reg [2:0] xrm;
 
 // Memory
 reg mval;
@@ -296,10 +312,14 @@ Address mip;
 reg advance_m;
 reg [15:0] mcause;
 Address mbadAddr;
-Address mlk;
+Address mca;
+Address mcares;
 reg mrfwr, m512;
+reg mcarfwr;
 reg mvmrfwr;
 reg [5:0] mRt;
+reg [3:0] mCt;
+reg [2:0] mistk_depth;
 reg [2:0] mcioreg;
 reg [1:0] mcio;
 reg mStset,mStmov,mStfnd,mStcmp;
@@ -310,11 +330,7 @@ reg mRti;
 reg mRex;
 reg mRts;
 reg mFlowchg;
-reg mMtlc;
-reg mwrlc, mwrlk;
-reg [1:0] mlkno;
 reg mLoad;
-reg [63:0] mlc;
 Value ma;
 Value mres, mcarry_res;
 reg [511:0] mres512;
@@ -332,9 +348,14 @@ Address wip;
 reg [15:0] wcause;
 Address wbadAddr;
 Address wlk;
+Address wca;
+Address wcares;
 reg wrfwr, w512;
 reg wvmrfwr;
+reg wcarfwr;
 reg [5:0] wRt;
+reg [3:0] wCt;
+reg [2:0] wistk_depth;
 reg [2:0] wcioreg;
 reg [1:0] wcio;
 reg wStset,wStmov,wStfnd,wStcmp;
@@ -345,11 +366,7 @@ reg wRts;
 reg wRti;
 reg wRex;
 reg wFlowchg;
-reg wMtlc;
-reg wwrlc, wwrlk;
-reg [1:0] wlkno;
 reg wLoad;
-reg [63:0] wlc;
 Value wa;
 Value wres, wcarry_res;
 reg [511:0] wres512;
@@ -415,6 +432,7 @@ begin
 end
 reg [7:0] vl;
 Value sema;
+reg [2:0] rm;
 
 assign omode = pmStack[2:1];
 assign MachineMode = omode==2'b11;
@@ -431,8 +449,16 @@ Value bf_out;
 // Decode stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-Thor2021_decoder udec (ir, xir, xval, deco);
+Thor2021_decoder udec (
+	.ir(ir),
+	.xir(xir),
+	.xval(xval),
+	.deco(deco),
+	.distk_depth(distk_depth),
+	.rm(rm)
+);
 
+`ifdef OVERLAPPED_PIPELINE
 always_comb
 if (Ra==6'd0)
   rfoa = {VALUE_SIZE{1'b0}};
@@ -445,7 +471,7 @@ else if (Ra==mRt && mrfwr && mval)
 else if (Ra==wRt && wrfwr && wval)
 	rfoa = wres;
 else
-	rfoa = regfile[Ra[5:3]] >> {Ra[2:0],6'd0};
+	rfoa = regfile[Ra[5:2]] >> {Ra[1:0],7'd0};
 /*
   case(Ra)
   6'd63:  rfoa = sp [{omode,ilvl}];
@@ -466,7 +492,7 @@ else if (Rb==mRt && mrfwr && mval)
 else if (Rb==wRt && wrfwr && wval)
 	rfob = wres;
 else
-	rfob = regfile[Rb[5:3]] >> {Rb[2:0],6'd0};
+	rfob = regfile[Rb[5:2]] >> {Rb[1:0],7'd0};
 /*	
   case(Rb)
   6'd63:  rfob = sp [{omode,ilvl}];
@@ -487,17 +513,19 @@ else if (Rc==mRt && mrfwr && mval)
 else if (Rc==wRt && wrfwr && wval)
 	rfoc0 = wres;
 else
-	rfoc0 = regfile[Rc[5:3]] >> {Rc[2:0],6'd0};
+	rfoc0 = regfile[Rc[5:2]] >> {Rc[1:0],7'd0};
 
 always_comb
-if (Rc|2'd1==xRt && xrfwr && xval)
+	Rc1 = Rc + 2'd1;
+always_comb
+if (Rc1==xRt && xrfwr && xval)
   rfoc1 = res;
-else if (Rc|2'd1==mRt && mrfwr && mval)
+else if (Rc1==mRt && mrfwr && mval)
 	rfoc1 = mres;
-else if (Rc|2'd1==wRt && wrfwr && wval)
+else if (Rc1==wRt && wrfwr && wval)
 	rfoc1 = wres;
 else
-	rfoc1 = regfile[Rc[5:3]] >> {Rc[2:1],1'b1,6'd0};
+	rfoc1 = regfile[Rc1[5:2]] >> {Rc1[1:0],7'd0};
 /*
   case(Rc)
   6'd63:  rfoc = sp [{omode,ilvl}];
@@ -518,20 +546,76 @@ always_comb
 		rfop = preg[cioreg];
 
 always_comb
-	if (xMtlc && xrfwr && xval)
-		dlc = res;
-	else if (xwrlc && xval)
-		dlc = xlc;
-	else if (mMtlc && mrfwr && mval)
-		dlc = mres;
-	else if (mwrlc && mval)
-		dlc = mlc;
-	else if (wMtlc && wrfwr && wval)
-		dlc = wres;
-	else if (wwrlc && wval)
-		dlc = wlc;
+	if (Ca == xCt && xcarfwr && xval)
+		rfoca = xcares;
+	else if (Ca == mCt && mcarfwr && mval)
+		rfoca = mcares;
+	else if (Ca == wCt && wcarfwr && wval)
+		rfoca = wcares;
 	else
-		dlc = lc;
+		rfoca = caregfile[Ca];
+
+`else
+always_comb
+if (Ra==6'd0)
+  rfoa = {VALUE_SIZE{1'b0}};
+else if (deco.Ravec)
+	rfoa = vroa;
+else
+	rfoa = regfile[Ra[5:2]] >> {Ra[1:0],7'd0};
+/*
+  case(Ra)
+  6'd63:  rfoa = sp [{omode,ilvl}];
+  default:    rfoa = regfile[Ra];
+  endcase
+*/
+always_comb
+if (Tb[1])
+	rfob = {{57{Tb[0]}},Tb[0],Rb};
+else if (Rb==6'd0)
+	rfob = {VALUE_SIZE{1'b0}};
+else if (deco.Rbvec)
+	rfob = vrob;
+else
+	rfob = regfile[Rb[5:2]] >> {Rb[1:0],7'd0};
+/*	
+  case(Rb)
+  6'd63:  rfob = sp [{omode,ilvl}];
+  default:    rfob = regfile[Rb];
+  endcase
+*/
+always_comb
+if (Tc[1])
+	rfoc0 = {{57{Tc[0]}},Tc[0],Rc};
+else if (Rc==6'd0)
+	rfoc0 = {VALUE_SIZE{1'b0}};
+else if (deco.Rcvec)
+	rfoc0 = vroc;
+else
+	rfoc0 = regfile[Rc[5:2]] >> {Rc[1:0],7'd0};
+
+reg [5:0] Rc1;
+always_comb
+	Rc1 = Rc + 2'd1;
+always_comb
+	rfoc1 = regfile[Rc1[5:2]] >> {Rc1[1:0],7'd0};
+/*
+  case(Rc)
+  6'd63:  rfoc = sp [{omode,ilvl}];
+  default:    rfoc = regfile[Rc];
+  endcase
+*/
+
+always_comb
+	if (cioreg==3'd0 || ~cio[1])
+		rfop = 64'd0;
+	else
+		rfop = preg[cioreg];
+
+always_comb
+	rfoca = caregfile[Ca];
+
+`endif
 
 always_comb
 	mask = vm_regfile[deco.Rvm];
@@ -543,14 +627,29 @@ always_comb
 // Execute stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-Thor2021_eval_branch ube (xir, xa, xb, takb);
+Thor2021_eval_branch ube (.inst(xir), .a(xa), .b(xb), .takb(takb));
+
+wire [127:0] cmpo, cmpio;
+Thor2021_compare ucmp1
+(
+	.a(xa),
+	.b(xb),
+	.o(cmpo)
+);
+
+Thor2021_compare ucmp2
+(
+	.a(xa),
+	.b(imm),
+	.o(cmpio)
+);
 
 wire [6:0] cntlz_out;
 cntlz64 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 
-wire [191:0] sllro = {64'd0,xb,xa|pn} << xc0[5:0];
-wire [191:0] srlro = {xb|pn,xa,64'd0} >> xc0[5:0];
-wire [127:0] srao = {{64{xa[63]}},xa,64'd0} >> xb[5:0];
+wire [191:0] sllro = {64'd0,xb[63:0],xa[63:0]|pn[63:0]} << xc0[5:0];
+wire [191:0] srlro = {xb[63:0]|pn[63:0],xa[63:0],64'd0} >> xc0[5:0];
+wire [127:0] srao = {{64{xa[63]}},xa[63:0],64'd0} >> xb[5:0];
 
 wire [127:0] mul_prod1;
 reg [127:0] mul_prod;
@@ -589,8 +688,8 @@ Thor2021_divider udiv
   .ss(xDiv),
   .su(xDivsu),
   .isDivi(xDivi),
-  .a(xa),
-  .b(xb),
+  .a(xa[63:0]),
+  .b(xb[63:0]),
   .imm(imm),
   .qo(qo),
   .ro(ro),
@@ -603,9 +702,9 @@ Thor2021_divider udiv
 Thor2021_bitfield ubf
 (
 	.ir(xir),
-	.a(xa),
-	.b(xb),
-	.c(xc0),
+	.a(xa[63:0]),
+	.b(xb[63:0]),
+	.c(xc0[63:0]),
 	.o(bf_out)
 );
 
@@ -614,12 +713,26 @@ Thor2021_crypto ucrypto
 	.ir(xir),
 	.m(xm),
 	.z(xz),
-	.a(xa),
-	.b(xb),
-	.c(xc0),
+	.a(xa[63:0]),
+	.b(xb[63:0]),
+	.c(xc0[63:0]),
 	.t(),
 	.o(crypto_res)
 );
+
+wire [127:0] dfaso;
+// takes about 25 clocks (27 to be safe)
+DFPAddsub128nr udfa1
+(
+	.clk(clk_i),
+	.ce(1'b1),
+	.rm(xrm),
+	.op(xir.r3.func==SUB),
+	.a(xa),
+	.b(xb),
+	.o(dfaso)
+);
+
 
 Value mux_out;
 integer n2;
@@ -635,76 +748,69 @@ always_comb
 case(xir.any.opcode)
 R1:
 	case(xir.r1.func)
-	CNTLZ:	res2 = {57'd0,cntlz_out};
-	CNTLO:	res2 = {57'd0,cntlz_out};
-	default:	res2 = 64'd0;
+	CNTLZ:	res2 = {121'd0,cntlz_out};
+	CNTLO:	res2 = {121'd0,cntlz_out};
+	default:	res2 = 'd0;
 	endcase
 R2:
 	case(xir.r3.func)
-	ADD:	res2 = xa + xb + (xc0|pn);
-	SUB:	res2 = xa - xb - pn;
+	ADD:	res2 = xa + xb;// + (xc0|pn);
+	SUB:	res2 = xa - xb;// - pn;
+	CMP:	res2 = cmpo;
 	AND:	res2 = xa & xb & xc0;
 	OR:		res2 = xa | xb | xc0;
 	XOR:	res2 = xa ^ xb ^ xc0;
 	SLLP:	res2 = sllro[127:64];
 	SRLP:	res2 = srlro[127:64];
 	SRA:	res2 = srao[127:64];
-	MUL:	res2 = mul_prod[63:0] + (xc0|pn);
+	MUL:	res2 = mul_prod[63:0] + xc0;// + pn;
 	MULH:	res2 = mul_prod[127:64];
-	MULU:	res2 = mul_prod[63:0] + (xc0|pn);
+	MULU:	res2 = mul_prod[63:0] + xc0;// + pn;
 	MULUH:	res2 = mul_prod[127:64];
-	MULSU:res2 = mul_prod[63:0] + (xc0|pn);
-	MULF:	res2 = mul_prod[63:0] + (xc0|pn);
+	MULSU:res2 = mul_prod[63:0] + xc0;// + pn;
+	MULF:	res2 = mul_prod[63:0] + xc0;// + pn;
 	DIV:	res2 = qo;
 	DIVU:	res2 = qo;
 	DIVSU:	res2 = qo;
 	MUX:	res2 = mux_out;
-	SLT:	res2 = ($signed(xa) < $signed(xb)) ? xc0 : 64'd0;
-	SGE:	res2 = ($signed(xa) >= $signed(xb)) ? xc0 : 64'd0;
-	SLTU:	res2 = (xa < xb) ? xc0 : 64'd0;
-	SGEU:	res2 = (xa >= xb) ? xc0 : 64'd0;
-	SEQ:	res2 = (xa == xb) ? xc0 : 64'd0;
-	SNE:	res2 = (xa != xb) ? xc0 : 64'd0;
-	default:			res2 = 64'd0;
+	SLT:	res2 = ($signed(xa) < $signed(xb)) ? xc0 : 'd0;
+	SGE:	res2 = ($signed(xa) >= $signed(xb)) ? xc0 : 'd0;
+	SLTU:	res2 = (xa < xb) ? xc0 : 'd0;
+	SGEU:	res2 = (xa >= xb) ? xc0 : 'd0;
+	SEQ:	res2 = (xa == xb) ? xc0 : 'd0;
+	SNE:	res2 = (xa != xb) ? xc0 : 'd0;
+	default:			res2 = 'd0;
 	endcase
 VM:
 	case(xir.vmr2.func)
 	MTVM:			res2 = xa;
-	MTLC:			res2 = xa;
-	MFLC:			res2 = xlc;
-	default:	res2 = 64'd0;
+	default:	res2 = 'd0;
 	endcase
 OSR2:
 	case(xir.r3.func)
 	MFSEL:		res2 = memresp.res;
-	default:	res2 = 64'd0;
+	default:	res2 = 'd0;
 	endcase
 CSR:		res2 = csr_res;
-MFLK:		
-	if (mwrlk && mlkno=={xir[15],~xir[15]} && mval)
-		res2 = mlk.offs;
-	else if (wwrlk && wlkno=={xir[15],~xir[15]} && wval)
-		res2 = wlk.offs;
-	else
-		res2 = caregfile[{2'd0,xir[15],~xir[15]}].offs;
+MFLK:		res2 = xca.offs;
 BTFLD:	res2 = bf_out;
-ADD2R:				res2 = xa + xb + pn;
+ADD2R:				res2 = xa + xb;// + pn;
 AND2R:				res2 = xa & xb;
-OR2R:					res2 = xa | xb | pn;
-XOR2R:				res2 = xa ^ xb ^ pn;
+OR2R:					res2 = xa | xb;// | pn;
+XOR2R:				res2 = xa ^ xb;// ^ pn;
 SLT2R:				res2 = $signed(xa) < $signed(xb);
 LEAX:					res2 = xa + (xb << xSc);
-ADDI,ADDIL,LEA:		res2 = xa + imm + pn;
-SUBFI,SUBFIL:	res2 = imm - xa - pn;
+ADDI,ADDIL,LEA:		res2 = xa + imm;// + pn;
+SUBFI,SUBFIL:	res2 = imm - xa;// - pn;
 ANDI,ANDIL:		res2 = xa & imm;
-ORI,ORIL:			res2 = xa | imm | pn;
-XORI,XORIL:		res2 = xa ^ imm ^ pn;
+ORI,ORIL:			res2 = xa | imm;// | pn;
+XORI,XORIL:		res2 = xa ^ imm;// ^ pn;
 SLLR2:				res2 = xa << xb[5:0];
-CMPI,CMPIL:		res2 = $signed(xa) < $signed(imm) ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
-CMPUI,CMPUIL:	res2 = xa < imm ? -64'd1 : xa==imm ? 64'd0 : 64'd1;
-MULI,MULIL:		res2 = mul_prod[63:0] + pn;
-MULUI:MULUIL:	res2 = mul_prod[63:0] + pn;
-MULFI:				res2 = mul_prod[63:0] + pn;
+CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
+//CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
+MULI,MULIL:		res2 = mul_prod[63:0];// + pn;
+MULUI:MULUIL:	res2 = mul_prod[63:0];// + pn;
+MULFI:				res2 = mul_prod[63:0];// + pn;
 DIVI,DIVIL:		res2 = qo;
 SEQI,SEQIL:		res2 = xa == imm;
 SNEI,SNEIL:		res2 = xa != imm;
@@ -712,10 +818,13 @@ SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
 SGTI,SGTIL:		res2 = $signed(xa) > $signed(imm);
 SLTUI,SLTUIL:	res2 = xa < imm;
 SGTUI,SGTUIL:	res2 = xa > imm;
+DJMP:					res2 = xa - 2'd1;
+//STSET:				res2 = xc0 - 2'd1;
+LLA,LLAX,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDOS,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
 							res2 = memresp.res;
-STSET:							
+BSET:							
 	case(xir[31:29])
 	3'd0:	res2 = xa + 4'd1;
 	3'd1:	res2 = xa + 4'd2;
@@ -741,12 +850,17 @@ default:			res2 = 64'd0;
 endcase
 
 always_comb
-	res = res2|crypto_res;
+	res = res2;//|crypto_res;
 
 always_comb
 case(xir.any.opcode)
 R2:
 	case(xir.r3.func)
+	ADD:			carry_res = res2[64];
+	SUB:			carry_res = res2[64];
+	MUL:			carry_res = mul_prod[127:64];
+	MULU:			carry_res = mul_prod[127:64];
+	MULSU:		carry_res = mul_prod[127:64];
 	SLLP:			carry_res = sllro[191:128];
 	SRLP:			carry_res = srlro[63:0];
 	SRA:			carry_res = srao[63:0];
@@ -754,6 +868,7 @@ R2:
 	endcase
 // (a&b)|(a&~s)|(b&~s)
 ADD2R:	carry_res = res2[64];
+LLA,LLAX:	carry_res = memresp.res[127:64];
 default:	carry_res = 64'd0;
 endcase
 
@@ -912,15 +1027,16 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // A synchronizing instruction causes a stall until the sync clears.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+`ifdef OVERLAPPED_PIPELINE
 wire stall_i = !ihit;
 wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov|deco.enter) &&
 								(((|xcause || xFlowchg || xLoad) && xval) ||
 								 ((|mcause || mFlowchg) && mval) ||
 								 ((|wcause || wFlowchg) && wval))) ||
 								 ((xIsMul||xIsDiv) && xval) ||
-								(xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt}) && xval && xRt!=6'd0) ||
-//								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt}) && mval && mRt!=6'd0) ||
-//								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt}) && wval && wRt!=6'd0) ||
+								(xLoad && (Ra==xRt || {Tb,Rb}=={2'b00,xRt} || {Tc,Rc}=={2'b00,xRt} || Rc1==xRt) && xval && xRt!=6'd0) ||
+//								(mLoad && (Ra==mRt || {Tb,Rb}=={2'b00,mRt} || {Tc,Rc}=={2'b00,mRt} || Rc1==mRt) && mval && mRt!=6'd0) ||
+//								(wLoad && (Ra==wRt || {Tb,Rb}=={2'b00,wRt} || {Tc,Rc}=={2'b00,wRt} || Rc1==wRt) && wval && wRt!=6'd0) ||
 								(xSync && xval) || (mSync && mval) || (wSync && wval) || tSync || uSync || vSync;
 
 assign run = ihit;
@@ -930,6 +1046,15 @@ always_comb advance_m = advance_w;
 always_comb advance_x = advance_m;
 always_comb advance_d = advance_x && !stall_d;
 always_comb advance_i = advance_d;
+`else
+assign run = ihit;
+always_comb advance_t = TRUE;
+always_comb	advance_w = TRUE;
+always_comb advance_m = TRUE;
+always_comb advance_x = TRUE;
+always_comb advance_d = TRUE;
+always_comb advance_i = ihit;
+`endif
 
 reg [3:0] xx;	// debug marker
 
@@ -944,14 +1069,15 @@ if (rst_i) begin
 end
 else begin
 	tOnce();
-
+`ifdef OVERLAPPED_PIPELINE
 	tInsnFetch();
 	tDecode();
-	tStateMachine();
 	tExecute();
 	tMemory();
 	tWriteback();
 	tSyncTrailer();
+`endif
+	tStateMachine();
 
 end
 
@@ -962,7 +1088,6 @@ end
 task inv_i;
 begin
 	micro_ip <= 6'd0;
-	ir <= {7'd0,1'b0,NOP};
 //  ival <= INV;
   icause <= 16'h0;
 end
@@ -972,6 +1097,7 @@ task inv_d;
 begin
   dval <= INV;
   dcause <= 16'h0;
+	ir <= {7'd0,1'b0,NOP};
 end
 endtask
 
@@ -1018,7 +1144,7 @@ begin
 	xStoo <= FALSE;
 	xSeg <= 3'd0;
 	xSc <= 3'd0;
-	xStset <= FALSE;
+	xBset <= FALSE;
 	xStcmp <= FALSE;
 	xStmov <= FALSE;
 	xStfnd <= FALSE;
@@ -1028,6 +1154,7 @@ begin
 	xdj <= FALSE;
 	xPredictableBranch <= FALSE;
 	xRt <= 6'd0;
+	xCt <= 4'h0;
 	xRti <= FALSE;
 	mRti <= FALSE;
 	xRex <= FALSE;
@@ -1071,14 +1198,9 @@ begin
 	xcause <= 16'h0000;
 	mcause <= 16'h0000;
 	wcause <= 16'h0000;
-	lc <= 64'd0;
 	wLoad <= FALSE;
 	mExBranch <= FALSE;
 	wExBranch <= FALSE;
-	mlk <= 64'd0;
-	wlk <= 64'd0;
-	mlkno <= 2'd0;
-	wlkno <= 2'd0;
 	xMtlk <= FALSE;
 	micro_ip <= 6'd0;
 	m512 <= FALSE;
@@ -1098,6 +1220,7 @@ begin
 	xFlowchg = FALSE;
 	mFlowchg = FALSE;
 	wFlowchg = FALSE;
+	rm <= 'd0;
 end
 endtask
 
@@ -1127,8 +1250,20 @@ RESTART1:
 RESTART2:
 	begin
 		rst_cnt <= 6'd0;
+`ifdef OVERLAPPED_PIPELINE
 		goto(RUN);
+`else
+		goto (IFETCH);
+`endif
 	end
+`ifndef OVERLAPPED_PIPELINE
+IFETCH:	tInsnFetch();
+DECODE: tDecode();
+EXECUTE:	tExecute();
+MEMORY:	tMemory();
+WRITEBACK:	tWriteback();
+SYNC:	tSyncTrailer();
+`endif
 RUN:
 	begin
 	end	// RUN
@@ -1163,6 +1298,8 @@ WAIT_MEM2:
 						m512 <= TRUE;
 				end
 				if (|memresp.cause) begin
+					if (~|mcause)
+						mistk_depth <= mistk_depth + 2'd1;
 					wcause <= memresp.cause;
 					wbadAddr <= memresp.badAddr;
 				end
@@ -1177,13 +1314,21 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
+`ifdef OVERLAPPED_PIPELINE
     goto(RUN);
+`else
+		goto(IFETCH);
+`endif
   end
 INVnRUN2:
   begin
     //inv_x();
 		xx <= 4'd7;
+`ifdef OVERLAPPED_PIPELINE
     goto(RUN);
+`else
+		goto(IFETCH);
+`endif
   end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1207,7 +1352,7 @@ MUL1:
     else if (xMulsui) bb <= imm;
     else if (xMulu|xMulf) bb <= xb;
     else bb <= imm; // MULUI
-    delay_cnt <= (xMulf|xMulfi) ? 8'd2 : 8'd17;	// Multiplier has 18 stages
+    delay_cnt <= (xMulf|xMulfi) ? 8'd3 : 8'd18;	// Multiplier has 18 stages
 	// Now wait for the six stage pipeline to finish
     call(DELAYN,MUL9);
   end
@@ -1267,6 +1412,28 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Increment / Decrement amount for block instructions.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function [10:0] fnIamt;
+input [3:0] cd;
+case(cd)
+4'd0:	fnIamt = 11'd0;
+4'd1:	fnIamt = 11'd1;
+4'd2:	fnIamt = 11'd2;
+4'd3:	fnIamt = 11'd4;
+4'd4:	fnIamt = 11'd8;
+4'd5:	fnIamt = 11'd16;
+4'd15: fnIamt = 11'h7FF;
+4'd14: fnIamt = 11'h7FE;
+4'd13:	fnIamt = 11'h7FC;
+4'd13:	fnIamt = 11'h7F8;
+4'd12:	fnIamt = 11'h7F0;
+default:	fnIamt = 11'd0;
+endcase
+endfunction
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Instruction Fetch stage
 // We want decodes in the IFETCH stage to be fast so they don't appear
 // on the critical path. Keep the decodes to a minimum.
@@ -1275,6 +1442,9 @@ endtask
 task tInsnFetch;
 begin
 	if (advance_i) begin
+`ifndef OVERLAPPED_PIPELINE
+		goto (DECODE);
+`endif
 		ival <= VAL;
 		dval <= ival;
 		dlen <= ilen;
@@ -1283,65 +1453,72 @@ begin
 			istep <= istep + 2'd1;
 			ip <= ip;
 		end
-		else if ((insn.any.opcode==STSET || insn.any.opcode==STMOV || insn.any.opcode==STFND || insn.any.opcode==STCMP) && lc != 64'd0)
-			ip <= ip;
+//		else if ((insn.any.opcode==BSET || insn.any.opcode==STMOV || insn.any.opcode==STFND || insn.any.opcode==STCMP) && r58 != 64'd0)
+//			ip <= ip;
 		else if (micro_ip != 7'd0) begin
 			case(micro_ip)
 			// POP Ra
-			7'd1:		begin micro_ip <= 7'd2; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
-			7'd2:		begin micro_ip <= 7'd0; ir <= {11'h008,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + dlen; end							// ADD $SP,$SP,#8
+			7'd1:		begin micro_ip <= 7'd2; ir <= {3'd6,24'h00,6'd63,micro_ir[14:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
+			7'd2:		begin micro_ip <= 7'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
 			// POP Ra,Rb
-			7'd3:		begin micro_ip <= 7'd4; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd4:		begin micro_ip <= 7'd5; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
-			7'd5:		begin micro_ip <= 7'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + dlen; end							// ADD $SP,$SP,#16
+			7'd3:		begin micro_ip <= 7'd4; ir <= {3'd6,24'h00,6'd63,micro_ir[14: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd4:		begin micro_ip <= 7'd5; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,LDH}; end	// LDOS $Rb,[$SP]
+			7'd5:		begin micro_ip <= 7'd0; ir <= {11'h020,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
 			// POP Ra,Rb,Rc
-			7'd6:		begin micro_ip <= 7'd7; ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,LDOS}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd7:		begin micro_ip <= 7'd8; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,LDOS}; end	// LDOS $Rb,[$SP]
-			7'd8:		begin micro_ip <= 7'd9; ir <= {3'd6,8'h10,6'd63,micro_ir[26:21],1'b0,LDOS}; end	// LDOS $Rc,[$SP]
-			7'd9:		begin micro_ip <= 7'd0; ir <= {11'h018,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + dlen; end							// ADD $SP,$SP,#24
+			7'd6:		begin micro_ip <= 7'd7; ir <= {3'd6,24'h00,6'd63,micro_ir[14: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd7:		begin micro_ip <= 7'd8; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,LDH}; end	// LDOS $Rb,[$SP]
+			7'd8:		begin micro_ip <= 7'd9; ir <= {3'd6,24'h20,6'd63,micro_ir[26:21],1'b0,LDH}; end	// LDOS $Rc,[$SP]
+			7'd9:		begin micro_ip <= 7'd0; ir <= {11'h030,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
 			// PUSH Ra
-			7'd10:	begin micro_ip <= 7'd11; ir <= {11'h7F8,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
-			7'd11:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h00,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + dlen; end	// STOS $Ra,[$SP]
+			7'd10:	begin micro_ip <= 7'd11; ir <= {11'h7F0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
+			7'd11:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h00,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
 			// PUSH Ra,Rb
-			7'd12:	begin micro_ip <= 7'd13; ir <= {11'h7F0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
-			7'd13:	begin micro_ip <= 7'd14; ir <= {3'd6,8'h00,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,[$SP]
-			7'd14:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h08,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + dlen; end		// STOS $Ra,8[$SP]
+			7'd12:	begin micro_ip <= 7'd13; ir <= {11'h7E0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
+			7'd13:	begin micro_ip <= 7'd14; ir <= {3'd6,24'h00,6'd63,micro_ir[20:15],1'b0,STH}; end	// STOS $Rb,[$SP]
+			7'd14:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h10,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,8[$SP]
 			// PUSH Ra,Rb,Rc
-			7'd15:	begin micro_ip <= 7'd16; ir <= {11'h7E8,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
-			7'd16:	begin micro_ip <= 7'd17; ir <= {3'd6,8'h00,6'd63,micro_ir[26:21],1'b0,STOS}; end	// STOS $Rc,[$SP]
-			7'd17:	begin micro_ip <= 7'd18; ir <= {3'd6,8'h08,6'd63,micro_ir[20:15],1'b0,STOS}; end	// STOS $Rb,8[$SP]
-			7'd18:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h10,6'd63,micro_ir[14:9],1'b0,STOS}; ip.offs <= ip.offs + dlen; end		// STOS $Ra,16[$SP]
+			7'd15:	begin micro_ip <= 7'd16; ir <= {11'h7D0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
+			7'd16:	begin micro_ip <= 7'd17; ir <= {3'd6,24'h00,6'd63,micro_ir[26:21],1'b0,STH}; end	// STOS $Rc,[$SP]
+			7'd17:	begin micro_ip <= 7'd18; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,STH}; end	// STOS $Rb,8[$SP]
+			7'd18:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h20,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
 			// LEAVE
 			7'd20:	begin micro_ip <= 7'd21; ir <= {11'h000,6'd62,6'd63,1'b0,ADDI};	end						// ADD $SP,$FP,#0
-			7'd21:	begin micro_ip <= 7'd22; ir <= {3'd6,8'h00,6'd63,6'd62,1'b0,LDOS}; end				// LDO $FP,[$SP]
-			7'd22:	begin micro_ip <= 7'd23; ir <= {3'd6,8'h10,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,16[$SP]
-			7'd23:	begin micro_ip <= 7'd24; ir <= {1'd0,6'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
-			7'd24:	begin micro_ip <= 7'd25; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,24[$SP]
-			7'd25:	begin micro_ip <= 7'd26; ir <= {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
-			7'd26: 	begin micro_ip <= 7'd27; ir <= {{4{micro_ir[31]}},micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
-			7'd27:	begin micro_ip <= 7'd0;  ir <= {2'd0,micro_ir[11:9],2'd1,1'b0,RTS}; ip.offs <= 32'hFFFD0000; end
+			7'd21:	begin micro_ip <= 7'd22; ir <= {3'd6,24'h00,6'd63,6'd62,1'b0,LDH}; end				// LDO $FP,[$SP]
+			7'd22:	begin micro_ip <= 7'd23; ir <= {3'd6,24'h10,6'd63,6'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
+			7'd23:	begin micro_ip <= 7'd26; ir <= {1'd0,6'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
+//			7'd24:	begin micro_ip <= 7'd25; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,24[$SP]
+//			7'd25:	begin micro_ip <= 7'd26; ir <= {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
+			7'd26: 	begin micro_ip <= 7'd27; ir <= {{4'h0,micro_ir[31:13]}+8'd4,4'b0,6'd63,6'd63,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
+			7'd27:	begin micro_ip <= 7'd0;  ir <= {1'd0,micro_ir[12:9],2'd1,1'b0,RTS}; ip.offs <= 32'hFFFD0000; end
 			// STOO
 			7'd28:	begin micro_ip <= 7'd29; ir <= {micro_ir[47:12],3'd0,1'b0,STOO}; dlen <= 4'd6; end
 			7'd29:	begin micro_ip <= 7'd30; ir <= {micro_ir[47:12],3'd2,1'b0,STOO}; end
 			7'd30:	begin micro_ip <= 7'd31; ir <= {micro_ir[47:12],3'd4,1'b0,STOO}; end
-			7'd31:	begin micro_ip <= 7'd0;  ir <= {micro_ir[47:12],3'd6,1'b0,STOO}; ip.offs <= ip.offs + dlen; end
+			7'd31:	begin micro_ip <= 7'd0;  ir <= {micro_ir[47:12],3'd6,1'b0,STOO}; ip.offs <= ip.offs + 4'd6; end
 			// ENTER
 			7'd32: 	begin micro_ip <= 7'd33; ir <= {11'h7C0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end						// ADD $SP,$SP,#-64
-			7'd33:	begin micro_ip <= 7'd34; ir <= {3'd6,8'h00,6'd63,6'd62,1'b0,STOS}; end				// STO $FP,[$SP]
+			7'd33:	begin micro_ip <= 7'd34; ir <= {3'd6,24'h00,6'd63,6'd62,1'b0,STH}; end				// STO $FP,[$SP]
 			7'd34:	begin micro_ip <= 7'd35; ir <= {1'd0,6'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
-			7'd35:	begin micro_ip <= 7'd36; ir <= {3'd6,8'h10,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,16[$SP]
-			7'd36:	begin micro_ip <= 7'd37; ir <= {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
-			7'd37:	begin micro_ip <= 7'd38; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,24[$SP]
-			7'd38:	begin micro_ip <= 7'd39; ir <= {3'd6,8'h20,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,32[$SP]
-			7'd39:	begin micro_ip <= 7'd40; ir <= {3'd6,8'h28,6'd63,6'd00,1'b0,STOS}; end				// STO $R0,40[$SP]
+			7'd35:	begin micro_ip <= 7'd38; ir <= {3'd6,24'h10,6'd63,6'd03,1'b0,STH}; end				// STO $T0,16[$SP]
+//			7'd36:	begin micro_ip <= 7'd37; ir <= {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
+//			7'd37:	begin micro_ip <= 7'd38; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,24[$SP]
+			7'd38:	begin micro_ip <= 7'd39; ir <= {3'd6,24'h20,6'd63,6'd00,1'b0,STH}; end				// STH $R0,32[$SP]
+			7'd39:	begin micro_ip <= 7'd40; ir <= {3'd6,24'h30,6'd63,6'd00,1'b0,STH}; end				// STH $R0,48[$SP]
 			7'd40: 	begin micro_ip <= 7'd41; ir <= {11'h000,6'd63,6'd62,1'b0,ADDI}; end						// ADD $FP,$SP,#0
-			7'd41: 	begin micro_ip <= 7'd0;  ir <= {{4{micro_ir[31]}},micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + dlen; end // SUB $SP,$SP,#Amt
+			7'd41: 	begin micro_ip <= 7'd0;  ir <= {{4{micro_ir[31]}},micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + 4'd4; end // SUB $SP,$SP,#Amt
 			// DEFCAT
 			7'd44:	begin micro_ip <= 7'd45; ir <= {3'd6,8'h00,6'd62,6'd3,1'b0,LDOS}; dlen <= 4'd2; end					// LDO $Tn,[$FP]
 			7'd45:	begin micro_ip <= 7'd46; ir <= {3'd6,8'h20,6'd3,6'd4,1'b0,LDOS}; end					// LDO $Tn+1,32[$Tn]
 			7'd46:	begin micro_ip <= 7'd47; ir <= {3'd6,8'h10,6'd62,6'd4,1'b0,STOS}; end					// STO $Tn+1,16[$FP]
 			7'd47:	begin micro_ip <= 7'd48; ir <= {3'd6,8'h28,6'd3,6'd4,1'b0,LDOS}; end					// LDO $Tn+1,40[$Tn]
-			7'd48:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h18,6'd62,6'd4,1'b0,STOS}; ip.offs <= ip.offs + dlen; end					// STO $Tn+1,24[$FP]
+			7'd48:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h18,6'd62,6'd4,1'b0,STOS}; ip.offs <= ip.offs + 4'd2; end					// STO $Tn+1,24[$FP]
+			// BSETx
+			7'd50:	begin micro_ip <= 7'd51; ir <= {micro_ir[34:32],23'h00,micro_ir[20:15],micro_ir[26:21],1'b0,4'h9,2'd0,micro_ir[30:29]}; end
+			7'd51:	begin micro_ip <= 7'd52; ir <= {fnIamt(micro_ir[12:9]),micro_ir[20:15],micro_ir[20:15],1'b0,ADDI}; end
+			7'd52:	begin micro_ip <= 7'd53; ir <= {11'h7FF,6'd58,6'd58,1'b0,ADDI}; end
+			7'd53:	begin micro_ip <= 7'd51; ir <= {3'd0,8'd54,6'd58,7'd0,MJNEZ}; end
+			7'd54:	begin micro_ip <= 7'd0;  ir <= NOP; ip.offs <= ip.offs + 4'd6; end
+			7'd55:	begin micro_ip <= 7'd53; ir <= {8'h7FF,6'd58,6'd58,1'd0,ADDI}; end
 			// STCTX
 			7'd64:	begin micro_ip <= 7'd65; ir <= {micro_ir[15:13],30'h00,5'd0,1'b0,1'b0,STOO}; dlen <= 4'd2; end
 			7'd65:	begin micro_ip <= 7'd66; ir <= {micro_ir[15:13],30'h10,5'd1,1'b0,1'b0,STOO}; end
@@ -1374,7 +1551,7 @@ begin
 			7'd92:	begin micro_ip <= 7'd93; ir <= {micro_ir[15:13],30'h1C0,5'd28,1'b0,1'b0,STOO}; end
 			7'd93:	begin micro_ip <= 7'd94; ir <= {micro_ir[15:13],30'h1D0,5'd29,1'b0,1'b0,STOO}; end
 			7'd94:	begin micro_ip <= 7'd95; ir <= {micro_ir[15:13],30'h1E0,5'd30,1'b0,1'b0,STOO}; end
-			7'd95:	begin micro_ip <= 7'd0;  ir <= {micro_ir[15:13],30'h1F0,5'd31,1'b0,1'b0,STOO}; ip.offs <= ip.offs + dlen; end    
+			7'd95:	begin micro_ip <= 7'd0;  ir <= {micro_ir[15:13],30'h1F0,5'd31,1'b0,1'b0,STOO}; ip.offs <= ip.offs + 4'd2; end    
 			// LDCTX
 			7'd96:	begin micro_ip <= 7'd97;  ir <= {micro_ir[15:13],30'h00,3'd0,3'd1,1'b0,LDOO}; dlen <= 4'd2; end
 			7'd97:	begin micro_ip <= 7'd98;  ir <= {micro_ir[15:13],30'h40,3'd1,3'd1,1'b0,LDOO}; end
@@ -1383,7 +1560,7 @@ begin
 			7'd100:	begin micro_ip <= 7'd101; ir <= {micro_ir[15:13],30'h100,3'd4,3'd1,1'b0,LDOO}; end
 			7'd101:	begin micro_ip <= 7'd102; ir <= {micro_ir[15:13],30'h140,3'd5,3'd1,1'b0,LDOO}; end
 			7'd102:	begin micro_ip <= 7'd103; ir <= {micro_ir[15:13],30'h180,3'd6,3'd1,1'b0,LDOO}; end
-			7'd103:	begin micro_ip <= 7'd0;   ir <= {micro_ir[15:13],30'h1C0,3'd7,3'd1,1'b0,LDOO}; ip.offs <= ip.offs + dlen; end
+			7'd103:	begin micro_ip <= 7'd0;   ir <= {micro_ir[15:13],30'h1C0,3'd7,3'd1,1'b0,LDOO}; ip.offs <= ip.offs + 4'd2; end
 			default:	;
 			endcase
 		end
@@ -1403,9 +1580,10 @@ begin
 			PUSH3R:	begin micro_ip <= 7'd15; ip <= ip; end
 			ENTER:	begin micro_ip <= 7'd32; ip <= ip; end
 			LEAVE:	begin micro_ip <= 7'd20; ip <= ip; end
-			STOO:		begin if (insn[10]) begin micro_ip <= 7'd28; ip <= ip; end end
+//			STOO:		begin if (insn[10]) begin micro_ip <= 7'd28; ip <= ip; end end
 			LDCTX:	begin micro_ip <= 7'd96; ip <= ip; end
 			STCTX:	begin micro_ip <= 7'd64; ip <= ip; end
+			BSET:		begin micro_ip <= 7'd55; ip <= ip; end
 			JMP:
 				if (insn.jmp.Ca==3'd0)
 					ip.offs <= {{30{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
@@ -1423,28 +1601,39 @@ begin
 		dpredict_taken <= ipredict_taken;
 		dcause <= icause;
 		dpfx <= is_prefix(insn.any.opcode);
+		distk_depth <= istk_depth;
 		if (is_prefix(insn.any.opcode))
 			pfx_cnt <= pfx_cnt + 2'd1;
 		else
 			pfx_cnt <= 3'd0;
 		// Interrupts disabled while running micro-code.
 		if (micro_ip==7'd0 && cio==16'h0000) begin
-			if (irq_i > pmStack[3:1] && gie && !dpfx)
+			if (irq_i > pmStack[3:1] && gie && !dpfx) begin
 				icause <= 16'h8000|icause_i|(irq_i << 4'd8);
-			else if (wc_time_irq && gie && !dpfx)
+				istk_depth <= istk_depth + 2'd1;
+			end
+			else if (wc_time_irq && gie && !dpfx) begin
 				icause <= 16'h8000|FLT_TMR;
-			else if (insn.any.opcode==BRK)
+				istk_depth <= istk_depth + 2'd1;
+			end
+			else if (insn.any.opcode==BRK) begin
 				icause <= FLT_BRK;
+				istk_depth <= istk_depth + 2'd1;
+			end
 			// Triple prefix fault.
-			else if (pfx_cnt > 3'd2)
+			else if (pfx_cnt > 3'd2) begin
 				icause <= 16'h8000|FLT_PFX;
+				istk_depth <= istk_depth + 2'd1;
+			end
 		end
 	end
 	// Wait for cache load
 	else begin
+`ifdef OVERLAPPED_PIPELINE
 		ip <= ip;
 		if (advance_d)
 			inv_d();
+`endif
 	end	
 end
 endtask
@@ -1459,6 +1648,10 @@ endtask
 task tDecode;
 begin
 	if (advance_d) begin
+`ifndef OVERLAPPED_PIPELINE
+		goto (EXECUTE);
+`endif
+		xistk_depth <= distk_depth;
 		xval <= dval;
 		xir <= ir;
 		xlen <= dlen;
@@ -1466,13 +1659,14 @@ begin
 		xb <= rfob;
 		xc0 <= rfoc0;
 		xc1 <= rfoc1;
+		xca <= rfoca;
 		pn <= rfop;
 		imm <= deco.imm;
-		xlc <= dlc;
 		xRa <= Ra;
 		xRb <= Rb;
 		xRc <= Rc;
 		xRt <= Rt;
+		xCt <= Ct;
 		xcioreg <= cioreg;
 		xcio <= cio[1:0];
 		xSc <= deco.scale;
@@ -1482,6 +1676,7 @@ begin
 		xJmp <= deco.jmp;
 		xJxx <= deco.jxx;
 		xJxz <= deco.jxz;
+		xmjnez <= deco.mjnez;
 		xdj <= deco.dj;
 		xRts <= deco.rts;
 		xFlowchg <= deco.flowchg;
@@ -1489,6 +1684,7 @@ begin
 		xpredict_taken <= dpredict_taken;
 		xLoadr <= deco.loadr;
 		xLoadn <= deco.loadn;
+		xLdoo <= deco.ldoo;
 		xStorer <= deco.storer;
 		xStoren <= deco.storen;
 		xStoo <= deco.stoo;
@@ -1500,7 +1696,7 @@ begin
 		xMem <= deco.mem;
 		xLoad <= deco.load;
 		xTlb <= deco.tlb;
-		xStset <= deco.stset;
+		xBset <= deco.stset;
 		xStmov <= deco.stmov;
 		xStcmp <= deco.stcmp;
 		xStfnd <= deco.stfnd;
@@ -1523,14 +1719,13 @@ begin
 		xSync <= deco.sync;
 		xRti <= deco.rti;
 		xRex <= deco.rex;
-		xMtlc <= deco.mtlc;
-		xwrlc <= deco.wrlc;
 		xMfsel <= deco.mfsel;
 		xMtsel <= deco.mtsel;
 		xcause <= dcause;
 		xstep <= dstep;
 		xRtvec <= deco.Rtvec;
 		xMtlk <= deco.mtlk;
+		xrm <= deco.rm;
 		xmaskbit <= mask[dstep];
 		xzbit <= zbit;
 		xpredict_taken <= dpredict_taken;
@@ -1551,11 +1746,25 @@ begin
 				ip.offs <= dip.offs + deco.jmptgt;
 			end
 		end
+		if (deco.jxx||deco.jxz) begin
+  		xcares.offs <= dip.offs + dlen;
+  		xcares.sel <= dip.sel;
+		end
+		if (deco.jmp) begin
+  		xcares.offs <= dip.offs + dlen;
+  		xcares.sel <= dip.sel;
+  	end
+  	if (deco.mtlk) begin
+  		xcares.offs <= rfoc0;
+  		xcares.sel <= dip.sel;
+  	end
 	end
+`ifdef OVERLAPPED_PIPELINE
 	else if (advance_x) begin
 		inv_x();
 		xx <= 4'd1;
 	end
+`endif
 end
 endtask
 
@@ -1579,9 +1788,23 @@ begin
   	byt:		begin memreq.func2 <= MR_LDB; memreq.sel <= 16'h0001; end
   	wyde:		begin memreq.func2 <= MR_LDW; memreq.sel <= 16'h0003; end
   	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
+  	octa:		begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h00FF; end
+  	hexi:		begin memreq.func2 <= MR_LDH; memreq.sel <= 16'hFFFF; end
   	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
   	endcase
   	memreq.adr.offs <= xa + imm;
+  	memreq.seg <= {2'd0,xSeg};
+  	memreq.wr <= TRUE;
+  	goto (WAIT_MEM1);
+  end
+  else if (xLdoo) begin
+  	memreq.tid <= tid;
+  	tid <= tid + 2'd1;
+  	memreq.func <= MR_LOAD;
+  	memreq.func2 <= MR_LDOO;
+  	memreq.sel <= 16'hFFFF;
+  	memreq.adr.offs <= xa + imm;
+  	memreq.adr.offs[5:0] <= 6'h00;
   	memreq.seg <= {2'd0,xSeg};
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
@@ -1606,6 +1829,8 @@ begin
   	byt:		begin memreq.func2 <= MR_LDB; memreq.sel <= 16'h0001; end
   	wyde:		begin memreq.func2 <= MR_LDW; memreq.sel <= 16'h0003; end
   	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
+  	octa:		begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h00FF; end
+  	hexi:		begin memreq.func2 <= MR_LDH; memreq.sel <= 16'hFFFF; end
   	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
   	endcase
   	memreq.adr.offs <= siea;
@@ -1633,7 +1858,7 @@ begin
   	byt:		begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
   	wyde:		begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
   	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-  	hexi:		begin memreq.func2 <= MR_STOO; memreq.sel <= 16'hFFFF; end
+  	hexi:		begin memreq.func2 <= MR_STH; memreq.sel <= 16'hFFFF; end
   	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
   	endcase
   	memreq.adr.offs <= xa + imm;
@@ -1650,7 +1875,7 @@ begin
   	byt:		begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
   	wyde:		begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
   	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-  	hexi:		begin memreq.func2 <= MR_STOO; memreq.sel <= 16'hFFFF; end
+  	hexi:		begin memreq.func2 <= MR_STH; memreq.sel <= 16'hFFFF; end
   	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
   	endcase
   	memreq.adr.offs <= siea;
@@ -1659,9 +1884,8 @@ begin
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
-	else if (xStset) begin
-		if (xlc != 64'd0) begin
-   		wlc <= xlc - 2'd1;
+	else if (xBset) begin
+		if (xc0 != 64'd0) begin
 	  	memreq.tid <= tid;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_STORE;
@@ -1678,11 +1902,10 @@ begin
 	  	goto (WAIT_MEM1);
   	end
   	else
-  		xStset <= FALSE;
+  		xBset <= FALSE;
 	end
 	else if (xStmov) begin
-		if (xlc != 64'd0) begin
-   		wlc <= xlc - 2'd1;
+		if (xc0 != 64'd0) begin
 	  	memreq.tid <= tid;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_MOVLD;
@@ -1747,16 +1970,10 @@ task tJxx;
 begin
   if (xJxx|xJxz) begin
   	mExBranch <= TRUE;
-  	if (xdj)
-  		mlc <= xlc - 2'd1;
-  	if (xir.jxx.lk != 2'd0 && (xdj ? (takb && xlc != 64'd0) : takb)) begin
-  		mwrlk <= TRUE;
-  		mlk.offs <= xip.offs + xlen;
-  		mlk.sel <= xip.sel;
-  		mlkno <= xir.jxx.lk;
-  	end
+  	if (!takb)
+  		mcarfwr <= FALSE;
     if (bpe) begin
-      if (xpredict_taken && !(xdj ? takb && xlc != 64'd0 : takb) && xPredictableBranch) begin
+      if (xpredict_taken && !takb && xPredictableBranch) begin
 		    inv_i();
 		    inv_d();
 		    inv_x();
@@ -1765,12 +1982,24 @@ begin
         // Was selector changed? If so change it back.
         tChangeIPSel(xip.sel);
       end
-      else if ((!xpredict_taken && (xdj ? takb && xlc != 64'd0 : takb)) || !xPredictableBranch)
+      else if ((!xpredict_taken && takb) || !xPredictableBranch)
       	tBranch(4'd3);
     end
-    else if (xdj ? (takb && xlc != 64'd0) : takb)
+    else if (takb)
     	tBranch(4'd4);
   end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tMjnez;
+begin
+	if (xmjnez) begin
+		if (!takb)
+			micro_ip <= xir[28:21];
+	end
 end
 endtask
 
@@ -1781,15 +2010,7 @@ task tJmp;
 begin
   if (xJmp) begin
   	mExBranch <= TRUE;
-  	if (xdj)
-  		mlc <= xlc - 2'd1;
-  	if (xir.jmp.lk != 2'd0) begin
-  		mwrlk <= TRUE;
-  		mlk.offs <= xip.offs + xlen;
-  		mlk.sel <= xip.sel;
-  		mlkno <= xir.jmp.lk;
-  	end
-  	if (xdj ? (xlc != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
+  	if (xdj ? (xa != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
   		tBranch(4'd5);
 	end
 end
@@ -1806,19 +2027,9 @@ begin
 	    inv_d();
 	    inv_x();
 			xx <= 4'd6;
-			if (mwrlk && mlkno==xir.rts.lk && mval) begin
-				ip.offs <= mlk.offs + {xir.rts.cnst,1'b0};
-	  		tChangeIPSel(mlk.sel);
-			end
-			else if (wwrlk && wlkno==xir.rts.lk && wval) begin
-				ip.offs <= wlk.offs + {xir.rts.cnst,1'b0};
-	  		tChangeIPSel(wlk.sel);
-			end
-			else begin
-	  		ip.offs <= caregfile[{2'b0,xir.rts.lk}].offs + {xir.rts.cnst,1'b0};
-				// Selector changing?
-				tChangeIPSel(caregfile[{2'b0,xir.rts.lk}].sel);
-			end
+  		ip.offs <= xca.offs + {xir.rts.cnst,1'b0};
+			// Selector changing?
+			tChangeIPSel(xca.sel);
 		end
 	end
 end
@@ -1833,20 +2044,29 @@ endtask
 task tExecute;
 begin
 	if (advance_x) begin
+`ifndef OVERLAPPED_PIPELINE
+		goto (MEMORY);
+`endif
+		mistk_depth <= xistk_depth;
 		mval <= xval;
 		mir <= xir;
 		mip <= xip;
 		mRt <= xRt;
+		mCt <= xCt;
+		mcares <= xcares;
 		mcioreg <= xcioreg;
 		mcio <= xcio;
 		mrfwr <= xrfwr;
 		mvmrfwr <= xvmrfwr;
+		mcarfwr <= xcarfwr;
 		mLoad <= xLoad;
-		mStset <= xStset;
+		mStset <= xBset;
 		mStmov <= xStmov;
-		mres <= res;
+		// For loads the memory result will be set by the state machine. Do
+		// not override the state machine's setting.
+		if (!xLoad)
+			mres <= res;
 		mcarry_res <= carry_res;
-		mlc <= xlc;
 		mCsr <= xCsr;
 		mSync <= xSync;
 		mJmp <= xJmp;
@@ -1856,11 +2076,8 @@ begin
 		mRti <= xRti;
 		mRex <= xRex;
 		mFlowchg <= xFlowchg;
-		mMtlc <= xMtlc;
-		mwrlc <= xwrlc;
-		mwrlk <= FALSE;
-		mlkno <= 2'd0;
 		ma <= xa;
+		mca <= xca;
 		mstep <= xstep;
 		mmaskbit <= xmaskbit;
 		mzbit <= xzbit;
@@ -1871,21 +2088,14 @@ begin
 			tJxx();
 	    tJmp();
 	  	tRts();
-	  	if (xMtlc)
-	  		mlc <= res;
-	  	if (xMtlk) begin
-	  		mwrlk <= TRUE;
-	  		mlk.offs <= xc0;
-	  		mlk.sel <= xip.sel;
-	  		mlkno <= {xir[15],~xir[15]};
-	  	end
-
 			tExMem();
 
 		end	// xval
 	end	// advance_x
+`ifdef OVERLAPPED_PIPELINE
 	else if (advance_m)
 		inv_m();
+`endif
 end
 endtask
 
@@ -1895,24 +2105,28 @@ endtask
 task tMemory;
 begin
 	if (advance_m) begin
+`ifndef OVERLAPPED_PIPELINE
+		goto (WRITEBACK);
+`endif
+		wistk_depth <= mistk_depth;
 		wval <= mval;
 		wir <= mir;
 		wip <= mip;
 		wRt <= mRt;
+		wCt <= mCt;
 		wcioreg <= mcioreg;
 		wcio <= mcio;
 		wcarry_res <= mcarry_res;
 		wrfwr <= mrfwr;
 		w512 <= m512;
 		wvmrfwr <= mvmrfwr;
+		wcarfwr <= mcarfwr;
 		wLoad <= mLoad;
 		wStset <= mStset;
 		wStmov <= mStmov;
 		wres <= mres;
+		wcares <= mcares;
 		wres512 <= mres512;
-		wlc <= mlc;
-		wlk <= mlk;
-		wlkno <= mlkno;
 		wCsr <= mCsr;
 		wSync <= mSync;
 		wJmp <= mJmp;
@@ -1922,10 +2136,8 @@ begin
 		wRti <= mRti;
 		wRex <= mRex;
 		wFlowchg <= mFlowchg;
-		wMtlc <= mMtlc;
-		wwrlc <= mwrlc;
-		wwrlk <= mwrlk;
 		wa <= ma;
+		wca <= mca;
 		wstep <= mstep;
 		wmaskbit <= mmaskbit;
 		wzbit <= mzbit;
@@ -1934,8 +2146,10 @@ begin
 		wJmptgt <= mJmptgt;
 		wExBranch <= mExBranch;
 	end
+`ifdef OVERLAPPED_PIPELINE
 	else if (advance_w)
 		inv_w();
+`endif
 end
 endtask
 
@@ -1945,6 +2159,9 @@ endtask
 task tWriteback;
 begin
   if (advance_w) begin
+`ifndef OVERLAPPED_PIPELINE
+		goto (SYNC);
+`endif
 		if (wval) begin
 			if (wcio[0])
 				preg[wcioreg] <= wcarry_res;
@@ -1957,8 +2174,7 @@ begin
 				plStack <= {plStack[55:0],8'hFF};
 				cause[2'd3] <= wcause & 16'h80FF;
 				badaddr[2'd3] <= wbadAddr;
-				caregfile[4'h8+istk_depth] <= ip;
-				istk_depth <= istk_depth + 2'd1;
+				caregfile[4'd8+wistk_depth] <= ip;
 				ip.offs <= tvec[3'd6] + {omode,6'h00};
 				tChangeIPSel(tvec[3'd7][31:0]);
 				inv_i();
@@ -1969,20 +2185,20 @@ begin
 				xx <= 4'd8;
 			end
 			else begin
-		  	if (wwrlk)
-		    	caregfile[{2'b0,wlkno}] <= wlk;
+		  	if (wcarfwr)
+		    	caregfile[wCt] <= wcares;
 				if (wRti) begin
 					if (|istk_depth) begin
 						pmStack <= {8'h3E,pmStack[63:8]};
 						plStack <= {8'hFF,plStack[63:8]};
-						ip.offs <= caregfile[4'h7+istk_depth].offs;	// 8-1
+						ip.offs <= wca.offs;	// 8-1
 						istk_depth <= istk_depth - 2'd1;
 						inv_i();
 						inv_d();
 						inv_x();
 						inv_m();
 						inv_w();
-						tChangeIPSel(caregfile[4'h7+istk_depth].sel);
+						tChangeIPSel(wca.sel);
 						xx <= 4'd9;
 					end
 				end
@@ -1998,7 +2214,7 @@ begin
 						pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 						plStack <= {plStack[55:0],8'hFF};
 						cause[2'd3] <= FLT_PRIV;
-						caregfile[3'd6] <= ip;
+						caregfile[wCt] <= ip;
 						ip.offs <= tvec[3'd6] + {omode,6'h00};
 						tChangeIPSel(tvec[3'd7][31:0]);
 						inv_i();
@@ -2027,17 +2243,13 @@ begin
 				    endcase
 				    */
 				    if (w512)
-				    	regfile[wRt[5:3]] <= wres512;
+				    	regfile[wRt[5:2]] <= wres512;
 				    else
-					    case(wRt[2:0])
-					    3'd0:	regfile[wRt[5:3]][63:0] <= wres;
-					    3'd1: regfile[wRt[5:3]][127:64] <= wres;
-					    3'd2:	regfile[wRt[5:3]][191:128] <= wres;
-					    3'd3:	regfile[wRt[5:3]][255:192] <= wres;
-					    3'd4:	regfile[wRt[5:3]][319:256] <= wres;
-					    3'd5:	regfile[wRt[5:3]][383:320] <= wres;
-					    3'd6:	regfile[wRt[5:3]][447:384] <= wres;
-					    3'd7:	regfile[wRt[5:3]][511:448] <= wres;
+					    case(wRt[1:0])
+					    2'd0:	regfile[wRt[5:2]][127:  0] <= wres;
+					    2'd1:	regfile[wRt[5:2]][255:128] <= wres;
+					    2'd2:	regfile[wRt[5:2]][383:256] <= wres;
+					    2'd3:	regfile[wRt[5:2]][511:384] <= wres;
 					  	endcase
 				    $display("regfile[%d] <= %h", wRt, wres);
 				    // Globally enable interrupts after first update of stack pointer.
@@ -2045,16 +2257,14 @@ begin
 				    	sp <= wres;	// debug
 				      gie <= TRUE;
 				    end
+				    if (wRt==6'd58)
+				    	r58 <= wres;
 				    if (wRt==6'd11)
 				    	t0 <= wres;
 				  end
 			  end
 			  if (wvmrfwr)
 			  	vm_regfile[wRt[2:0]] <= wres;
-			  if (wMtlc)
-			  	lc <= wres;
-			  else if (wwrlc)
-			  	lc <= wlc;
 			end	// wcause
 		end		// wval
   end			// advance_w
@@ -2069,6 +2279,9 @@ endtask
 
 task tSyncTrailer;
 begin
+`ifndef OVERLAPPED_PIPELINE
+	goto (IFETCH);
+`endif
 	if (advance_t) begin
 		tSync <= wSync & wval;
 		uSync <= tSync;
@@ -2102,45 +2315,23 @@ begin
   inv_d();
   inv_x();
 	xx <= yy;
-  if (xir.jxx.Ca == 3'd0) begin
+  if (xir.jxx.Ca == 4'd0) begin
   	ip.offs <= xJmptgt;
   	mJmptgt.offs <= xJmptgt;
   end
-  else if (xir.jxx.Ca == 3'd7) begin
+  else if (xir.jxx.Ca == 4'd7) begin
   	ip.offs <= xip.offs + xJmptgt;
   	mJmptgt.offs <= xip.offs + xJmptgt;
   end
   else begin
-  	if (mwrlk && {2'd0,mlkno}==xir.jxx.Ca && mval) begin
-  		ip.offs <= mlk.offs + xJmptgt;
-  		mJmptgt.offs <= mlk.offs + xJmptgt;
-  	end
-  	else if (wwrlk && {2'd0,wlkno}==xir.jxx.Ca && wval) begin
-  		ip.offs <= wlk.offs + xJmptgt;
-  		mJmptgt.offs <= wlk.offs + xJmptgt;
-  	end
-  	else begin
-  		ip.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
-	  	mJmptgt.offs <= caregfile[xir.jxx.Ca].offs + xJmptgt;
-	  end
+		ip.offs <= xca.offs + xJmptgt;
+  	mJmptgt.offs <= xca.offs + xJmptgt;
   end
   mJmptgt.sel <= xip.sel;
 	if (xir.jxx.Ca != 3'd0 && xir.jxx.Ca != 3'd7) begin
-		if (mwrlk && {2'd0,mlkno}==xir.jxx.Ca && mval) begin
-			tChangeIPSel(mlk.sel);
-			if (mlk.sel != xip.sel)
-				mJmptgt.sel <= mlk.sel;
-		end
-		else if (wwrlk && {2'd0,wlkno}==xir.jxx.Ca && wval) begin
-			tChangeIPSel(wlk.sel);
-			if (wlk.sel != xip.sel)
-				mJmptgt.sel <= wlk.sel;
-		end
-		else begin
-			tChangeIPSel(caregfile[{1'b0,xir.jxx.Ca}].sel);
-			if (caregfile[{1'b0,xir.jxx.Ca}].sel != xip.sel)
-				mJmptgt.sel <= caregfile[{1'b0,xir.jxx.Ca}].sel;
-		end
+		tChangeIPSel(xca.sel);
+		if (xca.sel != xip.sel)
+			mJmptgt.sel <= xca.sel;
 	end
 end
 endtask
@@ -2182,8 +2373,8 @@ begin
 				endcase
 			else if (regno[4:1] < 4'd8)
 				case(regno[0])
-				1'b0:	res = caregfile[regno[4:1]].offs;
-				1'b1:	res = caregfile[regno[4:1]].sel;
+				1'b0:	res = xca.offs;
+				1'b1:	res = xca.sel;
 				endcase
 			else
 				res = 64'd0;
@@ -2195,8 +2386,8 @@ begin
 				endcase
 			else
 				case(regno[0])
-				1'b0:	res = caregfile[regno[4:1]].offs;
-				1'b1:	res = caregfile[regno[4:1]].sel;
+				1'b0:	res = xca.offs;
+				1'b1:	res = xca.sel;
 				endcase
 		CSR_MPLSTACK:	res = plStack;
 		CSR_MPMSTACK:	res = pmStack;
@@ -2236,13 +2427,13 @@ begin
 		CSR_UCA:
 			if (regno[4:1] < 4'd8)
 				case(regno[0])
-				1'b0:	caregfile[regno[4:1]].offs <= val;
-				1'b1:	caregfile[regno[4:1]].sel <= val;
+				1'b0:	caregfile[wCt].offs <= val;
+				1'b1:	caregfile[wCt].sel <= val;
 				endcase
 		CSR_MCA,CSR_SCA,CSR_HCA:
 			case(regno[0])
-			1'b0:	caregfile[regno[4:1]].offs <= val;
-			1'b1:	caregfile[regno[4:1]].sel <= val;
+			1'b0:	caregfile[wCt].offs <= val;
+			1'b1:	caregfile[wCt].sel <= val;
 			endcase
 		CSR_MPLSTACK:	plStack <= val;
 		CSR_MPMSTACK:	pmStack <= val;

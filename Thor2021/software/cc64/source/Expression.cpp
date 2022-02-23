@@ -245,7 +245,7 @@ ENODE* Expression::ParseStringConstWithSizePrefix(ENODE** node)
 			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		case 'O':
-			tptr->btpp = TYP::Make(bt_long, 8);
+			tptr->btpp = TYP::Make(bt_int, 8);
 			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		}
@@ -1092,7 +1092,7 @@ j1:
 			NextToken();
 			ep2 = ParseArgumentList(pep1, &typearray, symi);
 			typearray.Print();
-			fn = Function::FindExactMatch(ii, name, bt_long, &typearray);
+			fn = Function::FindExactMatch(ii, name, bt_int, &typearray);
 			psp = sp;
 			sp = nullptr;
 			if (fn)
@@ -1254,7 +1254,7 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, SYM* symi)
 		sp->storage_class = sc_external;
 		sp->SetName(name);
 		sp->tp = TYP::Make(bt_func, 0);
-		sp->tp->btpp = TYP::Make(bt_long, sizeOfWord);
+		sp->tp->btpp = TYP::Make(bt_int, sizeOfInt);
 		sp->tp->btp = sp->tp->btpp->GetIndex();
 		sp->fi->AddProto(&typearray);
 		sp->mangledName = sp->fi->BuildSignature();
@@ -1262,7 +1262,7 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, SYM* symi)
 	}
 	else if (sp->IsUndefined) {
 		sp->tp = TYP::Make(bt_func, 0);
-		sp->tp->btpp = TYP::Make(bt_long, sizeOfWord);
+		sp->tp->btpp = TYP::Make(bt_int, sizeOfInt);
 		sp->tp->btp = sp->tp->btpp->GetIndex();
 		if (!sp->fi) {
 			sp->fi = MakeFunction(sp->id, sp, defaultcc == 1);
@@ -1612,7 +1612,7 @@ ENODE* Expression::MakeMemberNameNode(SYM* sp)
 			node->isUnsigned = TRUE;
 		node->esize = sp->tp->size;
 		switch (node->nodetype) {
-		case en_regvar:		node->etype = bt_long;	break;//sp->tp->type;
+		case en_regvar:		node->etype = bt_int;	break;//sp->tp->type;
 		case en_fpregvar:	node->etype = sp->tp->type;	break;//sp->tp->type;
 		case en_pregvar:	node->etype = sp->tp->type;	break;//sp->tp->type;
 		default:			node->etype = bt_pointer; break;//sp->tp->type;
@@ -1701,7 +1701,7 @@ ENODE* Expression::MakeAutoNameNode(SYM* sp)
 	}
 	node->esize = sp->tp->size;
 	switch (node->nodetype) {
-	case en_regvar:		node->etype = bt_long;	break;//sp->tp->type;
+	case en_regvar:		node->etype = bt_int;	break;//sp->tp->type;
 	case en_fpregvar:	node->etype = sp->tp->type;	break;//sp->tp->type;
 	case en_pregvar:	node->etype = sp->tp->type;	break;//sp->tp->type;
 	default:			node->etype = bt_pointer;break;//sp->tp->type;
@@ -1717,7 +1717,7 @@ ENODE* Expression::MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArr
 	sp = allocSYM();
 	sp->fi = compiler.ff.MakeFunction(sp->id, sp, defaultcc == 1);
 	sp->tp = &stdfunc;
-	sp->tp->btp = bt_long;
+	sp->tp->btp = bt_int;
 	sp->SetName(*(new std::string(nm)));
 	sp->storage_class = sc_external;
 	sp->IsUndefined = TRUE;
@@ -1731,7 +1731,7 @@ ENODE* Expression::MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArr
 	node->sym = sp;
 	if (sp->tp->isUnsigned)
 		node->isUnsigned = TRUE;
-	node->esize = 8;
+	node->esize = sizeOfInt;
 	node->isPascal = sp->fi->IsPascal;
 	return (node);
 }

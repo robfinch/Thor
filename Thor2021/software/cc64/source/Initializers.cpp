@@ -325,6 +325,12 @@ int64_t initshort(SYM* symi, int opt)
     return (4LL);
 }
 
+int64_t initint(SYM* symi, int opt)
+{
+	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0) : symi->enode ? symi->enode->i : 0);
+	return (8LL);
+}
+
 int64_t initlong(SYM* symi, int opt)
 {
 	GenerateLong(opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i : 0);

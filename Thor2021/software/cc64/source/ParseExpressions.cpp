@@ -49,6 +49,7 @@ int laststrlen;
 
 TYP				stdvoid;
 TYP stdbit;
+TYP							stddecimal;
 TYP             stdint;
 TYP             stduint;
 TYP             stdlong;
@@ -503,6 +504,26 @@ TYP* Expression::deref(ENODE **node, TYP *tp)
 			(*node)->tp = tp;
 			break;
 
+		case bt_uint:
+		case bt_int:
+			if (tp->isUnsigned) {
+				SetRefType(node);
+				(*node)->esize = tp->size;
+				(*node)->etype = (enum e_bt)tp->type;
+				(*node)->isUnsigned = TRUE;
+				tp = &stduint;
+			}
+			else {
+				SetRefType(node);
+				(*node)->esize = tp->size;
+				(*node)->etype = (enum e_bt)tp->type;
+				(*node)->isUnsigned = FALSE;
+				tp = &stdint;
+			}
+			(*node)->sym = sp;
+			(*node)->tp = tp;
+			break;
+
 		case bt_exception:
 			(*node)->esize = tp->size;
 			(*node)->etype = (enum e_bt)tp->type;
@@ -715,9 +736,9 @@ TYP *Expression::nameref2(std::string name, ENODE **node,int nt,bool alloc,TypeA
 	dfs.puts("<nameref2>\n");
 	if (tbl) {
 		dfs.printf("searching table for:%d:%s|",TABLE::matchno,(char *)name.c_str());
-		tbl->Find(name,bt_long,typearray,true);
+		tbl->Find(name,bt_int,typearray,true);
 		//		gsearch2(name,bt_long,typearray,true);
-		sp = Function::FindExactMatch(TABLE::matchno, name, bt_long, typearray)->sym;
+		sp = Function::FindExactMatch(TABLE::matchno, name, bt_int, typearray)->sym;
 		//		if (sp==nullptr) {
 		//			printf("notfound\r\n");
 		//			sp = gsearch2(name,bt_long,typearray,false);
@@ -725,7 +746,7 @@ TYP *Expression::nameref2(std::string name, ENODE **node,int nt,bool alloc,TypeA
 	}
 	else {
 	dfs.printf("A:%d:%s",TABLE::matchno,(char *)name.c_str());
-	fn = Function::FindExactMatch(TABLE::matchno, name, bt_long, typearray);
+	fn = Function::FindExactMatch(TABLE::matchno, name, bt_int, typearray);
 	// If we didn't have an exact match and no (parameter) types are known
 	// return the match if there is only a single one.
 	if (fn==nullptr) {
@@ -849,12 +870,12 @@ TYP *Expression::nameref(ENODE **node,int nt, SYM* symi)
 	if (strcmp(lastid, "_uval") == 0)
 		printf("hi");
 	// Search locally first
-	sp = gsearch2(lastid, (__int16)bt_long, nullptr, false);
+	sp = gsearch2(lastid, (__int16)bt_int, nullptr, false);
 	if (TABLE::matchno == 0) {
 		str = GetNamespace();
 		str = "";
 		str += lastid;
-		sp = gsearch2(str.c_str(), (__int16)bt_long, nullptr, false);
+		sp = gsearch2(str.c_str(), (__int16)bt_int, nullptr, false);
 		tp = nameref2(str.c_str(), node, nt, true, nullptr, nullptr, symi);
 	}
 	else {
@@ -978,7 +999,7 @@ SYM *makeint2(std::string name)
 	SYM *sp;
 	TYP *tp;
 	sp = allocSYM();
-	tp = TYP::Make(bt_long,2);
+	tp = TYP::Make(bt_int,2);
 	tp->sname = new std::string("");
 	sp->SetName(name);
 	sp->storage_class = sc_auto;
@@ -1042,7 +1063,7 @@ SYM *CreateDummyParameters(ENODE *ep, SYM *parent, TYP *tp)
 		sprintf_s(buf,sizeof(buf),"_p%d", nn);
 		sp1 = makeint2(std::string(my_strdup(buf)));
 		if (p->p[0]==nullptr)
-			sp1->tp =(TYP *) TYP::Make(bt_long,2);
+			sp1->tp =(TYP *) TYP::Make(bt_int,2);
 		else
 			sp1->SetType(p->p[0]->tp);
 		sp1->parent = parent->GetIndex();
