@@ -41,6 +41,7 @@ package Thor2021_pkg;
 
 `define QSLOTS	2		// number of simulataneously queueable instructions
 `define RENTRIES	8	// number of reorder buffer entries
+`define OVERLAPPED_PIPELINE	1
 
 parameter RSTIP	= 64'hFF000007FFFD0000;
 
@@ -49,7 +50,7 @@ parameter RENTRIES	= `RENTRIES;
 parameter BitsQS	= $clog2(`QSLOTS-1);
 parameter BitsRS	= $clog2(`RENTRIES-1) + 1;
 
-parameter VALUE_SIZE = 64;
+parameter VALUE_SIZE = 128;
 
 parameter TRUE  = 1'b1;
 parameter FALSE = 1'b0;
@@ -163,6 +164,8 @@ parameter LEA			= 8'h8A;
 parameter LDOR		= 8'h8B;
 parameter LDOO		= 8'h8C;
 parameter LDCTX		= 8'h8D;
+parameter LDOU		= 8'h8E;
+parameter LDH			= 8'h8F;
 
 parameter STB			= 8'h90;
 parameter STW			= 8'h91;
@@ -171,7 +174,8 @@ parameter STO			= 8'h93;
 parameter STOC		= 8'h94;
 parameter STOS		= 8'h95;
 parameter STOO		= 8'h96;
-parameter STSET		= 8'h98;
+parameter STH			= 8'h96;
+parameter BSET		= 8'h98;
 parameter STMOV		= 8'h99;
 parameter STCMP		= 8'h9A;
 parameter STFND		= 8'h9B;
@@ -217,7 +221,10 @@ parameter STWX		= 8'hC1;
 parameter STTX		= 8'hC2;
 parameter STOX		= 8'hC3;
 parameter STOCX		= 8'hC4;
+parameter STHX		= 8'hC5;
 parameter STOOX		= 8'hC6;
+parameter LDHX		= 8'hCD;
+parameter LDOUX		= 8'hCE;
 parameter CACHEX	= 8'hCF;
 
 parameter LDxX		= 8'hB0;
@@ -249,6 +256,7 @@ parameter MEMSB		= 8'hF8;
 parameter MEMDB		= 8'hF9;
 parameter WFI			= 8'hFA;
 parameter SEI			= 8'hFB;
+parameter MJNEZ	  = 8'hFC;
 
 parameter NOP_INSN	= NOP;
 
@@ -496,7 +504,7 @@ parameter pL1ICacheLines = 512;
 parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
-typedef logic [63:0]	Value;
+typedef logic [127:0]	Value;
 typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
 typedef logic [7:0] ASID;
@@ -515,6 +523,13 @@ typedef struct packed
 	Selector sel;
 	Offset offs;
 } Address;
+
+typedef struct packed
+{
+	logic [7:0] micro_ip;
+	Selector sel;
+	Offset offs;
+} IPAddress;
 
 typedef struct packed
 {
@@ -826,6 +841,7 @@ parameter MR_LDO	= 4'd3;
 parameter MR_LDOR	= 4'd4;
 parameter MR_LDOB	= 4'd5;
 parameter MR_LDOO = 4'd6;
+parameter MR_LDH	= 4'd7;
 parameter MR_LDDESC = 4'd12;
 parameter MR_LEA	= 4'd14;
 parameter MR_STB	= 4'd0;
@@ -834,6 +850,7 @@ parameter MR_STT	= 4'd2;
 parameter MR_STO	= 4'd3;
 parameter MR_STOC	= 4'd4;
 parameter MR_STOO	= 4'd5;
+parameter MR_STH	= 4'd7;
 parameter MR_STPTR	= 4'd8;
 
 typedef struct packed
@@ -863,7 +880,7 @@ typedef struct packed
 	logic cmt;
 	logic ldcs;
 	logic mtsel;
-} MemoryResponse;	// 228
+} MemoryResponse;	// 612
 
 typedef struct packed
 {
@@ -961,6 +978,7 @@ typedef struct packed
 	logic jxx;
 	logic jxz;
 	logic dj;
+	logic mjnez;
 	logic [63:0] jmptgt;
 	logic [3:0] lk;
 	logic rts;
@@ -1015,6 +1033,9 @@ typedef struct packed
 	logic mtlk;
 	logic enter;
 	logic flowchg;
+	logic [3:0] Ca;
+	logic [3:0] Ct;
+	logic [2:0] rm;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
