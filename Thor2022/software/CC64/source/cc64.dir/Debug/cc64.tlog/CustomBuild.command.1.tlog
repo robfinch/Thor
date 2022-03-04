@@ -1,0 +1,10 @@
+^D:\CORES2020\RTF64\V2\SOFTWARE\CC64\SOURCE\CMAKELISTS.TXT
+setlocal
+"D:\Program Files\CMake\bin\cmake.exe" -SD:/cores2020/rtf64/v2/software -BD:/cores2020/rtf64/v2/software --check-stamp-file D:/cores2020/rtf64/v2/software/CC64/source/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
