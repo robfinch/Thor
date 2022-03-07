@@ -182,6 +182,7 @@ SEQ2R:	o = 4'h4;
 SNE2R:	o = 4'h4;
 SGE2R:	o = 4'h4;
 SGEU2R:	o = 4'h4;
+SLLHR2:	o = 4'h4;
 //ADDIXL:	o = 4'd12;
 default:	o = 4'h2;
 endcase

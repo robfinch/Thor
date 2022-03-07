@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[321] =
+Instruction opl[326] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -125,6 +125,8 @@ Instruction opl[321] =
 { "enter_far",op_enter_far,12,1,true,am_imm,0,0,0 },
 { "eor",op_eor,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "eq",op_eq },
+{ "exi56", op_exi56,1,1,false,am_imm,0,0,0 },
+{ "exim", op_exim,1,1,false,am_imm,0,0,0 },
 { "ext", op_ext,1,1,false,am_reg,am_reg,am_reg | am_imm | am_imm0, am_reg | am_imm | am_imm0 },
 { "extr", op_extr,1,1,false,am_reg,am_reg,am_reg | am_imm | am_imm0, am_reg|am_imm | am_imm0 },
 { "extu", op_extu,1,1,false,am_reg,am_reg,am_reg | am_imm | am_imm0, am_reg | am_imm | am_imm0 },
@@ -197,6 +199,7 @@ Instruction opl[321] =
 { "ldfd", op_ldfd,4,1,true, am_reg, am_mem,0,0 },
 { "ldft", op_ldft,4,1,true, am_reg, am_mem,0,0 },
 { "ldh", op_ldh,4,1,true,am_reg,am_mem,0,0 },
+{ "ldhs", op_ldhs,4,1,true,am_reg,am_mem,0,0 },
 { "ldi",op_ldi,1,1,false,am_reg,am_imm,0,0 },
 { "ldm", op_ldm,20,1,true,am_mem,0,0,0 },
 { "ldo", op_ldo,4,1,true,am_reg,am_mem,0,0 },
@@ -304,6 +307,7 @@ Instruction opl[321] =
 { "sle",op_sle,1,1,false,am_reg,am_reg,am_reg | am_i26,0 },
 { "sleu",op_sleu,1,1,false,am_reg,am_reg,am_reg | am_i26,0 },
 { "sll", op_sll,2,1,false,am_reg,am_reg,am_reg,0 },
+{ "sllh", op_sllh,2,1,false,am_reg,am_reg,am_reg,0 },
 { "sllp", op_sllp,2,1,false,am_reg,am_reg,am_reg,am_reg|am_ui6 },
 { "slt", op_slt,1,1,false,am_reg,am_reg,am_reg,0 },
 { "sltu", op_sltu,1,1,false,am_reg,am_reg,am_reg,0 },
@@ -320,6 +324,7 @@ Instruction opl[321] =
 { "stfd", op_stfd,4,0,true, am_reg, am_mem,0,0 },
 { "stft", op_stft,4,0,true, am_reg, am_mem,0,0 },
 { "sth", op_sth,4,0,true,am_reg,am_mem,0,0 },
+{ "sths",op_sths,4,0,true,am_reg,am_mem,0,0 },
 { "sti", op_sti,1,0 },
 { "stm", op_stm,20,1,true,am_mem,0,0,0 },
 { "sto",op_sto,4,0,true,am_reg,am_mem,0,0 },

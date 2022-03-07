@@ -166,6 +166,7 @@ mnemonic mnemonics[]={
 	"enor", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x040000000002LL,6},	
 	
 	"enter", {OP_IMM,0,0,0,0}, {ENTER,CPU_ALL,0,0xAFLL,4},
+	"exi56", {OP_IMM,0,0,0,0}, {EXI56F,CPU_ALL,0,0x4CLL,8},
 
 	"int",	{OP_IMM,OP_IMM,0,0,0}, {INT,CPU_ALL,0,0xA6LL,4},
 
@@ -394,6 +395,8 @@ mnemonic mnemonics[]={
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R2,CPU_ALL,0,0x58,4},
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM,0,0}, {R2,CPU_ALL,0,0x58,4},
+	"sllh",	{OP_REG,OP_REG,OP_REG|OP_IMM,0,0}, {R2,CPU_ALL,0,0x5D,4},
+
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 
@@ -875,7 +878,7 @@ static int get_reloc_type(operand *op)
 {
   int rtype = REL_NONE;
 
-  if (OP_DATA(op->type)) {  /* data relocs */
+  if (OP_DATAM(op->type)) {  /* data relocs */
     return (REL_ABS);
   }
 
@@ -1154,7 +1157,7 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
       }
 
       /* determine reloc size, offset and mask */
-      if (OP_DATA(op->type)) {  /* data operand */
+      if (OP_DATAM(op->type)) {  /* data operand */
         switch (op->type) {
           case OP_D8:
             size = 8;
@@ -1590,8 +1593,12 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 		}
 		else if (mnemo->ext.format==R2) {
 			isize = 4;
-			if (insn)
-				*insn = *insn | RB(val & regmask) | TB(2);
+			if (insn) {
+				if (mnemo->ext.opcode==0x5D)	// SLLH
+					*insn = *insn | RB((val >> 4LL) & regmask) | TB(2);
+				else
+					*insn = *insn | RB(val & regmask) | TB(2);
+			}
 		}
 		else if (mnemo->ext.format==R3) {
 			isize = 6;
@@ -1617,6 +1624,11 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 			isize = 4;
 			if (insn)
 				*insn = *insn | ((val & 0x7fffffLL) << 9LL);
+		}
+		else if (mnemo->ext.opcode==EXI56) {
+			isize = 8;
+			if (insn)
+				*insn = *insn | ((val & 0xfffffffffffffeLL) << 8LL) | (val & 1LL);
 		}
 		else {
 			if (op->type & OP_IMM11)
@@ -1691,8 +1703,14 @@ j1:
 		}
 		else if (mnemo->ext.format==R2) {
 			isize = 4;
-			if (insn)
-				*insn = *insn | RB(val & 0x1fLL) | TB(2);
+			if (mnemo->ext.opcode==0x5D) {	// SLLH
+				if (insn)
+					*insn = *insn | RB((val >> 4LL) & 0x1fLL) | TB(2);
+			}
+			else {
+				if (insn)
+					*insn = *insn | RB(val & 0x1fLL) | TB(2);
+			}
 		}
 		else if (mnemo->ext.format==ENTER) {
 			isize = 4;
@@ -1703,6 +1721,11 @@ j1:
 			isize = 4;
 			if (insn)
 				*insn = *insn | ((val & 0x7fffffLL) << 9LL);
+		}
+		else if (mnemo->ext.opcode==EXI56) {
+			isize = 8;
+			if (insn)
+				*insn = *insn | ((val & 0xfffffffffffffeLL) << 8LL) | (val & 1LL);
 		}
 		else {
 			if (op->type & OP_IMM11) {
@@ -2349,7 +2372,7 @@ dblock *eval_data(operand *op,size_t bitsize,section *sec,taddr pc)
   if ((bitsize & 7) || bitsize > 64)
     cpu_error(9,bitsize);  /* data size not supported */
   /*
-	if (!OP_DATA(op->type))
+	if (!OP_DATAM(op->type))
   	ierror(0);
 	*/
   db->size = bitsize >> 3;

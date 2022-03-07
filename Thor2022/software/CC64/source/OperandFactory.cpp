@@ -113,6 +113,33 @@ Operand *OperandFactory::MakeImmediate(int64_t i, int display_opt)
 	return (ap);
 }
 
+Operand* OperandFactory::MakeImmediate(Int128 i, int display_opt)
+{
+	Operand* ap;
+	ENODE* ep;
+	Int128 k;
+	ep = allocEnode();
+	ep->nodetype = en_icon;
+	ep->i128 = i;
+	ep->i = i.low & 0xffffffLL;
+	ap = allocOperand();
+	ap->mode = am_imm;
+	ap->offset = ep;
+	ap->display_opt = display_opt;
+	if (!i.IsNBit(64)) {
+		if (i.IsNBit(80)) {
+			Int128::Lsr(&k, &i, 24);
+			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
+		}
+		else {
+			Int128::Lsr(&k, &i, 24);
+			GenerateMonadic(op_exim, 0, MakeImmediate(k.high));
+			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
+		}
+	}
+	return (ap);
+}
+
 Operand *OperandFactory::MakeIndirect(short int regno)
 {
 	Operand *ap;

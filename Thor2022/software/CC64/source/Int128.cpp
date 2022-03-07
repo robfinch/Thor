@@ -196,6 +196,17 @@ bool Int128::IsLessThan(Int128 *a, Int128 *b)
 	return ((d.high >> 63)!=0);
 }
 
+bool Int128::IsUnsignedLessThan(Int128* a, Int128* b)
+{
+	if ((unsigned __int64)(a->high) < (unsigned __int64)(b->high))
+		return (true);
+	if (a->high == b->high) {
+		if ((unsigned __int64)(a->low) < (unsigned __int64)(b->low))
+			return (true);
+	}
+	return (false);
+}
+
 bool Int128::IsNBit(int bitno)
 {
 	__int64 bit;

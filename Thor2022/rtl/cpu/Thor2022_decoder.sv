@@ -45,7 +45,7 @@ input Instruction mir;
 input xval;
 input mval;
 output DecodeOut deco;
-input [2:0] distk_depth;
+input [3:0] distk_depth;
 input [2:0] rm;
 input [2:0] dfrm;
 
@@ -193,6 +193,8 @@ LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LDOUX,LDHX:
 LEA,LEAX:	rfwr = `TRUE;
 ADD2R,AND2R,OR2R,XOR2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
 	rfwr = `TRUE;
+SLLR2,SLLHR2:
+	rfwr = `TRUE;
 DJMP,BSET:
 	rfwr = `TRUE;
 default:	rfwr = `FALSE;
@@ -257,8 +259,10 @@ deco.imm = imm;
 
 case(ir.any.opcode)
 R2,R3,BTFLD:	deco.Tb = ir.r3.Tb;
-ADD2R,AND2R,OR2R,XOR2R,SLT2R:
-	deco.Tb = {1'b0,ir[27]};
+ADD2R,AND2R,OR2R,XOR2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
+	deco.Tb = ir[25:24];
+SLLHR2,SLLR2:
+	deco.Tb = ir[25:24];
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Tb = ir.r3.Tb;
 JMP,DJMP:	deco.Tb = 2'b00;
@@ -367,7 +371,7 @@ LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
 LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
-STOO,STOOX,STH,STHX:	deco.memsz = hexi;
+STOOX,STH,STHX:	deco.memsz = hexi;
 default:	deco.memsz = octa;
 endcase
 

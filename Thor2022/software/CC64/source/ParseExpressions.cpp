@@ -228,6 +228,23 @@ ENODE *makeinode(int nt, int64_t v1)
     return ep;
 }
 
+ENODE* makei128node(int nt, Int128 v1)
+{
+	ENODE* ep;
+	ep = allocEnode();
+	ep->nodetype = (enum e_node)nt;
+	ep->constflag = TRUE;
+	ep->isUnsigned = FALSE;
+	ep->etype = bt_void;
+	ep->esize = -1;
+	ep->i = v1.low;
+	ep->i128 = v1;
+	ep->p[1] = 0;
+	ep->p[0] = 0;
+	ep->p[2] = 0;
+	return ep;
+}
+
 ENODE *makefqnode(int nt, Float128 *f128)
 {
 	ENODE *ep;
@@ -1134,14 +1151,14 @@ TYP *Expression::ParsePrimaryExpression(ENODE **node, int got_pa, SYM* symi)
     return (tptr);
   }
 j1:
-  switch( lastst ) {
+	switch (lastst) {
 
 	case ellipsis:
-  case id:
+	case id:
 		if (strcmp(lastid, "_L") == 0 || strcmp(lastid, "_l") == 0) {
 			if (lastch == '\'') {
 				NextToken();
-				pnode = ParseCharConst(node,sizeOfWord);
+				pnode = ParseCharConst(node, sizeOfWord);
 				break;
 			}
 		}
@@ -1176,15 +1193,22 @@ j1:
 		currentSym = symi;
 		pnode = ParseNameRef(symi);
 		pnode->constflag = false;
-    break;
+		break;
 
-  case cconst:
-		pnode = ParseCharConst(node,1);
-    break;
+	case cconst:
+		pnode = ParseCharConst(node, 1);
+		break;
 
-  case iconst:
-    tptr = &stdint;
-		pnode = SetIntConstSize(tptr, ival);
+	case iconst:
+		if (ival128.IsNBit(64))
+		{
+			tptr = &stdint;
+			pnode = SetIntConstSize(tptr, ival);
+		}
+		else {
+			tptr = &stdlong;
+			pnode = makei128node(en_icon, ival128);
+		}
 		pnode->SetType(tptr);
     NextToken();
     break;

@@ -230,6 +230,7 @@ void Operand::MakeLegal(int flags, int size)
 				if (preg == 0) {
 					offset = allocEnode();
 					offset->i = 0;
+					offset->i128 = *Int128::Zero();
 					return;
 				}
 			}

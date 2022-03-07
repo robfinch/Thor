@@ -116,12 +116,12 @@ reg [7:0] delay_cnt;
 Value sp, t0;
 Address caregfile [0:15];
 (* ram_style="block" *)
-Value vregfile [0:63][0:63];
+Value vregfile [0:31][0:63];
 reg [63:0] vm_regfile [0:7];
 
 integer n1;
 initial begin
-	for (n1 = 0; n1 < 64; n1 = n1 + 1) begin
+	for (n1 = 0; n1 < 32; n1 = n1 + 1) begin
 		regfile[n1] <= 64'd0;
 		preg[n1 % 8] <= 64'd0;
 		caregfile[n1 % 16].offs <= 32'd0;
@@ -169,7 +169,7 @@ reg [4:0] Ra;
 reg [4:0] Rb;
 reg [4:0] Rc;
 reg [4:0] Rc1;
-reg [4:0] Rt;
+reg [4:0] Rt, wRt;
 reg [1:0] Tb;
 reg [1:0] Tc;
 reg [2:0] Rvm;
@@ -196,6 +196,7 @@ wire dst = deco.st;
 Value rfoa, rfob, rfoc0, rfoc1, rfop;
 Address rfoca;
 reg [63:0] mask;
+reg [7:0] wstep;
 
 vreg_blkmem uvr1 (
   .clka(clk_g),    // input wire clka
@@ -359,7 +360,6 @@ Address wcares;
 reg wrfwr, w512;
 reg wvmrfwr;
 reg wcarfwr;
-reg [4:0] wRt;
 reg [3:0] wCt;
 reg [2:0] wistk_depth;
 reg [2:0] wcioreg;
@@ -376,7 +376,6 @@ reg wLoad;
 Value wa;
 Value wres, wcarry_res;
 reg [511:0] wres512;
-reg [7:0] wstep;
 reg wzbit;
 reg wmaskbit;
 Address wJmptgt;
@@ -398,7 +397,7 @@ Value scratch [0:3];
 reg [63:0] tick;
 reg [63:0] wc_time;			// wall-clock time
 reg [63:0] mtimecmp;
-reg [63:0] tvec [0:7];
+reg [63:0] tvec [0:3];
 reg [15:0] cause [0:3];
 Address badaddr [0:3];
 reg [63:0] mexrout;
@@ -489,8 +488,8 @@ else
 */
 always_comb
 if (Tb[1])
-	rfob = {{57{Tb[0]}},Tb[0],Rb};
-else if (Rb==6'd0)
+	rfob = {{58{Tb[0]}},Tb[0],Rb};
+else if (Rb=='d0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
 	rfob = vrob;
@@ -510,8 +509,8 @@ else
 */
 always_comb
 if (Tc[1])
-	rfoc0 = {{57{Tc[0]}},Tc[0],Rc};
-else if (Rc==6'd0)
+	rfoc0 = {{58{Tc[0]}},Tc[0],Rc};
+else if (Rc=='d0)
 	rfoc0 = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
 	rfoc0 = vroc;
@@ -544,7 +543,7 @@ else
 
 always_comb
 	if (cioreg==3'd0 || ~cio[1])
-		rfop = 64'd0;
+		rfop = 'd0;
 	else if (xval && xcioreg==cioreg && xcio[0])
 		rfop = carry_res;
 	else if (mval && mcioreg==cioreg && mcio[0])
@@ -566,7 +565,7 @@ always_comb
 
 `else
 always_comb
-if (Ra==6'd0)
+if (Ra=='d0)
   rfoa = {VALUE_SIZE{1'b0}};
 else if (deco.Ravec)
 	rfoa = vroa;
@@ -580,8 +579,8 @@ else
 */
 always_comb
 if (Tb[1])
-	rfob = {{57{Tb[0]}},Tb[0],Rb};
-else if (Rb==6'd0)
+	rfob = {{58{Tb[0]}},Tb[0],Rb};
+else if (Rb=='d0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
 	rfob = vrob;
@@ -595,8 +594,8 @@ else
 */
 always_comb
 if (Tc[1])
-	rfoc0 = {{57{Tc[0]}},Tc[0],Rc};
-else if (Rc==6'd0)
+	rfoc0 = {{58{Tc[0]}},Tc[0],Rc};
+else if (Rc=='d0)
 	rfoc0 = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
 	rfoc0 = vroc;
@@ -656,9 +655,9 @@ Thor2022_compare ucmp2
 wire [7:0] cntlz_out;
 cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 
-wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[6:4],4'h0};
-wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[6:4],4'h0};
-wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[6:4],4'h0};
+wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
+wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
+wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
 wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[3:0];
 wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[3:0];
 wire [255:0] srao = {{128{xa[127]}},xa[127:0],128'd0} >> xb[3:0];
@@ -862,6 +861,7 @@ ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm | pn;
 XORI,XORIL:		res2 = xa ^ imm ^ pn;
 SLLR2:				res2 = xa << xb[5:0];
+SLLHR2:				res2 = sllrho[127:0];// + xc0;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 MULI,MULIL:		res2 = mul_prod256[127:0] + pn;
@@ -1270,9 +1270,9 @@ begin
 	wJxz <= FALSE;
 	mRts <= FALSE;
 	wRts <= FALSE;
-	xFlowchg = FALSE;
-	mFlowchg = FALSE;
-	wFlowchg = FALSE;
+	xFlowchg <= FALSE;
+	mFlowchg <= FALSE;
+	wFlowchg <= FALSE;
 	rm <= 'd0;
 	dfrm <= 'd0;
 	xIsDF <= 1'b0;
@@ -1499,8 +1499,8 @@ case(cd)
 4'd15: fnIamt = 11'h7FF;
 4'd14: fnIamt = 11'h7FE;
 4'd13:	fnIamt = 11'h7FC;
-4'd13:	fnIamt = 11'h7F8;
-4'd12:	fnIamt = 11'h7F0;
+4'd12:	fnIamt = 11'h7F8;
+4'd11:	fnIamt = 11'h7F0;
 default:	fnIamt = 11'd0;
 endcase
 endfunction
@@ -1590,7 +1590,7 @@ begin
 			7'd52:	begin micro_ip <= 7'd53; ir <= {11'h7FF,6'd58,6'd58,1'b0,ADDI}; end
 			7'd53:	begin micro_ip <= 7'd51; ir <= {3'd0,8'd54,6'd58,7'd0,MJNEZ}; end
 			7'd54:	begin micro_ip <= 7'd0;  ir <= NOP; ip.offs <= ip.offs + 4'd6; end
-			7'd55:	begin micro_ip <= 7'd53; ir <= {8'h7FF,6'd58,6'd58,1'd0,ADDI}; end
+			7'd55:	begin micro_ip <= 7'd53; ir <= {11'h7FF,6'd58,6'd58,1'd0,ADDI}; end
 			// STCTX
 			7'd64:	begin micro_ip <= 7'd65; ir <= {micro_ir[15:13],30'h00,5'd0,1'b0,1'b0,STOO}; dlen <= 4'd2; end
 			7'd65:	begin micro_ip <= 7'd66; ir <= {micro_ir[15:13],30'h10,5'd1,1'b0,1'b0,STOO}; end
@@ -2231,7 +2231,7 @@ begin
 				cause[2'd3] <= wcause & 16'h80FF;
 				badaddr[2'd3] <= wbadAddr;
 				caregfile[4'd8+wistk_depth] <= ip;
-				ip.offs <= tvec[3'd6] + {omode,6'h00};
+				ip.offs <= tvec[3'd3] + {omode,6'h00};
 				inv_i();
 				inv_d();
 				inv_x();
@@ -2269,7 +2269,7 @@ begin
 						plStack <= {plStack[55:0],8'hFF};
 						cause[2'd3] <= FLT_PRIV;
 						caregfile[wCt] <= ip;
-						ip.offs <= tvec[3'd6] + {omode,6'h00};
+						ip.offs <= tvec[3'd3] + {omode,6'h00};
 						inv_i();
 						inv_d();
 						inv_x();
@@ -2374,7 +2374,6 @@ begin
 	  inv_x();
   	ip.offs <= xip.offs;
   	mJmptgt.offs <= xip.offs;
-	  mJmptgt.sel <= xip.sel;
 	end
 	else
 		first_flag <= 1'b1;
@@ -2409,7 +2408,7 @@ begin
 		CSR_MBADADDR:	res = badaddr[regno[13:12]];
 		CSR_TICK:	res = tick;
 		CSR_CAUSE:	res = cause[regno[13:12]];
-		CSR_MTVEC:	res = tvec[regno[2:0]];
+		CSR_MTVEC:	res = tvec[regno[1:0]];
 		CSR_UCA:
 			if (regno[3:0]==4'd7)
 				res = xip.offs;
@@ -2454,7 +2453,7 @@ begin
 		CSR_ASID: 	asid <= val;
 		CSR_MBADADDR:	badaddr[regno[13:12]] <= val;
 		CSR_CAUSE:	cause[regno[13:12]] <= val;
-		CSR_MTVEC:	tvec[regno[2:0]] <= val;
+		CSR_MTVEC:	tvec[regno[1:0]] <= val;
 		CSR_UCA:
 			if (regno[3:0] < 4'd8)
 				caregfile[wCt].offs <= val;

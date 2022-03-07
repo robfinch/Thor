@@ -183,6 +183,7 @@ public:
 	bool isPosit;
 	ENODE *offset;
 	int val;
+	Int128 val128;
 public:
 	static bool IsCalleeSave(int regno);
 	bool IsArgReg();
@@ -669,6 +670,7 @@ public:
 	int64_t i;
 	double f;
 	double f1, f2;
+	Int128 i128;
 	Float128 f128;
 	Posit64 posit;
 	std::string* sp;
@@ -1076,6 +1078,7 @@ public:
 	Operand* makepreg(int r);
 	Operand *MakeMask(int mask);
 	Operand *MakeImmediate(int64_t i, int display_opt=0);
+	Operand* MakeImmediate(Int128 i, int display_opt = 0);
 	Operand* MakeMemoryIndirect(int disp, int regno);
 	Operand *MakeIndirect(short int regno);
 	Operand *MakeIndexedCodeLabel(int lab, int i);
@@ -1101,6 +1104,7 @@ public:
 	Operand *MakeStringAsNameConst(char *s, e_sg seg);
 	Operand *MakeString(char *s);
 	Operand *MakeImmediate(int64_t i, int display_opt=0);
+	Operand* MakeImmediate(Int128 i, int display_opt = 0);
 	Operand *MakeIndirect(int i);
 	Operand *MakeIndexed(int64_t o, int i);
 	Operand* MakeIndexedName(std::string nme, int i);

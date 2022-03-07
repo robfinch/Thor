@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -334,12 +334,17 @@ void getbase(int64_t b)
         register int64_t i0, i1, i2;
         register int64_t i, j;
         int k;
-
+        Int128 i128, b128, j128;
+        b128 = Int128::Convert(b);
         i = 0;
+        i128 = *Int128::Zero();
         i0 = 0;
         i1 = 0;
         while(isalnum(lastch)) {
                 if((j = radix36(lastch)) < b) {
+                  j128 = Int128::Convert(j);
+                  i128.Mul(&i128, &i128, &b128);
+                  i128.Add(&i128, &i128, &j128);
                         i = i * b + j;
                         i2 = i0;
                         for (k = 0; k < b; k++) {
@@ -360,6 +365,7 @@ void getbase(int64_t b)
                 }
 		if (lastch=='L' || lastch=='U')	// ignore a 'L'ong suffix and 'U'nsigned
 			getch();
+    ival128 = i128;
         ival = i;
 /*
         rval.exp = 0x804E;

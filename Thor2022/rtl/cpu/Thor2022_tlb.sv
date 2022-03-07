@@ -36,7 +36,7 @@
 // ============================================================================
 
 import Thor2022_pkg::*;
-import Thor2022_tlbpkg::*;
+import Thor2022_mmupkg::*;
 
 module Thor2022_tlb(rst_i, clk_i, rdy_o, asid_i, sys_mode_i,xlaten_i,we_i,dadr_i,next_i,iacc_i,dacc_i,iadr_i,padr_o,acr_o,tlben_i,wrtlb_i,tlbadr_i,tlbdat_i,tlbdat_o,
 	tlbmiss_o, tlbmiss_adr_o);
@@ -60,8 +60,8 @@ output reg [3:0] acr_o;
 input tlben_i;
 input wrtlb_i;
 input [15:0] tlbadr_i;
-input TLBEntry tlbdat_i;
-output TLBEntry tlbdat_o;
+input PTE tlbdat_i;
+output PTE tlbdat_o;
 output reg tlbmiss_o;
 output Address tlbmiss_adr_o;
 parameter TRUE = 1'b1;
@@ -77,8 +77,8 @@ parameter ST_RUN = 3'd1;
 
 wire [AWID-1:0] rstip = RSTIP;
 reg [3:0] randway;
-TLBEntry tentryi [0:ASSOC-1];
-TLBEntry tentryo [0:ASSOC-1];
+PTE tentryi [0:ASSOC-1];
+PTE tentryo [0:ASSOC-1];
 
 reg [ASSOC-1:0] wr;
 reg wed;
@@ -94,7 +94,7 @@ generate begin : gWrtlb
  				wrtlb[g1] = tlbadr_i[13:10]==g1 && wrtlb_i;
 end
 endgenerate
-wire [63:0] tlbdato [0:ASSOC-1];
+PTE tlbdato [0:ASSOC-1];
 wire clk_g = clk_i;
 always_comb
 	tlbdat_o <= tlbdato[tlbadr_i[13:10]];
@@ -140,14 +140,14 @@ always_ff @(posedge clk_g)
 	else
 		dli <= {dli[4:0],1'b1};
 
-TLBEntry tlbdat_rst;
-TLBEntry tlbdati;
+PTE tlbdat_rst;
+PTE tlbdati;
 reg [12:0] count;
 reg [ASSOC-1:0] tlbwrr;
 reg tlbeni;
 reg [9:0] tlbadri;
 
-always @(posedge clk_g)
+always_ff @(posedge clk_g)
 if (rst_i) begin
 	randway <= 'd0;
 end
@@ -160,7 +160,7 @@ else begin
 end
 
 reg [9:0] rcount;
-always @(posedge clk_g)
+always_ff @(posedge clk_g)
 if (rst_i) begin
 	state <= 3'b001;
 	tlbeni <= 1'b1;		// forces ready low
@@ -180,26 +180,29 @@ case(state)
 		13'b011:
 			begin
 				tlbwrr[3] <= 1'b1; 
-				tlbdat_rst.asid = 8'h00;
-				tlbdat_rst.g = 1'b1;
-				tlbdat_rst.d = 1'b1;
-				tlbdat_rst.a = 1'b1;
-				tlbdat_rst.u = 1'b0;
-				tlbdat_rst.c = 1'b1;
-				tlbdat_rst.r = 1'b1;
-				tlbdat_rst.w = 1'b1;
-				tlbdat_rst.x = 1'b1;
-				tlbdat_rst.sc = 1'b1;
-				tlbdat_rst.sr = 1'b1;
-				tlbdat_rst.sw = 1'b1;
-				tlbdat_rst.sx = 1'b1;
+				tlbdat_rst.asid <= 8'h00;
+				tlbdat_rst.g <= 1'b1;
+				tlbdat_rst.v <= 1'b1;
+				tlbdat_rst.d <= 1'b1;
+				tlbdat_rst.u <= 1'b0;
+				tlbdat_rst.s <= 1'b0;
+				tlbdat_rst.a <= 1'b1;
+				tlbdat_rst.c <= 1'b1;
+				tlbdat_rst.r <= 1'b1;
+				tlbdat_rst.w <= 1'b1;
+				tlbdat_rst.x <= 1'b1;
+				tlbdat_rst.sc <= 1'b1;
+				tlbdat_rst.sr <= 1'b1;
+				tlbdat_rst.sw <= 1'b1;
+				tlbdat_rst.sx <= 1'b1;
 				// FFFC0000
 				// 1111_1111_11_ 11_1100_0000 _0000_0000_0000
-				tlbdat_rst.vpn = {20'h003FF};
-				tlbdat_rst.ppn = {10'h3FF,count[9:0]};
+				tlbdat_rst.vpn <= {24'h0003FF};
+				tlbdat_rst.ppn <= {16'h003FF,count[9:0]};
 				rcount <= count[9:0];
 			end // Map 16MB ROM/IO area
 		13'b1??: begin state <= 3'b010; tlbwrr <= 'd0; end
+		default:	;
 		endcase
 		count <= count + 2'd1;
 	end
@@ -208,6 +211,8 @@ case(state)
 		tlbeni  <= 1'b0;
 		tlbwrr <= 'd0;
 	end
+default:
+	state <= 3'b001;
 endcase
 end
 assign rdy_o = ~tlbeni;
@@ -284,7 +289,7 @@ else begin
 			tlbmiss_adr_o <= iadr_i;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
-				if (tentryo[n].vpn==iadr_i[31:12] && (tentryo[n].asid==asid_i || tentryo[n].g)) begin
+				if (tentryo[n].vpn[9:0]==iadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
@@ -307,7 +312,7 @@ else begin
 			tlbmiss_adr_o <= dadr_i;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
-				if (tentryo[n].vpn==dadr_i[31:12] && (tentryo[n].asid==asid_i || tentryo[n].g)) begin
+				if (tentryo[n].vpn[9:0]==dadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};

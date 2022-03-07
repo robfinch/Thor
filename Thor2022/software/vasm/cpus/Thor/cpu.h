@@ -99,11 +99,11 @@ typedef struct {
 
 #define FLG_NEGIMM	1
 
-#define EXI7	0x46
-#define EXI23	0x47
-#define EXI41	0x6C
-#define EXI55	0x49
-#define EXIM	0x4A
+#define EXI8	0x46
+#define EXI24	0x48
+#define EXI40	0x4A
+#define EXI56	0x4C
+#define EXIM	0x50
 
 // Instruction Formats
 #define	R3		1
@@ -145,6 +145,7 @@ typedef struct {
 #define MFLK	38
 #define ENTER	39
 #define LEAVE	40
+#define EXI56F	41
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)
@@ -162,5 +163,5 @@ typedef struct {
 #define OP_F32 0x40001005
 #define OP_F64 0x40001006
 
-#define OP_DATA(t) (t >= OP_D8)
+#define OP_DATAM(t) (t >= OP_D8)
 #define OP_FLOAT(t) (t >= OP_F32)

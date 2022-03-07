@@ -35,17 +35,23 @@ extern int NumericLiteral(ENODE*);
 void dooper(ENODE *node)
 {
 	ENODE *ep;
+	Int128 rm;
 
   ep = node;
   switch( ep->nodetype ) {
 	case en_abs:
     ep->nodetype = en_icon;
     ep->i = (ep->p[0]->i >= 0) ? ep->p[0]->i : -ep->p[0]->i;
+		if (Int128::IsGE(&ep->p[0]->i128, Int128::Zero()))
+			Int128::Assign(&ep->i128, &ep->p[0]->i128);
+		else
+			Int128::Sub(&ep->i128,Int128::Zero(),&ep->p[0]->i128);
 		break;
   case en_add:
 		if (ep->p[0]->nodetype == en_icon) {
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i + ep->p[1]->i;
+			Int128::Add(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		}
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
@@ -60,6 +66,7 @@ void dooper(ENODE *node)
 		if (ep->p[0]->nodetype == en_icon) {
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i - ep->p[1]->i;
+			Int128::Sub(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		}
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
@@ -70,15 +77,18 @@ void dooper(ENODE *node)
 	case en_mulu:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i * ep->p[1]->i;
+		Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		break;
 	case en_mulf:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i * ep->p[1]->i;
+		Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		break;
 	case en_div:
 	case en_udiv:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i / ep->p[1]->i;
+		Int128::Div(&ep->i128, &rm, &ep->p[0]->i128, &ep->p[1]->i128);
 		break;
 
 	case en_i2d:
@@ -161,82 +171,131 @@ void dooper(ENODE *node)
 	case en_shlu:
     ep->nodetype = en_icon;
     ep->i = ep->p[0]->i << ep->p[1]->i;
-    break;
+		Int128::Shl(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		break;
 	case en_asr:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i >> ep->p[1]->i;
+		Int128::Shr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
 		break;
 	case en_shr:
     ep->nodetype = en_icon;
     ep->i = (unsigned)ep->p[0]->i >> (unsigned)ep->p[1]->i;
-    break;
+		Int128::Lsr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		break;
   case en_shru:
     ep->nodetype = en_icon;
     ep->i = (unsigned)ep->p[0]->i >> (unsigned)ep->p[1]->i;
-    break;
+		Int128::Lsr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		break;
 
   case en_and:
     ep->nodetype = en_icon;
     ep->i = ep->p[0]->i & ep->p[1]->i;
-    break;
+		Int128::BitAnd(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		break;
   case en_or:
     ep->nodetype = en_icon;
     ep->i = ep->p[0]->i | ep->p[1]->i;
-    break;
+		Int128::BitOr(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		break;
   case en_xor:
     ep->nodetype = en_icon;
     ep->i = ep->p[0]->i ^ ep->p[1]->i;
-    break;
+		Int128::BitXor(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		break;
 	case en_land_safe:
 	case en_land:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i && ep->p[1]->i;
+		Int128::LogAnd(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		break;
 	case en_lor_safe:
 	case en_lor:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i || ep->p[1]->i;
+		Int128::LogOr(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		break;
 
 	case en_ult:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i < (unsigned)ep->p[1]->i;
+		if (Int128::IsULT(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_ule:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i <= (unsigned)ep->p[1]->i;
+		if (Int128::IsULE(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_ugt:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i > (unsigned)ep->p[1]->i;
+		if (Int128::IsUGT(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_uge:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i >= (unsigned)ep->p[1]->i;
+		if (Int128::IsUGE(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_lt:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i < (signed)ep->p[1]->i;
+		if (Int128::IsLT(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_le:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i <= (signed)ep->p[1]->i;
+		if (Int128::IsLE(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_gt:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i > (signed)ep->p[1]->i;
+		if (Int128::IsGT(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_ge:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i >= (signed)ep->p[1]->i;
+		if (Int128::IsGE(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_eq:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i == (signed)ep->p[1]->i;
+		if (Int128::IsEQ(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 	case en_ne:
 		ep->nodetype = en_icon;
 		ep->i = (signed)ep->p[0]->i != (signed)ep->p[1]->i;
+		if (!Int128::IsEQ(&ep->p[0]->i128, &ep->p[1]->i128))
+			Int128::Assign(&ep->i128, Int128::One());
+		else
+			Int128::Assign(&ep->i128, Int128::Zero());
 		break;
 
 	case en_feq:

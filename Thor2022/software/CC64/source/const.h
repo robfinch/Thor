@@ -190,7 +190,7 @@ enum e_op {
 	// FISA64
 	op_ldw0i, op_ldw1i, op_ldw2i, op_ldw3i, op_chk, op_chki,
 	op_cmpu, op_bsr, op_bun,
-	op_sll, op_slli, op_srl, op_srli, op_sra, op_srai, op_asl, op_lsr, op_asli, op_lsri, op_remark,
+	op_sll, op_sllh, op_slli, op_srl, op_srli, op_sra, op_srai, op_asl, op_lsr, op_asli, op_lsri, op_remark,
 	op_sllp,
 	// floating point
 	op_fbeq, op_fbne, op_fbor, op_fbun, op_fblt, op_fble, op_fbgt, op_fbge,
@@ -241,6 +241,7 @@ enum e_op {
 	op_mfbase, op_mtbase, op_di, op_defcat,
 	op_ptrdif, op_isnullptr,
 	op_mtlc, op_mflk, op_mtlk,
+	op_exi56, op_exim, op_ldhs, op_sths,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt,
 	op_wydendx,

@@ -90,6 +90,11 @@ Operand *CodeGenerator::MakeImmediate(int64_t i, int display)
 	return (compiler.of.MakeImmediate(i, display));
 }
 
+Operand* CodeGenerator::MakeImmediate(Int128 i, int display)
+{
+	return (compiler.of.MakeImmediate(i, display));
+}
+
 Operand *CodeGenerator::MakeIndirect(int i)
 {
 	return (compiler.of.MakeIndirect(i));
@@ -235,21 +240,22 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 2:	GenerateDiadic(cpu.ldwu_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldtu_op, 0, ap3, ap1); break;
 			case 8: 
+				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
+				break;
+			case 16:	
 				if (ap1->mode == am_indx) {
 					if (ap1->offset->nodetype == en_icon) {
-						if (ap1->offset->i > -128 && ap1->offset->i < 127) {
-							GenerateDiadic(op_ldos, 0, ap3, ap1);
+						if (ap1->offset->i > -1024 && ap1->offset->i < 1023) {
+							GenerateDiadic(op_ldhs, 0, ap3, ap1);
 							break;
 						}
 					}
 				}
 				else if (ap1->mode == am_ind) {
-					GenerateDiadic(op_ldos, 0, ap3, ap1);
+					GenerateDiadic(op_ldhs, 0, ap3, ap1);
 					break;
 				}
-				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
-				break;
-			case 16:	GenerateDiadic(op_ldh, 0, ap3, ap1); break;
+				GenerateDiadic(op_ldh, 0, ap3, ap1); break;
 			}
     }
     else {
@@ -259,21 +265,22 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 2:	GenerateDiadic(cpu.ldw_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldt_op, 0, ap3, ap1); break;
 			case 8:	
+				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
+				break;
+			case 16:
 				if (ap1->mode == am_indx) {
 					if (ap1->offset->nodetype == en_icon) {
-						if (ap1->offset->i > -128 && ap1->offset->i < 127) {
-							GenerateDiadic(op_ldos, 0, ap3, ap1);
+						if (ap1->offset->i > -1024 && ap1->offset->i < 1023) {
+							GenerateDiadic(op_ldhs, 0, ap3, ap1);
 							break;
 						}
 					}
 				}
 				else if (ap1->mode == am_ind) {
-					GenerateDiadic(op_ldos, 0, ap3, ap1);
+					GenerateDiadic(op_ldhs, 0, ap3, ap1);
 					break;
 				}
-				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
-				break;
-			case 16:	GenerateDiadic(op_ldh, 0, ap3, ap1); break;
+				GenerateDiadic(op_ldh, 0, ap3, ap1); break;
 			}
     }
 	ap3->memref = true;
@@ -326,21 +333,23 @@ void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size)
 		case 2: GenerateDiadic(cpu.stw_op, 0, ap1, ap3); break;
 		case 4: GenerateDiadic(cpu.stt_op, 0, ap1, ap3); break;
 		case 8:
+			GenerateDiadic(cpu.sto_op, 0, ap1, ap3);
+			break;
+		case 16:
 			if (ap3->mode == am_indx) {
 				if (ap3->offset->nodetype == en_icon) {
-					if (ap3->offset->i > -128 && ap3->offset->i < 127) {
-						GenerateDiadic(op_stos, 0, ap1, ap3);
+					if (ap3->offset->i > -1024 && ap3->offset->i < 1023) {
+						GenerateDiadic(op_sths, 0, ap1, ap3);
 						return;
 					}
 				}
 			}
 			else if (ap3->mode == am_ind) {
-				GenerateDiadic(op_stos, 0, ap1, ap3);
+				GenerateDiadic(op_sths, 0, ap1, ap3);
 				return;
 			}
-			GenerateDiadic(cpu.sto_op, 0, ap1, ap3);
+			GenerateDiadic(op_sth, 0, ap1, ap3); 
 			break;
-		case 16:	GenerateDiadic(op_sth, 0, ap1, ap3); break;
 		default:
 			;
 		}
@@ -1353,7 +1362,17 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 		//	ReleaseTempRegister(ap3);
 		//}
 		//else
+		GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i128));
+		/*
+		if (ap1->offset->i128.IsNBit(64))
 			GenerateDiadic(cpu.ldi_op, 0, ap2, ap1);
+		else {
+			Int128 a(ap1->offset->i128);
+			GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(a.high));
+			GenerateTriadic(op_sllh, 0, ap2, ap2, MakeImmediate(64));
+			GenerateTriadic(op_or, 0, ap2, ap2, MakeImmediate(ap1->offset->i128.low));
+		}
+		*/
 			if (ap2->tp) {
 //				ap2->tp->type = bt_long;
 //				ap2->tp->size = 16;
@@ -1671,6 +1690,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 		case am_reg:
 			ap1 = GenerateRegToRegAssign(node, ap1, ap2, ssize);
 			mr->val = regs[ap2->preg].val;
+			mr->val128 = regs[ap2->preg].val128;
 			mr->isConst = ap2->isConst;
 			break;
 
@@ -1680,8 +1700,10 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 				mr->val = ap2->offset->posit.val;
 			else if (ap2->tp->IsFloatType())
 				mr->val = ap2->offset->f;
-			else
+			else {
 				mr->val = ap2->offset->i;
+				mr->val128 = ap2->offset->i128;
+			}
 			mr->offset = ap2->offset;
 			mr->isConst = true;
 			break;

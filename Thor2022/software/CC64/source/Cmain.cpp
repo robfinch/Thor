@@ -152,7 +152,7 @@ int main(int argc, char **argv)
 	exceptions=1;
 	compiler.nogcskips = true;
 	compiler.os_code = false;
-	cpu.fileExt = ".r64";
+	cpu.fileExt = ".t64";
 	cpu.SupportsBand = false;
 	cpu.SupportsBor = false;
 	cpu.SupportsBBC = true;

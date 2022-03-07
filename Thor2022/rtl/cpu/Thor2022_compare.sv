@@ -61,6 +61,8 @@ begin
 	o[8] = a != b;
 	o[9] = $signed(a) >= $signed(b);
 	o[10] = $signed(a) > $signed(b);
+	o[13] = a >= b;
+	o[14] = a > b;
 	o[32] = dfco[0];	// equal
 	o[33] = dfco[1];	// less than
 	o[34] = dfco[2];	// less than or equal
