@@ -42,14 +42,14 @@ ENODE* Expression::SetIntConstSize(TYP* tptr, int64_t val)
 
 	pnode = makeinode(en_icon, val);
 	pnode->constflag = TRUE;
-	if (val >= -128 && ival < 128)
-		pnode->esize = 1;
-	else if (val >= -32768 && val < 32768)
-		pnode->esize = 2;
+	if (val >= -128LL && ival < 128LL)
+		pnode->esize = 1LL;
+	else if (val >= -32768LL && val < 32768LL)
+		pnode->esize = 2LL;
 	else if (val >= -2147483648LL && val < 2147483648LL)
-		pnode->esize = 4;
+		pnode->esize = 4LL;
 	else
-		pnode->esize = 8;
+		pnode->esize = 8LL;
 /*
 * ???
 	else if (val >= -54975581300LL && val < 54975581300LL)
@@ -323,7 +323,7 @@ ENODE* Expression::ParseAggregate(ENODE** node, SYM* symi)
 	//tbl = symi->tp->lst.GetPtr(symi->tp->lst.GetHead());
 	for (count = 0; lastst != end; count++) {
 		if (lastst == openbr) {
-			n = GetConstExpression(&cnode, symi);
+			n = GetConstExpression(&cnode, symi).low;
 			needpunc(closebr,49);
 			while (pos < n && pos < 1000000) {
 				pnode = makenode(en_void, nullptr, nullptr);

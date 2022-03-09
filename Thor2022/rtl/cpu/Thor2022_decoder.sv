@@ -71,7 +71,7 @@ JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 JMP:	Rt = 'd0;
 DJMP,BSET:
 	Rt = 5'd26;
-STB,STW,STT,STO,STOC,STOS,STH:
+STB,STW,STT,STO,STOC,STHS,STH:
 	Rt = 'd0;
 STBX,STWX,STTX,STOX,STOCX,STHX:
 	Rt = 'd0;
@@ -87,7 +87,7 @@ STB,STW,STT,STO,STOC,STH:
 	Rc = ir.st.Rs;
 STBX,STWX,STTX,STOX,STOCX,STHX:
 	Rc = ir.stx.Rs;
-STOS:
+STHS:
 	Rc = ir.sts.Rs;
 BSET:
 	Rc = 5'd26;
@@ -186,7 +186,7 @@ ADDIL,SUBFIL,CMPIL,CMPUIL,MULIL,DIVIL,MULUIL:
 	rfwr = `TRUE;
 ANDIL,ORIL,XORIL:	rfwr = `TRUE;
 SEQIL,SNEIL,SLTIL,SGTIL:		rfwr = `TRUE;
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,LDOU,LDH:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,LDOU,LDH:
 	rfwr = `TRUE;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LDOUX,LDHX:
 	rfwr = `TRUE;
@@ -223,21 +223,25 @@ STB,STW,STT,STO,STH:
 	imm = ir.any.v ? {{104{ir.st.disp[23]}},ir.st.disp} : {{99{ir.st.disp[28]}},ir.st.disp};
 STBX,STWX,STTX,STOX,STHX:
 	imm = 'd0;
-LDOS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
-STOS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
+LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
+STHS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
 default:
 	imm = 'd0;
 endcase
 if (xval)
-	casez(xir.any.opcode)
+	case(xir.any.opcode)
 	EXI8:		imm = {{96{xir[15]}},xir[15:9],xir[0],imm[23:0]};
+	EXI8+1:	imm = {{96{xir[15]}},xir[15:9],xir[0],imm[23:0]};
 	EXI24:	imm = {{80{xir[31]}},xir[31:9],xir[0],imm[23:0]};
+	EXI24+1:imm = {{80{xir[31]}},xir[31:9],xir[0],imm[23:0]};
 	EXI40:	imm = {{64{xir[47]}},xir[47:9],xir[0],imm[23:0]};
+	EXI40+1:imm = {{64{xir[47]}},xir[47:9],xir[0],imm[23:0]};
 	EXI56:	imm = {{48{xir[63]}},xir[63:9],xir[0],imm[23:0]};
+	EXI56+1:imm = {{48{xir[63]}},xir[63:9],xir[0],imm[23:0]};
 	default:	;	
 	endcase
 if (mval)
-	casez(mir.any.opcode)
+	case(mir.any.opcode)
 	EXIM:		imm = {mir[56:9],imm[79:0]};
 	default:	;	
 	endcase
@@ -312,7 +316,7 @@ endcase
 
 case(ir.any.opcode)
 CACHE,CACHEX,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,
 LDOU,LDOUX,LDH,LDHX,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
 	deco.ld = `TRUE;
@@ -328,7 +332,7 @@ endcase
 
 case(ir.any.opcode)
 CACHE,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOS,LDOR,LDOU,LDH:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,LDOU,LDH:
 	deco.loadr = `TRUE;
 default:	deco.loadr = `FALSE;
 endcase
@@ -342,14 +346,14 @@ endcase
 
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STOS,STOC,STH,
+STB,STW,STT,STO,STHS,STOC,STH,
 STBX,STWX,STTX,STOX,STOCX,STHX:
 	deco.st = `TRUE;
 default:	deco.st = `FALSE;
 endcase
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STOC,STOS,STH:
+STB,STW,STT,STO,STOC,STHS,STH:
 	deco.storer = `TRUE;
 default:	deco.storer = `FALSE;
 endcase
@@ -370,8 +374,8 @@ LDT,LDTU,STT:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
-LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
-STOOX,STH,STHX:	deco.memsz = hexi;
+LDHS,LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
+STHS,STOOX,STH,STHX:	deco.memsz = hexi;
 default:	deco.memsz = octa;
 endcase
 
@@ -412,14 +416,14 @@ CACHE,CACHEX:	deco.multi_cycle = `TRUE;
 LDB,LDBU,STB:	deco.multi_cycle = `TRUE;
 LDW,LDWU,STW:	deco.multi_cycle = `TRUE;
 LDT,LDTU,STT: deco.multi_cycle = `TRUE;
-LDO,LDOS,LDOR,LDOU:		deco.multi_cycle = `TRUE;
+LDO,LDHS,LDOR,LDOU:		deco.multi_cycle = `TRUE;
 LDH:					deco.multi_cycle = `TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = `TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = `TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = `TRUE;
 LDOX,LDORX,LDOUX:				deco.multi_cycle = `TRUE;
 LDHX:					deco.multi_cycle = `TRUE;
-STO,STOS,STOC,STHX,STH:		deco.multi_cycle = `TRUE;
+STO,STHS,STOC,STHX,STH:		deco.multi_cycle = `TRUE;
 STOX,STOCX:		deco.multi_cycle = `TRUE;
 STMOV,STFND,STCMP,BSET:			deco.multi_cycle = `TRUE;
 default:	deco.multi_cycle = `FALSE;
@@ -473,7 +477,7 @@ deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ || ir.any.opcode==DJEQZ ||
 if (deco.jxx)
 	deco.jmptgt = {{109{ir.jxx.Tgthi[18]}},ir.jxx.Tgthi,1'b0};
 else if (deco.jxz)
-	deco.jmptgt = {{99{ir[28]}},ir[28:21],ir[14:11],1'b0};
+	deco.jmptgt = {{116{ir[28]}},ir[28:21],ir[14:11],1'b0};
 else
 	deco.jmptgt = {{94{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	

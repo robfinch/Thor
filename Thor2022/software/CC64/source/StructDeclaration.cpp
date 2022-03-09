@@ -118,7 +118,7 @@ void StructDeclaration::ParseAttributes(SYM* sym)
       ParseAttribute(nullptr);
     else if (lastst == kw_align) {
       NextToken();
-      sym->tp->alignment = (int)GetIntegerExpression(&pnd, sym, 0);
+      sym->tp->alignment = (int)GetIntegerExpression(&pnd, sym, 0).low;
     }
     else
       break;
@@ -268,7 +268,7 @@ int StructDeclaration::Parse(TABLE* table, int ztype, SYM** sym)
 
     if (lastst==kw_align) {
       NextToken();
-      tp->alignment = (int)GetIntegerExpression(&pnd,sp,0);
+      tp->alignment = (int)GetIntegerExpression(&pnd,sp,0).low;
     }
 
     if( lastst != begin)
@@ -285,7 +285,7 @@ for (;;) {
     ParseAttribute(nullptr);
   else if (lastst == kw_align) {
     NextToken();
-    sp->tp->alignment = (int)GetIntegerExpression(&pnd,sp,0);
+    sp->tp->alignment = (int)GetIntegerExpression(&pnd,sp,0).low;
   }
   else
     break;

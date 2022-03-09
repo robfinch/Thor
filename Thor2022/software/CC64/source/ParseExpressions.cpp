@@ -222,6 +222,7 @@ ENODE *makeinode(int nt, int64_t v1)
 	ep->etype = bt_void;
 	ep->esize = -1;
 	ep->i = v1;
+	ep->i128 = Int128(v1);
 	ep->p[1] = 0;
 	ep->p[0] = 0;
 	ep->p[2] = 0;
@@ -236,7 +237,7 @@ ENODE* makei128node(int nt, Int128 v1)
 	ep->constflag = TRUE;
 	ep->isUnsigned = FALSE;
 	ep->etype = bt_void;
-	ep->esize = -1;
+	ep->esize = 16;
 	ep->i = v1.low;
 	ep->i128 = v1;
 	ep->p[1] = 0;

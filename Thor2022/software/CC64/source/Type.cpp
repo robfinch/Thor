@@ -907,12 +907,12 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 					return (nbytes);
 					//error(TOO_MANY_DESIGNATORS);
 				}
-				n = GetConstExpression(&cnode, symi);
+				n = GetConstExpression(&cnode, symi).low;
 //				ofs.seekp(poses[n].poses);
 				//fill = min(1000000, n - pos + 1);
 				if (lastst == ellipsis) {
 					NextToken();
-					nh = GetConstExpression(&cnode, symi);
+					nh = GetConstExpression(&cnode, symi).low;
 				}
 				else
 					nh = n;
@@ -1025,7 +1025,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 				case bt_byte:
 				case bt_ubyte:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr,symi,0);
+						values[npos].value.i = GetIntegerExpression(nullptr,symi,0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1038,7 +1038,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 						}
 					}
 					if (!spitout && !recval) {
-						GenerateByte(GetIntegerExpression(nullptr,symi,0));
+						GenerateByte(GetIntegerExpression(nullptr,symi,0).low);
 						nbytes += 1;
 						pos++;
 					}
@@ -1047,7 +1047,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 				case bt_uchar:
 				case bt_ichar:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr,symi,0);
+						values[npos].value.i = GetIntegerExpression(nullptr,symi,0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1060,7 +1060,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 						}
 					}
 					if (!spitout && !recval) {
-						GenerateChar(GetIntegerExpression(nullptr,symi,0));
+						GenerateChar(GetIntegerExpression(nullptr,symi,0).low);
 						nbytes += 2;
 						pos++;
 					}
@@ -1092,7 +1092,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 					break;
 				case bt_enum:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr,symi,0);
+						values[npos].value.i = GetIntegerExpression(nullptr,symi,0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1105,7 +1105,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 						}
 					}
 					if (!spitout && !recval) {
-						GenerateChar(GetIntegerExpression(nullptr,symi,0));
+						GenerateChar(GetIntegerExpression(nullptr,symi,0).low);
 						nbytes += 2;
 						pos++;
 					}
@@ -1113,7 +1113,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 				case bt_long:
 				case bt_ulong:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr,symi,0);
+						values[npos].value.i = GetIntegerExpression(nullptr,symi,0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1134,7 +1134,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 				case bt_short:
 				case bt_ushort:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr,symi,0);
+						values[npos].value.i = GetIntegerExpression(nullptr,symi,0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1147,7 +1147,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 						}
 					}
 					if (!spitout && !recval) {
-						GenerateHalf(GetIntegerExpression(nullptr,symi,0));
+						GenerateHalf(GetIntegerExpression(nullptr,symi,0).low);
 						nbytes += 4;
 						pos++;
 					}
@@ -1155,7 +1155,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 				case bt_int:
 				case bt_uint:
 					if (recval) {
-						values[npos].value.i = GetIntegerExpression(nullptr, symi, 0);
+						values[npos].value.i = GetIntegerExpression(nullptr, symi, 0).low;
 						npos++;
 					}
 					spitout = false;
@@ -1168,7 +1168,7 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 						}
 					}
 					if (!spitout && !recval) {
-						GenerateHalf(GetIntegerExpression(nullptr, symi, 0));
+						GenerateHalf(GetIntegerExpression(nullptr, symi, 0).low);
 						nbytes += 4;
 						pos++;
 					}
@@ -1486,7 +1486,7 @@ int64_t TYP::InitializeUnion(SYM* symi)
 	int count;
 
 	nbytes = 0;
-	val = GetConstExpression(&node, symi);
+	val = GetConstExpression(&node, symi).low;
 	if (node == nullptr)	// syntax error in GetConstExpression()
 		return (0);
 	sp = lst.headp;      /* start at top of symbol table */
@@ -1504,7 +1504,7 @@ int64_t TYP::InitializeUnion(SYM* symi)
 				found = true;
 				while (lastst == comma && count < sp->tp->numele) {
 					NextToken();
-					val = GetConstExpression(&node, symi);
+					val = GetConstExpression(&node, symi).low;
 					//nbytes = node->esize;
 					nbytes += GenerateT(tp, node);
 					count++;

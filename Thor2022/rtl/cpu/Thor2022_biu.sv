@@ -43,7 +43,7 @@ module Thor2022_biu(rst,clk,tlbclk,UserMode,MUserMode,omode,ASID,bounds_chk,pe,
 	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
-	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, pta);
+	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr);
 parameter AWID=32;
 input rst;
 input clk;
@@ -86,7 +86,7 @@ input rb_i;
 output reg dce;							// data cache enable
 input [19:0] keys [0:7];
 input [2:0] arange;
-input Address pta;
+input Address ptbr;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -94,82 +94,6 @@ parameter HIGH = 1'b1;
 parameter LOW = 1'b0;
 
 parameter IO_KEY_ADR	= 16'hFF88;
-
-parameter MEMORY_INIT = 7'd0;
-parameter MEMORY_IDLE = 7'd1;
-parameter MEMORY_DISPATCH = 7'd2;
-parameter MEMORY3 = 7'd3;
-parameter MEMORY4 = 7'd4;
-parameter MEMORY5 = 7'd5;
-parameter MEMORY_ACKLO = 7'd6;
-parameter MEMORY_NACKLO = 7'd7;
-parameter MEMORY8 = 7'd8;
-parameter MEMORY9 = 7'd9;
-parameter MEMORY10 = 7'd10;
-parameter MEMORY11 = 7'd11;
-parameter MEMORY12 = 7'd12;
-parameter MEMORY13 = 7'd13;
-parameter DATA_ALIGN = 7'd14;
-parameter MEMORY_KEYCHK1 = 7'd15;
-parameter MEMORY_KEYCHK2 = 7'd16;
-parameter KEYCHK_ERR = 7'd17;
-parameter TLB1 = 7'd21;
-parameter TLB2 = 7'd22;
-parameter TLB3 = 7'd23;
-parameter IFETCH0 = 7'd30;
-parameter IFETCH1 = 7'd31;
-parameter IFETCH2 = 7'd32;
-parameter IFETCH3 = 7'd33;
-parameter IFETCH4 = 7'd34;
-parameter IFETCH5 = 7'd35;
-parameter IFETCH6 = 7'd36;
-parameter IFETCH1a = 7'd37;
-parameter IFETCH1b = 7'd38;
-parameter IFETCH3a = 7'd39;
-parameter DFETCH2 = 7'd42;
-parameter DFETCH3 = 7'd43;
-parameter DFETCH4 = 7'd44;
-parameter DFETCH5 = 7'd45;
-parameter DFETCH6 = 7'd46;
-parameter DFETCH7 = 7'd47;
-parameter DFETCH8 = 7'd48;
-parameter DFETCH9 = 7'd49;
-parameter KYLD = 7'd51;
-parameter KYLD2 = 7'd52;
-parameter KYLD3 = 7'd53;
-parameter KYLD4 = 7'd54;
-parameter KYLD5 = 7'd55;
-parameter KYLD6 = 7'd56;
-parameter KYLD7 = 7'd57;
-parameter MEMORY1 = 7'd60;
-parameter MFSEL1 = 7'd61;
-parameter MEMORY_ACTIVATE_LO = 7'd62;
-parameter MEMORY_ACTIVATE_HI = 7'd63;
-parameter IPT_FETCH1 = 7'd64;
-parameter IPT_FETCH2 = 7'd65;
-parameter IPT_FETCH3 = 7'd66;
-parameter IPT_FETCH4 = 7'd67;
-parameter IPT_FETCH5 = 7'd68;
-parameter IPT_RW_PTG2 = 7'd69;
-parameter IPT_RW_PTG3 = 7'd70;
-parameter IPT_RW_PTG4 = 7'd71;
-parameter IPT_RW_PTG5 = 7'd72;
-parameter PT_FETCH1 = 7'd81;
-parameter PT_FETCH2 = 7'd82;
-parameter PT_FETCH3 = 7'd83;
-parameter PT_FETCH4 = 7'd84;
-parameter PT_FETCH5 = 7'd85;
-parameter PT_FETCH6 = 7'd86;
-parameter PT_READ_PDE1 = 7'd87;
-parameter PT_READ_PDE2 = 7'd88;
-parameter PT_READ_PDE3 = 7'd89;
-parameter PT_READ_PDE4 = 7'd90;
-parameter PT_READ_PDE5 = 7'd91;
-parameter PT_RW_PTE1 = 7'd92;
-parameter PT_RW_PTE2 = 7'd93;
-parameter PT_RW_PTE3 = 7'd94;
-parameter PT_RW_PTE4 = 7'd95;
-parameter PT_RW_PTE5 = 7'd96;
 
 integer m,n,k;
 genvar g;
@@ -236,7 +160,7 @@ biu_dati_align uda1
 (
 	.dati(dati),
 	.datis(datis), 
-	.amt({ealow[3:0],3'b0})
+	.amt({1'b0,ealow[3:0],3'b0})
 );
 
 `ifdef CPU_B64
@@ -251,27 +175,10 @@ wire [63:0] datis = dati >> {ealow[1:0],3'b0};
 `endif
 
 // Build an insert mask for data cache store operations.
-reg [511:0] stmask;
-reg [127:0] stmask1;
-generate begin : gStMask
-	for (g = 0; g < 16; g = g + 1)
-		always_comb
-			stmask1[g*8+7:g*8] <= sel_o[g] ? 8'h00 : 8'hFF;
-always_comb stmask <= stmask1 << {adr_o[5:4],7'd0};
-`ifdef CPU_B64
-	for (g = 0; g < 8; g = g + 1)
-		always_comb
-			stmask1[g*8+7:g*8] <= sel_o[g] ? 8'h00 : 8'hFF;
-always_comb stmask <= stmask1 << {adr_o[5:3],6'd0};
-`endif
-`ifdef CPU_B32
-	for (g = 0; g < 4; g = g + 1)
-		always_comb
-			stmask1[g*8+7:g*8] <= sel_o[g] ? 8'h00 : 8'hFF;
-always_comb stmask <= stmask1 << {adr_o[5:2],5'd0};
-`endif
-end
-endgenerate
+wire [511:0] stmask;
+
+Thor2022_stmask ustmsk (sel_o, adr_o[5:4], stmask);
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // PMA Checker
@@ -402,17 +309,22 @@ assign fifoFromCtrl_empty = ofifo_cnt==4'd0;
 // Instruction cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-reg ic_update;
 reg [1:0] ic_rway,ic_wway;
 reg icache_wr;
 always_comb icache_wr = state==IFETCH3;
 reg ic_invline,ic_invall;
-reg [1:0] prev_ic_rway = 0;
 Address ipo;
+wire [AWID-1:6] ictag [0:511];
+wire [512/4-1:0] icvalid [0:3];
 
 reg [639:0] ici;		// Must be a multiple of 128 bits wide for shifting.
-reg [AWID-7:0] ic_tag;
-reg [AWID-7:0] prev_ic_tag = 0;
+wire [AWID-7:0] ic_tag;
+reg [2:0] ivcnt;
+reg [2:0] vcn;
+reg [pL1ICacheLineSize-1:0] ivcache [0:4];
+reg [AWID-1:6] ivtag [0:4];
+reg [4:0] ivvalid;
+
 
 // 640 wide x 512 deep
 icache_blkmem uicm (
@@ -427,104 +339,58 @@ icache_blkmem uicm (
   .doutb(ic_line)  // output wire [511 : 0] doutb
 );
 
-reg [AWID-1:6] ictag [0:3] [0:512/4-1];
-reg [512/4-1:0] icvalid [0:3];
-reg ihit1a;
-reg ihit1b;
-reg ihit1c;
-reg ihit1d;
-always_ff @(posedge tlbclk)
-begin
-  ihit1a = ictag[0][ip[12:6]]==ip[AWID-1:6] && icvalid[0][ip[12:6]]==TRUE;
-  ihit1b = ictag[1][ip[12:6]]==ip[AWID-1:6] && icvalid[1][ip[12:6]]==TRUE;
-  ihit1c = ictag[2][ip[12:6]]==ip[AWID-1:6] && icvalid[2][ip[12:6]]==TRUE;
-  ihit1d = ictag[3][ip[12:6]]==ip[AWID-1:6] && icvalid[3][ip[12:6]]==TRUE;
-	ihit = ihit1a|ihit1b|ihit1c|ihit1d;
-end
+Thor2022_ictag 
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+uictag1
+(
+	.clk(tlbclk),
+	.wr(icache_wr),
+	.ip(ipo),
+	.way(waycnt),
+	.tag(ictag)
+);
 
-initial begin
-  for (n = 0; n < 512/4; n = n + 1) begin
-    ictag[0][n] = 32'd1;
-    ictag[1][n] = 32'd1;
-    ictag[2][n] = 32'd1;
-    ictag[3][n] = 32'd1;
-  end
-end
+Thor2022_ichit
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+uichit1
+(
+	.clk(tlbclk),
+	.ip(ip),
+	.tag(ictag),
+	.valid(icvalid),
+	.ihit(ihit),
+	.rway(ic_rway),
+	.vtag(ic_tag)
+);
 
-initial begin
-  for (n = 0; n < 512/4; n = n + 1) begin
-    icvalid[0][n] = 1'b0;
-    icvalid[1][n] = 1'b0;
-    icvalid[2][n] = 1'b0;
-    icvalid[3][n] = 1'b0;
-  end
-end
+Thor2022_icvalid 
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+uicval1
+(
+	.rst(rst),
+	.clk(tlbclk),
+	.invce(state==MEMORY4),
+	.ip(ipo),
+	.adr(adr_o),
+	.wr(icache_wr),
+	.way(waycnt),
+	.invline(ic_invline),
+	.invall(ic_invall),
+	.valid(icvalid)
+);
 
-always_comb
-begin
-  case(1'b1)
-  ihit1a: ic_rway <= 2'b00;
-  ihit1b: ic_rway <= 2'b01;
-  ihit1c: ic_rway <= 2'b10;
-  ihit1d: ic_rway <= 2'b11;
-  default:  ic_rway <= prev_ic_rway;
-  endcase
-end
-
-// For victim cache update
-always_comb
-begin
-  case(1'b1)
-  ihit1a: ic_tag <= ictag[0][ip[12:6]];
-  ihit1b: ic_tag <= ictag[1][ip[12:6]];
-  ihit1c: ic_tag <= ictag[2][ip[12:6]];
-  ihit1d: ic_tag <= ictag[3][ip[12:6]];
-  default:  ic_tag <= prev_ic_tag;
-  endcase
-end
-
-always_ff @(posedge clk)
-	prev_ic_rway <= ic_rway;
-always_ff @(posedge clk)
-	prev_ic_tag <= ic_tag;
-
-always_ff @(posedge clk)
-if (rst) begin
-	icvalid[0] <= {512/4{1'b0}};
-	icvalid[1] <= {512/4{1'b0}};
-	icvalid[2] <= {512/4{1'b0}};
-	icvalid[3] <= {512/4{1'b0}};
-end
-else begin
-	if (icache_wr) begin
-		icvalid[waycnt][ipo[12:6]] <= 1'b1;
-		ictag[waycnt][ipo[12:6]] <= ipo[AWID-1:6];
-	end
-	// Cache line invalidate
-	// Use physical address
-	// ToDo: Check for tag match
-	else if (state==MEMORY4) begin
-		if (ic_invline) begin
-			icvalid[0][adr_o[12:6]] <= 1'b0;
-			icvalid[1][adr_o[12:6]] <= 1'b0;
-			icvalid[2][adr_o[12:6]] <= 1'b0;
-			icvalid[3][adr_o[12:6]] <= 1'b0;
-		end
-		else if (ic_invall) begin
-			icvalid[0] <= {512/4{1'b0}};
-			icvalid[1] <= {512/4{1'b0}};
-			icvalid[2] <= {512/4{1'b0}};
-			icvalid[3] <= {512/4{1'b0}};
-		end
-	end
-end
-
-
-reg [2:0] ivcnt;
-reg [2:0] vcn;
-reg [pL1ICacheLineSize-1:0] ivcache [0:4];
-reg [AWID-1:6] ivtag [0:4];
-reg [4:0] ivvalid;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Key Cache
@@ -563,6 +429,7 @@ always_comb
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Data Cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+wire [3:0] tlbacr;
 
 reg [2:0] dwait;		// wait state counter for dcache
 Address dadr;
@@ -571,8 +438,10 @@ wire [511:0] dc_eline, dc_oline;
 reg [1023:0] dc_line;
 reg [511:0] datil;
 reg dcachable;
-reg [1:0] dc_erway,dc_ewway,prev_dc_erway;
-reg [1:0] dc_orway,dc_owway,prev_dc_orway;
+reg [1:0] dc_erway,prev_dc_erway;
+reg [1:0] dc_orway,prev_dc_orway;
+wire [1:0] dc_ewway;
+wire [1:0] dc_owway;
 reg dcache_ewr, dcache_owr;
 reg dc_invline,dc_invall;
 
@@ -606,102 +475,174 @@ always_comb
 	1'b1:	dc_line = {dc_eline,dc_oline};
 	endcase
 
-reg [AWID-7:0] dc_etag0 [0:127];
-reg [AWID-7:0] dc_etag1 [0:127];
-reg [AWID-7:0] dc_etag2 [0:127];
-reg [AWID-7:0] dc_etag3 [0:127];
-reg [127:0] dc_evalid0;
-reg [127:0] dc_evalid1;
-reg [127:0] dc_evalid2;
-reg [127:0] dc_evalid3;
-reg dhit1ae;
-reg dhit1be;
-reg dhit1ce;
-reg dhit1de;
-reg [AWID-7:0] dc_otag0 [0:127];
-reg [AWID-7:0] dc_otag1 [0:127];
-reg [AWID-7:0] dc_otag2 [0:127];
-reg [AWID-7:0] dc_otag3 [0:127];
-reg [127:0] dc_ovalid0;
-reg [127:0] dc_ovalid1;
-reg [127:0] dc_ovalid2;
-reg [127:0] dc_ovalid3;
-reg dhit1ao;
-reg dhit1bo;
-reg dhit1co;
-reg dhit1do;
+wire [AWID-7:0] dc_etag [511:0];
+wire [127:0] dc_evalid [0:3];
+wire [3:0] dhit1e;
+wire [AWID-7:0] dc_otag [511:0];
+wire [127:0] dc_ovalid [0:3];
+wire [3:0] dhit1o;
 
-always_comb	//(posedge clk_g)
-  dhit1ae <= dc_etag0[adr_o[13:7]+adr_o[6]]==adr_o[AWID-1:6] && dc_evalid0[adr_o[13:7]+adr_o[6]];
-always_comb	//(posedge clk_g)
-  dhit1be <= dc_etag1[adr_o[13:7]+adr_o[6]]==adr_o[AWID-1:6] && dc_evalid1[adr_o[13:7]+adr_o[6]];
-always_comb	//(posedge clk_g)
-  dhit1ce <= dc_etag2[adr_o[13:7]+adr_o[6]]==adr_o[AWID-1:6] && dc_evalid2[adr_o[13:7]+adr_o[6]];
-always_comb	//(posedge clk_g)
-  dhit1de <= dc_etag3[adr_o[13:7]+adr_o[6]]==adr_o[AWID-1:6] && dc_evalid3[adr_o[13:7]+adr_o[6]];
-wire dhite = dhit1ae|dhit1be|dhit1ce|dhit1de;
-initial begin
-  for (n = 0; n < 128; n = n + 1) begin
-    dc_etag0[n] = 32'd1;
-    dc_etag1[n] = 32'd1;
-    dc_etag2[n] = 32'd1;
-    dc_etag3[n] = 32'd1;
-  end
-end
+Thor2022_dchit udchite
+(
+	.clk(clk),
+	.tags(dc_etag),
+	.ndx(adr_o[13:7]+adr_o[6]),
+	.adr(adr_o),
+	.valid(dc_evalid),
+	.hits(dhit1e),
+	.hit(dhite),
+	.rway(dc_erway)
+);
 
-always_comb	//(posedge clk_g)
-  dhit1ao <= dc_otag0[adr_o[13:7]]==adr_o[AWID-1:6] && dc_ovalid0[adr_o[13:7]];
-always_comb	//(posedge clk_g)
-  dhit1bo <= dc_otag1[adr_o[13:7]]==adr_o[AWID-1:6] && dc_ovalid1[adr_o[13:7]];
-always_comb	//(posedge clk_g)
-  dhit1co <= dc_otag2[adr_o[13:7]]==adr_o[AWID-1:6] && dc_ovalid2[adr_o[13:7]];
-always_comb	//(posedge clk_g)
-  dhit1do <= dc_otag3[adr_o[13:7]]==adr_o[AWID-1:6] && dc_ovalid3[adr_o[13:7]];
-wire dhito = dhit1ao|dhit1bo|dhit1co|dhit1do;
-initial begin
-  for (n = 0; n < 128; n = n + 1) begin
-    dc_otag0[n] = 32'd1;
-    dc_otag1[n] = 32'd1;
-    dc_otag2[n] = 32'd1;
-    dc_otag3[n] = 32'd1;
-  end
-end
-
-
-always_comb
-begin
-  case(1'b1)
-  dhit1ae: dc_erway <= 2'b00;
-  dhit1be: dc_erway <= 2'b01;
-  dhit1ce: dc_erway <= 2'b10;
-  dhit1de: dc_erway <= 2'b11;
-  default:  dc_erway <= prev_dc_erway;
-  endcase
-end
-
-always_ff @(posedge clk)
-	prev_dc_erway <= dc_erway;
-
-always_comb
-begin
-  case(1'b1)
-  dhit1ao: dc_orway <= 2'b00;
-  dhit1bo: dc_orway <= 2'b01;
-  dhit1co: dc_orway <= 2'b10;
-  dhit1do: dc_orway <= 2'b11;
-  default:  dc_orway <= prev_dc_orway;
-  endcase
-end
-
-always_ff @(posedge clk)
-	prev_dc_orway <= dc_orway;
+Thor2022_dchit udchito
+(
+	.clk(clk),
+	.tags(dc_otag),
+	.ndx(adr_o[13:7]),
+	.adr(adr_o),
+	.valid(dc_ovalid),
+	.hits(dhit1o),
+	.hit(dhito),
+	.rway(dc_orway)
+);
 
 reg dhit;
 always_comb
-	dhit = (dhite & dhito) || (adr_o[6] ? (dhito && adr_o[5:0] < 6'd49) : (dhite && adr_o[5:0] < 6'd49));
-	
-// ToDo:
-// Add data cache invalidate
+	dhit = (dhite & dhito) || (adr_o[6] ? (dhito && adr_o[5:4] != 2'b11) : (dhite && adr_o[5:4] != 2'b11));
+
+Thor2022_dctag
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+udcotag
+(
+	.clk(clk),
+	.wr(state==DFETCH7 && dadr[6]),
+	.adr(dadr),
+	.way(lfsr_o[1:0]),
+	.tag(dc_otag)
+);
+
+Thor2022_dctag
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+udcetag
+(
+	.clk(clk),
+	.wr(state==DFETCH7 && ~dadr[6]),
+	.adr(dadr),
+	.way(lfsr_o[1:0]),
+	.tag(dc_etag)
+);
+
+Thor2022_dcvalid
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+udcovalid
+(
+	.rst(rst),
+	.clk(clk),
+	.invce(state==MEMORY4 && adr_o[6]),
+	.dadr(dadr),
+	.adr(adr_o),
+	.wr(state==DFETCH7 && dadr[6]),
+	.way(lfsr_o[1:0]),
+	.invline(dc_invline),
+	.invall(dc_invall),
+	.valid(dc_ovalid)
+);
+
+Thor2022_dcvalid
+#(
+	.LINES(128),
+	.WAYS(4),
+	.AWID(AWID)
+)
+udcevalid
+(
+	.rst(rst),
+	.clk(clk),
+	.invce(state==MEMORY4 && ~adr_o[6]),
+	.dadr(dadr),
+	.adr(adr_o),
+	.wr(state==DFETCH7 && ~dadr[6]),
+	.way(lfsr_o[1:0]),
+	.invline(dc_invline),
+	.invall(dc_invall),
+	.valid(dc_evalid)
+);
+
+Thor2022_dcache_wr udcwre
+(
+	.clk(clk),
+	.state(state),
+	.ack(ack_i),
+	.func(memreq.func),
+	.dce(dce),
+	.hit(dhit),
+	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
+	.acr(tlbacr),
+	.eaeo(~ealow[6]),
+	.daeo(dadr[6]),
+	.wr(dcache_ewr)
+);
+
+Thor2022_dcache_wr udcwro
+(
+	.clk(clk),
+	.state(state),
+	.ack(ack_i),
+	.func(memreq.func),
+	.dce(dce),
+	.hit(dhit),
+	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
+	.acr(tlbacr),
+	.eaeo(ealow[6]),
+	.daeo(~dadr[6]),
+	.wr(dcache_owr)
+);
+
+Thor2022_dcache_way udcwaye
+(
+	.clk(clk),
+	.state(state),
+	.ack(ack_i),
+	.func(memreq.func),
+	.dce(dce),
+	.hit(dhit),
+	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
+	.acr(tlbacr),
+	.eaeo(~ealow[6]),
+	.daeo(dadr[6]),
+	.lfsr(lfsr_o[1:0]),
+	.rway(dc_erway),
+	.wway(dc_ewway)
+);
+
+Thor2022_dcache_way udcwayo
+(
+	.clk(clk),
+	.state(state),
+	.ack(ack_i),
+	.func(memreq.func),
+	.dce(dce),
+	.hit(dhit),
+	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
+	.acr(tlbacr),
+	.eaeo(ealow[6]),
+	.daeo(~dadr[6]),
+	.lfsr(lfsr_o[1:0]),
+	.rway(dc_orway),
+	.wway(dc_owway)
+);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // TLB
@@ -712,13 +653,12 @@ reg [5:0] ipt_miss_count;
 reg tlben, tlbwr;
 wire tlbmiss;
 wire tlbrdy;
-wire [3:0] tlbacr;
 PTE tlbdato;
 reg [31:0] tlb_ia;
 PTE tlb_ib;
 reg inext;
-Address tlbmiss_adr;
-Address miss_adr;
+VirtualAddress tlbmiss_adr;
+VirtualAddress miss_adr;
 reg wr_ptg;
 
 Thor2022_tlb utlb (
@@ -745,25 +685,42 @@ Thor2022_tlb utlb (
   .tlbmiss_adr_o(tlbmiss_adr)
 );
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+// IPT
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 reg [7:0] fault_code;
 PTG ptg;
-reg pfetch7;
 PTE tmptlbe2;
+reg pte_found;
+wire [15:0] hash;
 
-always_comb
-begin
-	pfetch7 = `FALSE;
-  tmptlbe2 = 'd0;
-	for (k = 0; k < Thor2022_mmupkg::PtePerPtg; k = k + 1) begin
-		if (!pfetch7 && 
-			(ptg.ptes[k].vpn[19:10]==miss_adr[31:22] && (ptg.ptes[k].s || ptg.ptes[k].vpn[9:0]==miss_adr[21:12])) &&
-			(ptg.ptes[k].g || ptg.ptes[n].asid==ASID) && ptg.ptes[k].v) begin
-			tmptlbe2 = ptg.ptes[k];
-			pfetch7 = `TRUE;
-		end
-	end
+Thor2022_ipt_hash uhash
+(
+	.asid(ASID),
+	.adr(miss_adr),
+	.hash(hash)
+);
+
+Thor2022_ptg_search uptgs
+(
+	.ptg(ptg),
+	.asid(ASID),
+	.miss_adr(miss_adr),
+	.pte(tmptlbe2),
+	.found(pte_found)
+);
+
+integer j;
+reg [9:0] square_table [0:15];
+initial begin
+	for (j = 0; j < 16; j = j + 1)
+		square_table[j] = j * j;
 end
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+// PT
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Page table vars
 reg [2:0] dep;
 reg [8:0] adr_slice;
@@ -779,14 +736,6 @@ if (rst) begin
 	dce <= FALSE;
 	zero_data <= FALSE;
 	dcachable <= TRUE;
-  dc_evalid0 = 128'd0;
-  dc_evalid1 = 128'd0;
-  dc_evalid2 = 128'd0;
-  dc_evalid3 = 128'd0;
-  dc_ovalid0 = 128'd0;
-  dc_ovalid1 = 128'd0;
-  dc_ovalid2 = 128'd0;
-  dc_ovalid3 = 128'd0;
 	ivvalid <= 5'h00;
 	ivcnt <= 3'd0;
 	vcn <= 3'd0;
@@ -804,8 +753,6 @@ if (rst) begin
 	cr_o <= LOW;
 	waycnt <= 2'd0;
 	ic_wway <= 2'b00;
-	dcache_ewr <= FALSE;
-	dcache_owr <= FALSE;
 	dwait <= 3'd0;
 	iaccess <= FALSE;
 	daccess <= FALSE;
@@ -822,11 +769,8 @@ if (rst) begin
 end
 else begin
 	inext <= FALSE;
-	ic_update <= 1'b0;
 //	memreq_rd <= FALSE;
 	memresp.wr <= FALSE;
-	dcache_ewr <= FALSE;
-	dcache_owr <= FALSE;
 	tlbwr <= FALSE;
 
 	case(state)
@@ -926,7 +870,7 @@ else begin
 	MEMORY_ACTIVATE_HI:
 		tMemoryActivateHi();
 
-	MEMORY12:
+	MEMORY_ACKHI:
 		tMemoryAckHi();
 
 	MEMORY13:
@@ -998,7 +942,7 @@ else begin
 	  		tDeactivateBus();
 	  		fault_code <= FLT_CPF;
 	  		miss_adr <= tlbmiss_adr;
-	  		gosub (pta[0] ? PT_FETCH1 : IPT_FETCH1);
+	  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
 	  	end
 	    else if (ack_i) begin
 	      ici <= {dat_i,ici[639:128]};	// shift in the data
@@ -1072,7 +1016,7 @@ else begin
 		  		tDeactivateBus();
 		  		fault_code <= FLT_DPF;
 		  		miss_adr <= tlbmiss_adr;
-		  		gosub (pta[0] ? PT_FETCH1 : IPT_FETCH1);
+		  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
 		  	end
 			  // First time in, set to miss address, after that increment
 	      dadr <= {adr_o[AWID-1:6],6'h0};
@@ -1124,38 +1068,6 @@ else begin
 	// left to do is update the tag and valid status.
 	DFETCH7:
 	  begin
-    	if (dadr[6]) begin
-    		dcache_owr <= TRUE;
-    		dc_owway <= lfsr_o[1:0];
-	    	case(lfsr_o[1:0])
-	    	2'd0:	dc_otag0[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd1:	dc_otag1[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd2:	dc_otag2[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd3:	dc_otag3[dadr[13:7]] <= dadr[AWID-1:6];
-	    	endcase
-	    	case(lfsr_o[1:0])
-	    	2'd0:	dc_ovalid0[dadr[13:7]] <= 1'b1;
-	    	2'd1:	dc_ovalid1[dadr[13:7]] <= 1'b1;
-	    	2'd2:	dc_ovalid2[dadr[13:7]] <= 1'b1;
-	    	2'd3:	dc_ovalid3[dadr[13:7]] <= 1'b1;
-	    	endcase
-    	end
-    	else begin
-	    	dcache_ewr <= TRUE;
-  	  	dc_ewway <= lfsr_o[1:0];
-	    	case(lfsr_o[1:0])
-	    	2'd0:	dc_etag0[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd1:	dc_etag1[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd2:	dc_etag2[dadr[13:7]] <= dadr[AWID-1:6];
-	    	2'd3:	dc_etag3[dadr[13:7]] <= dadr[AWID-1:6];
-	    	endcase
-	    	case(lfsr_o[1:0])
-	    	2'd0:	dc_evalid0[dadr[13:7]] <= 1'b1;
-	    	2'd1:	dc_evalid1[dadr[13:7]] <= 1'b1;
-	    	2'd2:	dc_evalid2[dadr[13:7]] <= 1'b1;
-	    	2'd3:	dc_evalid3[dadr[13:7]] <= 1'b1;
-	    	endcase
-    	end
 			xlaten <= xlaten_stk;
     	goto (DFETCH8);
 	  end
@@ -1198,7 +1110,7 @@ else begin
 		  		tDeactivateBus();
 		  		fault_code <= FLT_DPF;
 		  		miss_adr <= tlbmiss_adr;
-		  		gosub (pta[0] ? PT_FETCH1 : IPT_FETCH1);
+		  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
 		  	end
 				else
 				  // First time in, set to miss address, after that increment
@@ -1260,14 +1172,15 @@ else begin
 	IPT_FETCH1:
 		begin
 			// Open addressing with quadratic probing
-//			dadr <= pta + {ptg.link,7'h0};
-			dadr <= pta + (({fnHash(ASID,miss_adr),7'h0} + (ipt_miss_count * ipt_miss_count)) & 16'hFFFF);//pta + {ptg.link,7'h0};
+//			dadr <= ptbr + {ptg.link,7'h0};
+			dadr <= ptbr + ({(hash + square_table[ipt_miss_count]) & 16'hFFFF,6'h0});//ptbr + {ptg.link,7'h0};
 	 		xlaten <= FALSE;
+	 		wr_ptg <= 1'b0;
 	    if (ipt_miss_count==6'd12)
 	    	tPageFault(fault_code,miss_adr);
 	    else
 	    	gosub (IPT_RW_PTG2);
-	    if (pfetch7) begin
+	    if (pte_found) begin
 	    	tlb_ib <= tmptlbe2;
 	    	goto (IPT_FETCH2);
 	    end
@@ -1340,8 +1253,10 @@ else begin
 		begin
   		stb_o <= HIGH;
 	    if (ack_i) begin
-	    	if (wr_ptg)
+	    	if (wr_ptg) begin
 	    		ptg <= {ptg[127:0],ptg[511:128]};
+	    		dat_o <= ptg[255:128];
+	    	end
 	    	else
 	      	ptg <= {dat_i,ptg[$bits(ptg)-1:128]};	// shift in the data
 	      dcnt <= dcnt + 4'd4;					// increment word count
@@ -1372,14 +1287,14 @@ else begin
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	PT_FETCH1:
 		begin
-			dep <= pta[10:8];
+			dep <= ptbr[10:8];
 			wr_pte <= 1'b0;
-	  	case(pta[8:6])
-	  	3'd0:	begin pde <= pta[31:12]; 	adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
-	  	3'd1: begin pde <= pta[31:12];	adr_slice <= miss_adr[28:20]; call (PT_READ_PDE1, PT_FETCH2); dep <= pta[10:8] - 2'd1; end // 9 bits
-	  	3'd2:	begin pde <= pta[31:12];	adr_slice <= miss_adr[31:29]; call (PT_READ_PDE1, PT_FETCH2); dep <= pta[10:8] - 2'd1; end // 9 bits
-//	  	3'd3:	begin pde <= pta[31:12];	adr_slice <= miss_adr[46:38]; call (PT_READ_PDE1, PT_FETCH2); dep <= pta[10:8] - 2'd1; end // 9 bits
-//	  	3'd4:	begin pde <= pta[31:12];	adr_slice <= miss_adr[55:47]; call (PT_READ_PDE1, PT_FETCH2); dep <= pta[10:8] - 2'd1; end // 9 bits
+	  	case(ptbr[8:6])
+	  	3'd0:	begin pde <= ptbr[31:12]; 	adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
+	  	3'd1: begin pde <= ptbr[31:12];	adr_slice <= miss_adr[28:20]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
+	  	3'd2:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[31:29]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
+//	  	3'd3:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[46:38]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
+//	  	3'd4:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[55:47]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
 	  	default:	ret();
 	  	endcase
 		end
@@ -1672,7 +1587,7 @@ begin
 		tDeactivateBus();
 		fault_code <= FLT_DPF;
 		miss_adr <= tlbmiss_adr;
- 		gosub (pta[0] ? PT_FETCH1 : IPT_FETCH1);
+ 		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
 	end
   else if (memreq.func != MR_CACHE) begin
   	vda_o <= HIGH;
@@ -1724,16 +1639,10 @@ begin
     	datil <= dc_line;
   		if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
   			if (ack_i) begin
-  				if (ealow[6]) begin
-		  			dci <= (dc_oline & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
-		  			dc_owway <= dc_orway;
-	  				dcache_owr <= TRUE;
-  				end
-  				else begin
-		  			dci <= (dc_eline & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
-		  			dc_ewway <= dc_erway;
-	  				dcache_ewr <= TRUE;
-  				end
+  				if (ealow[6])
+		  			dci <= (dc_oline & ~stmask) | ((dat << {adr_o[5:4],7'b0}) & stmask);
+  				else
+		  			dci <= (dc_eline & ~stmask) | ((dat << {adr_o[5:4],7'b0}) & stmask);
   			  goto (MEMORY_NACKLO);
 		      stb_o <= LOW;
 		      if (sel[31:16]==1'h0)
@@ -1824,13 +1733,13 @@ begin
   xlaten <= FALSE;
   dwait <= 3'd0;
 //    dadr <= adr_o;
-  goto (MEMORY12);
+  goto (MEMORY_ACKHI);
 	if (tlbmiss) begin
 		tPushBus();
 		tDeactivateBus();
 		fault_code <= FLT_DPF;
 		miss_adr <= tlbmiss_adr;
- 		gosub (pta[0] ? PT_FETCH1 : IPT_FETCH1);
+ 		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
 	end
 	else begin
 		if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce && tlbacr[3])
@@ -1861,16 +1770,10 @@ begin
   	datil <= dc_line;
 		if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
 			if (ack_i) begin
-				if (ealow[6]) begin
-  				dci <= (dc_eline & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
-  				dc_ewway <= dc_erway;
-  				dcache_ewr <= TRUE;
-				end
-				else begin
-  				dci <= (dc_oline & stmask) | ((dat << {adr_o[5:4],7'b0}) & ~stmask);
-  				dc_owway <= dc_orway;
-  				dcache_owr <= TRUE;
-  			end
+				if (ealow[6])
+  				dci <= (dc_eline & ~stmask) | ((dat << {adr_o[5:4],7'b0}) & stmask);
+				else
+  				dci <= (dc_oline & ~stmask) | ((dat << {adr_o[5:4],7'b0}) & stmask);
 	      goto (MEMORY13);
 	      stb_o <= LOW;
 	    end

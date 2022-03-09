@@ -55,7 +55,7 @@ input next_i;
 input iacc_i;
 input dacc_i;
 input Address iadr_i;
-output Address padr_o;
+output PhysicalAddress padr_o;
 output reg [3:0] acr_o;
 input tlben_i;
 input wrtlb_i;
@@ -269,7 +269,9 @@ if (rst_i) begin
   padr_o[11:0] <= rstip[11:0];
   padr_o[AWID-1:12] <= rstip[AWID-1:12];
   hit <= 4'd15;
+  tlbmiss_o <= FALSE;
 	tlbmiss_adr_o <= 'd0;
+  acr_o <= 4'hF;
 end
 else begin
   if (pe_xlat)
@@ -277,19 +279,19 @@ else begin
 	if (next_i)
 		padr_o <= padr_o + 6'd32;
   else if (iacc_i) begin
-  	padr_o[11:0] <= iadr_i[11:0];
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
+	  	padr_o[11:0] <= iadr_i[11:0];
 	    padr_o[31:12] <= iadr_i[31:12];
 	    acr_o <= 4'hF;
 		end
 		else begin
-			padr_o <= 'h0;
 			tlbmiss_o <= dli[4] & ~cd_iadr;
 			tlbmiss_adr_o <= iadr_i;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[9:0]==iadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
+			  	padr_o[11:0] <= iadr_i[11:0];
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
@@ -300,19 +302,19 @@ else begin
 		end
   end
   else if (dacc_i) begin
-    padr_o[11:0] <= dadr_i[11:0];
 		if (!xlaten_i) begin
 	    tlbmiss_o <= FALSE;
+	  	padr_o[11:0] <= dadr_i[11:0];
 	    padr_o[31:12] <= dadr_i[31:12];
 	    acr_o <= 4'hF;
 		end
 		else begin
-			padr_o <= 'h0;
 			tlbmiss_o <= dld[4] & ~cd_dadr;
 			tlbmiss_adr_o <= dadr_i;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[9:0]==dadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
+			  	padr_o[11:0] <= dadr_i[11:0];
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};

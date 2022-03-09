@@ -39,7 +39,7 @@ int64_t* Statement::GetCasevals()
 	NextToken();
 	nn = 0;
 	do {
-		buf[nn] = GetIntegerExpression((ENODE**)NULL,nullptr,0);
+		buf[nn] = GetIntegerExpression((ENODE**)NULL,nullptr,0).low;
 		nn++;
 		if (lastst != comma)
 			break;

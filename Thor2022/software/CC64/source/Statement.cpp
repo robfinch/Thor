@@ -281,7 +281,7 @@ Statement *Statement::ParseIf()
 		error(ERR_EXPREXPECT);
 	if (lastst == semicolon) {
 		NextToken();
-		snp->prediction = (GetIntegerExpression(NULL,nullptr,0) & 1) | 2;
+		snp->prediction = (GetIntegerExpression(NULL,nullptr,0).low & 1) | 2;
 	}
 	if (needpa)
 		needpunc(closepa, 19);
@@ -458,7 +458,7 @@ Statement *Statement::ParseStop()
 	Statement *snp;
 
 	snp = MakeStatement(st_stop, TRUE);
-	snp->num = (int)GetIntegerExpression(NULL,nullptr,0);
+	snp->num = (int)GetIntegerExpression(NULL,nullptr,0).low;
 	if (lastst != end)
 		needpunc(semicolon, 43);
 	return snp;

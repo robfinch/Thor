@@ -184,14 +184,14 @@ void Declaration::ParseInterrupt()
 	NextToken();
 	if (lastst == openpa) {
 		NextToken();
-		sp_init = GetIntegerExpression(nullptr,nullptr,0);
+		sp_init = GetIntegerExpression(nullptr,nullptr,0).low;
 		/*
 		if (lastst!=id)
 				error(ERR_IDEXPECT);
 		*/
 		if (lastst == comma) {
 			NextToken();
-			DoesContextSave = GetIntegerExpression(nullptr,nullptr,0);
+			DoesContextSave = GetIntegerExpression(nullptr,nullptr,0).low;
 		}
 		needpunc(closepa,49);
 		//stkname = my_strdup(lastid);
@@ -958,7 +958,7 @@ void Declaration::ParseBitfieldSpec(bool isUnion)
 {
 	dfs.puts("<ParseBitfieldSpec>");
 	NextToken();
-	bit_width = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0);
+	bit_width = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0).low;
 	if (isUnion)
 		bit_offset = 0;
 	else
@@ -1327,7 +1327,7 @@ void Declaration::ParseSuffixOpenbr()
 		NextToken();
 	}
 	else if(head != NULL) {
-		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1);
+		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1).low;
 		temp1->size = sz2 * head->size;
 		temp1->numele = sz2;
 		temp1->dimen = head->dimen + 1;
@@ -1336,7 +1336,7 @@ void Declaration::ParseSuffixOpenbr()
 		needpunc(closebr,21);
 	}
 	else {
-		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1);
+		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1).low;
 		temp1->size = sz2;
 		temp1->numele = sz2;
 		temp1->dimen = 1;

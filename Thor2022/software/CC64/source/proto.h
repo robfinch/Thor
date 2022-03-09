@@ -11,9 +11,9 @@ int IsTempReg(int rg);
 extern TYP* expression(ENODE** node, SYM* symi);
 
 // Intexpr.c
-extern int64_t GetIntegerExpression(ENODE** p, SYM* symi, int opt);
+extern Int128 GetIntegerExpression(ENODE** p, SYM* symi, int opt);
 extern Float128* GetFloatExpression(ENODE** pnode, SYM* symi);
-int64_t GetConstExpression(ENODE **pnode, SYM* symi);
+Int128 GetConstExpression(ENODE **pnode, SYM* symi);
 
 void GenMemop(int op, Operand *ap1, Operand *ap2, int ssize);
 void GenerateHint(int num);
@@ -44,7 +44,7 @@ extern void GenerateChar(int64_t val);
 extern void GenerateHalf(int64_t val);
 extern void GenerateWord(int64_t val);
 extern void GenerateInt(int64_t val);
-extern void GenerateLong(int64_t val);
+extern void GenerateLong(Int128 val);
 extern void GenerateFloat(Float128 *val);
 extern void GenerateQuad(Float128 *);
 extern void GenerateReference(SYM *sp, int64_t offset);

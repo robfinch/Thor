@@ -156,16 +156,16 @@ void Int128::Div(Int128 *q, Int128 *r, Int128 *a, Int128 *b)
 	else
 		Assign(&oa,a);
 
-	qu.high = ob.high;
-	qu.low = ob.low;
+	qu.high = oa.high;
+	qu.low = oa.low;
 	rm.high = 0LL;
 	rm.low = 0LL;
 	for (nn = 0; nn < 128; nn++) {
 		Shl(&rm,&rm);
 		if (Shl(&qu,&qu))
 			rm.low |= 1LL;
-		if (IsLE(&oa,&rm)) {
-			Sub(&rm,&rm,&oa);
+		if (IsLE(&ob,&rm)) {
+			Sub(&rm,&rm,&ob);
 			qu.low |= 1LL;
 		}
 	}

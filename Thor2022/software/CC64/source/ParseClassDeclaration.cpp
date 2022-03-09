@@ -102,7 +102,7 @@ int ClassDeclaration::Parse(int ztype)
     dfs.printf("A");
 		if (lastst == kw_align) {
       NextToken();
-      alignment = (int)GetIntegerExpression(&pnd,sp,0);
+      alignment = (int)GetIntegerExpression(&pnd,sp,0).low;
     }
     else
       alignment = AL_STRUCT;
@@ -196,7 +196,7 @@ int ClassDeclaration::Parse(int ztype)
     NextToken();
     if (lastst==kw_align) {
 	    NextToken();
-      sp->tp->alignment = (int)GetIntegerExpression(&pnd,sp,0);
+      sp->tp->alignment = (int)GetIntegerExpression(&pnd,sp,0).low;
     }
 		if (lastst==begin) {
         NextToken();

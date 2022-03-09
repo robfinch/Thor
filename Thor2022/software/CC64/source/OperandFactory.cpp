@@ -122,6 +122,7 @@ Operand* OperandFactory::MakeImmediate(Int128 i, int display_opt)
 	ep->nodetype = en_icon;
 	ep->i128 = i;
 	ep->i = i.low & 0xffffffLL;
+	ep->esize = 16LL;
 	ap = allocOperand();
 	ap->mode = am_imm;
 	ap->offset = ep;

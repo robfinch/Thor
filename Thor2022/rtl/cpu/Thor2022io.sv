@@ -122,9 +122,9 @@ reg [63:0] vm_regfile [0:7];
 integer n1;
 initial begin
 	for (n1 = 0; n1 < 32; n1 = n1 + 1) begin
-		regfile[n1] <= 64'd0;
-		preg[n1 % 8] <= 64'd0;
-		caregfile[n1 % 16].offs <= 32'd0;
+		regfile[n1] <= 'd0;
+		preg[n1 % 8] <= 'd0;
+		caregfile[n1 % 16].offs <= 'd0;
 	end
 end
 
@@ -266,7 +266,7 @@ reg [2:0] xSc;
 wire takb;
 reg xpredict_taken;
 reg xJmp;
-reg [63:0] xJmptgt;
+reg [127:0] xJmptgt;
 reg xJxx, xJxz;
 reg xPredictableBranch;
 reg xdj;
@@ -394,6 +394,7 @@ wire dce;     					// data cache enable
 wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
 Value scratch [0:3];
+Address ptbr;
 reg [63:0] tick;
 reg [63:0] wc_time;			// wall-clock time
 reg [63:0] mtimecmp;
@@ -876,8 +877,7 @@ SLTUI,SLTUIL:	res2 = xa < imm;
 SGTUI,SGTUIL:	res2 = xa > imm;
 DJMP:					res2 = xa - 2'd1;
 //STSET:				res2 = xc0 - 2'd1;
-LLA,LLAX,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDOS,
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDHS,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
 							res2 = memresp.res;
 BSET:							
@@ -924,7 +924,6 @@ R2:
 	endcase
 // (a&b)|(a&~s)|(b&~s)
 ADD2R:	carry_res = res2[128];
-LLA,LLAX:	carry_res = memresp.res[255:128];
 default:	carry_res = 128'd0;
 endcase
 
@@ -1001,7 +1000,8 @@ Thor2022_biu ubiu
 	.rb_i(rb_i),
 	.dce(dce),
 	.keys(keys),
-	.arange()
+	.arange(),
+	.ptbr(ptbr)
 );
 
 always_comb
@@ -1530,37 +1530,37 @@ begin
 		else if (micro_ip != 7'd0) begin
 			case(micro_ip)
 			// POP Ra
-			7'd1:		begin micro_ip <= 7'd2; ir <= {3'd6,24'h00,6'd63,micro_ir[14:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
-			7'd2:		begin micro_ip <= 7'd0; ir <= {11'h010,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
+			7'd1:		begin micro_ip <= 7'd2; ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
+			7'd2:		begin micro_ip <= 7'd0; ir <= {13'h010,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
 			// POP Ra,Rb
-			7'd3:		begin micro_ip <= 7'd4; ir <= {3'd6,24'h00,6'd63,micro_ir[14: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd4:		begin micro_ip <= 7'd5; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,LDH}; end	// LDOS $Rb,[$SP]
-			7'd5:		begin micro_ip <= 7'd0; ir <= {11'h020,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
+			7'd3:		begin micro_ip <= 7'd4; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd4:		begin micro_ip <= 7'd5; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,LDH}; end	// LDOS $Rb,[$SP]
+			7'd5:		begin micro_ip <= 7'd0; ir <= {13'h020,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
 			// POP Ra,Rb,Rc
-			7'd6:		begin micro_ip <= 7'd7; ir <= {3'd6,24'h00,6'd63,micro_ir[14: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd7:		begin micro_ip <= 7'd8; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,LDH}; end	// LDOS $Rb,[$SP]
-			7'd8:		begin micro_ip <= 7'd9; ir <= {3'd6,24'h20,6'd63,micro_ir[26:21],1'b0,LDH}; end	// LDOS $Rc,[$SP]
-			7'd9:		begin micro_ip <= 7'd0; ir <= {11'h030,6'd63,6'd63,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
+			7'd6:		begin micro_ip <= 7'd7; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd7:		begin micro_ip <= 7'd8; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,LDH}; end	// LDOS $Rb,[$SP]
+			7'd8:		begin micro_ip <= 7'd9; ir <= {29'h20,5'd31,micro_ir[23:19],1'b0,LDH}; end	// LDOS $Rc,[$SP]
+			7'd9:		begin micro_ip <= 7'd0; ir <= {13'h030,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
 			// PUSH Ra
-			7'd10:	begin micro_ip <= 7'd11; ir <= {11'h7F0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
-			7'd11:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h00,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
+			7'd10:	begin micro_ip <= 7'd11; ir <= {13'h1FF0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
+			7'd11:	begin micro_ip <= 7'd0;  ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
 			// PUSH Ra,Rb
-			7'd12:	begin micro_ip <= 7'd13; ir <= {11'h7E0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
-			7'd13:	begin micro_ip <= 7'd14; ir <= {3'd6,24'h00,6'd63,micro_ir[20:15],1'b0,STH}; end	// STOS $Rb,[$SP]
-			7'd14:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h10,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,8[$SP]
+			7'd12:	begin micro_ip <= 7'd13; ir <= {13'h1FE0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
+			7'd13:	begin micro_ip <= 7'd14; ir <= {29'h00,5'd31,micro_ir[18:14],1'b0,STH}; end	// STOS $Rb,[$SP]
+			7'd14:	begin micro_ip <= 7'd0;  ir <= {29'h10,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,8[$SP]
 			// PUSH Ra,Rb,Rc
-			7'd15:	begin micro_ip <= 7'd16; ir <= {11'h7D0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
-			7'd16:	begin micro_ip <= 7'd17; ir <= {3'd6,24'h00,6'd63,micro_ir[26:21],1'b0,STH}; end	// STOS $Rc,[$SP]
-			7'd17:	begin micro_ip <= 7'd18; ir <= {3'd6,24'h10,6'd63,micro_ir[20:15],1'b0,STH}; end	// STOS $Rb,8[$SP]
-			7'd18:	begin micro_ip <= 7'd0;  ir <= {3'd6,24'h20,6'd63,micro_ir[14:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
+			7'd15:	begin micro_ip <= 7'd16; ir <= {14'h1FD0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
+			7'd16:	begin micro_ip <= 7'd17; ir <= {29'h00,5'd31,micro_ir[23:19],1'b0,STH}; end	// STOS $Rc,[$SP]
+			7'd17:	begin micro_ip <= 7'd18; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,STH}; end	// STOS $Rb,8[$SP]
+			7'd18:	begin micro_ip <= 7'd0;  ir <= {29'h20,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
 			// LEAVE
-			7'd20:	begin micro_ip <= 7'd21; ir <= {11'h000,6'd62,6'd63,1'b0,ADDI};	end						// ADD $SP,$FP,#0
-			7'd21:	begin micro_ip <= 7'd22; ir <= {3'd6,24'h00,6'd63,6'd62,1'b0,LDH}; end				// LDO $FP,[$SP]
-			7'd22:	begin micro_ip <= 7'd23; ir <= {3'd6,24'h10,6'd63,6'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
-			7'd23:	begin micro_ip <= 7'd26; ir <= {1'd0,6'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
+			7'd20:	begin micro_ip <= 7'd21; ir <= {13'h000,5'd30,5'd31,1'b0,ADDI};	end						// ADD $SP,$FP,#0
+			7'd21:	begin micro_ip <= 7'd22; ir <= {29'h00,5'd31,5'd30,1'b0,LDH}; end				// LDO $FP,[$SP]
+			7'd22:	begin micro_ip <= 7'd23; ir <= {29'h10,5'd31,5'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
+			7'd23:	begin micro_ip <= 7'd26; ir <= {2'd0,5'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
 //			7'd24:	begin micro_ip <= 7'd25; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,24[$SP]
 //			7'd25:	begin micro_ip <= 7'd26; ir <= {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
-			7'd26: 	begin micro_ip <= 7'd27; ir <= {{4'h0,micro_ir[31:13]}+8'd4,4'b0,6'd63,6'd63,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
+			7'd26: 	begin micro_ip <= 7'd27; ir <= {{6'h0,micro_ir[31:13]}+8'd4,4'b0,5'd31,5'd31,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
 			7'd27:	begin micro_ip <= 7'd0;  ir <= {1'd0,micro_ir[12:9],2'd1,1'b0,RTS}; ip.offs <= 32'hFFFD0000; end
 			// STOO
 			7'd28:	begin micro_ip <= 7'd29; ir <= {micro_ir[47:12],3'd0,1'b0,STOO}; dlen <= 4'd6; end
@@ -1568,22 +1568,22 @@ begin
 			7'd30:	begin micro_ip <= 7'd31; ir <= {micro_ir[47:12],3'd4,1'b0,STOO}; end
 			7'd31:	begin micro_ip <= 7'd0;  ir <= {micro_ir[47:12],3'd6,1'b0,STOO}; ip.offs <= ip.offs + 4'd6; end
 			// ENTER
-			7'd32: 	begin micro_ip <= 7'd33; ir <= {11'h7C0,6'd63,6'd63,1'b0,ADDI}; dlen <= 4'd4; end						// ADD $SP,$SP,#-64
-			7'd33:	begin micro_ip <= 7'd34; ir <= {3'd6,24'h00,6'd63,6'd62,1'b0,STH}; end				// STO $FP,[$SP]
-			7'd34:	begin micro_ip <= 7'd35; ir <= {1'd0,6'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
-			7'd35:	begin micro_ip <= 7'd38; ir <= {3'd6,24'h10,6'd63,6'd03,1'b0,STH}; end				// STO $T0,16[$SP]
+			7'd32: 	begin micro_ip <= 7'd33; ir <= {13'h1FC0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end						// ADD $SP,$SP,#-64
+			7'd33:	begin micro_ip <= 7'd34; ir <= {29'h00,5'd31,5'd30,1'b0,STH}; end				// STO $FP,[$SP]
+			7'd34:	begin micro_ip <= 7'd35; ir <= {2'd0,5'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
+			7'd35:	begin micro_ip <= 7'd38; ir <= {29'h10,5'd31,5'd03,1'b0,STH}; end				// STO $T0,16[$SP]
 //			7'd36:	begin micro_ip <= 7'd37; ir <= {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
 //			7'd37:	begin micro_ip <= 7'd38; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,24[$SP]
-			7'd38:	begin micro_ip <= 7'd39; ir <= {3'd6,24'h20,6'd63,6'd00,1'b0,STH}; end				// STH $R0,32[$SP]
-			7'd39:	begin micro_ip <= 7'd40; ir <= {3'd6,24'h30,6'd63,6'd00,1'b0,STH}; end				// STH $R0,48[$SP]
-			7'd40: 	begin micro_ip <= 7'd41; ir <= {11'h000,6'd63,6'd62,1'b0,ADDI}; end						// ADD $FP,$SP,#0
-			7'd41: 	begin micro_ip <= 7'd0;  ir <= {{4{micro_ir[31]}},micro_ir[31:12],3'b0,6'd63,6'd63,1'b0,ADDIL}; ip.offs <= ip.offs + 4'd4; end // SUB $SP,$SP,#Amt
+			7'd38:	begin micro_ip <= 7'd39; ir <= {29'h20,5'd31,5'd00,1'b0,STH}; end				// STH $R0,32[$SP]
+			7'd39:	begin micro_ip <= 7'd40; ir <= {29'h30,5'd31,5'd00,1'b0,STH}; end				// STH $R0,48[$SP]
+			7'd40: 	begin micro_ip <= 7'd41; ir <= {13'h000,5'd31,5'd30,1'b0,ADDI}; end						// ADD $FP,$SP,#0
+			7'd41: 	begin micro_ip <= 7'd0;  ir <= {{9{micro_ir[31]}},micro_ir[31:12],3'b0,5'd31,5'd31,1'b0,ADDIL}; ip.offs <= ip.offs + 4'd4; end // SUB $SP,$SP,#Amt
 			// DEFCAT
-			7'd44:	begin micro_ip <= 7'd45; ir <= {3'd6,8'h00,6'd62,6'd3,1'b0,LDOS}; dlen <= 4'd2; end					// LDO $Tn,[$FP]
-			7'd45:	begin micro_ip <= 7'd46; ir <= {3'd6,8'h20,6'd3,6'd4,1'b0,LDOS}; end					// LDO $Tn+1,32[$Tn]
-			7'd46:	begin micro_ip <= 7'd47; ir <= {3'd6,8'h10,6'd62,6'd4,1'b0,STOS}; end					// STO $Tn+1,16[$FP]
-			7'd47:	begin micro_ip <= 7'd48; ir <= {3'd6,8'h28,6'd3,6'd4,1'b0,LDOS}; end					// LDO $Tn+1,40[$Tn]
-			7'd48:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h18,6'd62,6'd4,1'b0,STOS}; ip.offs <= ip.offs + 4'd2; end					// STO $Tn+1,24[$FP]
+			7'd44:	begin micro_ip <= 7'd45; ir <= {3'd6,8'h00,6'd62,6'd3,1'b0,LDH}; dlen <= 4'd2; end					// LDO $Tn,[$FP]
+			7'd45:	begin micro_ip <= 7'd46; ir <= {3'd6,8'h20,6'd3,6'd4,1'b0,LDHS}; end					// LDO $Tn+1,32[$Tn]
+			7'd46:	begin micro_ip <= 7'd47; ir <= {3'd6,8'h10,6'd62,6'd4,1'b0,STHS}; end					// STO $Tn+1,16[$FP]
+			7'd47:	begin micro_ip <= 7'd48; ir <= {3'd6,8'h28,6'd3,6'd4,1'b0,LDHS}; end					// LDO $Tn+1,40[$Tn]
+			7'd48:	begin micro_ip <= 7'd0;  ir <= {3'd6,8'h18,6'd62,6'd4,1'b0,STHS}; ip.offs <= ip.offs + 4'd2; end					// STO $Tn+1,24[$FP]
 			// BSETx
 			7'd50:	begin micro_ip <= 7'd51; ir <= {micro_ir[34:32],23'h00,micro_ir[20:15],micro_ir[26:21],1'b0,4'h9,2'd0,micro_ir[30:29]}; end
 			7'd51:	begin micro_ip <= 7'd52; ir <= {fnIamt(micro_ir[12:9]),micro_ir[20:15],micro_ir[20:15],1'b0,ADDI}; end
@@ -2306,7 +2306,7 @@ begin
 					  	endcase
 				    $display("regfile[%d] <= %h", wRt, wres);
 				    // Globally enable interrupts after first update of stack pointer.
-				    if (wRt==6'd63) begin
+				    if (wRt==5'd31) begin
 				    	sp <= wres;	// debug
 				      gie <= TRUE;
 				    end
@@ -2400,6 +2400,7 @@ begin
 		CSR_SCRATCH:	res = scratch[regno[13:12]];
 		CSR_MHARTID: res = hartid_i;
 		CSR_MCR0:	res = cr0|(dce << 5'd30);
+		CSR_PTBR:	res = ptbr;
 		CSR_KEYTBL:	res = keytbl;
 		CSR_KEYS:	res = keys2[regno[1:0]];
 		CSR_SEMA: res = sema;
@@ -2446,6 +2447,7 @@ begin
 		casez(regno[15:0])
 		CSR_SCRATCH:	scratch[regno[13:12]] <= val;
 		CSR_MCR0:		cr0 <= val;
+		CSR_PTBR:		ptbr <= val;
 		CSR_SEMA:		sema <= val;
 		CSR_KEYTBL:	keytbl <= val;
 		CSR_KEYS:		keys2[regno[1:0]] <= val;

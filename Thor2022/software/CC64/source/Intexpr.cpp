@@ -25,7 +25,7 @@
 //
 #include "stdafx.h"
 
-int64_t GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simple integer value */
+Int128 GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simple integer value */
 { 
 	TYP *tp;
 	ENODE *node, *n2, *n3;
@@ -37,14 +37,14 @@ int64_t GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simpl
 		tp = exp.ParseNonCommaExpression(&node, symi);
 	if (node==NULL) {
 		error(ERR_SYNTAX);
-		return (0);
+		return (*Int128::Zero());
 	}
 	// Do constant optimizations to reduce a set of constants to a single constant.
 	// Otherwise some codes won't compile without errors.
 	opt_const_unchecked(&node);	// This should reduce to a single integer expression
 	if (node==NULL) {
 		fatal("Compiler Error: GetIntegerExpression: node is NULL");
-		return (0);
+		return (*Int128::Zero());
 	}
 	//if (node->nodetype == en_assign)
 	//	n2 = node->p[1];
@@ -54,12 +54,12 @@ int64_t GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simpl
 		if (n2->p[0]->nodetype == en_labcon && n2->p[1]->nodetype == en_icon) {
 			if (pnode)
 				*pnode = n2;
-			return (n2->i);
+			return (Int128(n2->i));
 		}
 		if (n2->p[0]->nodetype == en_icon && n2->p[1]->nodetype == en_labcon) {
 			if (pnode)
 				*pnode = n2;
-			return (n2->i);
+			return (Int128(n2->i));
 		}
 
 	}
@@ -71,17 +71,19 @@ int64_t GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simpl
 				if (n2->p[1]->nodetype == en_icon) {
 					if (pnode)
 						*pnode = n2;
-					return (n2->p[1]->i);
+					//return (Int128(n2->p[1]->i));
+					return (n2->p[1]->i128);
 				}
 			}
 		}
 //    printf("\r\nnode:%d \r\n", node->nodetype);
 		error(ERR_INT_CONST);
-		return (0);
+		return (*Int128::Zero());
 	}
 	if (pnode)
 		*pnode = n2;
-	return (n2->i);
+	//return (Int128(n2->i));
+	return (n2->i128);
 }
 
 Float128 *GetFloatExpression(ENODE **pnode, SYM* symi)
@@ -157,22 +159,23 @@ Posit64 GetPositExpression(ENODE** pnode, SYM* symi)
 	return (node->posit);
 }
 
-int64_t GetConstExpression(ENODE **pnode, SYM* symi)       /* simple integer value */
+Int128 GetConstExpression(ENODE **pnode, SYM* symi)       /* simple integer value */
 {
 	TYP *tp;
 	ENODE *node;
 	Float128 *flt;
 	Expression exp;
+	Int128 tmp128;
 
 	tp = exp.ParseNonCommaExpression(&node, symi);
 	if (node == NULL) {
 		error(ERR_SYNTAX);
-		return (0);
+		return (*Int128::Zero());
 	}
 	opt_const_unchecked(&node);
 	if (node == NULL) {
 		fatal("Compiler Error: GetConstExpression: node is NULL");
-		return (0);
+		return (*Int128::Zero());
 	}
 	switch (node->nodetype)
 	{
@@ -181,38 +184,44 @@ int64_t GetConstExpression(ENODE **pnode, SYM* symi)       /* simple integer val
 		case en_icon:
 			if (pnode)
 				*pnode = node;
-			return (-node->i);
+			tmp128 = node->i128;
+			Int128::Sub(&tmp128, Int128::Zero(), &tmp128);
+			return (tmp128);
+			//return (-node->i);
 		case en_fcon:
 			flt = (Float128 *)allocx(sizeof(Float128));
 			Float128::Assign(flt, &node->p[0]->f128);
 			flt->sign = !flt->sign;
 			if (pnode)
 				*pnode = node;
-			return ((int64_t)flt);
+			return (Int128((int64_t)flt));
 		default:
 			error(ERR_CONST);
-			return (0);
+			return (*Int128::Zero());
 		}
 		break;
 	case en_fcon:
 		if (pnode)
 			*pnode = node;
-		return ((int64_t)&node->f128);
+		return (Int128((int64_t)&node->f128));
 	case en_pcon:
 		if (pnode)
 			*pnode = node;
-		return (node->posit.val);
+		return (Int128(node->posit.val));
 	case en_icon:
+		if (pnode)
+			*pnode = node;
+		return (node->i128);
 	case en_cnacon:
 		if (pnode)
 			*pnode = node;
-		return (node->i);
+		return (Int128(node->i));
 	default:
 		if (pnode)
 			*pnode = node;
 		//error(ERR_CONST);
-		return (0);
+		return (*Int128::Zero());
 	}
 	error(ERR_CONST);
-	return (0);
+	return (*Int128::Zero());
 }

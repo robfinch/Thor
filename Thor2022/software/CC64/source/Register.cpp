@@ -141,17 +141,16 @@ int NumTempRegs()
 
 void CPU::InitRegs()
 {
-	cpu.NumArgRegs = 10;
+	cpu.NumArgRegs = 9;
 	cpu.argregs[0] = 1;
 	cpu.argregs[1] = 2;
-	cpu.argregs[2] = 21;
-	cpu.argregs[3] = 22;
-	cpu.argregs[4] = 23;
-	cpu.argregs[5] = 24;
-	cpu.argregs[6] = 25;
-	cpu.argregs[7] = 26;
-	cpu.argregs[8] = 27;
-	cpu.argregs[9] = 28;
+	cpu.argregs[2] = 19;
+	cpu.argregs[3] = 20;
+	cpu.argregs[4] = 21;
+	cpu.argregs[5] = 22;
+	cpu.argregs[6] = 23;
+	cpu.argregs[7] = 24;
+	cpu.argregs[8] = 25;
 
 	cpu.NumTmpRegs = 8;
 	cpu.tmpregs[0] = 3;
@@ -163,7 +162,7 @@ void CPU::InitRegs()
 	cpu.tmpregs[6] = 9;
 	cpu.tmpregs[7] = 10;
 
-	cpu.NumSavedRegs = 10;
+	cpu.NumSavedRegs = 8;
 	cpu.saved_regs[0] = 11;
 	cpu.saved_regs[1] = 12;
 	cpu.saved_regs[2] = 13;
@@ -172,8 +171,6 @@ void CPU::InitRegs()
 	cpu.saved_regs[5] = 16;
 	cpu.saved_regs[6] = 17;
 	cpu.saved_regs[7] = 18;
-	cpu.saved_regs[8] = 19;
-	cpu.saved_regs[9] = 20;
 }
 
 void initRegStack()

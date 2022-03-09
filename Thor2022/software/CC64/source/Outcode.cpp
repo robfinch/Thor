@@ -428,16 +428,16 @@ char *RegMoniker(int regno)
 			sprintf_s(&buf[n][0], 20, "$b14");
 		else if (regno==regFP)
 			sprintf_s(&buf[n][0], 20, "fp");
-		else if (regno == regAFP)
-			sprintf_s(&buf[n][0], 20, "$afp");
+//		else if (regno == regAFP)
+//			sprintf_s(&buf[n][0], 20, "$afp");
 		else if (regno==regGP)
 		sprintf_s(&buf[n][0], 20, "gp");
 		else if (regno == regGP1)
 			sprintf_s(&buf[n][0], 20, "gp1");
 		else if (regno==regXLR)
 		sprintf_s(&buf[n][0], 20, "$xlr");
-	else if (regno==regPC)
-		sprintf_s(&buf[n][0], 20, "$pc");
+//	else if (regno==regPC)
+//		sprintf_s(&buf[n][0], 20, "$pc");
 	else if (regno==regSP)
 		sprintf_s(&buf[n][0], 20, "sp");
 	else if (regno==regLR)
@@ -495,16 +495,16 @@ char *RegMoniker2(int regno)
 			sprintf_s(&buf[n][0], 20, "$b14");
 		else if (regno == regFP)
 		sprintf_s(&buf[n][0], 20, "fp");
-	else if (regno == regAFP)
-		sprintf_s(&buf[n][0], 20, "$afp");
+//	else if (regno == regAFP)
+//		sprintf_s(&buf[n][0], 20, "$afp");
 	else if (regno == regGP)
 		sprintf_s(&buf[n][0], 20, "gp");
 	else if (regno == regGP1)
 		sprintf_s(&buf[n][0], 20, "gp1");
 	else if (regno == regXLR)
 		sprintf_s(&buf[n][0], 20, "$xlr");
-	else if (regno == regPC)
-		sprintf_s(&buf[n][0], 20, "$pc");
+//	else if (regno == regPC)
+//		sprintf_s(&buf[n][0], 20, "$pc");
 	else if (regno == regSP)
 		sprintf_s(&buf[n][0], 20, "sp");
 	else if (regno == regLR)
@@ -693,19 +693,19 @@ void GenerateWord(int64_t val)
 	genst_cumulative += 8;
 }
 
-void GenerateLong(int64_t val)
+void GenerateLong(Int128 val)
 { 
 	if( gentype == longgen && outcol < 56) {
-                ofs.printf(",%I64d",val);
+                ofs.printf(",%I64d,%I64d",val.low,val.high);
                 outcol += 10;
                 }
         else    {
                 nl();
-                ofs.printf("\t.8byte\t%I64d",val);
+                ofs.printf("\t.8byte\t%I64d,%I64d",val.low,val.high);
                 gentype = longgen;
                 outcol = 25;
                 }
-		genst_cumulative += 8;
+		genst_cumulative += 16;
 }
 
 void GenerateInt(int64_t val)

@@ -309,32 +309,32 @@ void doInitCleanup()
 
 int64_t initbyte(SYM* symi, int opt)
 {   
-	GenerateByte(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0) : 0);
+	GenerateByte(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (1LL);
 }
 
 int64_t initchar(SYM* symi, int opt)
 {   
-	GenerateChar(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0) : 0);
+	GenerateChar(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (2LL);
 }
 
 int64_t initshort(SYM* symi, int opt)
 {
-	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0) : 0);
+	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (4LL);
 }
 
 int64_t initint(SYM* symi, int opt)
 {
-	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0) : symi->enode ? symi->enode->i : 0);
+	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : symi->enode ? symi->enode->i : 0);
 	return (8LL);
 }
 
 int64_t initlong(SYM* symi, int opt)
 {
-	GenerateLong(opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i : 0);
-    return (8LL);
+	GenerateLong(opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i128 : *Int128::Zero());
+    return (16LL);
 }
 
 int64_t initquad(SYM* symi, int opt)
@@ -466,7 +466,7 @@ int64_t InitializePointer(TYP *tp2, int opt, SYM* symi)
 	//		GenerateLong(GetIntegerExpression(NULL));
 	//}
 	else {
-		lng = GetIntegerExpression(&n,symi,0);
+		lng = GetIntegerExpression(&n,symi,0).low;
 		if (n && n->nodetype == en_cnacon) {
 			if (n->sp->length()) {
 				sp = gsearch(*n->sp);

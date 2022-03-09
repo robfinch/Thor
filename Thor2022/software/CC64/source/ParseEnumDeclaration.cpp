@@ -63,7 +63,7 @@ void Declaration::ParseEnum(TABLE *table)
           NextToken();
           power = true;
         }
-        amt = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 0);
+        amt = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 0).low;
         needpunc(closepa, 10);
       }
       if (lastst != begin)
@@ -88,7 +88,7 @@ void Declaration::ParseEnum(TABLE *table)
         NextToken();
         power = true;
       }
-      amt = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0);
+      amt = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0).low;
 			needpunc(closepa,10);
 		}
     if( lastst != begin)
@@ -122,7 +122,7 @@ void Declaration::ParseEnumerationList(TABLE *table, int amt, SYM *parent, bool 
     NextToken();
 		if (lastst==assign) {
 			NextToken();
-			sp->value.i = GetIntegerExpression((ENODE **)NULL,sp,0);
+			sp->value.i = GetIntegerExpression((ENODE **)NULL,sp,0).low;
 			evalue = (int)sp->value.i;
 		}
 		else
