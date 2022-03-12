@@ -395,6 +395,7 @@ wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
 Value scratch [0:3];
 Address ptbr;
+Address artbr;
 reg [63:0] tick;
 reg [63:0] wc_time;			// wall-clock time
 reg [63:0] mtimecmp;
@@ -1001,7 +1002,8 @@ Thor2022_biu ubiu
 	.dce(dce),
 	.keys(keys),
 	.arange(),
-	.ptbr(ptbr)
+	.ptbr(ptbr),
+	.artbr(artbr)
 );
 
 always_comb
@@ -1992,34 +1994,11 @@ begin
   	memreq.func <= MR_TLB;
   	memreq.func2 <= MR_STO;
   	memreq.sel <= 16'h00FF;
-  	memreq.adr <= xa;		// must use entire adr (64 bits)
-  	memreq.dat <= xb;
+  	memreq.adr <= 'd0;
+  	memreq.dat <= {xb,xa};
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
 	end
-  else if (xMfsel) begin
-  	memreq.tid <= tid;
-  	tid <= tid + 2'd1;
-  	memreq.func <= MR_MFSEL;
-  	memreq.func2 <= 4'd0;
-  	memreq.sel <= 16'hFFFF;
-  	memreq.adr <= 64'd0;
-  	memreq.dat <= {59'd0,xb[4:0]};
-  	memreq.seg <= 5'd0;
-  	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
-	end
-  else if (xMtsel) begin
-  	memreq.tid <= tid;
-  	tid <= tid + 2'd1;
-  	memreq.func <= MR_LOAD;
-  	memreq.func2 <= MR_LDDESC;
-  	memreq.sel <= 16'hFFFF;
-  	memreq.adr <= xa;
-  	memreq.dat <= {59'd0,xb[4:0]};
-  	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
-  end
 end
 endtask
 
@@ -2401,6 +2380,7 @@ begin
 		CSR_MHARTID: res = hartid_i;
 		CSR_MCR0:	res = cr0|(dce << 5'd30);
 		CSR_PTBR:	res = ptbr;
+		CSR_ARTBR:	res = artbr;
 		CSR_KEYTBL:	res = keytbl;
 		CSR_KEYS:	res = keys2[regno[1:0]];
 		CSR_SEMA: res = sema;
@@ -2448,6 +2428,7 @@ begin
 		CSR_SCRATCH:	scratch[regno[13:12]] <= val;
 		CSR_MCR0:		cr0 <= val;
 		CSR_PTBR:		ptbr <= val;
+		CSR_ARTBR:	artbr <= val;
 		CSR_SEMA:		sema <= val;
 		CSR_KEYTBL:	keytbl <= val;
 		CSR_KEYS:		keys2[regno[1:0]] <= val;

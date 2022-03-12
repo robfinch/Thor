@@ -9,9 +9,9 @@ char *cpuname="Thor";
 int bitsperbyte=8;
 int bytespertaddr=8;
 int abits=32;
-static taddr sdreg = 61;
-static taddr sd2reg = 60;
-static taddr sd3reg = 59;
+static taddr sdreg = 29;
+static taddr sd2reg = 28;
+static taddr sd3reg = 27;
 static __int64 regmask = 0x1fLL;
 
 static insn_sizes1[20000];
@@ -171,6 +171,7 @@ mnemonic mnemonics[]={
 	
 	"enter", {OP_IMM,0,0,0,0}, {ENTER,CPU_ALL,0,0xAFLL,4},
 	"exi56", {OP_IMM,0,0,0,0}, {EXI56F,CPU_ALL,0,0x4CLL,8},
+	"exim", {OP_IMM,0,0,0,0}, {EXI56F,CPU_ALL,0,0x50LL,8},
 
 	"int",	{OP_IMM,OP_IMM,0,0,0}, {INT,CPU_ALL,0,0xA6LL,4},
 
@@ -534,7 +535,25 @@ static int is_nbit(int64_t val, int64_t n)
 	high = (1LL << (n - 1LL));
 	return (val >= low && val < high);
 }
-
+/*
+static int is_nbit(thuge val, int64_t n)
+{
+	int r1, r2;
+	thuge low, high;
+//  if (n > 63)
+//    return (1);
+	low.lo = 1;
+	low.hi = 0;
+	low = hshl(low,(n-1LL));
+	high = low;
+	low = tsub(huge_zero(),low);
+	low = -(1LL << (n - 1LL));
+	high = (1LL << (n - 1LL));
+	r1 = hcmp(val, low);
+	r2 = hcmp(val, high);
+	return (r1 >= 0 && r2 < 0);
+}
+*/
 static int is_identchar(unsigned char ch)
 {
 	return (isalnum(ch) || ch == '_');
@@ -1210,7 +1229,7 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
                            19,10,0,0xffc0LL);
           break;
         case RIL:
-        	if (abits < 29) {
+        	if (abits < 30) {
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
                            19,29,0,0x1fffffffLL);
         	}	/* ToDo: fix for 31 bits and above */
@@ -1223,7 +1242,7 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
                            35,24,0,0x00ffffffLL);
         		
         	}
-        	else if (abits < 47) {
+        	else if (abits < 49) {
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
                            0,1,0,0x01000000LL);
 			      add_extnreloc_masked(reloclist,base,addend,reloctype,
@@ -1528,13 +1547,15 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 	}
 }
 
-static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
-	operand *op, int64_t val, int constexpr, int i, char vector)
+static size_t eval_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mnemonic* mnemo,
+	operand *op, taddr hval, int constexpr, int i, char vector)
 {
 	size_t isize;
+	int64_t val;
 
 	if (mnemo->ext.flags & FLG_NEGIMM)
-		val = -val;	/* ToDo: check here for value overflow */
+		hval = -hval;	/* ToDo: check here for value overflow */
+	val = hval;
 	if (constexpr) {
 		if (mnemo->ext.format==DIRECT) {
 			isize = 6;
@@ -1543,19 +1564,19 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 					isize = 4;
 				}
 			} */
-			if (!is_nbit(val,24)) {
+			if (!is_nbit(hval,24)) {
 				if (prefix)
 					*prefix = ((val >> 25LL) << 9LL) | EXI8 | ((val >> 24LL) & 1LL);
 				isize = (2<<8)|6;
-				if (!is_nbit(val,32)) {
+				if (!is_nbit(hval,32)) {
 					if (prefix)
 						*prefix = ((val >> 25LL) << 9LL) | EXI24 | ((val >> 24LL) & 1LL);
 					isize = (4<<8)|6;
-					if (!is_nbit(val,48)) {
+					if (!is_nbit(hval,48)) {
 						if (prefix)
 							*prefix = ((val >> 25LL) << 9LL) | EXI40 | ((val >> 24LL) & 1LL);
  						isize = (6<<8)|6;
-						if (!is_nbit(val,64)) {
+						if (!is_nbit(hval,64)) {
 							if (prefix)
 								*prefix = ((val >> 25LL) << 9LL) | EXI56 | ((val >> 24LL) & 1LL);
 	 						isize = (8<<8)|6;
@@ -1634,34 +1655,51 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *insn, mnemonic* mnemo,
 			if (insn)
 				*insn = *insn | ((val & 0xfffffffffffffeLL) << 8LL) | (val & 1LL);
 		}
+		else if (mnemo->ext.opcode==EXIM) {
+			isize = 8;
+			if (insn)
+				*insn = *insn | ((val & 0x7fffffffffffffLL) << 9LL);
+		}
 		else {
 			if (op->type & OP_IMM11)
 				isize = 4;
 			else
 				isize = 6;
-			if (!is_nbit(val,11)) {
-				isize = 6;
-				if (!is_nbit(val,vector ? 24 : 29)) {
-					if (prefix)
-						*prefix = ((val >> 25LL) << 9LL) | EXI8 | ((val >> 24LL) & 1LL);
-					isize = (2<<8)|6;
-					if (!is_nbit(val,32)) {
-						if (prefix)
-							*prefix = ((val >> 25LL) << 9LL) | EXI24 | ((val >> 24LL) & 1LL);
-						isize = (4<<8)|6;
-						if (!is_nbit(val,48)) {
-							if (prefix)
-								*prefix = ((val >> 25LL) << 9LL) | EXI40 | ((val >> 24LL) & 1LL);
-	 						isize = (6<<8)|6;
-							if (!is_nbit(val,64)) {
-								if (prefix)
-									*prefix = ((val >> 25LL) << 9LL) | EXI56 | ((val >> 24LL) & 1LL);
-		 						isize = (8<<8)|6;
-							}
-						}
-					}
-				}
+			/*
+			if (!is_nbit(hval,80)) {
+				isize = (8<<16)|(8<<8)|6;
+				if (prefix2)
+					*prefix2 = ((hval.hi >> 16LL) << 9LL) | EXIM;
+				if (prefix)
+					*prefix = ((hval.hi & 0xffffLL) << 48LL) | 
+						((val >> 25LL) << 9LL) | EXI56 | ((val >> 24LL) & 1LL);
 			}
+			else
+			if (!is_nbit(hval,64)) {
+				if (prefix)
+					*prefix = ((hval.hi & 0xffffLL) << 48LL) | 
+						((val >> 25LL) << 9LL) | EXI56 | ((val >> 24LL) & 1LL);
+				isize = (8<<8)|6;
+			}
+			else
+			*/
+			if (!is_nbit(hval,48)) {
+				if (prefix)
+					*prefix = ((val >> 25LL) << 9LL) | EXI40 | ((val >> 24LL) & 1LL);
+				isize = (6<<8)|6;
+			}
+			else if (!is_nbit(hval,32)) {
+				if (prefix)
+					*prefix = ((val >> 25LL) << 9LL) | EXI24 | ((val >> 24LL) & 1LL);
+				isize = (4<<8)|6;
+			}
+			else if (!is_nbit(hval,vector ? 24 : 29)) {
+				if (prefix)
+					*prefix = ((val >> 25LL) << 9LL) | EXI8 | ((val >> 24LL) & 1LL);
+				isize = (2<<8)|6;
+			}
+			else if (!is_nbit(hval,13))
+				isize = 6;
 			if (insn) {
 				switch(isize) {
 				case 4:	
@@ -1730,6 +1768,11 @@ j1:
 			isize = 8;
 			if (insn)
 				*insn = *insn | ((val & 0xfffffffffffffeLL) << 8LL) | (val & 1LL);
+		}
+		else if (mnemo->ext.opcode==EXIM) {
+			isize = 8;
+			if (insn)
+				*insn = *insn | ((val & 0x7fffffffffffffLL) << 9LL);
 		}
 		else {
 			if (op->type & OP_IMM11) {
@@ -2060,7 +2103,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
    shift and sum.
 */
 size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
-                     uint64_t *prefix, uint64_t *insn, dblock *db)
+                     uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, dblock *db)
 {
   mnemonic *mnemo = &mnemonics[ip->code];
   size_t isize;
@@ -2094,7 +2137,8 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
   for (i=0; i<MAX_OPERANDS && ip->op[i]!=NULL; i++) {
     operand *pop;
     int reloctype;
-    taddr val;
+    taddr hval;
+    int64_t val;
 
 		TRACE("F");
     op = *(ip->op[i]);
@@ -2119,7 +2163,8 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
       else {
         if (!eval_expr(op.value,&val,sec,pc)) {
           if (reloctype == REL_PC)
-            val -= pc;
+//          	hval = hsub(huge_zero(),pc);
+						val -= pc;
         }
       }
     }
@@ -2202,7 +2247,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
 			TRACE("Etho3:");
-			isize = eval_immed(prefix, insn, mnemo, &op, val, constexpr, i, vector_insn);
+			isize = eval_immed(prefix, prefix2, insn, mnemo, &op, hval, constexpr, i, vector_insn);
     }
     else if (encode_branch(insn, mnemo, &op, val, &isize, i)) {
 			TRACE("Etho4:");
@@ -2333,8 +2378,8 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
    to the data created by eval_instruction. */
 size_t instruction_size(instruction *ip,section *sec,taddr pc)
 {
-	size_t sz = eval_thor_operands(ip,sec,pc,NULL,NULL,NULL);
-	sz = (sz & 0xff) + (sz >> 8);
+	size_t sz = eval_thor_operands(ip,sec,pc,NULL,NULL,NULL,NULL);
+	sz = (sz & 0xff) + ((sz >> 8) & 0xff) + (sz >> 16);
 /*	insn_sizes1[sz1ndx++] = sz; */
 	TRACE2("isize=%d ", sz);
   return (sz);
@@ -2346,19 +2391,23 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 {
   dblock *db = new_dblock();
-  uint64_t prefix;
+  uint64_t prefix, prefix2;
   uint64_t insn;
   size_t sz;
 
-	sz = eval_thor_operands(ip,sec,pc,&prefix,&insn,db);
-	db->size = (sz & 0xff) + (sz >> 8);
+	prefix = 0;
+	prefix2 = 0;
+	sz = eval_thor_operands(ip,sec,pc,&prefix,&prefix2,&insn,db);
+	db->size = (sz & 0xff) + ((sz >> 8) & 0xff) + (sz >> 16);
 /*	insn_sizes2[sz2ndx++] = db->size; */
   if (db->size) {
     unsigned char *d = db->data = mymalloc(db->size);
     int i;
 
-		if (sz >> 8)
-	    d = setval(0,d,sz >> 8,prefix);
+		if (sz >> 16)
+	    d = setval(0,d,sz >> 16,prefix2);
+		if ((sz >> 8) & 0xff)
+	    d = setval(0,d,(sz >> 8) & 0xff,prefix);
     d = setval(0,d,sz & 0xff,insn);
   }
   return (db);

@@ -1,0 +1,185 @@
+# ============================================================================
+#        __
+#   \\__/ o\    (C) 2020-2022  Robert Finch, Waterloo
+#    \  __ /    All rights reserved.
+#     \/_//     robfinch<remove>@finitron.ca
+#       ||
+#  
+#
+# BSD 3-Clause License
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES# LOSS OF USE, DATA, OR PROFITS# OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# ============================================================================
+
+#OPT include "d:\cores2022\rf6809\software\fmtk\config.a09"
+.include "d:\cores2022\Thor\software\boot\bios-const.t64"
+
+# The share count is the number of times a page has been shared.
+.set	PAMLastAllocate,0xFFFFFC020
+.set	PAMShareCounts,0x00
+
+#------------------------------------------------------------------------------
+# Find a page and mark it allocated. Proceeds starting at the previous byte
+# where there was an allocation. This should help reduce the search time to
+# find a freepage. The memory allocated is zeroed out.
+#
+# Parameters:
+#		none
+# Returns:
+#   a0 = page number, -1 if insufficient memory
+#   a1 = E_NoMem if insufficient memory, otherwise E_Ok
+#------------------------------------------------------------------------------
+
+PAMAlloc:
+	push	t0,t1
+	ldt		t0,PAMLastAllocate
+	ldi		t1,MEMSZ						# number of bytes to look at
+.0002:
+	ldw		a0,PAMShareCounts[t0]
+	bnez	a0,.0001						# page empty?
+	# Found an empty
+	srl		a0,t0,1
+	bsr		PAMShare
+	stt		t0,PAMLastAllocate
+	# Clear allocated memory
+	ldi		t0,256
+	sll		t1,a0,LOGPGSZ
+.0003:
+	sth		r0,[t1]
+	add		t1,t1,16
+	add		t0,t0,-1
+	bnez	t0,.0003
+	pop		t1,t0
+	ldi		a1,E_Ok
+	rts
+.0001:
+	add		t1,t1,-1
+	beqz	t1,PAMAllocOutOfMem
+	add		t0,t0,2							# advance to next wyde
+	cmp		a1,t0,MEMSZ
+	bbs		a1,LTU,.0002
+	mov		t0,r0
+	bra		.0002
+PAMAllocOutOfMem:
+	pop		t1,t0
+	ldi		a0,-1
+	ldi		a1,E_NoMem
+	rts
+
+#------------------------------------------------------------------------------
+# Free memory previously allocated with PAMAlloc.
+# The share count is decremented. If the share count reaches zero then the
+# the memory is zeroed out.
+#
+# Parameters:
+#		a0 = page number to free
+# Modifies:
+#		none
+#------------------------------------------------------------------------------
+
+PAMFree:
+	push		t0,a1
+	cmp			t0,a0,MEMSZ-STACK_PAGES	# last page is permanently allocated to system stack
+	bbs			t0,GEU,pump1
+	cmp			t0,a0,NUM_PERM_PAGES_LO	# first 768 pages (6MB) allocated permanently to system
+	bbs			t0,LTU,pump1
+	sll			a0,a0,1								# turn arg into table index
+	ldw			t0,PAMShareCounts[a0]	# memory already free?
+	beqz		t0,pump2
+	add			t0,t0,-1
+	stw			t0,PAMShareCounts[a0]	# decrease share count
+	bnez		t0,.0001
+	ldi			t0,256								# number of hexi-bytes to clear
+	sll			a1,a0,LOGPGSZ					# turn page number into address
+.0002:
+	sth			r0,[a1]
+	add			a1,a1,16
+	add			t0,t0,-1
+	bnez		t0,.0002
+.0001:
+pump2:
+	srl			a0,a0,1								# restore argument
+pump1:
+	pop			a1,t0
+	rts
+
+#------------------------------------------------------------------------------
+# Share a page of memory. A page cannot be shared more than 65535 times.
+#
+# Parameters:
+#		a0 = page number to share
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+PAMShare:
+	push		t0
+	cmp			t0,a0,MEMSZ
+	bbs			t0,GEU,.0001
+	sll			a0,a0,1									# convert to table index
+	ldw			t0,PAMShareCounts[a0]		# get and increment share count
+	add			t0,t0,1
+	bbs			t0,16,.0002							# did it overflow 16 bits?
+	stw			t0,PAMShareCounts[a0]		# update with new share count
+.0002:
+	srl			a0,a0,1									# restore a0
+.0001:
+	pop			t0
+	rts
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+PAMInit:
+  # First zero out the entire PAM using word stores
+  mov		t0,r0								# PAM is at address zero
+.0002:
+	sth		r0,[t0]
+	add		t0,t0,16
+	cmp		t1,t0,MEMSZ/8				# *2/16
+	bbs		t1,LTU,.0002
+
+  # Now preallocate memory pages
+  # The first 2MB is allocated to the OS
+  # The next 4MB is allocated for the bitmapped display
+  ldi   t0,NUM_PERM_PAGES_LO-1	# 768 pages
+  stt		t0,PAMLastAllocate		# begin search after OS pages
+  mov		t1,r0
+  ldi		t0,0x0001
+.0001:
+	stw		t0,[t1]
+	add		t1,t1,2
+	cmp		t2,t1,NUM_PERM_PAGES_LO*2
+	bbs		t2,LTU,.0001
+  # The last 8 pages (32kB) of memory are reserved for OS stacks
+  ldi		t0,0x0001
+  ldi		t1,MEMSZ*2-16
+.0003:
+  stw		t0,[t1]
+  add		t1,t1,2
+  cmp		t2,t1,MEMSZ
+  bbs		t2,LTU,.0003
+	rts

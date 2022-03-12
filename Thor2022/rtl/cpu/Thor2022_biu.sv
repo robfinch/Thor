@@ -43,7 +43,7 @@ module Thor2022_biu(rst,clk,tlbclk,UserMode,MUserMode,omode,ASID,bounds_chk,pe,
 	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
-	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr);
+	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr, artbr);
 parameter AWID=32;
 input rst;
 input clk;
@@ -51,7 +51,7 @@ input tlbclk;
 input UserMode;
 input MUserMode;
 input [1:0] omode;
-input [7:0] ASID;
+input [11:0] ASID;
 input bounds_chk;
 input pe;									// protected mode enable
 input Address ip;
@@ -87,6 +87,7 @@ output reg dce;							// data cache enable
 input [19:0] keys [0:7];
 input [2:0] arange;
 input Address ptbr;
+input Address artbr;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -155,6 +156,8 @@ reg [63:0] nsel;
 reg [511:0] dati512;
 reg [255:0] dat, dati;
 wire [127:0] datis;
+ARTE arti;
+assign arti = dat_i;
 
 biu_dati_align uda1
 (
@@ -188,26 +191,26 @@ reg [AWID-4:0] PMA_UB [0:7];
 reg [15:0] PMA_AT [0:7];
 
 initial begin
-  PMA_LB[7] = 28'hFFFC000;
+  PMA_LB[7] = 28'hFFFD000;
   PMA_UB[7] = 28'hFFFFFFF;
   PMA_AT[7] = 16'h000D;       // rom, byte addressable, cache-read-execute
-  PMA_LB[6] = 28'hFFD0000;
-  PMA_UB[6] = 28'hFFD1FFF;
+  PMA_LB[6] = 28'hFF80000;
+  PMA_UB[6] = 28'hFFEFFFF;
   PMA_AT[6] = 16'h0206;       // io, (screen) byte addressable, read-write
   PMA_LB[5] = 28'hFFD2000;
   PMA_UB[5] = 28'hFFDFFFF;
   PMA_AT[5] = 16'h0206;       // io, byte addressable, read-write
-  PMA_LB[4] = 28'hFFFFFFF;
-  PMA_UB[4] = 28'hFFFFFFF;
-  PMA_AT[4] = 16'hFF00;       // vacant
+  PMA_LB[4] = 28'hFFFC000;
+  PMA_UB[4] = 28'hFFFCFFF;
+  PMA_AT[4] = 16'h020F;       //
   PMA_LB[3] = 28'hFFFFFFF;
   PMA_UB[3] = 28'hFFFFFFF;
   PMA_AT[3] = 16'hFF00;       // vacant
   PMA_LB[2] = 28'hFFFFFFF;
   PMA_UB[2] = 28'hFFFFFFF;
   PMA_AT[2] = 16'hFF00;       // vacant
-  PMA_LB[1] = 28'h1000000;
-  PMA_UB[1] = 28'hFFCFFFF;
+  PMA_LB[1] = 28'hFFFFFFF;
+  PMA_UB[1] = 28'hFFFFFFF;
   PMA_AT[1] = 16'hFF00;       // vacant
   PMA_LB[0] = 28'h0000000;
   PMA_UB[0] = 28'h0FFFFFF;
@@ -648,14 +651,14 @@ Thor2022_dcache_way udcwayo
 // TLB
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PTE tmptlbe;
+TLBE tmptlbe;
 reg [5:0] ipt_miss_count;
 reg tlben, tlbwr;
 wire tlbmiss;
 wire tlbrdy;
-PTE tlbdato;
-reg [31:0] tlb_ia;
-PTE tlb_ib;
+TLBE tlbdato;
+reg [127:0] tlb_ia;
+reg [127:0] tlb_ib;
 reg inext;
 VirtualAddress tlbmiss_adr;
 VirtualAddress miss_adr;
@@ -679,7 +682,7 @@ Thor2022_tlb utlb (
   .tlben_i(tlben),
   .wrtlb_i(tlbwr & tlb_ia[31]),
   .tlbadr_i(tlb_ia[15:0]),
-  .tlbdat_i(tlb_ib),
+  .tlbdat_i({tlb_ia[127:32],tlb_ib}),
   .tlbdat_o(tlbdato),
   .tlbmiss_o(tlbmiss),
   .tlbmiss_adr_o(tlbmiss_adr)
@@ -691,7 +694,7 @@ Thor2022_tlb utlb (
 
 reg [7:0] fault_code;
 PTG ptg;
-PTE tmptlbe2;
+PTE tmppte;
 reg pte_found;
 wire [15:0] hash;
 
@@ -707,14 +710,14 @@ Thor2022_ptg_search uptgs
 	.ptg(ptg),
 	.asid(ASID),
 	.miss_adr(miss_adr),
-	.pte(tmptlbe2),
+	.pte(tmppte),
 	.found(pte_found)
 );
 
 integer j;
-reg [9:0] square_table [0:15];
+reg [11:0] square_table [0:63];
 initial begin
-	for (j = 0; j < 16; j = j + 1)
+	for (j = 0; j < 64; j = j + 1)
 		square_table[j] = j * j;
 end
 
@@ -937,13 +940,8 @@ else begin
 	IFETCH2:
 	  begin
 	  	stb_o <= HIGH;
-	  	if (tlbmiss) begin
-	  		tPushBus();
-	  		tDeactivateBus();
-	  		fault_code <= FLT_CPF;
-	  		miss_adr <= tlbmiss_adr;
-	  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
-	  	end
+	  	if (tlbmiss)
+	  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_CPF);
 	    else if (ack_i) begin
 	      ici <= {dat_i,ici[639:128]};	// shift in the data
 	      icnt <= icnt + 4'd4;					// increment word count
@@ -1011,13 +1009,8 @@ else begin
 	 		xlaten <= FALSE;
 		  begin
 	  		goto (DFETCH4);
-		  	if (tlbmiss) begin
-		  		tPushBus();
-		  		tDeactivateBus();
-		  		fault_code <= FLT_DPF;
-		  		miss_adr <= tlbmiss_adr;
-		  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
-		  	end
+		  	if (tlbmiss)
+		  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 			  // First time in, set to miss address, after that increment
 	      dadr <= {adr_o[AWID-1:6],6'h0};
 		  end
@@ -1105,13 +1098,8 @@ else begin
 	 		xlaten <= FALSE;
 		  begin
 	  		goto (KYLD4);
-		  	if (tlbmiss) begin
-		  		tPushBus();
-		  		tDeactivateBus();
-		  		fault_code <= FLT_DPF;
-		  		miss_adr <= tlbmiss_adr;
-		  		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
-		  	end
+		  	if (tlbmiss)
+		  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 				else
 				  // First time in, set to miss address, after that increment
 				  daccess <= TRUE;
@@ -1181,7 +1169,7 @@ else begin
 	    else
 	    	gosub (IPT_RW_PTG2);
 	    if (pte_found) begin
-	    	tlb_ib <= tmptlbe2;
+	    	tmptlbe <= {64'd0,tmppte};
 	    	goto (IPT_FETCH2);
 	    end
 		end
@@ -1193,10 +1181,13 @@ else begin
 			tlb_ia[15] <= 1'b1;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[21:12];
-			tlb_ib <= tmptlbe;
+			{tlb_ia[127:32],tlb_ib} <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_ptg <= 1'b1;
-			call (IPT_RW_PTG2,IPT_FETCH3);
+			if (!tmptlbe.av)
+				gosub (ART_FETCH1);
+			else
+				call (IPT_RW_PTG2,IPT_FETCH3);
 		end
 	// Delay a couple of cycles to allow TLB update
 	IPT_FETCH3:
@@ -1253,12 +1244,9 @@ else begin
 		begin
   		stb_o <= HIGH;
 	    if (ack_i) begin
-	    	if (wr_ptg) begin
-	    		ptg <= {ptg[127:0],ptg[511:128]};
-	    		dat_o <= ptg[255:128];
-	    	end
-	    	else
-	      	ptg <= {dat_i,ptg[$bits(ptg)-1:128]};	// shift in the data
+    		ptg <= {dat_i,ptg[$bits(ptg)-1:128]};	// shift in the data
+	    	if (wr_ptg)
+	    		dat_o <= ptg[255:128];	// shift out the data
 	      dcnt <= dcnt + 4'd4;					// increment word count
 	      if (dcnt[4:2]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
 	      	tDeactivateBus();
@@ -1316,10 +1304,12 @@ else begin
 			tlb_ia[15] <= 1'b1;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[21:12];
-			tlb_ib <= tmptlbe;
-			tlb_ib.a <= 1'b1;
+			{tlb_ia[127:96],tlb_ib} <= tmppte;
 			wr_pte <= 1'b1;
-			call (PT_RW_PTE1,PT_FETCH4);
+			if (!tmppte.av)
+				gosub (ART_FETCH1);
+			else
+				call (PT_RW_PTE1,PT_FETCH4);
 		end
 	PT_FETCH4:
 		begin
@@ -1396,7 +1386,7 @@ else begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {pde[19:0],adr_slice[8:1],4'h0};
+			dadr <= {pde[19:0],12'h0} + {adr_slice[8:0],4'h0};
 			goto (PT_RW_PTE2);
 		end
 	PT_RW_PTE2:
@@ -1410,22 +1400,82 @@ else begin
 			stb_o <= HIGH;
 			we_o <= wr_pte;
 	    sel_o <= 16'hFFFF;
-	    dat_o <= tmptlbe;
+	    dat_o <= tmppte;
 	    goto (PT_RW_PTE4);
 		end
 	PT_RW_PTE4:
 		if (ack_i) begin
-			tDeactivateBus();
+			stb_o <= LOW;
+			inext <= 1'b1;
 			if (!wr_pte)
-				tmptlbe <= dat_i;
+				tmppte <= {96'd0,dat_i};
 			goto (PT_RW_PTE5);
 		end
 	PT_RW_PTE5:
 		begin
-			if (tmptlbe.v)
+			stb_o <= HIGH;
+			dat_o <= {96'd0,tmppte[95:64]};
+			goto (PT_RW_PTE6);
+		end
+	PT_RW_PTE6:
+		if (ack_i) begin
+			tDeactivateBus();
+			if (!wr_pte)
+				tmppte[159:128] <= dat_i[31:0];
+			goto (PT_RW_PTE7);
+		end
+	PT_RW_PTE7:
+		begin
+			if (tmppte.v)
 				ret();
 			else
 				tPageFault(fault_code,miss_adr);
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Subroutine to fetch access rights.
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	ART_FETCH1:
+		begin
+	 		xlaten <= FALSE;
+			daccess <= TRUE;
+			iaccess <= FALSE;
+			dadr <= {artbr[AWID-1:4],4'h0} + {adr_o[AWID-1:12],4'h0};
+			goto (ART_FETCH2);
+		end
+	ART_FETCH2:
+		goto (ART_FETCH3);
+	ART_FETCH3:
+		if (!ack_i) begin
+			vda_o <= HIGH;
+	  	bte_o <= 2'b00;
+	  	cti_o <= 3'b001;	// constant address burst cycle
+	    cyc_o <= HIGH;
+			stb_o <= HIGH;
+			we_o <= wr_pte;
+	    sel_o <= 16'hFFFF;
+	    goto (ART_FETCH4);
+		end
+	ART_FETCH4:
+		if (ack_i) begin
+			tDeactivateBus();
+			tmptlbe.pl <= arti.pl;
+			tmptlbe.key <= arti.key;
+			tmptlbe.access_count <= arti.access_count;
+			tmptlbe.c <= arti.c;
+			tmptlbe.r <= arti.r;
+			tmptlbe.w <= arti.w;
+			tmptlbe.x <= arti.x;
+			tmptlbe.sc <= arti.sc;
+			tmptlbe.sr <= arti.sr;
+			tmptlbe.sw <= arti.sw;
+			tmptlbe.sx <= arti.sx;
+			tmptlbe.av <= 1'b1;
+			goto (ART_FETCH5);
+		end
+	ART_FETCH5:
+		begin
+			ret();
 		end
 
 	default:
@@ -1467,8 +1517,8 @@ begin
 	case(memreq.func)
 	MR_TLB:
 		begin
-    	tlb_ia <= memreq.adr[31:0];
-			tlb_ib <= memreq.dat[$bits(PTE)-1:0];
+    	tlb_ia <= memreq.dat[127:  0];
+			tlb_ib <= memreq.dat[255:128];
 			tlbwr <= TRUE;
 			goto (TLB1);
 		end
@@ -1582,13 +1632,8 @@ task tMemoryActivateLo;
 begin
   dwait <= 3'd0;
   goto (MEMORY_ACKLO);
-	if (tlbmiss) begin
-		tPushBus();
-		tDeactivateBus();
-		fault_code <= FLT_DPF;
-		miss_adr <= tlbmiss_adr;
- 		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
-	end
+	if (tlbmiss)
+ 		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
   else if (memreq.func != MR_CACHE) begin
   	vda_o <= HIGH;
     cyc_o <= HIGH;
@@ -1599,6 +1644,7 @@ begin
     	sel_o <= 16'hFFFF;
 //	      sel_o <= sel[15:0];
     dat_o <= dat[127:0];
+		tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
     case(memreq.func)
     MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
     	begin
@@ -1610,15 +1656,11 @@ begin
       		end
     		end
     		else
-    			tReadViolation(ea);
+    			tReadViolation(adr_o);
     	end
     MR_STORE,MR_MOVST,M_CALL:
     	begin
   			cr_o <= memreq.func2==MR_STOC;
-    		if (tlbacr[1])
-      		we_o <= HIGH;
-      	else
-      		tWriteViolation(ea);
     	end
     default:
     	tDeactivateBus();
@@ -1734,13 +1776,8 @@ begin
   dwait <= 3'd0;
 //    dadr <= adr_o;
   goto (MEMORY_ACKHI);
-	if (tlbmiss) begin
-		tPushBus();
-		tDeactivateBus();
-		fault_code <= FLT_DPF;
-		miss_adr <= tlbmiss_adr;
- 		gosub (ptbr[0] ? PT_FETCH1 : IPT_FETCH1);
-	end
+	if (tlbmiss)
+ 		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 	else begin
 		if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce && tlbacr[3])
  			tDeactivateBus();
@@ -1752,12 +1789,7 @@ begin
       	sel_o[n] <= sel[n+16];
 //	      	sel_o <= sel[31:16];
     	dat_o <= dat[255:128];
-    	if (memreq.func==MR_STORE) begin
-    		if (tlbacr[1])
-      		we_o <= HIGH;
-      	else
-      		tWriteViolation(ea);
-      end
+			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
   	end
   end
 end
@@ -1898,6 +1930,43 @@ begin
 end
 endtask
 
+// TLB miss processing
+//
+// TLB misses may be handled by either software or hardware.
+// Software handling terminates the current bus cycle then sends an exception
+// response back to the mainline.
+// Hardware handling pushes the current bus cycle on a stack then terminates
+// the current bus cycle. Next a hardware subroutine is called to walk the 
+// page tables and update the TLB with a translation.
+
+task tTlbMiss;
+input Address ba;
+input [6:0] st;
+input [7:0] fc;
+begin
+	tDeactivateBus();
+	miss_adr <= ba;
+	if (ptbr[4]) begin
+		memresp.step <= memreq.step;
+		memresp.cmt <= TRUE;
+	  memresp.cause <= 16'h8000|FLT_TLBMISS;
+		memresp.tid <= memreq.tid;
+	  memresp.badAddr <= ba;
+	  memresp.wr <= TRUE;
+		memresp.res <= 128'd0;
+		goto (MEMORY_IDLE);
+	end
+	else begin
+		tPushBus();
+		fault_code <= fc;
+		gosub (st);
+	end
+end
+endtask
+
+// Page faults occur only during hardware page table walks when a translation
+// cannot be found.
+
 task tPageFault;
 input [7:0] typ;
 input Address ba;
@@ -1944,6 +2013,21 @@ begin
 end
 endtask
 
+task tKeyViolation;
+input Address ba;
+begin
+	memresp.step <= memreq.step;
+	memresp.cmt <= TRUE;
+  memresp.cause <= 16'h8000|FLT_KEY;
+	memresp.tid <= memreq.tid;
+  memresp.badAddr <= ba;
+  memresp.wr <= TRUE;
+	memresp.res <= 128'd0;
+	tDeactivateBus();
+	goto (MEMORY_IDLE);
+end
+endtask
+
 `ifdef SUPPORT_KEYCHK
 task tKeyCheck;
 input [6:0] nst;
@@ -1956,8 +2040,8 @@ begin
 			if (kyut == keys[n] || kyut==20'd0)
 				goto(nst);
 	end
-	if (memreq.func==MR_CACHE)
-  	tPMAEA();
+//	if (memreq.func==MR_CACHE)
+//  	tPMAEA(1'b0,);
   if (adr_o[31:16]==IO_KEY_ADR) begin
   	memresp.step <= memreq.step;
   	memresp.cause <= {8'h00,FLT_NONE};
@@ -1992,14 +2076,21 @@ endtask
 
 
 task tPMAEA;
+input wr;
+input tlbwr;
 begin
+	we_o <= 1'b0;
   if (keyViolation && omode == 2'd0)
-    memresp.cause <= {8'h80,FLT_KEY};
+  	tKeyViolation(adr_o);
   // PMA Check
   for (n = 0; n < 8; n = n + 1)
     if (adr_o[31:4] >= PMA_LB[n] && adr_o[31:4] <= PMA_UB[n]) begin
-      if (((memreq.func==MR_STORE || memreq.func==MR_MOVST) && !PMA_AT[n][1]) || ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI /*|| memreq.func==RTS2*/) && !PMA_AT[n][2]))
-		    memresp.cause <= {8'h80,FLT_PMA};
+    	we_o <= wr & tlbwr & PMA_AT[n][1];
+      if (wr && !PMA_AT[n][1])
+      	tWriteViolation(adr_o);
+      else if (~wr && !PMA_AT[n][2])
+      	tReadViolation(adr_o);
+//		    memresp.cause <= {8'h80,FLT_PMA};
 		  dcachable <= dcachable & PMA_AT[n][3];
     end
 end

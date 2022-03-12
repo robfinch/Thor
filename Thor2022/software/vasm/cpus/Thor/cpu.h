@@ -1,4 +1,4 @@
-/* (c) in 2021 by Robert Finch */
+/* (c) in 2021-2022 by Robert Finch */
 
 #define LITTLEENDIAN 1
 #define BIGENDIAN 0

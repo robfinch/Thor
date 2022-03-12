@@ -1,0 +1,1498 @@
+  
+	.bss
+	.align	8
+
+	.bss
+	.type	_xx,@object
+	.size	_xx,256
+_xx:
+
+	.space	256,0x00                    
+
+
+	.align	8
+
+	.bss
+	.type	_yy,@object
+	.size	_yy,256
+_yy:
+
+	.space	256,0x00                    
+
+
+	.align	8
+
+	.bss
+	.type	_dx,@object
+	.size	_dx,256
+_dx:
+
+	.space	256,0x00                    
+
+
+	.align	8
+
+	.bss
+	.type	_dy,@object
+	.size	_dy,256
+_dy:
+
+	.space	256,0x00                    
+
+ 
+	.align	2
+
+	.bss
+	.type	_state,@object
+	.size	_state,8
+_state:
+
+	.space	8,0x00                    
+
+ 
+	.align	2
+
+	.bss
+	.type	_scrpos,@object
+	.size	_scrpos,8
+_scrpos:
+
+	.space	8,0x00                    
+
+              
+#{++ _foo
+
+	.text
+	.align	4
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_foo:
+  enter    0
+  sxo      a1,a1
+  slt      a0,a1,a0
+.00012:
+  leave    0
+	.type	_foo,@function
+	.size	_foo,$-_foo
+
+
+#--}
+ 
+#{++ _MapPages
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_MapPages:
+  enter    48
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+# a0 = ((1) << 78)|((1) << 79)|((15) << 80)|((0) << 68)|((15) << 64)|((0x3C0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((1) << 31);
+  exim     15
+  exi56    1134923598771781760
+  ldi      s2,5056
+# a1 = ((0xFFFC0) << 64)|(0xFFFC0)|((0) << 52)|((1) << 63);
+  exim     15
+  exi56    1152851685618483200
+  ldi      s1,1048512
+# for (m = 0; m < 16; m++) {
+  mov      s0,r0
+  bge      s0,16,.00035
+.00034:
+# MapPage(a0,a1);
+  push     s2,s1
+  jsr      _MapPage
+# a0++;
+  add      s2,s2,1
+# a1++;
+  add      s1,s1,1
+  add      s0,s0,1
+  blt      s0,16,.00034
+.00035:
+# a0 = ((1) << 78)|((1) << 79)|((6) << 80)|((0) << 68)|((6) << 64)|((0x300) << 0)|((4) << 10)|((2) << 14)|((0) << 16)|((1) << 31);
+  exim     6
+  exi56    486395356825780352
+  ldi      s2,37632
+# a1 = ((0x300) << 64)|(0x300)|((0) << 52)|((1) << 63);
+  exi56    844974685945856
+  ldi      s1,768
+# for (m = 0; m < 32; m++) {
+  mov      s0,r0
+  sgt      t0,s0,31
+  bnez     t0,.00038
+.00037:
+# MapPage(a0,a1);
+  push     s2,s1
+  jsr      _MapPage
+# a0++;
+  add      s2,s2,1
+# a1++;
+  add      s1,s1,1
+  add      s0,s0,1
+  slt      t0,s0,32
+  bnez     t0,.00037
+.00038:
+# a0 = ((1) << 78)|((1) << 79)|((14) << 80)|((0) << 68)|((14) << 64)|((0x000) << 0)|((0) << 10)|((0) << 14)|((0) << 16)|((1) << 31);
+  exim     14
+  exi56    1062864905222226048
+  ldi      s2,0
+# a1 = ((0x000) << 64)|(0x000)|((0) << 52)|((1) << 63);
+  exi56    549755813888
+  ldi      s1,0
+# for (m = 0; m < 1024; m++) {
+  mov      s0,r0
+  sgt      t0,s0,1023
+  bnez     t0,.00041
+.00040:
+# MapPage(a0,a1);
+  push     s2,s1
+  jsr      _MapPage
+# a0++;
+  add      s2,s2,1
+# a1++;
+  add      s1,s1,1
+  add      s0,s0,1
+  slt      t0,s0,1024
+  bnez     t0,.00040
+.00041:
+.00033:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  leave    0
+	.type	_MapPages,@function
+	.size	_MapPages,$-_MapPages
+
+
+#--}
+  
+#{++ _UnmapPage
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_UnmapPage:
+  enter    0
+  ldo      t0,64[fp]
+  push     t0
+  ldi      t0,36028797023158271
+  push     t0
+  jsr      _MapPage
+.00052:
+  leave    16
+	.type	_UnmapPage,@function
+	.size	_UnmapPage,$-_UnmapPage
+
+
+#--}
+  
+#{++ _my_abs
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_my_abs:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# if (a < 0) a = -a;
+  bge      s0,r0,.00065
+  neg      s0,s0
+.00065:
+# return (a);
+  mov      a0,s0
+.00064:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_my_abs,@function
+	.size	_my_abs,$-_my_abs
+
+
+#--}
+   
+#{++ _my_srand
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_my_srand:
+  enter    32
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+# int:32* pRand = 0;
+  mov      s1,r0
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4416
+  push     t0
+  exim     15
+  exi56    1151022098269863936
+  ldi      t0,1046848
+  push     t0
+  jsr      _MapPage
+# pRand += (0xFF940000/sizeof(int:32));
+  add      s1,s1,4287889408
+# for (ch = 0; ch < 256; ch++) {
+  mov      s0,r0
+  sgt      t0,s0,255
+  bnez     t0,.00081
+.00080:
+# pRand[1] = ch;
+  stt      s0,4[s1]
+# pRand[2] = a;
+  ldo      t0,64[fp]
+  stt      t0,8[s1]
+# pRand[3] = b;
+  ldo      t0,72[fp]
+  stt      t0,12[s1]
+  add      s0,s0,1
+  slt      t0,s0,256
+  bnez     t0,.00080
+.00081:
+.00079:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  leave    32
+	.type	_my_srand,@function
+	.size	_my_srand,$-_my_srand
+
+
+#--}
+  
+#{++ _my_rand
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_my_rand:
+  enter    32
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+# int:32* pRand = 0;
+  mov      s0,r0
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4416
+  push     t0
+  exim     15
+  exi56    1151022098269863936
+  ldi      t0,1046848
+  push     t0
+  jsr      _MapPage
+# pRand += (0xFF940000/sizeof(int:32));
+  add      s0,s0,4287889408
+# pRand[1] = ch;
+  ldo      t0,64[fp]
+  stt      t0,4[s0]
+# r = *pRand;
+  ldt      s1,[s0]
+# *pRand = r;
+  stt      s1,[s0]
+# return (r);
+  mov      a0,s1
+.00092:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  leave    16
+	.type	_my_rand,@function
+	.size	_my_rand,$-_my_rand
+
+
+#--}
+ 
+#{++ _bypassTest
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_bypassTest:
+  enter    0
+# __asm {
+  #asm     
+			ldi		a0,1
+			add		a1,a0,1
+			add		a2,a0,1
+			add		a3,a1,a2
+			ldo		a4,_DBGAttr
+			or		a4,a4,a3
+			add		a4,a4,'0'
+			sto		a4,0xFF800378
+			slt		a5,a4,'0'
+			ldo		a4,_DBGAttr
+			or		a4,a5,'0'
+			sto		a4,0xFF800370
+.00102:
+  leave    0
+	.type	_bypassTest,@function
+	.size	_bypassTest,$-_bypassTest
+
+
+#--}
+ 
+#{++ _ramtest
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_ramtest:
+  enter    0
+.00112:
+  leave    0
+	.type	_ramtest,@function
+	.size	_ramtest,$-_ramtest
+
+
+#--}
+  
+#{++ _TstDisplayChar
+
+	.align 4
+
+	.sdreg	29
+ #====================================================
+# Basic Block 0
+#====================================================
+_TstDisplayChar:
+  enter    16
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+# int:64* pScreen = 0;
+  mov      s0,r0
+# pScreen += (0xFF800000/sizeof(int));
+  add      s0,s0,4286578688
+# pScreen[scrpos++] = DBGAttr|n;
+  ldo      t1,_scrpos[gp]
+  ldo      t2,_scrpos[gp]
+  add      t2,t2,1
+  sto      t2,_scrpos[gp]
+  sllp     t0,r0,t1,3
+  ldo      t2,_DBGAttr[gp]
+  ldo      t3,64[fp]
+  or       t1,t2,t3
+  sto      t1,[t0+s0]
+.00122:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_TstDisplayChar,@function
+	.size	_TstDisplayChar,$-_TstDisplayChar
+
+
+#--}
+  
+#{++ _PutNybble
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_PutNybble:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# n = n & 15;
+  and      s0,s0,15
+# n = n | '0';
+  ldi      t1,48
+  sxc      t1,t1
+  or       s0,s0,t1
+# if (n > '9')
+  ldi      t0,57
+  sxc      t0,t0
+  bge      t0,s0,.00135
+# n = n + 7;
+  add      s0,s0,7
+.00135:
+# DBGDisplayChar(n);
+  push     s0
+  jsr      _DBGDisplayChar
+  push     s0
+  jsr      _DBGDisplayChar
+.00134:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_PutNybble,@function
+	.size	_PutNybble,$-_PutNybble
+
+
+#--}
+  
+#{++ _PutByte
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_PutByte:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# PutNybble(n >> 4);
+  sra      t0,s0,4
+  push     t0
+  jsr      _PutNybble
+# PutNybble(n);
+  push     s0
+  jsr      _PutNybble
+.00146:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_PutByte,@function
+	.size	_PutByte,$-_PutByte
+
+
+#--}
+  
+#{++ _PutWyde
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_PutWyde:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# PutByte(n >> 8);
+  sra      t0,s0,8
+  push     t0
+  jsr      _PutByte
+# PutByte(n);
+  push     s0
+  jsr      _PutByte
+.00156:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_PutWyde,@function
+	.size	_PutWyde,$-_PutWyde
+
+
+#--}
+  
+#{++ _PutTetra
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_PutTetra:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# PutWyde(n >> 16);
+  sra      t0,s0,16
+  push     t0
+  jsr      _PutWyde
+# PutWyde(n);
+  push     s0
+  jsr      _PutWyde
+.00166:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_PutTetra,@function
+	.size	_PutTetra,$-_PutTetra
+
+
+#--}
+  
+#{++ _PutOcta
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_PutOcta:
+  enter    16
+  sths     s0,0[sp]
+  ldo      s0,64[fp]
+# PutTetra(n >> 32);
+  sra      t0,s0,32
+  push     t0
+  jsr      _PutTetra
+# PutTetra(n);
+  push     s0
+  jsr      _PutTetra
+.00176:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_PutOcta,@function
+	.size	_PutOcta,$-_PutOcta
+
+
+#--}
+ 
+#{++ _FlashLEDs
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_FlashLEDs:
+  enter    48
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  ldi      s2,2000000
+# int:16* pLEDS = 0;
+  mov      s1,r0
+# pLEDS += (0xFF910000/sizeof(int:16));
+  add      s1,s1,4287692800
+# *pLEDS = 0xAAAA;
+  ldi      t0,43690
+  stw      t0,[s1]
+# for (n = 0; n < 2000000; n++)
+  mov      s0,r0
+  bge      s0,s2,.00191
+.00190:
+# *pLEDS = n >> 13;
+  sra      t0,s0,13
+  stw      t0,[s1]
+  add      s0,s0,1
+  blt      s0,s2,.00190
+.00191:
+.00189:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  leave    0
+	.type	_FlashLEDs,@function
+	.size	_FlashLEDs,$-_FlashLEDs
+
+
+#--}
+  
+#{++ _ShowSprites
+
+	.align 4
+
+	.sdreg	29
+ #====================================================
+# Basic Block 0
+#====================================================
+_ShowSprites:
+  enter    16
+  sths     s0,0[sp]
+# int:32 *pSprEN = 0xFF8B03C0;
+  ldi      s0,4287300544
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4272
+  push     t0
+  exim     15
+  exi56    1150863768595464192
+  ldi      t0,1046704
+  push     t0
+  jsr      _MapPage
+# *pSprEN = which;
+  ldo      t0,64[fp]
+  stt      t0,4287300544
+.00202:
+  ldhs     s0,0[sp]
+  leave    16
+	.type	_ShowSprites,@function
+	.size	_ShowSprites,$-_ShowSprites
+
+
+#--}
+ 
+#{++ _SetSpriteColor
+
+	.align 4
+
+	.sdreg	29
+     #====================================================
+# Basic Block 0
+#====================================================
+_SetSpriteColor:
+  enter    112
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  sths     s3,48[sp]
+  sths     s4,64[sp]
+  sths     s5,80[sp]
+  sths     s6,96[sp]
+# int:16* pSpr = 0;
+  mov      s5,r0
+  mov      s4,r0
+  ldi      s6,4287300568
+# pScreen += (0xFF800000/sizeof(int));
+  add      s4,s4,4286578688
+# pScreen[10] = DBGAttr|'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,80[s4]
+# pScreen[11] = DBGAttr + 'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  add      t0,t1,t2
+  sto      t0,88[s4]
+# pSpr += (0x00300000/sizeof(int:16));
+  add      s5,s5,3145728
+# pScreen[12] = DBGAttr + 'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  add      t0,t1,t2
+  sto      t0,96[s4]
+# for (m = 0; m < 32; m++) {
+  mov      s1,r0
+  sgt      t0,s1,31
+  bnez     t0,.00244
+.00243:
+# pScreen[11] = DBGAttr + 'A' + m;
+  ldo      t2,_DBGAttr[gp]
+  ldi      t3,65
+  sxc      t3,t3
+  add      t1,t2,t3
+  add      t0,t1,s1
+  sto      t0,88[s4]
+# c = my_rand(0);
+  push     r0
+  jsr      _my_rand
+  mov      t0,a0
+  mov      s3,t0
+# k = m * 2048;
+  sllp     s2,r0,s1,11
+# for (n = 0; n < 2048; n++) {
+  mov      s0,r0
+  sgt      t0,s0,2047
+  bnez     t0,.00247
+.00246:
+# pSpr[k + n] = c;
+  add      t1,s2,s0
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,2048
+  bnez     t0,.00246
+.00247:
+  add      s1,s1,1
+  slt      t0,s1,32
+  bnez     t0,.00243
+.00244:
+# c = 0x7fff;
+  ldi      s3,32767
+# for (m = 0; m < 32; m++) {
+  mov      s1,r0
+  sgt      t0,s1,31
+  bnez     t0,.00250
+.00249:
+# pScreen[12] = DBGAttr + 'A' + m;
+  ldo      t2,_DBGAttr[gp]
+  ldi      t3,65
+  sxc      t3,t3
+  add      t1,t2,t3
+  add      t0,t1,s1
+  sto      t0,96[s4]
+# k = m * 2048;
+  sllp     s2,r0,s1,11
+# for (n = 0; n < 56; n++)	// Top
+  mov      s0,r0
+  sgt      t0,s0,55
+  bnez     t0,.00253
+.00252:
+# pSpr[k + n] = c;
+  add      t1,s2,s0
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,56
+  bnez     t0,.00252
+.00253:
+# for (n = 0; n < 56; n++)	// Bottom
+  mov      s0,r0
+  sgt      t0,s0,55
+  bnez     t0,.00256
+.00255:
+# pSpr[k + 35*56 + n] = c;
+  add      t2,s2,1960
+  add      t1,t2,s0
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,56
+  bnez     t0,.00255
+.00256:
+# for (n = 0; n < 36; n++)	// Left
+  mov      s0,r0
+  sgt      t0,s0,35
+  bnez     t0,.00259
+.00258:
+# pSpr[k + n * 56] = c;
+  mul      t2,s0,56
+  add      t1,s2,t2
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,36
+  bnez     t0,.00258
+.00259:
+# for (n = 0; n < 36; n++)	// Right
+  mov      s0,r0
+  sgt      t0,s0,35
+  bnez     t0,.00262
+.00261:
+# pSpr[k + 55 + n * 56] = c;
+  add      t2,s2,55
+  mul      t3,s0,56
+  add      t1,t2,t3
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,36
+  bnez     t0,.00261
+.00262:
+# for (n = 0; n < 36; n++)
+  mov      s0,r0
+  sgt      t0,s0,35
+  bnez     t0,.00265
+.00264:
+# pSpr[k + n * 57] = c;
+  mul      t2,s0,57
+  add      t1,s2,t2
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,36
+  bnez     t0,.00264
+.00265:
+# for (n = 0; n < 36; n++)
+  mov      s0,r0
+  sgt      t0,s0,35
+  bnez     t0,.00268
+.00267:
+# pSpr[k + n * 55 + 55] = c;
+  mul      t3,s0,55
+  add      t2,s2,t3
+  add      t1,t2,55
+  sllp     t0,r0,t1,1
+  stw      s3,[t0+s5]
+  add      s0,s0,1
+  slt      t0,s0,36
+  bnez     t0,.00267
+.00268:
+  add      s1,s1,1
+  slt      t0,s1,32
+  bnez     t0,.00249
+.00250:
+# pScreen[13] = DBGAttr + 'A' + m;
+  ldo      t2,_DBGAttr[gp]
+  ldi      t3,65
+  sxc      t3,t3
+  add      t1,t2,t3
+  add      t0,t1,s1
+  sto      t0,104[s4]
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4272
+  push     t0
+  exim     15
+  exi56    1150863768595464192
+  ldi      t0,1046704
+  push     t0
+  jsr      _MapPage
+# *pSprVDT = 0xFFFFFFFF;
+  ldi      t0,4294967295
+  stt      t0,4287300568
+# for (m = 0; m < 10000000; m++)
+  mov      s1,r0
+  sgt      t0,s1,9999999
+  bnez     t0,.00271
+.00270:
+# ;
+  add      s1,s1,1
+  slt      t0,s1,10000000
+  bnez     t0,.00270
+.00271:
+# pScreen[14] = DBGAttr + 'A' + m;
+  ldo      t2,_DBGAttr[gp]
+  ldi      t3,65
+  sxc      t3,t3
+  add      t1,t2,t3
+  add      t0,t1,s1
+  sto      t0,112[s4]
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4272
+  push     t0
+  exim     15
+  exi56    1150863768595464192
+  ldi      t0,1046704
+  push     t0
+  jsr      _MapPage
+# *pSprVDT = 0xFFFFFFFF;
+  ldi      t0,4294967295
+  stt      t0,4287300568
+.00242:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  ldhs     s3,48[sp]
+  ldhs     s4,64[sp]
+  ldhs     s5,80[sp]
+  ldhs     s6,96[sp]
+  leave    0
+	.type	_SetSpriteColor,@function
+	.size	_SetSpriteColor,$-_SetSpriteColor
+
+
+#--}
+ 
+#{++ _SetSpritePosAndSpeed
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_SetSpritePosAndSpeed:
+  enter    64
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+# int:16* pSpr16 = 0;
+  mov      s1,r0
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4272
+  push     t0
+  exim     15
+  exi56    1150863768595464192
+  ldi      t0,1046704
+  push     t0
+  jsr      _MapPage
+# pSpr16 += (0xFF8B0000/sizeof(int:16));
+  add      s1,s1,4287299584
+# for (n = 0; n < 32; n++)
+  mov      s0,r0
+  sgt      t0,s0,31
+  bnez     t0,.00287
+.00286:
+# xx[n] = (my_rand(0) & 511) + 210;
+  sllp     t0,r0,s0,3
+  lea      t1,_xx[gp]
+  sto      t0,-64[fp]
+  sto      t1,-80[fp]
+  sto      t2,-96[fp]
+  sto      t3,-112[fp]
+  push     r0
+  jsr      _my_rand
+  ldo      t1,-80[fp]
+  ldo      t0,-64[fp]
+  mov      t4,a0
+  and      t3,t4,511
+  add      t2,t3,210
+  sto      t2,[t0+t1]
+# yy[n] = (my_rand(0) & 511) + 36;
+  sllp     t0,r0,s0,3
+  lea      t1,_yy[gp]
+  sto      t0,-64[fp]
+  sto      t1,-80[fp]
+  sto      t2,-96[fp]
+  sto      t3,-112[fp]
+  push     r0
+  jsr      _my_rand
+  ldo      t1,-80[fp]
+  ldo      t0,-64[fp]
+  mov      t4,a0
+  and      t3,t4,511
+  add      t2,t3,36
+  sto      t2,[t0+t1]
+# dx[n] = (my_rand(0) & 7) - 4;
+  sllp     t0,r0,s0,3
+  lea      t1,_dx[gp]
+  sto      t0,-64[fp]
+  sto      t1,-80[fp]
+  sto      t2,-96[fp]
+  sto      t3,-112[fp]
+  push     r0
+  jsr      _my_rand
+  ldo      t1,-80[fp]
+  ldo      t0,-64[fp]
+  mov      t4,a0
+  and      t3,t4,7
+  sub      t2,t3,4
+  sto      t2,[t0+t1]
+# dy[n] = (my_rand(0) & 7) - 4;
+  sllp     t0,r0,s0,3
+  lea      t1,_dy[gp]
+  sto      t0,-64[fp]
+  sto      t1,-80[fp]
+  sto      t2,-96[fp]
+  sto      t3,-112[fp]
+  push     r0
+  jsr      _my_rand
+  ldo      t1,-80[fp]
+  ldo      t0,-64[fp]
+  mov      t4,a0
+  and      t3,t4,7
+  sub      t2,t3,4
+  sto      t2,[t0+t1]
+# pSpr16[n*8] = xx[n];
+  sllp     t1,r0,s0,3
+  sllp     t0,r0,t1,1
+  sllp     t1,r0,s0,3
+  lea      t2,_xx[gp]
+  ldo      t3,[t1+t2]
+  stw      t3,[t0+s1]
+# pSpr16[n*8+1] = yy[n];
+  sllp     t2,r0,s0,3
+  add      t1,t2,1
+  sllp     t0,r0,t1,1
+  sllp     t1,r0,s0,3
+  lea      t2,_yy[gp]
+  ldo      t3,[t1+t2]
+  stw      t3,[t0+s1]
+# pSpr16[n*8+2] = 0x2a30;		// set size 48x42
+  sllp     t2,r0,s0,3
+  add      t1,t2,2
+  sllp     t0,r0,t1,1
+  ldi      t1,10800
+  stw      t1,[t0+s1]
+  add      s0,s0,1
+  slt      t0,s0,32
+  bnez     t0,.00286
+.00287:
+.00285:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  leave    0
+	.type	_SetSpritePosAndSpeed,@function
+	.size	_SetSpritePosAndSpeed,$-_SetSpritePosAndSpeed
+
+
+#--}
+ 
+#{++ _MoveSprites
+
+	.align 4
+
+	.sdreg	29
+     #====================================================
+# Basic Block 0
+#====================================================
+_MoveSprites:
+  enter    128
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  sths     s3,48[sp]
+  sths     s4,64[sp]
+  sths     s5,80[sp]
+  sths     s6,96[sp]
+  sths     s7,112[sp]
+# int:64* pScreen = 0;
+  mov      s3,r0
+  sto      r0,-16[fp]
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4272
+  push     t0
+  exim     15
+  exi56    1150863768595464192
+  ldi      t0,1046704
+  push     t0
+  jsr      _MapPage
+# pSpr16 += (0xFF8B0000/sizeof(int:16));
+  ldo      t0,-16[fp]
+  add      t0,t0,4287299584
+  sto      t0,-16[fp]
+# pScreen += (0xFF800000/sizeof(int));
+  add      s3,s3,4286578688
+.00335:
+# for (m = 0; m < 100000; m++)
+  mov      s1,r0
+  sgt      t0,s1,99999
+  bnez     t0,.00338
+.00337:
+# ;
+  add      s1,s1,1
+  slt      t0,s1,100000
+  bnez     t0,.00337
+.00338:
+# for (n = 0; n < 32; n++) {
+  mov      s0,r0
+  sgt      t0,s0,31
+  bnez     t0,.00341
+.00340:
+# bypassTest();
+  jsr      _bypassTest
+# j = xx[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_xx[gp]
+  ldo      s5,[t0+t1]
+# k = dx[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_dx[gp]
+  ldo      s6,[t0+t1]
+# a = yy[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_yy[gp]
+  ldo      s7,[t0+t1]
+# b = dy[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_dy[gp]
+  ldo      s4,[t0+t1]
+# t = j < 210 && k < 0;
+  slt      t0,s5,210
+  slt      t1,s6,r0
+  and      s2,t0,t1
+# pScreen[0] = t + 0x7FE0F041;
+  add      t0,s2,2145448001
+  sto      t0,[s3]
+# if (t)
+  beqz     s2,.00348
+# dx[n] = -k;
+  sllp     t0,r0,s0,3
+  lea      t1,_dx[gp]
+  neg      t2,s6
+  sto      t2,[t0+t1]
+.00348:
+# t = j > 210 + 800 - 48 && k > 0;
+  sgt      t0,s5,962
+  slt      t1,r0,s6
+  and      s2,t0,t1
+# pScreen[1] = t + 0x7FE0F041;
+  add      t0,s2,2145448001
+  sto      t0,8[s3]
+# if (t)
+  beqz     s2,.00355
+# dx[n] = -k;
+  sllp     t0,r0,s0,3
+  lea      t1,_dx[gp]
+  neg      t2,s6
+  sto      t2,[t0+t1]
+.00355:
+# t = a < 36 && b < 0;
+  slt      t0,s7,36
+  slt      t1,s4,r0
+  and      s2,t0,t1
+# pScreen[2] = t + 0x7FE0F041;
+  add      t0,s2,2145448001
+  sto      t0,16[s3]
+# if (t)
+  beqz     s2,.00362
+# dy[n] = -b;
+  sllp     t0,r0,s0,3
+  lea      t1,_dy[gp]
+  neg      t2,s4
+  sto      t2,[t0+t1]
+.00362:
+# t = a > 600 + 26 - 42 && b > 0;
+  sgt      t0,s7,584
+  slt      t1,r0,s4
+  and      s2,t0,t1
+# pScreen[3] = t + 0x7FE0F041;
+  add      t0,s2,2145448001
+  sto      t0,24[s3]
+# if (t)
+  beqz     s2,.00369
+# dy[n] = -b;
+  sllp     t0,r0,s0,3
+  lea      t1,_dy[gp]
+  neg      t2,s4
+  sto      t2,[t0+t1]
+.00369:
+# pSpr16[n*8] = j;
+  sllp     t1,r0,s0,3
+  sllp     t0,r0,t1,1
+  ldo      t1,-16[fp]
+  stw      s5,[t0+t1]
+# pSpr16[n*8+1] = a;
+  sllp     t2,r0,s0,3
+  add      t1,t2,1
+  sllp     t0,r0,t1,1
+  ldo      t1,-16[fp]
+  stw      s7,[t0+t1]
+# xx[n] = j + dx[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_xx[gp]
+  sllp     t3,r0,s0,3
+  lea      t4,_dx[gp]
+  ldo      t3,[t3+t4]
+  add      t2,s5,t3
+  sto      t2,[t0+t1]
+# yy[n] = a + dy[n];
+  sllp     t0,r0,s0,3
+  lea      t1,_yy[gp]
+  sllp     t3,r0,s0,3
+  lea      t4,_dy[gp]
+  ldo      t3,[t3+t4]
+  add      t2,s7,t3
+  sto      t2,[t0+t1]
+  add      s0,s0,1
+  slt      t0,s0,32
+  bnez     t0,.00340
+.00341:
+  beqz     r0,.00335
+.00334:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  ldhs     s3,48[sp]
+  ldhs     s4,64[sp]
+  ldhs     s5,80[sp]
+  ldhs     s6,96[sp]
+  ldhs     s7,112[sp]
+  leave    0
+	.type	_MoveSprites,@function
+	.size	_MoveSprites,$-_MoveSprites
+
+
+#--}
+ 
+#{++ _main
+
+	.align 4
+
+	.sdreg	29
+      #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  enter    112
+  lea      gp,_bss_start
+  lea      gp1,_rodata_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  sths     s3,48[sp]
+  sths     s4,64[sp]
+  sths     s5,80[sp]
+  sths     s6,96[sp]
+  ldi      s4,100000
+# int:64* pScreen = 0;
+  mov      s1,r0
+  mov      s5,r0
+  lea      s6,rom_bios_c_371[gp1]
+  ldi      t0,4294836224
+  sto      t0,-48[fp]
+  mov      s2,r0
+# pLEDS += (0xFF910000/sizeof(int:16));
+  add      s2,s2,4287692800
+# *pLEDS = 0xAAAA;
+  ldi      t0,43690
+  stw      t0,[s2]
+# scrpos = 0;
+  sto      r0,_scrpos[gp]
+# ShowSprites(0x00);
+  push     r0
+  jsr      _ShowSprites
+# MapPages();
+  jsr      _MapPages
+# MapPage(
+  exim     6
+  exi56    486395356825780352
+  ldi      t0,4416
+  push     t0
+  exim     15
+  exi56    1151022098269863936
+  ldi      t0,1046848
+  push     t0
+  jsr      _MapPage
+# *pLEDS = 0x01;
+  ldi      t0,1
+  stw      t0,[s2]
+# state++;
+  ldo      t0,_state[gp]
+  add      t0,t0,1
+  sto      t0,_state[gp]
+# FlashLEDs();
+  jsr      _FlashLEDs
+# *pLEDS = 0x55;
+  ldi      t0,85
+  stw      t0,[s2]
+# DBGAttr = 0x03FFFE0003FF0000;
+  ldi      t0,288228177195499520
+  sto      t0,_DBGAttr[gp]
+# pMem += (0xFFFC0000/sizeof(int));
+  add      s5,s5,4294705152
+# pScreen += (0xFF800000/sizeof(int:64));
+  add      s1,s1,4286578688
+# DBGClearScreen();
+  jsr      _DBGClearScreen
+# DBGHomeCursor();
+  jsr      _DBGHomeCursor
+# pScreen[0] = DBGAttr|'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,[s1]
+# pScreen[1] = DBGAttr|'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,8[s1]
+# pScreen[2] = DBGAttr|'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,16[s1]
+# pScreen[3] = DBGAttr|'A';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,65
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,24[s1]
+# n = 1;
+  ldi      s0,1
+# if (n)
+  beqz     s0,.00401
+# pScreen[4] = DBGAttr|'B';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,66
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,32[s1]
+.00401:
+# n++;
+  add      s0,s0,1
+# if (n==2)
+  bne      s0,2,.00403
+# pScreen[5] = DBGAttr|'C';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,67
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,40[s1]
+.00403:
+# if (n==4)
+  bne      s0,4,.00405
+# pScreen[6] = DBGAttr|'D';
+  ldo      t1,_DBGAttr[gp]
+  ldi      t2,68
+  sxc      t2,t2
+  or       t0,t1,t2
+  sto      t0,48[s1]
+.00405:
+# bypassTest();
+  jsr      _bypassTest
+# DBGCRLF();
+  jsr      _DBGCRLF
+# PutTetra(&DBGAttr);
+  lea      t0,_DBGAttr[gp]
+  push     t0
+  jsr      _PutTetra
+# DBGDisplayChar(' ');
+  ldi      t0,32
+  push     t0
+  jsr      _DBGDisplayChar
+# PutTetra(0x87654321);
+  ldi      t0,2271560481
+  push     t0
+  jsr      _PutTetra
+# DBGDisplayChar(' ');
+  ldi      t0,32
+  push     t0
+  jsr      _DBGDisplayChar
+# __asm {
+  #asm     
+			csrrd	a0,r0,0x3036
+			sub		sp,sp,8
+			sto		a0,[sp]
+			jsr		lk1,_PutTetra
+# ShowSprites(0xAAAAAAAA);
+  ldi      t0,2863311530
+  push     t0
+  jsr      _ShowSprites
+# DBGCRLF();
+  jsr      _DBGCRLF
+# DBGDisplayChar(' ');
+  ldi      t0,32
+  push     t0
+  jsr      _DBGDisplayChar
+# DBGCRLF();
+  jsr      _DBGCRLF
+# PutWyde(bootstr[0]);
+  ldw      t0,[s6]
+  push     t0
+  jsr      _PutWyde
+# DBGCRLF();
+  jsr      _DBGCRLF
+# DBGDisplayChar(' ');
+  ldi      t0,32
+  push     t0
+  jsr      _DBGDisplayChar
+# my_srand(1234,4567);
+  ldi      t0,1234
+  push     t0
+  ldi      t0,4567
+  push     t0
+  jsr      _my_srand
+# SetSpriteColor();
+  jsr      _SetSpriteColor
+# state++;
+  ldo      t0,_state[gp]
+  add      t0,t0,1
+  sto      t0,_state[gp]
+# SetSpritePosAndSpeed();
+  jsr      _SetSpritePosAndSpeed
+.00407:
+# MoveSprites();
+  jsr      _MoveSprites
+  beqz     r0,.00407
+.00409:
+# for (n = 0; n < 100000; n = n + 1)
+  mov      s0,r0
+  bge      s0,s4,.00412
+.00411:
+# pScreen[my_abs(my_rand(0))%(64*32)+64] = my_rand(0);
+  sto      t0,-112[fp]
+  sto      t1,-128[fp]
+  sto      t2,-144[fp]
+  push     r0
+  jsr      _my_rand
+  mov      t3,a0
+  push     t3
+  jsr      _my_abs
+  mov      t3,a0
+  and      t2,t3,2047
+  add      t1,t2,64
+  sllp     t0,r0,t1,3
+  push     r0
+  jsr      _my_rand
+  mov      t3,a0
+  sto      t3,[t0+s1]
+  add      s0,s0,1
+  blt      s0,s4,.00411
+.00412:
+# for (m = 0; m < 10000; m = m + 1) {
+  mov      s3,r0
+  sgt      t0,s3,9999
+  bnez     t0,.00415
+.00414:
+# pScreen = 0;
+  mov      s1,r0
+# pScreen += (0xFF800010/sizeof(int));
+  add      s1,s1,4286578704
+# for (n = 0; n < 64*33; n = n + 1)
+  mov      s0,r0
+  sgt      t0,s0,2111
+  bnez     t0,.00418
+.00417:
+# *pScreen++ = my_rand(0);
+  push     r0
+  jsr      _my_rand
+  mov      t0,a0
+  sto      t0,[s1]
+  add      s1,s1,8
+  add      s0,s0,1
+  slt      t0,s0,2112
+  bnez     t0,.00417
+.00418:
+  add      s3,s3,1
+  slt      t0,s3,10000
+  bnez     t0,.00414
+.00415:
+  beqz     r0,.00409
+.00400:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  ldhs     s3,48[sp]
+  ldhs     s4,64[sp]
+  ldhs     s5,80[sp]
+  ldhs     s6,96[sp]
+  leave    0
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+ 
+#{++ _last_func
+
+	.align 4
+
+	.sdreg	29
+#====================================================
+# Basic Block 0
+#====================================================
+_last_func:
+  enter    0
+.00429:
+  leave    0
+	.type	_last_func,@function
+	.size	_last_func,$-_last_func
+
+
+#--}
+
+	.rodata
+	.align	16
+
+	.align	8
+
+
+	.type	rom_bios_c_371,@object
+	.size	rom_bios_c_371,48
+rom_bios_c_371: # Thor2021 SoC Booting...
+
+	.2byte	84,104,111,114,50,48,50,49
+	.2byte	32,83,111,67,32,66,111,111
+	.2byte	116,105,110,103,46,46,46,0
+	.extern	_rand
+	.extern	_SieveOfEratosthenes
+	.extern	_DBGHomeCursor
+	.extern	_DBGCRLF
+	.extern	_DBGClearScreen
+	.extern	_srand
+	.extern	_DBGDisplayChar
+	.extern	_DBGDisplayAsciiStringCRLF
+	.extern	_DBGAttr
+	.extern	_MapPage

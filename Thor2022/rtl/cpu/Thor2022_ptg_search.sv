@@ -40,7 +40,7 @@ import Thor2022_mmupkg::*;
 
 module Thor2022_ptg_search(ptg, asid, miss_adr, pte, found);
 input PTG ptg;
-input [7:0] asid;
+input [11:0] asid;
 input VirtualAddress miss_adr;
 output PTE pte;
 output reg found;

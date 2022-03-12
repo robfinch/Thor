@@ -133,8 +133,9 @@ Operand* OperandFactory::MakeImmediate(Int128 i, int display_opt)
 			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
 		}
 		else {
+			Int128::Lsr(&k, &i, 80);
+			GenerateMonadic(op_exim, 0, MakeImmediate(k.low));
 			Int128::Lsr(&k, &i, 24);
-			GenerateMonadic(op_exim, 0, MakeImmediate(k.high));
 			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
 		}
 	}

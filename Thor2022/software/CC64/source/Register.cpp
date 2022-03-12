@@ -236,7 +236,7 @@ int IsTempReg(int rg)
 {
 	int nn;
 
-	for (nn = 0; nn < NumTempRegs(); nn++) {
+	for (nn = 0; nn < cpu.NumTmpRegs; nn++) {
 		if (rg == cpu.tmpregs[nn])
 			return (nn+1);
 	}
@@ -247,7 +247,7 @@ int IsArgReg(int rg)
 {
 	int nn;
 
-	for (nn = 0; nn < 10; nn++) {
+	for (nn = 0; nn < cpu.NumArgRegs; nn++) {
 		if (rg == cpu.argregs[nn])
 			return (nn + 1);
 	}
@@ -258,7 +258,7 @@ int IsSavedReg(int rg)
 {
 	int nn;
 
-	for (nn = 0; nn < 10; nn++) {
+	for (nn = 0; nn < cpu.NumSavedRegs; nn++) {
 		if (rg == cpu.saved_regs[nn])
 			return (nn + 1);
 	}
