@@ -1002,8 +1002,7 @@ Thor2022_biu ubiu
 	.dce(dce),
 	.keys(keys),
 	.arange(),
-	.ptbr(ptbr),
-	.artbr(artbr)
+	.ptbr(ptbr)
 );
 
 always_comb

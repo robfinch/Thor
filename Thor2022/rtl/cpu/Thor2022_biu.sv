@@ -43,7 +43,7 @@ module Thor2022_biu(rst,clk,tlbclk,UserMode,MUserMode,omode,ASID,bounds_chk,pe,
 	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
-	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr, artbr);
+	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr);
 parameter AWID=32;
 input rst;
 input clk;
@@ -87,7 +87,6 @@ output reg dce;							// data cache enable
 input [19:0] keys [0:7];
 input [2:0] arange;
 input Address ptbr;
-input Address artbr;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -156,8 +155,6 @@ reg [63:0] nsel;
 reg [511:0] dati512;
 reg [255:0] dat, dati;
 wire [127:0] datis;
-ARTE arti;
-assign arti = dat_i;
 
 biu_dati_align uda1
 (
@@ -186,37 +183,20 @@ Thor2022_stmask ustmsk (sel_o, adr_o[5:4], stmask);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // PMA Checker
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-reg [AWID-4:0] PMA_LB [0:7];
-reg [AWID-4:0] PMA_UB [0:7];
-reg [15:0] PMA_AT [0:7];
 
-initial begin
-  PMA_LB[7] = 28'hFFFD000;
-  PMA_UB[7] = 28'hFFFFFFF;
-  PMA_AT[7] = 16'h000D;       // rom, byte addressable, cache-read-execute
-  PMA_LB[6] = 28'hFF80000;
-  PMA_UB[6] = 28'hFFEFFFF;
-  PMA_AT[6] = 16'h0206;       // io, (screen) byte addressable, read-write
-  PMA_LB[5] = 28'hFFD2000;
-  PMA_UB[5] = 28'hFFDFFFF;
-  PMA_AT[5] = 16'h0206;       // io, byte addressable, read-write
-  PMA_LB[4] = 28'hFFFC000;
-  PMA_UB[4] = 28'hFFFCFFF;
-  PMA_AT[4] = 16'h020F;       //
-  PMA_LB[3] = 28'hFFFFFFF;
-  PMA_UB[3] = 28'hFFFFFFF;
-  PMA_AT[3] = 16'hFF00;       // vacant
-  PMA_LB[2] = 28'hFFFFFFF;
-  PMA_UB[2] = 28'hFFFFFFF;
-  PMA_AT[2] = 16'hFF00;       // vacant
-  PMA_LB[1] = 28'hFFFFFFF;
-  PMA_UB[1] = 28'hFFFFFFF;
-  PMA_AT[1] = 16'hFF00;       // vacant
-  PMA_LB[0] = 28'h0000000;
-  PMA_UB[0] = 28'h0FFFFFF;
-  PMA_AT[0] = 16'h010F;       // ram, byte addressable, cache-read-write-execute
-end
+REGION region;
+wire [2:0] region_num;
 
+Thor2022_active_region
+(
+	.adr(adr_o),
+	.region_num(),
+	.region(region),
+	.err()
+);
+
+ARTE arti = dat_i;
+Address art_adr = adr_o[AWID-1:0] - region.start[AWID-1:0];
 
 wire [3:0] ififo_cnt, ofifo_cnt;
 
@@ -651,14 +631,14 @@ Thor2022_dcache_way udcwayo
 // TLB
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-TLBE tmptlbe;
+PTE tmptlbe;
 reg [5:0] ipt_miss_count;
 reg tlben, tlbwr;
 wire tlbmiss;
 wire tlbrdy;
-TLBE tlbdato;
-reg [127:0] tlb_ia;
-reg [127:0] tlb_ib;
+PTE tlbdato;
+reg [31:0] tlb_ia;
+TLBE tlb_ib;
 reg inext;
 VirtualAddress tlbmiss_adr;
 VirtualAddress miss_adr;
@@ -682,7 +662,7 @@ Thor2022_tlb utlb (
   .tlben_i(tlben),
   .wrtlb_i(tlbwr & tlb_ia[31]),
   .tlbadr_i(tlb_ia[15:0]),
-  .tlbdat_i({tlb_ia[127:32],tlb_ib}),
+  .tlbdat_i(tlb_ib),
   .tlbdat_o(tlbdato),
   .tlbmiss_o(tlbmiss),
   .tlbmiss_adr_o(tlbmiss_adr)
@@ -694,9 +674,12 @@ Thor2022_tlb utlb (
 
 reg [7:0] fault_code;
 PTG ptg;
-PTE tmppte;
+PTE tmptlbe2;
 reg pte_found;
+wire [2:0] entry_num;
+reg [3:0] span_lo, span_hi;
 wire [15:0] hash;
+reg [127:0] ndat;		// next data output
 
 Thor2022_ipt_hash uhash
 (
@@ -710,9 +693,25 @@ Thor2022_ptg_search uptgs
 	.ptg(ptg),
 	.asid(ASID),
 	.miss_adr(miss_adr),
-	.pte(tmppte),
-	.found(pte_found)
+	.pte(tmptlbe2),
+	.found(pte_found),
+	.entry_num(entry_num)
 );
+
+// 0   159  319 479  639  799   959  1119  1279
+// 0 128 255 383 511 639 767 895 1023 1151 1279
+always_ff @(posedge clk)
+	case(entry_num)
+	3'd0:	begin span_lo <= 4'd0; span_hi <= 4'd1; end
+	3'd1: begin span_lo <= 4'd1; span_hi <= 4'd2; end
+	3'd2: begin span_lo <= 4'd2; span_hi <= 4'd3; end
+	3'd3: begin span_lo <= 4'd3; span_hi <= 4'd4; end
+	3'd4: begin span_lo <= 4'd5; span_hi <= 4'd6; end
+	3'd5: begin span_lo <= 4'd6; span_hi <= 4'd7; end
+	3'd6: begin span_lo <= 4'd7; span_hi <= 4'd8; end
+	3'd7: begin span_lo <= 4'd8; span_hi <= 4'd9; end
+	endcase
+
 
 integer j;
 reg [11:0] square_table [0:63];
@@ -728,6 +727,7 @@ end
 reg [2:0] dep;
 reg [8:0] adr_slice;
 PDE pde;
+PTE tmppte;
 reg wr_pte;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1082,78 +1082,6 @@ else begin
 		end
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to load keys.
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-`ifdef SUPPORT_KEYCHK
-	KYLD:
-	  begin
-	    tEA(keytbl);
-			goto (KYLD2);
-	  end
-	KYLD2:
-		goto (KYLD3);
-
-	KYLD3:
-	  begin
-	 		xlaten <= FALSE;
-		  begin
-	  		goto (KYLD4);
-		  	if (tlbmiss)
-		  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
-				else
-				  // First time in, set to miss address, after that increment
-				  daccess <= TRUE;
-	      dadr <= {adr_o[AWID-1:5],6'h0};
-		  end
-	  end
-
-	KYLD4:
-	  if (!ack_i) begin
-	  	vda_o <= HIGH;
-	  	bte_o <= 2'b00;
-	  	cti_o <= 3'b001;
-	    cyc_o <= HIGH;
-			stb_o <= HIGH;
-	    sel_o <= 16'hFFFF;
-	    goto (KYLD5);
-	  end
-
-	KYLD5:
-	  begin
-	  	stb_o <= HIGH;
-	    if (ack_i) begin
-	    	dcnt <= dcnt + 4'd4;
-	      dci <= {dat_i,dci[511:128]};
-	      if (dcnt[4:2]==3'd3) begin		// Are we done?
-	      	tDeactivateBus();
-	      	goto (KYLD7);
-	    	end
-	    	if (!bok_i) begin							// burst mode supported?
-	    		cti_o <= 3'b000;						// no, use normal cycles
-	    		goto (KYLD6);
-	    	end
-	    end
-	  end
-
-	KYLD6:
-		begin
-			stb_o <= LOW;
-			if (!ack_i)	begin							// wait till consumer ready
-				inext <= TRUE;
-				goto (KYLD5);
-			end
-		end
-
-	KYLD7:
-	  begin
-	  	kytag[dadr[11:6]] <= dadr[AWID-1:6];
-	  	kyline[dadr[11:6]] <= dci;
-	  	kyv[dadr[11:6]] <= 1'b1;
-	  	ret();
-	  end
-`endif
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to find an address translation and update the TLB.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// 
@@ -1169,7 +1097,7 @@ else begin
 	    else
 	    	gosub (IPT_RW_PTG2);
 	    if (pte_found) begin
-	    	tmptlbe <= {64'd0,tmppte};
+	    	tmptlbe <= tmptlbe2;
 	    	goto (IPT_FETCH2);
 	    end
 		end
@@ -1178,16 +1106,17 @@ else begin
 			tlbwr <= 1'b1;
 			tlb_ia <= 'd0;
 			tlb_ia[31] <= 1'b1;	// write to tlb
-			tlb_ia[15] <= 1'b1;	// write a random way
+			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[21:12];
-			{tlb_ia[127:32],tlb_ib} <= tmptlbe;
+			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_ptg <= 1'b1;
-			if (!tmptlbe.av)
-				gosub (ART_FETCH1);
-			else
+			ptg[entry_num * $bits(PTE) + 132] <= 1'b1;	// The 'a' bit in the pte
+			if (tmptlbe.av)
 				call (IPT_RW_PTG2,IPT_FETCH3);
+			else
+				gosub(ART_FETCH1);
 		end
 	// Delay a couple of cycles to allow TLB update
 	IPT_FETCH3:
@@ -1217,6 +1146,10 @@ else begin
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to read / write a page table group.
+	//
+	// Reads or writes only as much as it needs to. For writes just the PTE needs
+	// to be updated. For reads, the PTG is read up until a translation match is
+	// found or the entire PTG is read.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	IPT_RW_PTG2:
 		begin
@@ -1224,7 +1157,7 @@ else begin
 			goto (IPT_RW_PTG3);
 		end
 
-	IPT_RW_PTG3:	//FETCH3:
+	IPT_RW_PTG3:
 		begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
@@ -1237,27 +1170,57 @@ else begin
 			stb_o <= HIGH;
 	    sel_o <= 16'hFFFF;
 	    we_o <= wr_ptg;
-	    dat_o <= ptg[127:0];
+	    // We need only to write the access bit which is in the upper half of
+	    // the pte.
+  		case(span_lo)
+  		4'd0:	dat_o <= ptg[255:128];
+  		4'd1: dat_o <= ptg[383:256];
+  		4'd2:	dat_o <= ptg[511:384];
+  		4'd3:	dat_o <= ptg[639:512];
+  		4'd4:	dat_o <= ptg[767:640];
+  		4'd5: dat_o <= ptg[895:768];
+  		4'd6: dat_o <= ptg[1023:895];
+  		4'd7: dat_o <= ptg[1151:1024];
+  		4'd8:	dat_o <= ptg[1279:1152];
+  		default:	;
+  		endcase
   		goto (IPT_RW_PTG4);
 		end
 	IPT_RW_PTG4:
 		begin
   		stb_o <= HIGH;
 	    if (ack_i) begin
-    		ptg <= {dat_i,ptg[$bits(ptg)-1:128]};	// shift in the data
-	    	if (wr_ptg)
-	    		dat_o <= ptg[255:128];	// shift out the data
-	      dcnt <= dcnt + 4'd4;					// increment word count
-	      if (dcnt[4:2]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+	    	if (wr_ptg) begin
 	      	tDeactivateBus();
 	      	daccess <= FALSE;
 	      	ret();
-	      	//goto (IPT_FETCH6);
 	    	end
-	    	else if (!bok_i) begin				// burst mode supported?
-	    		cti_o <= 3'b000;						// no, use normal cycles
-	    		goto (IPT_RW_PTG5);
-	    	end
+	    	else begin
+		    	case(dcnt[3:0])
+		    	4'd0:	ptg[127:  0] <= dat_i;
+		    	4'd1: ptg[255:128] <= dat_i;
+		    	4'd2:	ptg[383:256] <= dat_i;
+		    	4'd3: ptg[511:384] <= dat_i;
+		    	4'd4:	ptg[639:512] <= dat_i;
+		    	4'd5: ptg[767:640] <= dat_i;
+		    	4'd6: ptg[895:768] <= dat_i;
+		    	4'd7: ptg[1023:896] <= dat_i;
+		    	4'd8: ptg[1151:1024] <= dat_i;
+		    	4'd9: ptg[1279:1152] <= dat_i;
+		    	default:	;
+		    	endcase
+		    	// If the PTE was found we can quit reading data early.
+		      if (pte_found || dcnt[3:0]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+		      	tDeactivateBus();
+		      	daccess <= FALSE;
+		      	ret();
+		    	end
+		    	else if (!bok_i) begin				// burst mode supported?
+		    		cti_o <= 3'b000;						// no, use normal cycles
+		    		goto (IPT_RW_PTG5);
+		    	end
+			  end
+	      dcnt <= dcnt + 2'd1;					// increment word count
 	    end
   	end
   // Increment address and bounce back for another read.
@@ -1270,6 +1233,7 @@ else begin
 			end
 		end
 
+`ifdef SUPPORT_HIERPT
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to find an address translation and update the TLB.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1278,50 +1242,74 @@ else begin
 			dep <= ptbr[10:8];
 			wr_pte <= 1'b0;
 	  	case(ptbr[8:6])
-	  	3'd0:	begin pde <= ptbr[31:12]; 	adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
-	  	3'd1: begin pde <= ptbr[31:12];	adr_slice <= miss_adr[28:20]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
-	  	3'd2:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[31:29]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
-//	  	3'd3:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[46:38]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
-//	  	3'd4:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[55:47]; call (PT_READ_PDE1, PT_FETCH2); dep <= ptbr[10:8] - 2'd1; end // 9 bits
+	  	3'd0:	begin pde <= ptbr[31:12]; adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
+	  	3'd1: begin pde <= ptbr[31:12];	adr_slice <= miss_adr[28:20]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
+	  	3'd2:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[31:29]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
+//	  	3'd3:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[46:38]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
+//	  	3'd4:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[55:47]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
+//	  	3'd5:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[63:56]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
 	  	default:	ret();
 	  	endcase
 		end
 	PT_FETCH2:
 	  begin
-	  	case(dep)
-	  	3'd0:	begin adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
-	  	3'd1: begin adr_slice <= miss_adr[28:20]; gosub (PT_READ_PDE1); dep <= dep - 2'd1; end // 9 bits
-	  	3'd2:	begin adr_slice <= miss_adr[31:29]; gosub (PT_READ_PDE1); dep <= dep - 2'd1; end // 9 bits
-//	  	3'd3:	begin adr_slice <= miss_adr[46:38]; gosub (PT_READ_PDE1); dep <= dep - 2'd1; end // 9 bits
-	  	default:	ret();
-	  	endcase
+	  	if (pde.lvl >= dep)
+	  		tPageFault(FLT_LVL,adr_o); 
+	  	else
+		  	case(dep)
+		  	3'd0:	begin adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
+		  	3'd1: begin adr_slice <= miss_adr[28:20]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+		  	3'd2:	begin adr_slice <= miss_adr[31:29]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+//		  	3'd3:	begin adr_slice <= miss_adr[46:38]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+//		  	3'd4:	begin adr_slice <= miss_adr[55:47]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+//		  	3'd5:	begin adr_slice <= miss_adr[63:56]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+		  	default:	ret();
+		  	endcase
 	  end
 	PT_FETCH3:
 		begin
 			tlbwr <= 1'b1;
 			tlb_ia <= 'd0;
 			tlb_ia[31] <= 1'b1;	// write to tlb
-			tlb_ia[15] <= 1'b1;	// write a random way
+			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[21:12];
-			{tlb_ia[127:96],tlb_ib} <= tmppte;
+			tlb_ib.ppn <= tmppte.ppn;
+			tlb_ib.d <= tmppte.d;
+			tlb_ib.u <= tmppte.u;
+			tlb_ib.s <= tmppte.s;
+			tlb_ib.a <= tmppte.a;
+			tlb_ib.c <= tmppte.c;
+			tlb_ib.r <= tmppte.r;
+			tlb_ib.w <= tmppte.w;
+			tlb_ib.x <= tmppte.x;
+			tlb_ib.sc <= tmppte.sc;
+			tlb_ib.sr <= tmppte.sr;
+			tlb_ib.sw <= tmppte.sw;
+			tlb_ib.sx <= tmppte.sx;
+			tlb_ib.v <= tmppte.v;
+			tlb_ib.g <= tmppte.g;
+			tlb_ib.bc <= tmppte.lvl;
+			tlb_ib.n <= tmppte.n;
+			tlb_ib.av <= tmppte.av;
+//			tlb_ib <= tmptlbe;
+			tlb_ib.a <= 1'b1;
 			wr_pte <= 1'b1;
-			if (!tmppte.av)
-				gosub (ART_FETCH1);
-			else
+			if (tmptlbe.av)
 				call (PT_RW_PTE1,PT_FETCH4);
+			else
+				gosub(ART_FETCH1);
 		end
 	PT_FETCH4:
 		begin
 			tlbwr <= 1'b0;
 			wr_pte <= 1'b0;
+			xlaten <= xlaten_stk;
 			if (fault_code==FLT_DPF) begin
-				xlaten <= xlaten_stk;
 				dadr <= dadr_stk;
 				goto (PT_FETCH5);
 			end
 			else begin
-				xlaten <= xlaten_stk;
 				iadr <= iadr_stk;
 			  if (!ack_i)
 		  		goto (PT_FETCH5);
@@ -1386,7 +1374,7 @@ else begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {pde[19:0],12'h0} + {adr_slice[8:0],4'h0};
+			dadr <= {pde[19:0],adr_slice[8:1],4'h0};
 			goto (PT_RW_PTE2);
 		end
 	PT_RW_PTE2:
@@ -1405,32 +1393,19 @@ else begin
 		end
 	PT_RW_PTE4:
 		if (ack_i) begin
-			stb_o <= LOW;
-			inext <= 1'b1;
+			tDeactivateBus();
 			if (!wr_pte)
-				tmppte <= {96'd0,dat_i};
+				tmppte <= dat_i;
 			goto (PT_RW_PTE5);
 		end
 	PT_RW_PTE5:
-		begin
-			stb_o <= HIGH;
-			dat_o <= {96'd0,tmppte[95:64]};
-			goto (PT_RW_PTE6);
-		end
-	PT_RW_PTE6:
-		if (ack_i) begin
-			tDeactivateBus();
-			if (!wr_pte)
-				tmppte[159:128] <= dat_i[31:0];
-			goto (PT_RW_PTE7);
-		end
-	PT_RW_PTE7:
 		begin
 			if (tmppte.v)
 				ret();
 			else
 				tPageFault(fault_code,miss_adr);
 		end
+`endif
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Subroutine to fetch access rights.
@@ -1440,7 +1415,7 @@ else begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {artbr[AWID-1:4],4'h0} + {adr_o[AWID-1:12],4'h0};
+			dadr <= {region.art[AWID-1:4],4'h0} + {art_adr[AWID-1:12],4'h0};
 			goto (ART_FETCH2);
 		end
 	ART_FETCH2:
@@ -1517,8 +1492,8 @@ begin
 	case(memreq.func)
 	MR_TLB:
 		begin
-    	tlb_ia <= memreq.dat[127:  0];
-			tlb_ib <= memreq.dat[255:128];
+    	tlb_ia <= memreq.dat[31:0];
+			tlb_ib <= {memreq.dat[127:32],memreq.dat[255:128]};
 			tlbwr <= TRUE;
 			goto (TLB1);
 		end
@@ -1644,7 +1619,7 @@ begin
     	sel_o <= 16'hFFFF;
 //	      sel_o <= sel[15:0];
     dat_o <= dat[127:0];
-		tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
+		tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1],we_o);
     case(memreq.func)
     MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
     	begin
@@ -1789,7 +1764,7 @@ begin
       	sel_o[n] <= sel[n+16];
 //	      	sel_o <= sel[31:16];
     	dat_o <= dat[255:128];
-			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
+			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1],we_o);
   	end
   end
 end
@@ -1944,6 +1919,7 @@ input Address ba;
 input [6:0] st;
 input [7:0] fc;
 begin
+	ptg <= 'd0;
 	tDeactivateBus();
 	miss_adr <= ba;
 	if (ptbr[4]) begin
@@ -2040,8 +2016,8 @@ begin
 			if (kyut == keys[n] || kyut==20'd0)
 				goto(nst);
 	end
-//	if (memreq.func==MR_CACHE)
-//  	tPMAEA(1'b0,);
+	if (memreq.func==MR_CACHE)
+  	tPMAEA();
   if (adr_o[31:16]==IO_KEY_ADR) begin
   	memresp.step <= memreq.step;
   	memresp.cause <= {8'h00,FLT_NONE};
@@ -2078,21 +2054,19 @@ endtask
 task tPMAEA;
 input wr;
 input tlbwr;
+output reg wro;
 begin
-	we_o <= 1'b0;
+	wro <= 1'b0;
   if (keyViolation && omode == 2'd0)
   	tKeyViolation(adr_o);
   // PMA Check
-  for (n = 0; n < 8; n = n + 1)
-    if (adr_o[31:4] >= PMA_LB[n] && adr_o[31:4] <= PMA_UB[n]) begin
-    	we_o <= wr & tlbwr & PMA_AT[n][1];
-      if (wr && !PMA_AT[n][1])
-      	tWriteViolation(adr_o);
-      else if (~wr && !PMA_AT[n][2])
-      	tReadViolation(adr_o);
-//		    memresp.cause <= {8'h80,FLT_PMA};
-		  dcachable <= dcachable & PMA_AT[n][3];
-    end
+ 	wro <= wr & tlbwr & region.at[1];
+  if (wr && !regions.at[1])
+  	tWriteViolation(adr_o);
+  else if (~wr && !region.at[2])
+    tReadViolation(adr_o);
+//	memresp.cause <= {8'h80,FLT_PMA};
+	dcachable <= dcachable & region.at[3];
 end
 endtask
 
@@ -2100,13 +2074,10 @@ task tPMAIP;
 begin
   // PMA Check
   // Abort cycle that has already started.
-  for (n = 0; n < 8; n = n + 1)
-    if (adr_o[31:4] >= PMA_LB[n] && adr_o[31:4] <= PMA_UB[n]) begin
-      if (!PMA_AT[n][0]) begin
-        memresp.cause <= {8'h80,FLT_PMA};
-        tDeactivateBus();
-    	end
-    end
+  if (!region.at[0]) begin
+    memresp.cause <= {8'h80,FLT_PMA};
+    tDeactivateBus();
+	end
 end
 endtask
 

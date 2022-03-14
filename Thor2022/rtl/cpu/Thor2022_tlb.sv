@@ -40,7 +40,7 @@ import Thor2022_mmupkg::*;
 
 module Thor2022_tlb(rst_i, clk_i, clock, rdy_o, asid_i, sys_mode_i,xlaten_i,we_i,
 	dadr_i,next_i,iacc_i,dacc_i,iadr_i,padr_o,acr_o,tlben_i,wrtlb_i,tlbadr_i,tlbdat_i,tlbdat_o,
-	tlbmiss_o, tlbmiss_adr_o);
+	tlbmiss_o, tlbmiss_adr_o, tlbkey_o);
 parameter ASSOC = 5;	// MAX assoc = 15
 parameter AWID=32;
 parameter RSTIP = 32'hFFFD0000;
@@ -66,6 +66,7 @@ input TLBE tlbdat_i;
 output TLBE tlbdat_o;
 output reg tlbmiss_o;
 output Address tlbmiss_adr_o;
+output reg [31:0] tlbkey_o;
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
 
@@ -364,6 +365,7 @@ if (rst_i) begin
   hit <= 4'd15;
   tlbmiss_o <= FALSE;
 	tlbmiss_adr_o <= 'd0;
+	tlbkey_o <= 32'hFFFFFFFF;
   acr_o <= 4'hF;
 end
 else begin
@@ -377,10 +379,12 @@ else begin
 	  	padr_o[11:0] <= iadr_i[11:0];
 	    padr_o[31:12] <= iadr_i[31:12];
 	    acr_o <= 4'hF;
+			tlbkey_o <= 32'hFFFFFFFF;
 		end
 		else begin
 			tlbmiss_o <= dli[4] & ~cd_iadr;
 			tlbmiss_adr_o <= iadr_i;
+			tlbkey_o <= 32'hFFFFFFFF;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[19:10]==iadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
@@ -388,6 +392,7 @@ else begin
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
+					tlbkey_o <= tentryo[n].key;
 					tlbmiss_o <= FALSE;
 					hit <= n;
 				end
@@ -400,10 +405,12 @@ else begin
 	  	padr_o[11:0] <= dadr_i[11:0];
 	    padr_o[31:12] <= dadr_i[31:12];
 	    acr_o <= 4'hF;
+			tlbkey_o <= 32'hFFFFFFFF;
 		end
 		else begin
 			tlbmiss_o <= dld[4] & ~cd_dadr;
 			tlbmiss_adr_o <= dadr_i;
+			tlbkey_o <= 32'hFFFFFFFF;
 			hit <= 4'd15;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[19:10]==dadr_i[31:22] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
@@ -411,6 +418,7 @@ else begin
 					padr_o[31:12] <= tentryo[n].ppn;
 					acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
+					tlbkey_o <= tentryo[n].key;
 					tlbmiss_o <= FALSE;
 					hit <= n;
 				end
