@@ -725,9 +725,8 @@ end
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Page table vars
 reg [2:0] dep;
-reg [8:0] adr_slice;
-PDE pde;
-PTE tmppte;
+reg [7:0] adr_slice;
+PTE pte;
 reg wr_pte;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1242,27 +1241,29 @@ else begin
 			dep <= ptbr[10:8];
 			wr_pte <= 1'b0;
 	  	case(ptbr[8:6])
-	  	3'd0:	begin pde <= ptbr[31:12]; adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
-	  	3'd1: begin pde <= ptbr[31:12];	adr_slice <= miss_adr[28:20]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
-	  	3'd2:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[31:29]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
-//	  	3'd3:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[46:38]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
-//	  	3'd4:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[55:47]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
-//	  	3'd5:	begin pde <= ptbr[31:12];	adr_slice <= miss_adr[63:56]; call (PT_READ_PDE1, PT_FETCH2); end // 9 bits
+	  	3'd1:	begin pte <= ptbr[31:12]; adr_slice <= miss_adr[19:12]; call (PT_RW_PTE1, PT_FETCH3); end
+	  	3'd2: begin pte <= ptbr[31:12];	adr_slice <= miss_adr[27:20]; call (PT_RW_PTE1, PT_FETCH2); end // 8 bits
+	  	3'd3:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[31:28]; call (PT_RW_PTE1, PT_FETCH2); end // 8 bits
+//	  	3'd4:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[41:34]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
+//	  	3'd5:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[49:42]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
+//	  	3'd6:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[57:50]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
+//	  	3'd7:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[63:58]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
 	  	default:	ret();
 	  	endcase
 		end
 	PT_FETCH2:
 	  begin
-	  	if (pde.lvl >= dep)
+	  	if (pte.lvl >= dep)
 	  		tPageFault(FLT_LVL,adr_o); 
 	  	else
 		  	case(dep)
-		  	3'd0:	begin adr_slice <= {miss_adr[19:12],1'b0}; call (PT_RW_PTE1, PT_FETCH3); end
-		  	3'd1: begin adr_slice <= miss_adr[28:20]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
-		  	3'd2:	begin adr_slice <= miss_adr[31:29]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
-//		  	3'd3:	begin adr_slice <= miss_adr[46:38]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
-//		  	3'd4:	begin adr_slice <= miss_adr[55:47]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
-//		  	3'd5:	begin adr_slice <= miss_adr[63:56]; gosub (PT_READ_PDE1); dep <= pde.lvl; end // 9 bits
+		  	3'd1:	begin adr_slice <= miss_adr[19:12]; call (PT_RW_PTE1, PT_FETCH3); end
+		  	3'd2: begin adr_slice <= miss_adr[27:20]; gosub (PT_RW_PTE1); dep <= pte.lvl; end // 8 bits
+		  	3'd3:	begin adr_slice <= miss_adr[31:28]; gosub (PT_RW_PTE1); dep <= pte.lvl; end // 8 bits
+//		  	3'd4:	begin adr_slice <= miss_adr[41:34]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
+//		  	3'd5:	begin adr_slice <= miss_adr[59:42]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
+//		  	3'd6:	begin adr_slice <= miss_adr[57:50]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
+//		  	3'd7:	begin adr_slice <= miss_adr[63:58]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
 		  	default:	ret();
 		  	endcase
 	  end
@@ -1270,33 +1271,34 @@ else begin
 		begin
 			tlbwr <= 1'b1;
 			tlb_ia <= 'd0;
+			tlb_ib <= 'd0;
 			tlb_ia[31] <= 1'b1;	// write to tlb
 			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[21:12];
-			tlb_ib.ppn <= tmppte.ppn;
-			tlb_ib.d <= tmppte.d;
-			tlb_ib.u <= tmppte.u;
-			tlb_ib.s <= tmppte.s;
-			tlb_ib.a <= tmppte.a;
-			tlb_ib.c <= tmppte.c;
-			tlb_ib.r <= tmppte.r;
-			tlb_ib.w <= tmppte.w;
-			tlb_ib.x <= tmppte.x;
-			tlb_ib.sc <= tmppte.sc;
-			tlb_ib.sr <= tmppte.sr;
-			tlb_ib.sw <= tmppte.sw;
-			tlb_ib.sx <= tmppte.sx;
-			tlb_ib.v <= tmppte.v;
-			tlb_ib.g <= tmppte.g;
-			tlb_ib.bc <= tmppte.lvl;
-			tlb_ib.n <= tmppte.n;
-			tlb_ib.av <= tmppte.av;
-			tmppte.a <= 1'b1;
+			tlb_ib.ppn <= pte.ppn;
+			tlb_ib.d <= pte.d;
+			tlb_ib.u <= pte.u;
+			tlb_ib.s <= pte.s;
+			tlb_ib.a <= pte.a;
+			tlb_ib.c <= pte.c;
+			tlb_ib.r <= pte.r;
+			tlb_ib.w <= pte.w;
+			tlb_ib.x <= pte.x;
+			tlb_ib.sc <= pte.sc;
+			tlb_ib.sr <= pte.sr;
+			tlb_ib.sw <= pte.sw;
+			tlb_ib.sx <= pte.sx;
+			tlb_ib.v <= pte.v;
+			tlb_ib.g <= pte.g;
+			tlb_ib.bc <= pte.lvl;
+			tlb_ib.n <= pte.n;
+			tlb_ib.av <= pte.av;
+			pte.a <= 1'b1;
 //			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_pte <= 1'b1;
-			if (tmppte.av)
+			if (pte.av)
 				call (PT_RW_PTE1,PT_FETCH4);
 			else
 				gosub(ART_FETCH1);
@@ -1329,53 +1331,15 @@ else begin
 		end
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to read a PDE.
-	// If the PDE is not valid then a page fault occurs.
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	PT_READ_PDE1:
-		begin
-	 		xlaten <= FALSE;
-			daccess <= TRUE;
-			iaccess <= FALSE;
-			dadr <= {pde[19:0],adr_slice[8:1],4'h0};
-			goto (PT_READ_PDE2);
-		end
-	PT_READ_PDE2:
-		goto (PT_READ_PDE3);
-	PT_READ_PDE3:
-		if (!ack_i) begin
-	  	vda_o <= HIGH;
-	  	bte_o <= 2'b00;
-	  	cti_o <= 3'b001;	// constant address burst cycle
-	    cyc_o <= HIGH;
-			stb_o <= HIGH;
-	    sel_o <= 16'hFFFF;
-	    goto (PT_READ_PDE4);
-		end
-	PT_READ_PDE4:
-		if (ack_i) begin
-			tDeactivateBus();
-			pde <= adr_slice[0] ? dat_i[127:64] : dat_i[63:0];
-			goto(PT_READ_PDE5);
-		end
-	PT_READ_PDE5:
-		begin
-			if (pde.v)
-				ret();
-			else
-				tPageFault(fault_code,miss_adr);
-		end
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to read a PDE.
-	// If the PDE is not valid then a page fault occurs.
+	// Hardware subroutine to read a PTE.
+	// If the PTE is not valid then a page fault occurs.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	PT_RW_PTE1:
 		begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {pde[19:0],adr_slice[8:1],4'h0};
+			dadr <= {pte[19:0],adr_slice[7:0],4'h0};
 			goto (PT_RW_PTE2);
 		end
 	PT_RW_PTE2:
@@ -1389,19 +1353,19 @@ else begin
 			stb_o <= HIGH;
 			we_o <= wr_pte;
 	    sel_o <= 16'hFFFF;
-	    dat_o <= tmppte;
+	    dat_o <= pte;
 	    goto (PT_RW_PTE4);
 		end
 	PT_RW_PTE4:
 		if (ack_i) begin
 			tDeactivateBus();
 			if (!wr_pte)
-				tmppte <= dat_i;
+				pte <= dat_i;
 			goto (PT_RW_PTE5);
 		end
 	PT_RW_PTE5:
 		begin
-			if (tmppte.v)
+			if (pte.v)
 				ret();
 			else
 				tPageFault(fault_code,miss_adr);
