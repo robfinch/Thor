@@ -631,12 +631,12 @@ Thor2022_dcache_way udcwayo
 // TLB
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PTE tmptlbe;
+TLBE tmptlbe;
 reg [5:0] ipt_miss_count;
 reg tlben, tlbwr;
 wire tlbmiss;
 wire tlbrdy;
-PTE tlbdato;
+TLBE tlbdato;
 reg [31:0] tlb_ia;
 TLBE tlb_ib;
 reg inext;
@@ -1292,10 +1292,11 @@ else begin
 			tlb_ib.bc <= tmppte.lvl;
 			tlb_ib.n <= tmppte.n;
 			tlb_ib.av <= tmppte.av;
+			tmppte.a <= 1'b1;
 //			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_pte <= 1'b1;
-			if (tmptlbe.av)
+			if (tmppte.av)
 				call (PT_RW_PTE1,PT_FETCH4);
 			else
 				gosub(ART_FETCH1);
@@ -2061,7 +2062,7 @@ begin
   	tKeyViolation(adr_o);
   // PMA Check
  	wro <= wr & tlbwr & region.at[1];
-  if (wr && !regions.at[1])
+  if (wr && !region.at[1])
   	tWriteViolation(adr_o);
   else if (~wr && !region.at[2])
     tReadViolation(adr_o);
