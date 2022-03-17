@@ -39,7 +39,8 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022io(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, irq_i, icause_i,
+module Thor2022io(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, clock,
+		irq_i, icause_i,
 		vpa_o, vda_o, bte_o, cti_o, bok_i, cyc_o, stb_o, lock_o, ack_i,
     err_i, we_o, sel_o, adr_o, dat_i, dat_o, cr_o, sr_o, rb_i, state_o, trigger_o);
 input [63:0] hartid_i;
@@ -48,6 +49,7 @@ input clk_i;
 input clk2x_i;
 input clk2d_i;
 input wc_clk_i;
+input clock;					// MMU clock algorithm
 input [2:0] irq_i;
 input [8:0] icause_i;
 output vpa_o;
@@ -293,7 +295,7 @@ reg xStorer, xStoren;
 reg xStoo;
 reg [2:0] xSeg;
 reg [2:0] xMemsz;
-reg xTlb;
+reg xTlb, xRgn;
 reg xBset, xStmov, xStfnd, xStcmp;
 reg xCsr,xSync;
 reg xMtlk;
@@ -321,7 +323,7 @@ reg [15:0] mcause;
 Address mbadAddr;
 Address mca;
 Address mcares;
-reg mrfwr, m512;
+reg mrfwr, m512, m256;
 reg mcarfwr;
 reg mvmrfwr;
 reg [4:0] mRt;
@@ -357,7 +359,7 @@ Address wbadAddr;
 Address wlk;
 Address wca;
 Address wcares;
-reg wrfwr, w512;
+reg wrfwr, w512, w256;
 reg wvmrfwr;
 reg wcarfwr;
 reg [3:0] wCt;
@@ -657,12 +659,12 @@ Thor2022_compare ucmp2
 wire [7:0] cntlz_out;
 cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 
-wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
-wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
-wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
-wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[3:0];
-wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[3:0];
-wire [255:0] srao = {{128{xa[127]}},xa[127:0],128'd0} >> xb[3:0];
+//wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
+//wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
+//wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
+wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[6:0];
+wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[6:0];
+wire [255:0] srao = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
 
 wire [255:0] mul_prod1;
 reg [255:0] mul_prod;
@@ -810,11 +812,11 @@ R2:
 	SRA:	res2 = srao[255:128];
 	ROL:	res2 = sllro[127:0]|sllro[255:128];
 	ROR:	res2 = srlro[255:128]|srlro[127:0];
-	SLLH:	res2 = sllrho[127:0] + xc0;
-	SRLH:	res2 = srlrho[255:128];
-	SRAH:	res2 = sraho[255:128];
-	ROLH:	res2 = sllrho[127:0]|sllrho[255:128];
-	RORH:	res2 = srlrho[255:128]|srlrho[127:0];
+//	SLLH:	res2 = sllrho[127:0] + xc0;
+//	SRLH:	res2 = srlrho[255:128];
+//	SRAH:	res2 = sraho[255:128];
+//	ROLH:	res2 = sllrho[127:0]|sllrho[255:128];
+//	RORH:	res2 = srlrho[255:128]|srlrho[127:0];
 	MUL:	res2 = mul_prod256[127:0] + xc0 + pn;
 	MULH:	res2 = mul_prod256[255:128];
 	MULU:	res2 = mul_prod256[127:0] + xc0 + pn;
@@ -863,7 +865,7 @@ ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm | pn;
 XORI,XORIL:		res2 = xa ^ imm ^ pn;
 SLLR2:				res2 = xa << xb[5:0];
-SLLHR2:				res2 = sllrho[127:0];// + xc0;
+//SLLHR2:				res2 = sllrho[127:0];// + xc0;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 MULI,MULIL:		res2 = mul_prod256[127:0] + pn;
@@ -967,6 +969,7 @@ Thor2022_biu ubiu
 	.rst(rst_i),
 	.clk(clk_g),
 	.tlbclk(clk2x_i),
+	.clock(clock),
 	.UserMode(UserMode),
 	.MUserMode(MUserMode),
 	.omode(omode),
@@ -1258,7 +1261,9 @@ begin
 	xMtlk <= FALSE;
 	micro_ip <= 6'd0;
 	m512 <= FALSE;
+	m256 <= FALSE;
 	w512 <= FALSE;
+	w256 <= FALSE;
 	cio <= 16'h0000;
 	xcio <= 2'd0;
 	mcio <= 2'd0;
@@ -1344,6 +1349,7 @@ WAIT_MEM2:
 			if (mStset|mStmov)
 				mrfwr <= TRUE;
 			m512 <= FALSE;
+			m256 <= FALSE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MFSEL) begin
 					mrfwr <= FALSE;
@@ -1353,6 +1359,11 @@ WAIT_MEM2:
 					if (memreq.func2==MR_LDOO)
 						m512 <= TRUE;
 				end
+				else if (memreq.func==MR_TLB) begin
+					m256 <= TRUE;
+				end
+				else if (memreq.func==MR_RGN)
+					mrfwr <= TRUE;
 				if (|memresp.cause) begin
 					if (~|mcause)
 						mistk_depth <= mistk_depth + 2'd1;
@@ -1767,6 +1778,7 @@ begin
 		xMem <= deco.mem;
 		xLoad <= deco.load;
 		xTlb <= deco.tlb;
+		xRgn <= deco.rgn;
 		xBset <= deco.stset;
 		xStmov <= deco.stmov;
 		xStcmp <= deco.stcmp;
@@ -1998,6 +2010,17 @@ begin
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
 	end
+  else if (xRgn) begin
+  	memreq.tid <= tid;
+  	tid <= tid + 2'd1;
+  	memreq.func <= MR_RGN;
+  	memreq.func2 <= MR_STO;
+  	memreq.sel <= 16'h00FF;
+  	memreq.adr <= xb;
+  	memreq.dat <= xa;
+  	memreq.wr <= TRUE;
+  	goto (WAIT_MEM1);
+	end
 end
 endtask
 
@@ -2153,6 +2176,7 @@ begin
 		wcarry_res <= mcarry_res;
 		wrfwr <= mrfwr;
 		w512 <= m512;
+		w256 <= m256;
 		wvmrfwr <= mvmrfwr;
 		wcarfwr <= mcarfwr;
 		wLoad <= mLoad;
@@ -2275,6 +2299,13 @@ begin
 				    */
 				    if (w512)
 				    	regfile[wRt[4:2]] <= wres512;
+				    else if (w256) begin
+				    	if (wRt!=5'd0)
+					    	case(wRt[1])
+					    	1'd0:	regfile[wRt[4:2]][255:  0] <= wres512[255:0];
+					    	1'd1:	regfile[wRt[4:2]][511:256] <= wres512[255:0];
+					    	endcase
+				    end
 				    else
 					    case(wRt[1:0])
 					    2'd0:	regfile[wRt[4:2]][127:  0] <= wres;

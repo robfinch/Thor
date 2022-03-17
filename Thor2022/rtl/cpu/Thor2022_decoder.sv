@@ -71,9 +71,9 @@ JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 JMP:	Rt = 'd0;
 DJMP,BSET:
 	Rt = 5'd26;
-STB,STW,STT,STO,STOC,STHS,STH:
+STB,STW,STT,STO,STHC,STHS,STH,STPTR:
 	Rt = 'd0;
-STBX,STWX,STTX,STOX,STOCX,STHX:
+STBX,STWX,STTX,STOX,STHCX,STHX,STPTRX:
 	Rt = 'd0;
 EXI8,EXI24,EXI40,EXI56,EXIM:
 	Rt = 'd0;
@@ -83,9 +83,9 @@ default:	Rt = ir[13:9];
 endcase
 // Rc
 case(ir.any.opcode)
-STB,STW,STT,STO,STOC,STH:
+STB,STW,STT,STO,STHC,STH,STPTR:
 	Rc = ir.st.Rs;
-STBX,STWX,STTX,STOX,STOCX,STHX:
+STBX,STWX,STTX,STOX,STHCX,STHX,STPTRX:
 	Rc = ir.stx.Rs;
 STHS:
 	Rc = ir.sts.Rs;
@@ -186,9 +186,9 @@ ADDIL,SUBFIL,CMPIL,CMPUIL,MULIL,DIVIL,MULUIL:
 	rfwr = `TRUE;
 ANDIL,ORIL,XORIL:	rfwr = `TRUE;
 SEQIL,SNEIL,SLTIL,SGTIL:		rfwr = `TRUE;
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,LDOU,LDH:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 	rfwr = `TRUE;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	rfwr = `TRUE;
 LEA,LEAX:	rfwr = `TRUE;
 ADD2R,AND2R,OR2R,XOR2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
@@ -219,9 +219,9 @@ LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LEA:
 	imm = ir.any.v ? {{104{ir.ld.disp[23]}},ir.ld.disp} : {{99{ir.ld.disp[28]}},ir.ld.disp};
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX,LEAX:
 	imm = 'd0;
-STB,STW,STT,STO,STH:
+STB,STW,STT,STO,STH,STHC,STPTR:
 	imm = ir.any.v ? {{104{ir.st.disp[23]}},ir.st.disp} : {{99{ir.st.disp[28]}},ir.st.disp};
-STBX,STWX,STTX,STOX,STHX:
+STBX,STWX,STTX,STOX,STHX,STHCX,STPTRX:
 	imm = 'd0;
 LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
 STHS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
@@ -270,9 +270,9 @@ SLLHR2,SLLR2:
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Tb = ir.r3.Tb;
 JMP,DJMP:	deco.Tb = 2'b00;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LEAX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LEAX,LDOUX,LDHX:
 	deco.Tb = ir.r3.Tb;
-STBX,STWX,STTX,STOX,STOCX,STHX:
+STBX,STWX,STTX,STOX,STHCX,STHX,STPTRX:
 	deco.Tb = ir.r3.Tb;
 default:	deco.Tb = 2'b00;
 endcase
@@ -316,9 +316,9 @@ endcase
 
 case(ir.any.opcode)
 CACHE,CACHEX,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,
 LDOU,LDOUX,LDH,LDHX,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX:
 	deco.ld = `TRUE;
 default:	deco.ld = `FALSE;
 endcase
@@ -332,34 +332,34 @@ endcase
 
 case(ir.any.opcode)
 CACHE,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDOR,LDOU,LDH:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 	deco.loadr = `TRUE;
 default:	deco.loadr = `FALSE;
 endcase
 
 case(ir.any.opcode)
 CACHEX,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDORX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	deco.loadn = `TRUE;
 default:	deco.loadn = `FALSE;
 endcase
 
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STHS,STOC,STH,
-STBX,STWX,STTX,STOX,STOCX,STHX:
+STB,STW,STT,STO,STHS,STHC,STH,STPTR,
+STBX,STWX,STTX,STOX,STHCX,STHX,STPTRX:
 	deco.st = `TRUE;
 default:	deco.st = `FALSE;
 endcase
 
 case(ir.any.opcode)
-STB,STW,STT,STO,STOC,STHS,STH:
+STB,STW,STT,STO,STHC,STHS,STH,STPTR:
 	deco.storer = `TRUE;
 default:	deco.storer = `FALSE;
 endcase
 
 case(ir.any.opcode)
-STBX,STWX,STTX,STOCX,STOX,STHX:
+STBX,STWX,STTX,STHCX,STOX,STHX,STPTRX:
 	deco.storen = `TRUE;
 default:	deco.storen = `FALSE;
 endcase
@@ -375,7 +375,8 @@ LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
 LDHS,LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
-STHS,STOOX,STH,STHX:	deco.memsz = hexi;
+STHS,STOOX,STH,STHX,STHCX:	deco.memsz = hexi;
+STPTR,STPTRX:	deco.memsz = ptr;
 default:	deco.memsz = octa;
 endcase
 
@@ -407,6 +408,7 @@ R2,R3:
 OSR2:
 	case(ir.r3.func)
 	TLBRW:		deco.multi_cycle = `TRUE;
+	RGNRW:		deco.multi_cycle = `TRUE;
 	MTSEL:		deco.multi_cycle = `TRUE;
 	default:	deco.multi_cycle = `FALSE;
 	endcase
@@ -416,15 +418,15 @@ CACHE,CACHEX:	deco.multi_cycle = `TRUE;
 LDB,LDBU,STB:	deco.multi_cycle = `TRUE;
 LDW,LDWU,STW:	deco.multi_cycle = `TRUE;
 LDT,LDTU,STT: deco.multi_cycle = `TRUE;
-LDO,LDHS,LDOR,LDOU:		deco.multi_cycle = `TRUE;
+LDO,LDHS,LDHR,LDOU:		deco.multi_cycle = `TRUE;
 LDH:					deco.multi_cycle = `TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = `TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = `TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = `TRUE;
-LDOX,LDORX,LDOUX:				deco.multi_cycle = `TRUE;
+LDOX,LDHRX,LDOUX:				deco.multi_cycle = `TRUE;
 LDHX:					deco.multi_cycle = `TRUE;
-STO,STHS,STOC,STHX,STH:		deco.multi_cycle = `TRUE;
-STOX,STOCX:		deco.multi_cycle = `TRUE;
+STO,STHS,STHC,STHX,STH,STPTR:		deco.multi_cycle = `TRUE;
+STOX,STHCX,STPTRX:		deco.multi_cycle = `TRUE;
 STMOV,STFND,STCMP,BSET:			deco.multi_cycle = `TRUE;
 default:	deco.multi_cycle = `FALSE;
 endcase
@@ -486,6 +488,7 @@ deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
 deco.sync = ir.any.opcode==CSR || ir.any.opcode==SYNC;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
+deco.rgn = ir.any.opcode==OSR2 && ir.r3.func==RGNRW;
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
 deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;

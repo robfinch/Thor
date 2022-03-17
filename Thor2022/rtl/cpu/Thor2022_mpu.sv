@@ -264,6 +264,7 @@ Thor2022io ucpu1
   .clk2x_i(clk2x_i),
 //    .clk4x_i(clk4x_i),
   .wc_clk_i(tm_clk_i),
+  .clock(pit_out3),		// MMU clock algorithm
 //    .div_clk_i(div_clk_i),
   .irq_i(irq),
   .icause_i(cause),

@@ -39,7 +39,7 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_biu(rst,clk,tlbclk,UserMode,MUserMode,omode,ASID,bounds_chk,pe,
+module Thor2022_biu(rst,clk,tlbclk,clock,UserMode,MUserMode,omode,ASID,bounds_chk,pe,
 	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
@@ -48,6 +48,7 @@ parameter AWID=32;
 input rst;
 input clk;
 input tlbclk;
+input clock;							// clock for clock algorithm
 input UserMode;
 input MUserMode;
 input [1:0] omode;
@@ -96,6 +97,7 @@ parameter LOW = 1'b0;
 parameter IO_KEY_ADR	= 16'hFF88;
 
 integer m,n,k;
+integer n4,n5;
 genvar g;
 
 reg [5:0] shr_ma;
@@ -138,6 +140,7 @@ MemoryResponse memresp;
 reg zero_data = 0;
 Value movdat;
 
+Address cta;		// card table address
 Address ea;
 Address afilt;
 
@@ -145,7 +148,7 @@ always_comb
 	afilt = (memreq.func==MR_MOVST) ? memreq.dat : memreq.adr;
 
 always_comb
- 	ea = afilt >> shr_ma;
+	ea = cta + (afilt >> shr_ma);
 
 reg [7:0] ealow;
 
@@ -186,17 +189,26 @@ Thor2022_stmask ustmsk (sel_o, adr_o[5:4], stmask);
 
 REGION region;
 wire [2:0] region_num;
+reg rgn_wr;
+reg [5:0] rgn_adr;
+Value rgn_dat;
+Value rgn_dat_o;
 
 Thor2022_active_region
 (
+	.clk(clk),
+	.wr(rgn_wr),
+	.rwa(rgn_adr),
+	.i(rgn_dat),
+	.o(rgn_dat_o),
 	.adr(adr_o),
 	.region_num(),
 	.region(region),
 	.err()
 );
 
-ARTE arti = dat_i;
-Address art_adr = adr_o[AWID-1:0] - region.start[AWID-1:0];
+PMTE arti = dat_i;
+Address pmt_adr = adr_o[AWID-1:0] - region.start[AWID-1:0];
 
 wire [3:0] ififo_cnt, ofifo_cnt;
 
@@ -639,6 +651,9 @@ wire tlbrdy;
 TLBE tlbdato;
 reg [31:0] tlb_ia;
 TLBE tlb_ib;
+wire tlb_cyc;
+TLBE tlb_dat;
+reg tlb_ack;
 reg inext;
 VirtualAddress tlbmiss_adr;
 VirtualAddress miss_adr;
@@ -647,6 +662,8 @@ reg wr_ptg;
 Thor2022_tlb utlb (
   .rst_i(rst),
   .clk_i(tlbclk),
+  .al_i(ptbr[7:6]),
+  .clock(clock),
   .rdy_o(tlbrdy),
   .asid_i(ASID),
   .sys_mode_i(vpa_o ? ~UserMode : ~MUserMode),
@@ -665,7 +682,10 @@ Thor2022_tlb utlb (
   .tlbdat_i(tlb_ib),
   .tlbdat_o(tlbdato),
   .tlbmiss_o(tlbmiss),
-  .tlbmiss_adr_o(tlbmiss_adr)
+  .tlbmiss_adr_o(tlbmiss_adr),
+  .m_cyc_o(tlb_cyc),
+  .m_dat_o(tlb_dat),
+  .m_ack_i(tlb_ack)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -725,9 +745,11 @@ end
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Page table vars
 reg [2:0] dep;
-reg [7:0] adr_slice;
-PTE pte;
+reg [12:0] adr_slice;
+HIER_PTE hier_pte;
+PDE pde;
 reg wr_pte;
+PTCE [7:0] ptc;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
@@ -767,6 +789,7 @@ if (rst) begin
   tmptlbe <= 'd0;
   wr_pte <= 1'b0;
   wr_ptg <= 1'b0;
+  tlb_ack <= 1'b0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -774,10 +797,13 @@ else begin
 //	memreq_rd <= FALSE;
 	memresp.wr <= FALSE;
 	tlbwr <= FALSE;
+	tlb_ack <= FALSE;
 
 	case(state)
 	MEMORY_INIT:
 		begin
+			for (n5 = 0; n5 < 8; n5 = n5 + 1)
+				ptc[n5] <= 'd0;
 			goto (MEMORY_IDLE);
 		end
 
@@ -892,6 +918,23 @@ else begin
 		begin
 			memresp.step <= memreq.step;
 	    memresp.res <= {432'd0,tlbdato};
+	    memresp.cmt <= TRUE;
+			memresp.tid <= memreq.tid;
+			memresp.wr <= TRUE;
+	   	ret();
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Complete RGN access cycle
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	RGN1:
+		goto (RGN2);	// Give time for MR_TLB to process
+	RGN2:
+		goto (RGN3);	// Give time for MR_TLB to process
+	RGN3:
+		begin
+			memresp.step <= memreq.step;
+	    memresp.res <= {432'd0,rgn_dat_o};
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 			memresp.wr <= TRUE;
@@ -1080,6 +1123,7 @@ else begin
 				dadr <= {ea[AWID-1:6]+ea[6],6'h0};
 		end
 
+`ifdef SUPPORT_HASHPT
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to find an address translation and update the TLB.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1107,15 +1151,19 @@ else begin
 			tlb_ia[31] <= 1'b1;	// write to tlb
 			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
-			tlb_ia[9:0] <= miss_adr[21:12];
+			tlb_ia[9:0] <= miss_adr[25:16];
 			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
+			tlb_ib.adr <= dadr;
 			wr_ptg <= 1'b1;
-			ptg[entry_num * $bits(PTE) + 132] <= 1'b1;	// The 'a' bit in the pte
+//			ptg[entry_num * $bits(PTE) + 132] <= 1'b1;	// The 'a' bit in the pte
+//			if (tmptlbe.av)
+//				call (IPT_RW_PTG2,IPT_FETCH3);
+//			else
 			if (tmptlbe.av)
-				call (IPT_RW_PTG2,IPT_FETCH3);
+				goto (IPT_FETCH3);
 			else
-				gosub(ART_FETCH1);
+				gosub(PMT_FETCH1);
 		end
 	// Delay a couple of cycles to allow TLB update
 	IPT_FETCH3:
@@ -1181,6 +1229,8 @@ else begin
   		4'd6: dat_o <= ptg[1023:895];
   		4'd7: dat_o <= ptg[1151:1024];
   		4'd8:	dat_o <= ptg[1279:1152];
+  		4'd9:	dat_o <= ptg[1407:1280];
+  		4'd10:	dat_o <= ptg[1535:1408];
   		default:	;
   		endcase
   		goto (IPT_RW_PTG4);
@@ -1206,6 +1256,8 @@ else begin
 		    	4'd7: ptg[1023:896] <= dat_i;
 		    	4'd8: ptg[1151:1024] <= dat_i;
 		    	4'd9: ptg[1279:1152] <= dat_i;
+		    	4'd10: 	ptg[1407:1280] <= dat_i;
+		    	4'd11: 	ptg[1535:1408] <= dat_i;
 		    	default:	;
 		    	endcase
 		    	// If the PTE was found we can quit reading data early.
@@ -1232,6 +1284,26 @@ else begin
 			end
 		end
 
+	IPT_WRITE_PTE:
+		begin
+			ptg <= 'd0;
+			ptg <= tlb_dat[191:0] << (tlb_dat.en * $bits(PTE));	// will cause entry_num to be zero.
+			case(tlb_dat.en)
+			3'd0:	dadr <= tlb_dat.adr;
+			3'd1:	dadr <= tlb_dat.adr + 12'd16;
+			3'd2:	dadr <= tlb_dat.adr + 12'd48;
+			3'd3:	dadr <= tlb_dat.adr + 12'd64;
+			3'd4:	dadr <= tlb_dat.adr + 12'd96;
+			3'd5:	dadr <= tlb_dat.adr + 12'd112;
+			3'd6:	dadr <= tlb_dat.adr + 12'd144;
+			3'd7:	dadr <= tlb_dat.adr + 12'd160;
+			endcase
+			miss_adr <= {tlb_dat.vpn,12'd0};
+			wr_ptg <= 1'b1;
+			goto (IPT_RW_PTG2);
+		end
+`endif
+
 `ifdef SUPPORT_HIERPT
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to find an address translation and update the TLB.
@@ -1240,30 +1312,138 @@ else begin
 		begin
 			dep <= ptbr[10:8];
 			wr_pte <= 1'b0;
-	  	case(ptbr[8:6])
-	  	3'd1:	begin pte <= ptbr[31:12]; adr_slice <= miss_adr[19:12]; call (PT_RW_PTE1, PT_FETCH3); end
-	  	3'd2: begin pte <= ptbr[31:12];	adr_slice <= miss_adr[27:20]; call (PT_RW_PTE1, PT_FETCH2); end // 8 bits
-	  	3'd3:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[31:28]; call (PT_RW_PTE1, PT_FETCH2); end // 8 bits
-//	  	3'd4:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[41:34]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
-//	  	3'd5:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[49:42]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
-//	  	3'd6:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[57:50]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
-//	  	3'd7:	begin pte <= ptbr[31:12];	adr_slice <= miss_adr[63:58]; call (PT_READ_PDE1, PT_FETCH2); end // 8 bits
+	  	case(ptbr[10:8])
+	  	3'd1:
+	  		begin
+	  			hier_pte <= ptbr[31:16];
+	  			hier_pte.lvl <= 3'd1;
+	  			hier_pte.d <= 1'b0;
+	  			hier_pte.a <= 1'b1;
+	  			hier_pte.v <= 1'b1;
+	  			adr_slice <= {miss_adr[27:16],1'b0};
+	  			if (miss_adr[AWID-1:28] != 'd0 && miss_adr[AWID-1:28] != {AWID-28{1'b1}})
+	  				tPageFault(0,miss_adr);
+	  			else
+	  				call (PT_RW_PTE1, PT_FETCH3);
+	  		end
+	  	3'd2:
+	  		begin
+	  			pde <= ptbr[31:16];
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd2;
+	  			adr_slice <= miss_adr[31:28];	// [40:28]
+	  			call (PT_RW_PDE1, PT_FETCH2);
+	  		end // 8 bits
+	  	/*
+	  	3'd3:	
+	  		begin
+	  			pde <= ptbr[31:12];
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd3;
+	  			adr_slice <= miss_adr[53:41];
+	  			call (PT_RW_PDE1, PT_FETCH2);
+	  		end // 13 bits
+	  	3'd4:
+	  		begin
+	  			pde <= ptbr[31:12];	
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd4;
+	  			adr_slice <= miss_adr[66:54];
+	  			call (PT_READ_PDE1, PT_FETCH2);
+	  		end // 13 bits
+	  	3'd5:
+	  		begin
+	  			pde <= ptbr[31:12];
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd5;
+	  			adr_slice <= miss_adr[79:67];
+	  			call (PT_READ_PDE1, PT_FETCH2);
+	  		end // 13 bits
+	  	3'd6:
+	  		begin
+	  			pde <= ptbr[31:12];
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd6;
+	  			adr_slice <= miss_adr[92:80];
+	  			call (PT_READ_PDE1, PT_FETCH2);
+	  		end // 13 bits
+	  	3'd7:
+	  		begin
+	  			pde <= ptbr[31:12];
+	  			pde.v <= 1'b1;
+	  			pde.d <= 1'b0;
+	  			pde.a <= 1'b1;
+	  			pde.lvl <= 3'd7;
+	  			adr_slice <= miss_adr[105:93];
+	  			call (PT_READ_PDE1, PT_FETCH2);
+	  		end // 13 bits
+	  	*/
 	  	default:	ret();
 	  	endcase
 		end
 	PT_FETCH2:
 	  begin
-	  	if (pte.lvl >= dep)
+	  	if (pde.lvl >= dep)
 	  		tPageFault(FLT_LVL,adr_o); 
 	  	else
 		  	case(dep)
-		  	3'd1:	begin adr_slice <= miss_adr[19:12]; call (PT_RW_PTE1, PT_FETCH3); end
-		  	3'd2: begin adr_slice <= miss_adr[27:20]; gosub (PT_RW_PTE1); dep <= pte.lvl; end // 8 bits
-		  	3'd3:	begin adr_slice <= miss_adr[31:28]; gosub (PT_RW_PTE1); dep <= pte.lvl; end // 8 bits
-//		  	3'd4:	begin adr_slice <= miss_adr[41:34]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
-//		  	3'd5:	begin adr_slice <= miss_adr[59:42]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
-//		  	3'd6:	begin adr_slice <= miss_adr[57:50]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
-//		  	3'd7:	begin adr_slice <= miss_adr[63:58]; gosub (PT_READ_PDE1); dep <= pte.lvl; end // 8 bits
+		  	3'd1:
+		  		begin
+		  			hier_pte[15:0] <= pde[15:0];
+		  			adr_slice <= {miss_adr[27:16],1'b0};
+		  			if (miss_adr[AWID-1:28] != 'd0 && miss_adr[AWID-1:28] != {AWID-28{1'b1}})
+		  				tPageFault(0,miss_adr);
+		  			else
+			  			call (PT_RW_PTE1, PT_FETCH3);
+		  		end
+/*		  	
+		  	3'd2:
+		  		begin
+		  			adr_slice <= miss_adr[31:28];	// [40:28];
+	  				gosub (PT_RW_PDE1);
+	  				dep <= pde.lvl;
+		  		end // 13 bits
+			  3'd3:
+			  	begin
+			  		adr_slice <= miss_adr[53:41];
+			  		gosub (PT_RW_PTE1);
+			  		dep <= pde.lvl;
+			  	end // 13 bits
+		  	3'd4:
+		  		begin
+		  			adr_slice <= miss_adr[66:54];
+		  			gosub (PT_READ_PDE1);
+		  			dep <= pde.lvl;
+		  		end // 13 bits
+		  	3'd5:
+		  		begin
+		  			adr_slice <= miss_adr[79:67];
+		  			gosub (PT_READ_PDE1);
+		  			dep <= pde.lvl;
+		  		end // 13 bits
+		  	3'd6:
+		  		begin
+		  			adr_slice <= miss_adr[92:80];
+		  			gosub (PT_READ_PDE1);
+		  			dep <= pde.lvl;
+		  		end // 13 bits
+		  	3'd7:
+		  		begin
+		  			adr_slice <= miss_adr[105:93];
+		  			gosub (PT_READ_PDE1);
+		  			dep <= pde.lvl;
+		  		end // 13 bits
+*/		  		
 		  	default:	ret();
 		  	endcase
 	  end
@@ -1275,33 +1455,36 @@ else begin
 			tlb_ia[31] <= 1'b1;	// write to tlb
 			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
-			tlb_ia[9:0] <= miss_adr[21:12];
-			tlb_ib.ppn <= pte.ppn;
-			tlb_ib.d <= pte.d;
-			tlb_ib.u <= pte.u;
-			tlb_ib.s <= pte.s;
-			tlb_ib.a <= pte.a;
-			tlb_ib.c <= pte.c;
-			tlb_ib.r <= pte.r;
-			tlb_ib.w <= pte.w;
-			tlb_ib.x <= pte.x;
-			tlb_ib.sc <= pte.sc;
-			tlb_ib.sr <= pte.sr;
-			tlb_ib.sw <= pte.sw;
-			tlb_ib.sx <= pte.sx;
-			tlb_ib.v <= pte.v;
-			tlb_ib.g <= pte.g;
-			tlb_ib.bc <= pte.lvl;
-			tlb_ib.n <= pte.n;
-			tlb_ib.av <= pte.av;
-			pte.a <= 1'b1;
+			tlb_ia[9:0] <= miss_adr[25:16];
+			tlb_ib.ppn <= hier_pte.ppn;
+			tlb_ib.d <= hier_pte.d;
+			tlb_ib.u <= hier_pte.u;
+			tlb_ib.s <= hier_pte.s;
+			tlb_ib.a <= hier_pte.a;
+			tlb_ib.c <= hier_pte.c;
+			tlb_ib.r <= hier_pte.r;
+			tlb_ib.w <= hier_pte.w;
+			tlb_ib.x <= hier_pte.x;
+			tlb_ib.sc <= hier_pte.sc;
+			tlb_ib.sr <= hier_pte.sr;
+			tlb_ib.sw <= hier_pte.sw;
+			tlb_ib.sx <= hier_pte.sx;
+			tlb_ib.v <= hier_pte.v;
+			tlb_ib.g <= hier_pte.g;
+			tlb_ib.bc <= hier_pte.lvl;
+			tlb_ib.n <= hier_pte.n;
+			tlb_ib.av <= hier_pte.av;
+			tlb_ib.mb <= hier_pte.mb;
+			tlb_ib.me <= hier_pte.me;
+			tlb_ib.adr <= dadr;
+			hier_pte.a <= 1'b1;
 //			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_pte <= 1'b1;
-			if (pte.av)
-				call (PT_RW_PTE1,PT_FETCH4);
+			if (hier_pte.av)
+				goto (PT_FETCH4);
 			else
-				gosub(ART_FETCH1);
+				gosub(PMT_FETCH1);
 		end
 	PT_FETCH4:
 		begin
@@ -1331,7 +1514,7 @@ else begin
 		end
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to read a PTE.
+	// Hardware subroutine to read or write a PTE.
 	// If the PTE is not valid then a page fault occurs.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	PT_RW_PTE1:
@@ -1339,53 +1522,120 @@ else begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {pte[19:0],adr_slice[7:0],4'h0};
+			dadr <= {hier_pte[15:0],adr_slice[12:1],4'h0};
 			goto (PT_RW_PTE2);
 		end
 	PT_RW_PTE2:
 		goto (PT_RW_PTE3);
 	PT_RW_PTE3:
-		if (!ack_i) begin
-			vda_o <= HIGH;
-	  	bte_o <= 2'b00;
-	  	cti_o <= 3'b001;	// constant address burst cycle
-	    cyc_o <= HIGH;
-			stb_o <= HIGH;
-			we_o <= wr_pte;
-	    sel_o <= 16'hFFFF;
-	    dat_o <= pte;
-	    goto (PT_RW_PTE4);
+		begin
+			if (!ack_i) begin
+				vda_o <= HIGH;
+		  	bte_o <= 2'b00;
+		  	cti_o <= 3'b001;	// constant address burst cycle
+		    cyc_o <= HIGH;    
+				stb_o <= HIGH;
+				we_o <= wr_pte;
+		    sel_o <= 16'hFFFF;
+		    dat_o <= hier_pte;
+		    goto (PT_RW_PTE4);
+			end
 		end
 	PT_RW_PTE4:
 		if (ack_i) begin
 			tDeactivateBus();
 			if (!wr_pte)
-				pte <= dat_i;
+				hier_pte <= dat_i;
 			goto (PT_RW_PTE5);
 		end
 	PT_RW_PTE5:
 		begin
-			if (pte.v)
+			if (hier_pte.v)
 				ret();
 			else
 				tPageFault(fault_code,miss_adr);
 		end
-`endif
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Subroutine to fetch access rights.
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	ART_FETCH1:
+	
+	PT_WRITE_PTE:
 		begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {region.art[AWID-1:4],4'h0} + {art_adr[AWID-1:12],4'h0};
-			goto (ART_FETCH2);
+			wr_pte <= TRUE;
+			hier_pte <= tlb_dat;
+			dadr <= tlb_dat.adr;
+			goto (PT_RW_PTE2);
 		end
-	ART_FETCH2:
-		goto (ART_FETCH3);
-	ART_FETCH3:
+`endif
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Hardware subroutine to read or write a PDE.
+	// If the PDE is not valid then a page fault occurs.
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	PT_RW_PDE1:
+		begin
+			goto (PT_RW_PDE2);
+	 		xlaten <= FALSE;
+			daccess <= TRUE;
+			iaccess <= FALSE;
+			dadr <= {pde[15:0],adr_slice[12:1],4'h0};
+			if (!wr_pte)
+				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+					if (ptc[n4].adr=={pde[15:0],adr_slice[12:0],3'h0} && ptc[n4].v) begin
+						pde <= ptc[n4].pde;
+						ret();
+					end
+		end
+	PT_RW_PDE2:
+		goto (PT_RW_PDE3);
+	PT_RW_PDE3:
+		if (!ack_i) begin
+			vda_o <= HIGH;
+	  	bte_o <= 2'b00;
+	  	cti_o <= 3'b001;	// constant address burst cycle
+	    cyc_o <= HIGH;    
+			stb_o <= HIGH;
+			we_o <= wr_pte;
+	    sel_o <= 16'hFFFF;
+	    dat_o <= pde;
+	    goto (PT_RW_PDE4);
+		end
+	PT_RW_PDE4:
+		if (ack_i) begin
+			tDeactivateBus();
+			if (!wr_pte)
+				pde <= adr_slice[0] ? dat_i[127:64] : dat_i[63:0];
+			pde.padr <= adr_o;
+			goto (PT_RW_PDE5);
+		end
+	PT_RW_PDE5:
+		begin
+			if (pde.v) begin
+				for (n4 = 0; n4 < 7; n4 = n4 + 1)
+					ptc[n4+1] <= ptc[n4];
+				ptc[0].v <= 1'b1;
+				ptc[0].adr <= dadr|{adr_slice[0],3'b0};
+				ptc[0].pde <= pde;
+				ret();
+			end
+			else
+				tPageFault(fault_code,miss_adr);
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Subroutine to fetch access rights.
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	PMT_FETCH1:
+		begin
+	 		xlaten <= FALSE;
+			daccess <= TRUE;
+			iaccess <= FALSE;
+			dadr <= {region.pmt[AWID-1:4],4'h0} + {pmt_adr[AWID-1:12] << region.pmt[1:0],4'h0};
+			goto (PMT_FETCH2);
+		end
+	PMT_FETCH2:
+		goto (PMT_FETCH3);
+	PMT_FETCH3:
 		if (!ack_i) begin
 			vda_o <= HIGH;
 	  	bte_o <= 2'b00;
@@ -1394,9 +1644,9 @@ else begin
 			stb_o <= HIGH;
 			we_o <= wr_pte;
 	    sel_o <= 16'hFFFF;
-	    goto (ART_FETCH4);
+	    goto (PMT_FETCH4);
 		end
-	ART_FETCH4:
+	PMT_FETCH4:
 		if (ack_i) begin
 			tDeactivateBus();
 			tmptlbe.pl <= arti.pl;
@@ -1411,9 +1661,9 @@ else begin
 			tmptlbe.sw <= arti.sw;
 			tmptlbe.sx <= arti.sx;
 			tmptlbe.av <= 1'b1;
-			goto (ART_FETCH5);
+			goto (PMT_FETCH5);
 		end
-	ART_FETCH5:
+	PMT_FETCH5:
 		begin
 			ret();
 		end
@@ -1432,14 +1682,20 @@ begin
 	  icnt <= 5'd0;
 	  dcnt <= 5'd0;
 	  shr_ma <= 6'd0;
+	  cta <= 'd0;
 	  dcachable <= FALSE;
-		if (!ihit && fifoToCtrl_empty) begin
+	  if (tlb_cyc) begin
+	  	daccess <= TRUE;
+	  	tlb_ack <= 1'b1;
+	  	gosub (ptbr[0] ? PT_WRITE_PTE : IPT_WRITE_PTE);
+		end
+		else if (!ihit && fifoToCtrl_empty) begin
 			waycnt <= waycnt + 2'd1;
 			// On a miss goto load I$ process unless a hit in the victim cache.
 	    iaccess <= TRUE;
 			gosub (IFETCH0);
 		end
-		if (!fifoToCtrl_empty) begin
+		else if (!fifoToCtrl_empty) begin
 			memreq_rd <= TRUE;
 			gosub (MEMORY1);
 		end
@@ -1461,6 +1717,13 @@ begin
 			tlb_ib <= {memreq.dat[127:32],memreq.dat[255:128]};
 			tlbwr <= TRUE;
 			goto (TLB1);
+		end
+	MR_RGN:
+		begin
+			rgn_wr <= memreq.adr[6];
+			rgn_adr <= memreq.adr[5:0];
+			rgn_dat <= memreq.dat;
+			goto (RGN1);
 		end
 	MR_LOAD,MR_LOADZ,MR_MOVLD:
 		case(memreq.func2)
@@ -1600,6 +1863,10 @@ begin
     	end
     MR_STORE,MR_MOVST,M_CALL:
     	begin
+    		// Invalidate PTCEs when a store occurs to the PDE
+				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
+						ptc[n4].v <= 1'b0;
   			cr_o <= memreq.func2==MR_STOC;
     	end
     default:
@@ -1676,7 +1943,7 @@ begin
 			    goto (MEMORY8);
 			  else begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
-			    	if (~|ea[AWID-5:0]) begin
+			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
   						memresp.tid <= memreq.tid;
@@ -1685,7 +1952,12 @@ begin
 				    	ret();
 			    	end
 			    	else begin
-			    		shr_ma <= shr_ma + 4'd9;
+			    		if (shr_ma=='d0) begin
+			    			cta <= region.cta;
+			    			// Turn request address into an index into region
+			    			memreq.adr <= memreq.adr - region.start;
+			    		end
+			    		shr_ma <= shr_ma + 4'd8;
 			    		zero_data <= TRUE;
 			    		goto (MEMORY_DISPATCH);
 			    	end
@@ -1729,6 +2001,11 @@ begin
       	sel_o[n] <= sel[n+16];
 //	      	sel_o <= sel[31:16];
     	dat_o <= dat[255:128];
+   		// Invalidate PTCEs when a store occurs to the PDE
+    	if (memreq.func==MR_STORE)
+				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
+						ptc[n4].v <= 1'b0;
 			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1],we_o);
   	end
   end
@@ -1778,7 +2055,7 @@ begin
 	    MR_STORE,MR_MOVST,M_CALL:
 	    	begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
-			    	if (~|ea[AWID-5:0]) begin
+			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
 			  			memresp.tid <= memreq.tid;
@@ -1787,6 +2064,10 @@ begin
 				    	ret();
 			    	end
 			    	else begin
+			    		if (shr_ma=='d0) begin
+			    			cta <= region.cta;
+			    			memreq.adr <= memreq.adr - region.start;
+			    		end
 			    		shr_ma <= shr_ma + 4'd9;
 			    		zero_data <= TRUE;
 			    		goto (MEMORY_DISPATCH);

@@ -52,6 +52,9 @@ package Thor2022_pkg;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 
+//`define SUPPORT_HASHPT	1
+`define SUPPORT_HIERPT	1
+
 parameter RSTIP	= 64'hFF000007FFFD0000;
 
 parameter QSLOTS	= `QSLOTS;
@@ -143,8 +146,14 @@ parameter BYTNDXI	= 8'h55;
 parameter WYDNDXI	= 8'h56;
 parameter UTF21NDXI	= 8'h57;
 parameter SLLR2		= 8'h58;
+parameter SRLR2		= 8'h59;
+parameter SRAR2		= 8'h5A;
+parameter ROLR2		= 8'h5B;
+parameter RORR2		= 8'h5C;
+parameter SLLHR2	= 8'h5D;
 parameter MFLK		= 8'h5E;
 parameter MTLK		= 8'h5F;
+
 parameter CMPUI		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
@@ -164,23 +173,23 @@ parameter LDWU		= 8'h83;
 parameter LDT			= 8'h84;
 parameter LDTU		= 8'h85;
 parameter LDO			= 8'h86;
-parameter LDOS		= 8'h87;
-parameter LLA			= 8'h88;
+parameter LDOU		= 8'h87;
+parameter LDH			= 8'h88;
+parameter LDHS		= 8'h89;
+//parameter LLA			= 8'h88;
 parameter LEA			= 8'h8A;
-parameter LDOR		= 8'h8B;
+parameter LDHR		= 8'h8B;
 parameter LDOO		= 8'h8C;
 parameter LDCTX		= 8'h8D;
-parameter LDOU		= 8'h8E;
-parameter LDH			= 8'h8F;
 
 parameter STB			= 8'h90;
 parameter STW			= 8'h91;
 parameter STT			= 8'h92;
 parameter STO			= 8'h93;
-parameter STOC		= 8'h94;
-parameter STOS		= 8'h95;
-parameter STOO		= 8'h96;
-parameter STH			= 8'h96;
+parameter STH			= 8'h94;
+parameter STHS		= 8'h95;
+parameter STHC		= 8'h96;
+parameter STOO		= 8'h97;
 parameter BSET		= 8'h98;
 parameter STMOV		= 8'h99;
 parameter STCMP		= 8'h9A;
@@ -191,6 +200,8 @@ parameter CACHE		= 8'h9F;
 parameter SYS			= 8'hA5;
 parameter INT			= 8'hA6;
 parameter MOV			= 8'hA7;
+parameter STPTR		= 8'hA8;
+parameter STPTRX	= 8'hA9;
 parameter BTFLD		= 8'hAA;
 parameter BFALIGN		= 4'h0;
 parameter BFFFO			= 4'h1;
@@ -212,10 +223,10 @@ parameter LDWUX		= 8'hB3;
 parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
-parameter LDOOX		= 8'hB7;
-parameter LLAX		= 8'hB8;
+parameter LDOUX		= 8'hB7;
+parameter LDHX		= 8'hB8;
 parameter LEAX		= 8'hBA;
-parameter LDORX		= 8'hBB;
+parameter LDHRX		= 8'hBB;
 parameter LEAVE		= 8'hBF;
 
 parameter POP			= 8'hBC;
@@ -226,11 +237,10 @@ parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
 parameter STTX		= 8'hC2;
 parameter STOX		= 8'hC3;
-parameter STOCX		= 8'hC4;
-parameter STHX		= 8'hC5;
-parameter STOOX		= 8'hC6;
-parameter LDHX		= 8'hCD;
-parameter LDOUX		= 8'hCE;
+parameter STHX		= 8'hC4;
+parameter STHCX		= 8'hC6;
+parameter STOOX		= 8'hC7;
+parameter LDOOX		= 8'hCC;
 parameter CACHEX	= 8'hCF;
 
 parameter LDxX		= 8'hB0;
@@ -462,9 +472,12 @@ parameter MR_MFSEL = 4'd8;
 parameter MR_MTSEL = 4'd9;
 parameter MR_MOVLD = 4'd10;
 parameter MR_MOVST = 4'd11;
+parameter MR_RGN = 4'd12;
 
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_SEMA	= 16'h?00C;
+parameter CSR_PTBR	= 16'h1003;
+parameter CSR_ARTBR	= 16'h1005;
 parameter CSR_FSTAT	= 16'h?014;
 parameter CSR_ASID	= 16'h101F;
 parameter CSR_KEYS	= 16'b00010000001000??;
@@ -515,6 +528,7 @@ parameter FLT_WD		= 8'h36;
 parameter FLT_UNIMP	= 8'h37;
 parameter FLT_CPF		= 8'h39;
 parameter FLT_DPF		= 8'h3A;
+parameter FLT_LVL		= 8'h3B;
 parameter FLT_PMA		= 8'h3D;
 parameter FLT_BRK		= 8'h3F;
 parameter FLT_PFX		= 8'hC8;
@@ -530,7 +544,7 @@ localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 typedef logic [127:0]	Value;
 typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
-typedef logic [7:0] ASID;
+typedef logic [11:0] ASID;
 typedef logic [BitsRS:0] SrcId;
 typedef logic [BitsRS:0] RNdx;
 
@@ -545,6 +559,16 @@ typedef struct packed
 {
 	Offset offs;
 } Address;
+
+typedef struct packed
+{
+	Offset offs;
+} VirtualAddress;
+
+typedef struct packed
+{
+	logic [31:0] offs;
+} PhysicalAddress;
 
 typedef struct packed
 {
@@ -877,9 +901,9 @@ typedef struct packed
 	logic [3:0] func2;	// more resolution to function
 	Address adr;
 	logic [4:0] seg;
-	logic [127:0] dat;
+	logic [255:0] dat;
 	logic [15:0] sel;		// data byte select, indicates size of data
-} MemoryRequest;	// 236
+} MemoryRequest;	// 332
 
 // All the fields in this structure are *output* back to the system.
 typedef struct packed
@@ -948,6 +972,7 @@ parameter wyde = 3'd1;
 parameter tetra = 3'd2;
 parameter octa = 3'd3;
 parameter hexi = 3'd4;
+parameter ptr = 3'd7;
 
 typedef struct packed
 {
@@ -995,6 +1020,7 @@ typedef struct packed
 	logic lear;
 	logic lean;
 	logic tlb;
+	logic rgn;
 	logic stset;
 	logic stmov;
 	logic stfnd;
