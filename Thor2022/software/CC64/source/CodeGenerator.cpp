@@ -198,6 +198,10 @@ Operand* CodeGenerator::GenerateHook(ENODE* inode, int flags, int size)
 	return (ap3);
 }
 
+void CodeGenerator::GenerateLoadAddress(Operand* ap3, Operand* ap1)
+{
+	GenerateDiadic(op_lea, 0, ap3, ap1);
+}
 
 void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size)
 {
@@ -851,6 +855,7 @@ Operand *CodeGenerator::GenerateDereference(ENODE *node,int flags,int size, int 
 	//	}
 	ap1 = GenerateDereference2(node->p[0], node->tp, node->IsRefType(), flags, size, siz1, su, opt);
 	if (ap1) {
+		ap1->rhs = rhs;
 		if (node->nodetype == en_fieldref) {
 			ap1->bit_offset = node->bit_offset;
 			ap1->bit_width = node->bit_width;
@@ -859,6 +864,7 @@ Operand *CodeGenerator::GenerateDereference(ENODE *node,int flags,int size, int 
 	}
 	ap1 = GenerateExpression(node->p[0], am_reg | am_imm, sizeOfWord,rhs); // generate address
 	ap1->isPtr = node->IsRefType();
+	ap1->rhs = rhs;
 	if( ap1->mode == am_reg)
   {
 			// This seems a bit of a kludge. If we are dereferencing and there's a
@@ -1668,7 +1674,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 	//	ap2 = GenerateExpression(node->p[1],am_mem,size);
 	//}
 	//else {
-		ap1 = GenerateExpression(node->p[0], am_reg | am_mem | am_vreg, ssize, 0);
+		ap1 = GenerateExpression(node->p[0], am_reg | am_mem | am_vreg, ssize, 1);
 		flg = am_all;
 		if (ap1->typep == &stddouble)
 			flg = am_fpreg;
@@ -1676,7 +1682,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 			flg = am_preg;
 		flg = am_reg | am_mem | am_imm;
 		// We want the size of the RHS to be its natural size.
-		ap2 = GenerateExpression(node->p[1], flg, RHsize = node->p[1]->GetNaturalSize(), 1);// size);
+		ap2 = GenerateExpression(node->p[1], flg, RHsize = node->p[1]->GetNaturalSize(), 0);// size);
 		//if (node->p[0]->isUnsigned && !node->p[1]->isUnsigned)
 		//    ap2->GenZeroExtend(RHsize,ssize);
 		// Supposed to be handled in parse
@@ -2084,6 +2090,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_ref:
 		ap1 = GenerateDereference(node, flags, node->tp->size, !node->isUnsigned, (flags & am_bf_assign) ? 0 : 1, rhs);
 		ap1->isPtr = TRUE;
+		ap1->rhs = rhs;
 		goto retpt;
 	case en_fieldref:
 		ap1 = (flags & am_bf_assign) ? GenerateDereference(node,flags & ~am_bf_assign,node->tp->size,!node->isUnsigned, (flags & am_bf_assign) != 0, rhs)
@@ -2341,9 +2348,9 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_udiv:   ap1 = node->GenDivMod(flags,size,op_divu); goto retpt;
   case en_mod:    ap1 = node->GenDivMod(flags,size,op_rem); goto retpt;
   case en_umod:   ap1 = node->GenDivMod(flags,size,op_remu); goto retpt;
-  case en_asl:    ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
-  case en_shl:    ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
-  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_sllp); goto retpt;
+  case en_asl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
+  case en_shl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
+  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
   case en_asr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shru:   ap1 = node->GenerateShift(flags,size,op_srl); goto retpt;
@@ -2393,7 +2400,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_asand:  ap1 = node->GenerateAssignLogic(flags,size,op_and); goto retpt;
   case en_asor:   ap1 = node->GenerateAssignLogic(flags,size,op_or); goto retpt;
 	case en_asxor:  ap1 = node->GenerateAssignLogic(flags,size,op_xor); goto retpt;
-  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sllp)); goto retpt;
+  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sll)); goto retpt;
   case en_asrsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sra)); goto retpt;
 	case en_asrshu: ap1 = (node->GenerateAssignShift(flags,size,op_srl)); goto retpt;
   case en_asmul: ap1 = GenerateAssignMultiply(node,flags,size,op_mul); goto retpt;

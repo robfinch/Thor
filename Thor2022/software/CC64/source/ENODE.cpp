@@ -1218,7 +1218,7 @@ Operand *ENODE::GenIndex(bool neg)
 		return (ap2);
 	}
 	// ap1->mode must be am_reg
-	ap2->MakeLegal(am_reg, 8);
+//	ap2->MakeLegal(am_reg, 8);
 	if (cpu.SupportsIndexed) {
 		ap1->mode = am_indx2;            /* make indexed */
 		ap1->sreg = ap2->preg;

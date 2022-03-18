@@ -127,7 +127,7 @@ Operand* OperandFactory::MakeImmediate(Int128 i, int display_opt)
 	ap->mode = am_imm;
 	ap->offset = ep;
 	ap->display_opt = display_opt;
-	if (!i.IsNBit(64)) {
+	if (!i.IsNBit(24)) {
 		if (i.IsNBit(80)) {
 			Int128::Lsr(&k, &i, 24);
 			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));

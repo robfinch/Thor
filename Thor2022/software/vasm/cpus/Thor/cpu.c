@@ -1843,7 +1843,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 					break;
 				case 2:
 		  		uint64_t tgt;
-		  		*insn |= CA(7);
+		  		*insn |= CAB(7);
 		  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 		  		*insn |= tgt;
 			  	break;
@@ -1863,7 +1863,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 				case 3:
 			  	if (insn) {
 			  		uint64_t tgt;
-			  		*insn |= CA(7);
+			  		*insn |= CAB(7);
 			  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 			  		*insn |= tgt;
 			  	}
@@ -1883,7 +1883,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 					break;
 				case 2:
 		  		uint64_t tgt;
-		  		*insn |= CA(0);
+		  		*insn |= CAB(0);
 		  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 		  		*insn |= tgt;
 		  		break;
@@ -1894,7 +1894,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  if (op->type==OP_CAREGIND) {
 	  	if (insn) {
 	  		uint64_t tgt;
-	  		*insn |= CA(op->basereg & 0x7);
+	  		*insn |= CAB(op->basereg & 0x7);
 	  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 	  		*insn |= tgt;
 	  	}
@@ -1911,7 +1911,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 					break;
 				case 3:
 		  		uint64_t tgt;
-		  		*insn |= CA(0);
+		  		*insn |= CAB(0);
 		  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 		  		*insn |= tgt;
 		  		break;
@@ -1922,7 +1922,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  if (op->type==OP_CAREGIND) {
 	  	if (insn) {
 	  		uint64_t tgt;
-	  		*insn |= CA(op->basereg & 0x7);
+	  		*insn |= CAB(op->basereg & 0x7);
 	  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 	  		*insn |= tgt;
 	  	}

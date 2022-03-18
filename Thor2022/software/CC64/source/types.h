@@ -950,6 +950,7 @@ public:
 	unsigned int isPtr : 1;
 	unsigned int isConst : 1;
 	unsigned int isBool : 1;
+	unsigned int rhs : 1;
 	short int pdeep;		// previous stack depth on allocation
 	short int deep;           /* stack depth on allocation */
 	short int deep2;
@@ -1117,6 +1118,7 @@ public:
 	void GenerateComment(char *cm);
 	void GenMemop(int op, Operand *ap1, Operand *ap2, int ssize, int typ);
 	void GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size);
+	void GenerateLoadAddress(Operand* ap3, Operand* ap1);
 	void GenerateStore(Operand *ap1, Operand *ap3, int size);
 	Operand* GenerateHook(ENODE*, int flags, int size);
 	virtual Operand* GenerateSafeLand(ENODE *, int flags, int op);

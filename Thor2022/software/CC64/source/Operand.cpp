@@ -117,7 +117,9 @@ Operand *Operand::GenerateSignExtend(int isize, int osize, int flags)
 	Operand *ap1;
 	Operand *ap = this;
 
-	if (isize == osize)
+	if (isize >= osize)
+		return (ap);
+	if (ap->isPtr)
 		return (ap);
 	if (ap->isUnsigned)
 		return (ap);
