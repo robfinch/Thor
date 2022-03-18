@@ -1,0 +1,4359 @@
+F00:0001       	.text
+F00:0002       	.set	CSR_MTVEC,0x3030
+F00:0003       	.set	IOBASE,0xFF800000
+F00:0004       	.set	RODATABASE,0xFFFE0000
+F00:0005       	.set	LEDS,0xFFFFFFFFFF910000
+F00:0006       	.align	2
+F00:0007       #------------------------------------------------------------------------------
+F00:0008       #------------------------------------------------------------------------------
+F00:0009       	jmp			MachineStart
+               S01:00000000:  20 30 00 00 00 00 [R]
+F00:0010       	nop
+               S01:00000006:  F1 00
+F00:0011       	nop
+               S01:00000008:  F1 00
+F00:0012       	nop
+               S01:0000000A:  F1 00
+F00:0013       MachineStart:
+F00:0014         # Map 4kB GDT area
+F00:0015       #	ldi			$t0,#$8000000000000C00	# entry number = $000, way = 3, write = true
+F00:0016       #	ldi			$t1,#$008E000000000000
+F00:0017       #	tlbrw		$x0,$t0,$t1
+F00:0018       #	FFFC0000
+F00:0019       #	1111_1111_1111_1100_0000_0000_0000_0000
+F00:0020       #	1111_1111_11_11_1100_0000
+F00:0021       #	exim		0x0000000000000E
+F00:0022       #	exi56		0xC01E0000000080
+F00:0023       #	ldi			t0,0x00000000800000FC		# entry number = $3C0, way = 3, write = true
+F00:0024       #	jmp			ms1
+F00:0025       ms1:
+F00:0026       #	ldi			t1,0x3f00
+F00:0027       #	sllh		t1,t1,64
+F00:0028       #	exim		0x0000000000000F
+F00:0029       #	exi56		0xFFC08000000000
+F00:0030       #	ldi			t1,0x00000000FFFC
+F00:0031       #	tlbrw		r0,t0,t1
+F00:0032       #	add			t0,t0,1
+F00:0033       #	tlbrw		x0,t0,t1
+F00:0034       #	add			t0,t0,1
+F00:0035       #	tlbrw		x0,t0,t1
+F00:0036       #	add			t0,t0,1
+F00:0037       #	tlbrw		x0,t0,t1
+F00:0038         # Map 32kB scratchpad stack area into stack segment
+F00:0039       #	FFFC8000
+F00:0040       #	1111_1111_1111_1100_1000_0000_0000_0000
+F00:0041       #	1111_1111_11_11_1100_1000
+F00:0042       	exim		0x00000000000000
+               S01:0000000C:  50 00 00 00 00 00 00 00
+F00:0043       	exi56		0x000FE01E80
+               S01:00000014:  4C 80 1E E0 0F 00 00 00
+F00:0044       	ldi			t0,0x0013F0		# entry number = $3F0, way = 4, write = true
+               S01:0000001C:  D4 06 80 9F 00 00
+F00:0045       	exim		0x003F000000000
+               S01:00000022:  50 00 00 00 00 E0 07 00
+F00:0046       	exi56		0xFFF01000000000
+               S01:0000002A:  4C 00 00 00 00 10 F0 FF
+F00:0047       	ldi			t1,0x00FFFC
+               S01:00000032:  D4 08 E0 FF 07 00
+F00:0048       	tlbrw		r0,t0,t1
+               S01:00000038:  07 C0 20 00 00 3C
+F00:0049       	# Map text screen - first 24kB
+F00:0050       	# FF800000
+F00:0051       	# 1111_1111_10 00_0000_0000 _0000_0000_0000
+F00:0052       #	exim		0x0000000000000E
+F00:0053       #	exi56		0xC01E0000000080
+F00:0054       #	ldi			t0,0x0000000080001000		# entry number = $000, way = 4, write = true
+F00:0055       #	exim		0x0000000000000F
+F00:0056       #	exi56		0xFF800000000000
+F00:0057       #	ldi			t1,0x00000000FF80
+F00:0058       #	ldi			r26,5
+F00:0059       .0003:
+F00:0060       #	tlbrw		r0,t0,t1
+F00:0061       #	add			t0,t0,1							# map next 4kB
+F00:0062       #	add			t1,t1,1
+F00:0063       #	dbra		.0003
+F00:0064       	# Map text registers
+F00:0065       #	exim		0x0000000000000E
+F00:0066       #	exi56		0xC01E0000000080
+F00:0067       #	ldi			t0,0x0000000080001001		# entry number = $01D, way = 4, write = true
+F00:0068       #	exim		0x0000000000000F
+F00:0069       #	exi56		0xFF81D000000000
+F00:0070       #	ldi			t1,0x00000000FF81
+F00:0071       #	tlbrw		r0,t0,t1
+F00:0072       	# Map Sprite registers
+F00:0073       #	exim		0x0000000000000E
+F00:0074       #	exi56		0xC01E0000000080
+F00:0075       #	ldi			t0,0x000000008000100B		# entry number = $0B0, way = 4, write = true
+F00:0076       #	exim		0x0000000000000F
+F00:0077       #	exi56		0xFF8B0000000000
+F00:0078       #	ldi			t1,0x00000000FF8B
+F00:0079       #	tlbrw		r0,t0,t1
+F00:0080       	# Setup trap vector
+F00:0081       	lea			a1,IRQRout
+               S01:0000003E:  8A 04 00 08 00 00 [R]
+F00:0082       	csrrw		r0,a1,CSR_MTVEC
+               S01:00000044:  0F 80 80 81 01 02
+F00:0083       	csrrw		r0,a1,CSR_MTVEC+1
+               S01:0000004A:  0F 80 88 81 01 02
+F00:0084       	csrrw		r0,a1,CSR_MTVEC+2
+               S01:00000050:  0F 80 90 81 01 02
+F00:0085       	csrrw		r0,a1,CSR_MTVEC+3
+               S01:00000056:  0F 80 98 81 01 02
+F00:0086       	# Setup debug mode stack pointer. The debug stack is set to a high order
+F00:0087       	# address in the scratchpad memory area.
+F00:0088       	ldi			sp,0xFFF00FF0
+               S01:0000005C:  49 FE 00 00 D4 3E 80 7F 80 FF
+F00:0089       #  ldi   	t0,0xAA
+F00:0090       #  stb   	t0,LEDS
+F00:0091       #  ldi   	a0,0xAA
+F00:0092       #  stb   	a0,LEDS
+F00:0093       .0002:
+F00:0094       	jmp			_main
+               S01:00000066:  20 C0 3F 00 00 00 [R]
+F00:0095       	bra			.0002
+               S01:0000006C:  20 E8 FF FF FF FF
+F00:0096       	.type		MachineStart,@function
+F00:0097       	.size		MachineStart,$-MachineStart
+F00:0098       	
+F00:0099       	.align	8
+F00:0100       IRQRout:
+F00:0101       	ldi			a1,0x03FFFE0003FF0055
+               S01:00000100:  4B 02 00 FE FF 03 D4 04 A8 02 F8 1F
+F00:0102       	sto			a1,0xff800000
+               S01:0000010C:  49 FE 00 00 93 04 00 00 00 FC
+F00:0103       .0004:
+F00:0104       	bra			.0004
+               S01:00000116:  20 00 00 FC 00 00
+F00:0105       	.align	6
+F00:0106       IRQRoutM1:
+F00:0107       	ldi			a1,0x03FFFE0003FF0053
+               S01:00000140:  4B 02 00 FE FF 03 D4 04 98 02 F8 1F
+F00:0108       	sto			a1,0xff800000
+               S01:0000014C:  49 FE 00 00 93 04 00 00 00 FC
+F00:0109       .0004:
+F00:0110       	bra			.0004
+               S01:00000156:  20 00 00 FC 00 00
+F00:0111       	.align	6
+F00:0112       IRQRoutM2:
+F00:0113       	ldi			a1,0x03FFFE0003FF0048
+               S01:00000180:  4B 02 00 FE FF 03 D4 04 40 02 F8 1F
+F00:0114       	sto			a1,0xff800000
+               S01:0000018C:  49 FE 00 00 93 04 00 00 00 FC
+F00:0115       .0004:
+F00:0116       	bra			.0004
+               S01:00000196:  20 00 00 FC 00 00
+F00:0117       	.align	6
+F00:0118       IRQRoutM3:
+F00:0119       	ldi			a1,0x03FFFE0003FF004D
+               S01:000001C0:  4B 02 00 FE FF 03 D4 04 68 02 F8 1F
+F00:0120       	sto			a1,0xff800000
+               S01:000001CC:  49 FE 00 00 93 04 00 00 00 FC
+F00:0121       .0004:
+F00:0122       	bra			.0004
+               S01:000001D6:  20 00 00 FC 00 00
+F00:0123       	.type		IRQRout,@function
+F00:0124       	.size		IRQRout,$-IRQRout
+F00:0125       _MapPage:
+F00:0126       	ldhs		a1,0[sp]
+               S01:000001DC:  89 C4 07 00
+F00:0127       	ldhs		a0,16[sp]
+               S01:000001E0:  89 C2 87 00
+F00:0128       	tlbrw		a0,a0,a1
+               S01:000001E4:  07 42 10 00 00 3C
+F00:0129       	add			sp,sp,32
+               S01:000001EA:  04 FE 07 01
+F00:0130       	rts
+               S01:000001EE:  F2 02
+F00:0131       	.type		_MapPage,@function
+F00:0132       	.size		_MapPage,$-_MapPage
+F00:0133       # ============================================================================
+F00:0134       #        __
+F00:0135       #   \\__/ o\    (C) 2020-2022  Robert Finch, Waterloo
+F00:0136       #    \  __ /    All rights reserved.
+F00:0137       #     \/_//     robfinch<remove>@finitron.ca
+F00:0138       #       ||
+F00:0139       #  
+F00:0140       #
+F00:0141       # BSD 3-Clause License
+F00:0142       # Redistribution and use in source and binary forms, with or without
+F00:0143       # modification, are permitted provided that the following conditions are met:
+F00:0144       #
+F00:0145       # 1. Redistributions of source code must retain the above copyright notice, this
+F00:0146       #    list of conditions and the following disclaimer.
+F00:0147       #
+F00:0148       # 2. Redistributions in binary form must reproduce the above copyright notice,
+F00:0149       #    this list of conditions and the following disclaimer in the documentation
+F00:0150       #    and/or other materials provided with the distribution.
+F00:0151       #
+F00:0152       # 3. Neither the name of the copyright holder nor the names of its
+F00:0153       #    contributors may be used to endorse or promote products derived from
+F00:0154       #    this software without specific prior written permission.
+F00:0155       #
+F00:0156       # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+F00:0157       # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+F00:0158       # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+F00:0159       # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+F00:0160       # FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+F00:0161       # DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+F00:0162       # SERVICES# LOSS OF USE, DATA, OR PROFITS# OR BUSINESS INTERRUPTION) HOWEVER
+F00:0163       # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+F00:0164       # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+F00:0165       # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+F00:0166       #
+F00:0167       # ============================================================================
+F00:0168       #OPT include "d:\cores2022\rf6809\software\fmtk\config.a09"
+F00:0169       .include "d:\cores2022\Thor\software\boot\bios-const.t64"
+F01:0001       .set	MEMSZ,131072
+F01:0002       .set	PGSZ,4096
+F01:0003       .set	LOGPGSZ,12
+F01:0004       .set	NUM_PERM_PAGES_LO,768
+F01:0005       .set	STACK_PAGES,8
+F01:0006       .set	MMU_ENTRIES,4096
+F01:0007       .set	OSPAGES,16
+F01:0008       
+F01:0009       .set	E_Ok,0
+F01:0010       .set	E_NotAlloc,9
+F01:0011       .set	E_NoMem,12
+F01:0012       
+F01:0013       .set	GEU,13
+F01:0014       .set	LTU,5
+F01:0015       
+F00:0170       # The share count is the number of times a page has been shared.
+F00:0171       .set	PAMLastAllocate,0xFFFFFC020
+F00:0172       .set	PAMShareCounts,0x00
+F00:0173       #------------------------------------------------------------------------------
+F00:0174       # Find a page and mark it allocated. Proceeds starting at the previous byte
+F00:0175       # where there was an allocation. This should help reduce the search time to
+F00:0176       # find a freepage. The memory allocated is zeroed out.
+F00:0177       #
+F00:0178       # Parameters:
+F00:0179       #		none
+F00:0180       # Returns:
+F00:0181       #   a0 = page number, -1 if insufficient memory
+F00:0182       #   a1 = E_NoMem if insufficient memory, otherwise E_Ok
+F00:0183       #------------------------------------------------------------------------------
+F00:0184       PAMAlloc:
+F00:0185       	push	t0,t1
+               S01:000001F0:  AD 06 01 00
+F00:0186       	ldt		t0,PAMLastAllocate
+               S01:000001F4:  49 FE 0F 00 84 06 00 01 FE FF
+F00:0187       	ldi		t1,MEMSZ						# number of bytes to look at
+               S01:000001FE:  D4 08 00 00 10 00
+F00:0188       .0002:
+F00:0189       	ldw		a0,PAMShareCounts[t0]
+               S01:00000204:  82 C2 00 00 00 00
+F00:0190       	bnez	a0,.0001						# page empty?
+               S01:0000020A:  12 5E 08 E0
+F00:0191       	# Found an empty
+F00:0192       	srl		a0,t0,1
+               S01:0000020E:  02 C2 08 02 00 82
+F00:0193       	bsr		PAMShare
+               S01:00000214:  20 0A 03 FC 00 00
+F00:0194       	stt		t0,PAMLastAllocate
+               S01:0000021A:  49 FE 0F 00 92 06 00 01 FE FF
+F00:0195       	# Clear allocated memory
+F00:0196       	ldi		t0,256
+               S01:00000224:  04 06 00 08
+F00:0197       	sll		t1,a0,LOGPGSZ
+               S01:00000228:  58 48 60 02
+F00:0198       .0003:
+F00:0199       	sth		r0,[t1]
+               S01:0000022C:  94 00 01 00 00 00
+F00:0200       	add		t1,t1,16
+               S01:00000232:  04 08 81 00
+F00:0201       	add		t0,t0,-1
+               S01:00000236:  04 C6 F8 3F
+F00:0202       	bnez	t0,.0003
+               S01:0000023A:  12 D2 F8 FF
+F00:0203       	pop		t1,t0
+               S01:0000023E:  BD C8 00 00
+F00:0204       	ldi		a1,E_Ok
+               S01:00000242:  04 04 00 00
+F00:0205       	rts
+               S01:00000246:  F2 02
+F00:0206       .0001:
+F00:0207       	add		t1,t1,-1
+               S01:00000248:  04 08 F9 3F
+F00:0208       	beqz	t1,PAMAllocOutOfMem
+               S01:0000024C:  10 1E 01 E0
+F00:0209       	add		t0,t0,2							# advance to next wyde
+               S01:00000250:  04 C6 10 00
+F00:0210       	cmp		a1,t0,MEMSZ
+               S01:00000254:  02 C4 00 02 00 54
+F00:0211       	bbs		a1,LTU,.0002
+               S01:0000025A:  25 80 28 FE FA FF
+F00:0212       	mov		t0,r0
+               S01:00000260:  1D 06 00 00
+F00:0213       	bra		.0002
+               S01:00000264:  20 80 FE FF FF FF
+F00:0214       PAMAllocOutOfMem:
+F00:0215       	pop		t1,t0
+               S01:0000026A:  BD C8 00 00
+F00:0216       	ldi		a0,-1
+               S01:0000026E:  04 02 F8 3F
+F00:0217       	ldi		a1,E_NoMem
+               S01:00000272:  04 04 60 00
+F00:0218       	rts
+               S01:00000276:  F2 02
+F00:0219       #------------------------------------------------------------------------------
+F00:0220       # Free memory previously allocated with PAMAlloc.
+F00:0221       # The share count is decremented. If the share count reaches zero then the
+F00:0222       # the memory is zeroed out.
+F00:0223       #
+F00:0224       # Parameters:
+F00:0225       #		a0 = page number to free
+F00:0226       # Modifies:
+F00:0227       #		none
+F00:0228       #------------------------------------------------------------------------------
+F00:0229       PAMFree:
+F00:0230       	push		t0,a1
+               S01:00000278:  AD 86 00 00
+F00:0231       	cmp			t0,a0,MEMSZ-STACK_PAGES	# last page is permanently allocated to system stack
+               S01:0000027C:  02 46 C0 02 00 54
+F00:0232       	bbs			t0,GEU,pump1
+               S01:00000282:  25 C0 68 FE 04 00
+F00:0233       	cmp			t0,a0,NUM_PERM_PAGES_LO	# first 768 pages (6MB) allocated permanently to system
+               S01:00000288:  02 46 00 02 00 54
+F00:0234       	bbs			t0,LTU,pump1
+               S01:0000028E:  25 C0 28 FE 04 00
+F00:0235       	sll			a0,a0,1								# turn arg into table index
+               S01:00000294:  58 42 08 02
+F00:0236       	ldw			t0,PAMShareCounts[a0]	# memory already free?
+               S01:00000298:  82 46 00 00 00 00
+F00:0237       	beqz		t0,pump2
+               S01:0000029E:  10 CC 08 E0
+F00:0238       	add			t0,t0,-1
+               S01:000002A2:  04 C6 F8 3F
+F00:0239       	stw			t0,PAMShareCounts[a0]	# decrease share count
+               S01:000002A6:  91 46 00 00 00 00
+F00:0240       	bnez		t0,.0001
+               S01:000002AC:  12 DE 00 E0
+F00:0241       	ldi			t0,256								# number of hexi-bytes to clear
+               S01:000002B0:  04 06 00 08
+F00:0242       	sll			a1,a0,LOGPGSZ					# turn page number into address
+               S01:000002B4:  58 44 60 02
+F00:0243       .0002:
+F00:0244       	sth			r0,[a1]
+               S01:000002B8:  94 80 00 00 00 00
+F00:0245       	add			a1,a1,16
+               S01:000002BE:  04 84 80 00
+F00:0246       	add			t0,t0,-1
+               S01:000002C2:  04 C6 F8 3F
+F00:0247       	bnez		t0,.0002
+               S01:000002C6:  12 D2 F8 FF
+F00:0248       .0001:
+F00:0249       pump2:
+F00:0250       	srl			a0,a0,1								# restore argument
+               S01:000002CA:  02 42 08 02 00 82
+F00:0251       pump1:
+F00:0252       	pop			a1,t0
+               S01:000002D0:  BD C4 00 00
+F00:0253       	rts
+               S01:000002D4:  F2 02
+F00:0254       #------------------------------------------------------------------------------
+F00:0255       # Share a page of memory. A page cannot be shared more than 65535 times.
+F00:0256       #
+F00:0257       # Parameters:
+F00:0258       #		a0 = page number to share
+F00:0259       # Returns:
+F00:0260       #		none
+F00:0261       #------------------------------------------------------------------------------
+F00:0262       PAMShare:
+F00:0263       	push		t0
+               S01:000002D6:  AC 06
+F00:0264       	cmp			t0,a0,MEMSZ
+               S01:000002D8:  02 46 00 02 00 54
+F00:0265       	bbs			t0,GEU,.0001
+               S01:000002DE:  25 C0 68 FE 02 00
+F00:0266       	sll			a0,a0,1									# convert to table index
+               S01:000002E4:  58 42 08 02
+F00:0267       	ldw			t0,PAMShareCounts[a0]		# get and increment share count
+               S01:000002E8:  82 46 00 00 00 00
+F00:0268       	add			t0,t0,1
+               S01:000002EE:  04 C6 08 00
+F00:0269       	bbs			t0,16,.0002							# did it overflow 16 bits?
+               S01:000002F2:  25 C0 80 FE 00 00
+F00:0270       	stw			t0,PAMShareCounts[a0]		# update with new share count
+               S01:000002F8:  91 46 00 00 00 00
+F00:0271       .0002:
+F00:0272       	srl			a0,a0,1									# restore a0
+               S01:000002FE:  02 42 08 02 00 82
+F00:0273       .0001:
+F00:0274       	pop			t0
+               S01:00000304:  BC 06
+F00:0275       	rts
+               S01:00000306:  F2 02
+F00:0276       #------------------------------------------------------------------------------
+F00:0277       #------------------------------------------------------------------------------
+F00:0278       PAMInit:
+F00:0279         # First zero out the entire PAM using word stores
+F00:0280         mov		t0,r0								# PAM is at address zero
+               S01:00000308:  1D 06 00 00
+F00:0281       .0002:
+F00:0282       	sth		r0,[t0]
+               S01:0000030C:  94 C0 00 00 00 00
+F00:0283       	add		t0,t0,16
+               S01:00000312:  04 C6 80 00
+F00:0284       	cmp		t1,t0,MEMSZ/8				# *2/16
+               S01:00000316:  02 C8 00 02 00 54
+F00:0285       	bbs		t1,LTU,.0002
+               S01:0000031C:  25 00 29 FE FF FF
+F00:0286         # Now preallocate memory pages
+F00:0287         # The first 2MB is allocated to the OS
+F00:0288         # The next 4MB is allocated for the bitmapped display
+F00:0289         ldi   t0,NUM_PERM_PAGES_LO-1	# 768 pages
+               S01:00000322:  04 06 F8 17
+F00:0290         stt		t0,PAMLastAllocate		# begin search after OS pages
+               S01:00000326:  49 FE 0F 00 92 06 00 01 FE FF
+F00:0291         mov		t1,r0
+               S01:00000330:  1D 08 00 00
+F00:0292         ldi		t0,0x0001
+               S01:00000334:  04 06 08 00
+F00:0293       .0001:
+F00:0294       	stw		t0,[t1]
+               S01:00000338:  91 06 01 00 00 00
+F00:0295       	add		t1,t1,2
+               S01:0000033E:  04 08 11 00
+F00:0296       	cmp		t2,t1,NUM_PERM_PAGES_LO*2
+               S01:00000342:  02 0A 01 02 00 54
+F00:0297       	bbs		t2,LTU,.0001
+               S01:00000348:  25 40 29 FE FF FF
+F00:0298         # The last 8 pages (32kB) of memory are reserved for OS stacks
+F00:0299         ldi		t0,0x0001
+               S01:0000034E:  04 06 08 00
+F00:0300         ldi		t1,MEMSZ*2-16
+               S01:00000352:  D4 08 80 FF 1F 00
+F00:0301       .0003:
+F00:0302         stw		t0,[t1]
+               S01:00000358:  91 06 01 00 00 00
+F00:0303         add		t1,t1,2
+               S01:0000035E:  04 08 11 00
+F00:0304         cmp		t2,t1,MEMSZ
+               S01:00000362:  02 0A 01 02 00 54
+F00:0305         bbs		t2,LTU,.0003
+               S01:00000368:  25 40 29 FE FF FF
+F00:0306       	rts
+               S01:0000036E:  F2 02
+F00:0307         
+F00:0308       	.align	4
+F00:0309       	.align 4
+F00:0310       	.sdreg	29
+F00:0311       #====================================================
+F00:0312       # Basic Block 0
+F00:0313       #====================================================
+F00:0314       _foo:
+F00:0315         enter    0
+               S01:00000370:  AF 00 00 00
+F00:0316         sxo      a1,a1
+               S01:00000374:  AA 84 00 F0 17 0A
+F00:0317         slt      a0,a1,a0
+               S01:0000037A:  4E 82 08 00
+F00:0318       .00012:
+F00:0319         leave    0
+               S01:0000037E:  BF 00 00 00
+F00:0320       	.type	_foo,@function
+F00:0321       	.size	_foo,$-_foo
+F00:0322       #--}
+F00:0323        
+F00:0324       #{++ _MapPages
+F00:0325       	.align 4
+F00:0326       	.sdreg	29
+F00:0327         
+F00:0328       	.align	4
+F00:0329       #====================================================
+F00:0330       # Basic Block 0
+F00:0331       #====================================================
+F00:0332       _MapPages:
+F00:0333         enter    48
+               S01:00000390:  AF A0 FF FF
+F00:0334         sths     s0,0[sp]
+               S01:00000394:  95 D6 07 00
+F00:0335         sths     s1,16[sp]
+               S01:00000398:  95 D8 87 00
+F00:0336         sths     s2,32[sp]
+               S01:0000039C:  95 DA 07 01
+F00:0337       # a0 = ((1) << 46)|((1) << 47)|((15) << 48)|((0) << 36)|((15) << 32)|((0x3FC) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|‹0õÕ
+F00:0338         exi56    266342272
+               S01:000003A0:  4C 80 0F E0 0F 00 00 00
+F00:0339         ldi      s2,5116
+               S01:000003A8:  D4 1A E0 9F 00 00
+F00:0340       # a1 = ((0xFFFC) << 64)|(0xFFFC)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0341         exim     4329327034368
+               S01:000003AE:  50 00 00 00 00 E0 07 00
+F00:0342         exi56    72053264710893568
+               S01:000003B6:  4C 00 00 00 00 10 FC FF
+F00:0343         ldi      s1,65532
+               S01:000003BE:  D4 18 E0 FF 07 00
+F00:0344       # for (m = 0; m < 16; m++) {
+F00:0345         mov      s0,r0
+               S01:000003C4:  1D 16 00 00
+F00:0346         bge      s0,16,.00035
+               S01:000003C8:  29 C0 82 FE 02 00
+F00:0347       .00034:
+F00:0348       # MapPage(a0,a1);
+F00:0349         push     s2,s1
+               S01:000003CE:  AD 1A 03 00
+F00:0350         jsr      _MapPage
+               S01:000003D2:  20 72 07 00 00 00 [R]
+F00:0351       # a0++;
+F00:0352         add      s2,s2,1
+               S01:000003D8:  04 5A 0B 00
+F00:0353       # a1++;
+F00:0354         add      s1,s1,1
+               S01:000003DC:  04 18 0B 00
+F00:0355         add      s0,s0,1
+               S01:000003E0:  04 D6 0A 00
+F00:0356         blt      s0,16,.00034
+               S01:000003E4:  28 C0 82 FE FE FF
+F00:0357       .00035:
+F00:0358       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x30) << 0)|((4) << 10)|((2) << 14)|((0) << 16)|((1·=ÉÖ
+F00:0359         exi56    115345024
+               S01:000003EA:  4C 80 06 E0 06 00 00 00
+F00:0360         ldi      s2,36912
+               S01:000003F2:  D4 1A 80 81 04 00
+F00:0361       # a1 = ((0x30) << 64)|(0x30)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0362         exim     4329327034368
+               S01:000003F8:  50 00 00 00 00 E0 07 00
+F00:0363         exi56    52845277609984
+               S01:00000400:  4C 00 00 00 00 10 30 00
+F00:0364         ldi      s1,48
+               S01:00000408:  04 18 80 01
+F00:0365       # for (m = 0; m < 32; m++) {
+F00:0366         mov      s0,r0
+               S01:0000040C:  1D 16 00 00
+F00:0367         sgt      t0,s0,31
+               S01:00000410:  1B C6 FA 00
+F00:0368         bnez     t0,.00038
+               S01:00000414:  12 C2 08 E0
+F00:0369       .00037:
+F00:0370       # MapPage(a0,a1);
+F00:0371         push     s2,s1
+               S01:00000418:  AD 1A 03 00
+F00:0372         jsr      _MapPage
+               S01:0000041C:  20 72 07 00 00 00 [R]
+F00:0373       # a0++;
+F00:0374         add      s2,s2,1
+               S01:00000422:  04 5A 0B 00
+F00:0375       # a1++;
+F00:0376         add      s1,s1,1
+               S01:00000426:  04 18 0B 00
+F00:0377         add      s0,s0,1
+               S01:0000042A:  04 D6 0A 00
+F00:0378         slt      t0,s0,32
+               S01:0000042E:  18 C6 02 01
+F00:0379         bnez     t0,.00037
+               S01:00000432:  12 C6 F8 FF
+F00:0380       .00038:
+F00:0381       # a0 = ((1) << 46)|((1) << 47)|((14) << 48)|((0) << 36)|((14) << 32)|((0x000) << 0)|((0) << 10)|((0) << 14)|((0) << 16)|*	Q×
+F00:0382         exi56    249564800
+               S01:00000436:  4C 80 0E E0 0E 00 00 00
+F00:0383         ldi      s2,0
+               S01:0000043E:  04 1A 00 00
+F00:0384       # a1 = ((0x000) << 64)|(0x000)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0385         exim     4329327034368
+               S01:00000442:  50 00 00 00 00 E0 07 00
+F00:0386         exi56    68719476736
+               S01:0000044A:  4C 00 00 00 00 10 00 00
+F00:0387         ldi      s1,0
+               S01:00000452:  04 18 00 00
+F00:0388       # for (m = 0; m < 1024; m++) {
+F00:0389         mov      s0,r0
+               S01:00000456:  1D 16 00 00
+F00:0390         sgt      t0,s0,1023
+               S01:0000045A:  1B C6 FA 1F
+F00:0391         bnez     t0,.00041
+               S01:0000045E:  12 C2 08 E0
+F00:0392       .00040:
+F00:0393       # MapPage(a0,a1);
+F00:0394         push     s2,s1
+               S01:00000462:  AD 1A 03 00
+F00:0395         jsr      _MapPage
+               S01:00000466:  20 72 07 00 00 00 [R]
+F00:0396       # a0++;
+F00:0397         add      s2,s2,1
+               S01:0000046C:  04 5A 0B 00
+F00:0398       # a1++;
+F00:0399         add      s1,s1,1
+               S01:00000470:  04 18 0B 00
+F00:0400         add      s0,s0,1
+               S01:00000474:  04 D6 0A 00
+F00:0401         slt      t0,s0,1024
+               S01:00000478:  18 C6 02 20
+F00:0402         bnez     t0,.00040
+               S01:0000047C:  12 C6 F8 FF
+F00:0403       .00041:
+F00:0404       .00033:
+F00:0405         ldhs     s0,0[sp]
+               S01:00000480:  89 D6 07 00
+F00:0406         ldhs     s1,16[sp]
+               S01:00000484:  89 D8 87 00
+F00:0407         ldhs     s2,32[sp]
+               S01:00000488:  89 DA 07 01
+F00:0408         leave    0
+               S01:0000048C:  BF 00 00 00
+F00:0409       	.type	_MapPages,@function
+F00:0410       	.size	_MapPages,$-_MapPages
+F00:0411       #--}
+F00:0412         
+F00:0413       #{++ _UnmapPage
+F00:0414       	.align 4
+F00:0415       	.sdreg	29
+F00:0416       #====================================================
+F00:0417       # Basic Block 0
+F00:0418       #====================================================
+F00:0419       _UnmapPage:
+F00:0420         enter    0
+               S01:00000490:  AF 00 00 00
+F00:0421         ldo      t0,64[fp]
+               S01:00000494:  86 86 07 02 00 00
+F00:0422         push     t0
+               S01:0000049A:  AC 06
+F00:0423         ldi      t0,36028797023158271
+               S01:0000049C:  4A 00 00 00 80 00 D4 06 F8 FF FF 01
+F00:0424         push     t0
+               S01:000004A8:  AC 06
+F00:0425         jsr      _MapPage
+               S01:000004AA:  20 72 07 00 00 00 [R]
+F00:0426       .00052:
+F00:0427         leave    16
+               S01:000004B0:  BF 20 00 00
+F00:0428       	.type	_UnmapPage,@function
+F00:0429       	.size	_UnmapPage,$-_UnmapPage
+F00:0430       #--}
+F00:0431         
+F00:0432       #{++ _my_abs
+F00:0433       	.align 4
+F00:0434       	.sdreg	29
+F00:0435       #====================================================
+F00:0436       # Basic Block 0
+F00:0437       #====================================================
+F00:0438       _my_abs:
+F00:0439         enter    16
+               S01:000004C0:  AF E0 FF FF
+F00:0440         sths     s0,0[sp]
+               S01:000004C4:  95 D6 07 00
+F00:0441         ldo      s0,64[fp]
+               S01:000004C8:  86 96 07 02 00 00
+F00:0442       # if (a < 0) a = -a;
+F00:0443         bge      s0,r0,.00065
+               S01:000004CE:  29 C0 02 FC 00 00
+F00:0444         neg      s0,s0
+               S01:000004D4:  02 16 58 00 00 0A
+F00:0445       .00065:
+F00:0446       # return (a);
+F00:0447         mov      a0,s0
+               S01:000004DA:  1D C2 02 00
+F00:0448       .00064:
+F00:0449         ldhs     s0,0[sp]
+               S01:000004DE:  89 D6 07 00
+F00:0450         leave    16
+               S01:000004E2:  BF 20 00 00
+F00:0451       	.type	_my_abs,@function
+F00:0452       	.size	_my_abs,$-_my_abs
+F00:0453       #--}
+F00:0454          
+F00:0455       #{++ _my_srand
+F00:0456       	.align 4
+F00:0457       	.sdreg	29
+F00:0458          #====================================================
+F00:0459       # Basic Block 0
+F00:0460       #====================================================
+F00:0461       _my_srand:
+F00:0462         enter    64
+               S01:000004F0:  AF 80 FF FF
+F00:0463         sths     s0,0[sp]
+               S01:000004F4:  95 D6 07 00
+F00:0464         sths     s1,16[sp]
+               S01:000004F8:  95 D8 87 00
+F00:0465         sths     s2,32[sp]
+               S01:000004FC:  95 DA 07 01
+F00:0466         sths     s3,48[sp]
+               S01:00000500:  95 DC 87 01
+F00:0467       # int:32* pRand = 0;
+F00:0468         mov      s1,r0
+               S01:00000504:  1D 18 00 00
+F00:0469       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x140) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((E²Õ
+F00:0470         exi56    115345024
+               S01:00000508:  4C 80 06 E0 06 00 00 00
+F00:0471         ldi      s3,4416
+               S01:00000510:  D4 1C 00 8A 00 00
+F00:0472       # a1 = ((0xFF94) << 64)|(0xFF94)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0473         exim     4329327034368
+               S01:00000516:  50 00 00 00 00 E0 07 00
+F00:0474         exi56    71938915501604864
+               S01:0000051E:  4C 00 00 00 00 10 94 FF
+F00:0475         ldi      s2,65428
+               S01:00000526:  D4 1A A0 FC 07 00
+F00:0476       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:0477         push     s3,s2
+               S01:0000052C:  AD 5C 03 00
+F00:0478         jsr      _MapPage
+               S01:00000530:  20 72 07 00 00 00 [R]
+F00:0479       # pRand += (0xFF940000/sizeof(int:32));
+F00:0480         add      s1,s1,4287889408
+               S01:00000536:  49 FE 00 00 D4 18 03 00 A0 FC
+F00:0481       # for (ch = 0; ch < 256; ch++) {
+F00:0482         mov      s0,r0
+               S01:00000540:  1D 16 00 00
+F00:0483         sgt      t0,s0,255
+               S01:00000544:  1B C6 FA 07
+F00:0484         bnez     t0,.00081
+               S01:00000548:  12 CE 08 E0
+F00:0485       .00080:
+F00:0486       # pRand[1] = ch;
+F00:0487         stt      s0,4[s1]
+               S01:0000054C:  92 16 23 00 00 00
+F00:0488       # pRand[2] = a;
+F00:0489         ldo      t0,64[fp]
+               S01:00000552:  86 86 07 02 00 00
+F00:0490         stt      t0,8[s1]
+               S01:00000558:  92 06 43 00 00 00
+F00:0491       # pRand[3] = b;
+F00:0492         ldo      t0,72[fp]
+               S01:0000055E:  86 86 47 02 00 00
+F00:0493         stt      t0,12[s1]
+               S01:00000564:  92 06 63 00 00 00
+F00:0494         add      s0,s0,1
+               S01:0000056A:  04 D6 0A 00
+F00:0495         slt      t0,s0,256
+               S01:0000056E:  18 C6 02 08
+F00:0496         bnez     t0,.00080
+               S01:00000572:  12 DA F0 FF
+F00:0497       .00081:
+F00:0498       .00079:
+F00:0499         ldhs     s0,0[sp]
+               S01:00000576:  89 D6 07 00
+F00:0500         ldhs     s1,16[sp]
+               S01:0000057A:  89 D8 87 00
+F00:0501         ldhs     s2,32[sp]
+               S01:0000057E:  89 DA 07 01
+F00:0502         ldhs     s3,48[sp]
+               S01:00000582:  89 DC 87 01
+F00:0503         leave    32
+               S01:00000586:  BF 40 00 00
+F00:0504       	.type	_my_srand,@function
+F00:0505       	.size	_my_srand,$-_my_srand
+F00:0506       #--}
+F00:0507         
+F00:0508       #{++ _my_rand
+F00:0509       	.align 4
+F00:0510       	.sdreg	29
+F00:0511          #====================================================
+F00:0512       # Basic Block 0
+F00:0513       #====================================================
+F00:0514       _my_rand:
+F00:0515         enter    64
+               S01:00000590:  AF 80 FF FF
+F00:0516         sths     s0,0[sp]
+               S01:00000594:  95 D6 07 00
+F00:0517         sths     s1,16[sp]
+               S01:00000598:  95 D8 87 00
+F00:0518         sths     s2,32[sp]
+               S01:0000059C:  95 DA 07 01
+F00:0519         sths     s3,48[sp]
+               S01:000005A0:  95 DC 87 01
+F00:0520       # int:32* pRand = 0;
+F00:0521         mov      s0,r0
+               S01:000005A4:  1D 16 00 00
+F00:0522       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x140) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((énÐ
+F00:0523         exi56    115345024
+               S01:000005A8:  4C 80 06 E0 06 00 00 00
+F00:0524         ldi      s3,4416
+               S01:000005B0:  D4 1C 00 8A 00 00
+F00:0525       # a1 = ((0xFF94) << 64)|(0xFF94)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0526         exim     4329327034368
+               S01:000005B6:  50 00 00 00 00 E0 07 00
+F00:0527         exi56    71938915501604864
+               S01:000005BE:  4C 00 00 00 00 10 94 FF
+F00:0528         ldi      s2,65428
+               S01:000005C6:  D4 1A A0 FC 07 00
+F00:0529       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:0530         push     s3,s2
+               S01:000005CC:  AD 5C 03 00
+F00:0531         jsr      _MapPage
+               S01:000005D0:  20 72 07 00 00 00 [R]
+F00:0532       # pRand += (0xFF940000/sizeof(int:32));
+F00:0533         add      s0,s0,4287889408
+               S01:000005D6:  49 FE 00 00 D4 D6 02 00 A0 FC
+F00:0534       # pRand[1] = ch;
+F00:0535         ldo      t0,64[fp]
+               S01:000005E0:  86 86 07 02 00 00
+F00:0536         stt      t0,4[s0]
+               S01:000005E6:  92 C6 22 00 00 00
+F00:0537       # r = *pRand;
+F00:0538         ldt      s1,[s0]
+               S01:000005EC:  84 D8 02 00 00 00
+F00:0539       # *pRand = r;
+F00:0540         stt      s1,[s0]
+               S01:000005F2:  92 D8 02 00 00 00
+F00:0541       # return (r);
+F00:0542         mov      a0,s1
+               S01:000005F8:  1D 02 03 00
+F00:0543       .00092:
+F00:0544         ldhs     s0,0[sp]
+               S01:000005FC:  89 D6 07 00
+F00:0545         ldhs     s1,16[sp]
+               S01:00000600:  89 D8 87 00
+F00:0546         ldhs     s2,32[sp]
+               S01:00000604:  89 DA 07 01
+F00:0547         ldhs     s3,48[sp]
+               S01:00000608:  89 DC 87 01
+F00:0548         leave    16
+               S01:0000060C:  BF 20 00 00
+F00:0549       	.type	_my_rand,@function
+F00:0550       	.size	_my_rand,$-_my_rand
+F00:0551       #--}
+F00:0552        
+F00:0553       #{++ _bypassTest
+F00:0554       	.align 4
+F00:0555       	.sdreg	29
+F00:0556       #====================================================
+F00:0557       # Basic Block 0
+F00:0558       #====================================================
+F00:0559       _bypassTest:
+F00:0560         enter    0
+               S01:00000610:  AF 00 00 00
+F00:0561       # __asm {
+F00:0562         #asm     
+F00:0563       			ldi		a0,1
+               S01:00000614:  04 02 08 00
+F00:0564       			add		a1,a0,1
+               S01:00000618:  04 44 08 00
+F00:0565       			add		a2,a0,1
+               S01:0000061C:  04 6C 08 00
+F00:0566       			add		a3,a1,a2
+               S01:00000620:  19 AE B0 00
+F00:0567       			ldo		a4,_DBGAttr
+               S01:00000624:  86 30 C0 28 00 00 [R]
+F00:0568       			or		a4,a4,a3
+               S01:0000062A:  1D 30 BE 00
+F00:0569       			add		a4,a4,'0'
+               S01:0000062E:  04 30 86 01
+F00:0570       			sto		a4,0xFF800378
+               S01:00000632:  49 FE 00 00 93 30 C0 1B 00 FC
+F00:0571       			slt		a5,a4,'0'
+               S01:0000063C:  18 32 86 01
+F00:0572       			ldo		a4,_DBGAttr
+               S01:00000640:  86 30 C0 28 00 00 [R]
+F00:0573       			or		a4,a5,'0'
+               S01:00000646:  09 70 86 01
+F00:0574       			sto		a4,0xFF800370
+               S01:0000064A:  49 FE 00 00 93 30 80 1B 00 FC
+F00:0575       .00102:
+F00:0576         leave    0
+               S01:00000654:  BF 00 00 00
+F00:0577       	.type	_bypassTest,@function
+F00:0578       	.size	_bypassTest,$-_bypassTest
+F00:0579       #--}
+F00:0580        
+F00:0581       #{++ _ramtest
+F00:0582       	.align 4
+F00:0583       	.sdreg	29
+F00:0584       #====================================================
+F00:0585       # Basic Block 0
+F00:0586       #====================================================
+F00:0587       _ramtest:
+F00:0588         enter    0
+               S01:00000660:  AF 00 00 00
+F00:0589       .00112:
+F00:0590         leave    0
+               S01:00000664:  BF 00 00 00
+F00:0591       	.type	_ramtest,@function
+F00:0592       	.size	_ramtest,$-_ramtest
+F00:0593       #--}
+F00:0594         
+F00:0595       #{++ _TstDisplayChar
+F00:0596       	.align 4
+F00:0597       	.sdreg	29
+F00:0598        #====================================================
+F00:0599       # Basic Block 0
+F00:0600       #====================================================
+F00:0601       _TstDisplayChar:
+F00:0602         enter    16
+               S01:00000670:  AF E0 FF FF
+F00:0603         lea      gp,_bss_start
+               S01:00000674:  8A 3A 00 00 00 00 [R]
+F00:0604         sths     s0,0[sp]
+               S01:0000067A:  95 D6 07 00
+F00:0605       # int:64* pScreen = 0;
+F00:0606         mov      s0,r0
+               S01:0000067E:  1D 16 00 00
+F00:0607       # pScreen += (0xFF800000/sizeof(int));
+F00:0608         add      s0,s0,4286578688
+               S01:00000682:  49 FE 00 00 D4 D6 02 00 00 FC
+F00:0609       # pScreen[scrpos++] = DBGAttr|n;
+F00:0610         ldo      t1,_scrpos[gp]
+               S01:0000068C:  86 48 47 28 00 00 [R]
+F00:0611         ldo      t2,_scrpos[gp]
+               S01:00000692:  86 4A 47 28 00 00 [R]
+F00:0612         add      t2,t2,1
+               S01:00000698:  04 4A 09 00
+F00:0613         sto      t2,_scrpos[gp]
+               S01:0000069C:  93 4A 47 28 00 00 [R]
+F00:0614         sll      t0,t1,3
+               S01:000006A2:  58 06 19 02
+F00:0615         ldo      t2,_DBGAttr[gp]
+               S01:000006A6:  86 4A C7 28 00 00 [R]
+F00:0616         ldo      t3,64[fp]
+               S01:000006AC:  86 8C 07 02 00 00
+F00:0617         or       t1,t2,t3
+               S01:000006B2:  1D 48 31 00
+F00:0618         sto      t1,[t0+s0]
+               S01:000006B6:  C3 C8 58 00 00 00
+F00:0619       .00122:
+F00:0620         ldhs     s0,0[sp]
+               S01:000006BC:  89 D6 07 00
+F00:0621         leave    16
+               S01:000006C0:  BF 20 00 00
+F00:0622       	.type	_TstDisplayChar,@function
+F00:0623       	.size	_TstDisplayChar,$-_TstDisplayChar
+F00:0624       #--}
+F00:0625         
+F00:0626       #{++ _PutNybble
+F00:0627       	.align 4
+F00:0628       	.sdreg	29
+F00:0629       #====================================================
+F00:0630       # Basic Block 0
+F00:0631       #====================================================
+F00:0632       _PutNybble:
+F00:0633         enter    16
+               S01:000006D0:  AF E0 FF FF
+F00:0634         sths     s0,0[sp]
+               S01:000006D4:  95 D6 07 00
+F00:0635         ldo      s0,64[fp]
+               S01:000006D8:  86 96 07 02 00 00
+F00:0636         and      s0,s0,15
+               S01:000006DE:  08 D6 7A 00
+F00:0637       # n = n | '0';
+F00:0638         ldi      t1,48
+               S01:000006E2:  04 08 80 01
+F00:0639         sxc      t1,t1
+               S01:000006E6:  AA 08 01 F0 11 0A
+F00:0640         or       s0,s0,t1
+               S01:000006EC:  1D D6 22 00
+F00:0641       # if (n > '9')
+F00:0642         ldi      t0,57
+               S01:000006F0:  04 06 C8 01
+F00:0643         sxc      t0,t0
+               S01:000006F4:  AA C6 00 F0 11 0A
+F00:0644         bge      t0,s0,.00135
+               S01:000006FA:  29 C0 58 FC 00 00
+F00:0645       # n = n + 7;
+F00:0646         add      s0,s0,7
+               S01:00000700:  04 D6 3A 00
+F00:0647       .00135:
+F00:0648       # DBGDisplayChar(n);
+F00:0649         push     s0
+               S01:00000704:  AC 16
+F00:0650         jsr      _DBGDisplayChar
+               S01:00000706:  20 42 5B 00 00 00 [R]
+F00:0651         push     s0
+               S01:0000070C:  AC 16
+F00:0652         jsr      _DBGDisplayChar
+               S01:0000070E:  20 42 5B 00 00 00 [R]
+F00:0653       .00134:
+F00:0654         ldhs     s0,0[sp]
+               S01:00000714:  89 D6 07 00
+F00:0655         leave    16
+               S01:00000718:  BF 20 00 00
+F00:0656       	.type	_PutNybble,@function
+F00:0657       	.size	_PutNybble,$-_PutNybble
+F00:0658       #--}
+F00:0659         
+F00:0660       #{++ _PutByte
+F00:0661       	.align 4
+F00:0662       	.sdreg	29
+F00:0663       #====================================================
+F00:0664       # Basic Block 0
+F00:0665       #====================================================
+F00:0666       _PutByte:
+F00:0667         enter    16
+               S01:00000720:  AF E0 FF FF
+F00:0668         sths     s0,0[sp]
+               S01:00000724:  95 D6 07 00
+F00:0669         ldo      s0,64[fp]
+               S01:00000728:  86 96 07 02 00 00
+F00:0670       # PutNybble(n >> 4);
+F00:0671         sra      t0,s0,4
+               S01:0000072E:  02 C6 22 02 00 84
+F00:0672         push     t0
+               S01:00000734:  AC 06
+F00:0673         jsr      _PutNybble
+               S01:00000736:  20 42 1B 00 00 00 [R]
+F00:0674       # PutNybble(n);
+F00:0675         push     s0
+               S01:0000073C:  AC 16
+F00:0676         jsr      _PutNybble
+               S01:0000073E:  20 42 1B 00 00 00 [R]
+F00:0677       .00146:
+F00:0678         ldhs     s0,0[sp]
+               S01:00000744:  89 D6 07 00
+F00:0679         leave    16
+               S01:00000748:  BF 20 00 00
+F00:0680       	.type	_PutByte,@function
+F00:0681       	.size	_PutByte,$-_PutByte
+F00:0682       #--}
+F00:0683         
+F00:0684       #{++ _PutWyde
+F00:0685       	.align 4
+F00:0686       	.sdreg	29
+F00:0687       #====================================================
+F00:0688       # Basic Block 0
+F00:0689       #====================================================
+F00:0690       _PutWyde:
+F00:0691         enter    16
+               S01:00000750:  AF E0 FF FF
+F00:0692         sths     s0,0[sp]
+               S01:00000754:  95 D6 07 00
+F00:0693         ldo      s0,64[fp]
+               S01:00000758:  86 96 07 02 00 00
+F00:0694       # PutByte(n >> 8);
+F00:0695         sra      t0,s0,8
+               S01:0000075E:  02 C6 42 02 00 84
+F00:0696         push     t0
+               S01:00000764:  AC 06
+F00:0697         jsr      _PutByte
+               S01:00000766:  20 82 1C 00 00 00 [R]
+F00:0698       # PutByte(n);
+F00:0699         push     s0
+               S01:0000076C:  AC 16
+F00:0700         jsr      _PutByte
+               S01:0000076E:  20 82 1C 00 00 00 [R]
+F00:0701       .00156:
+F00:0702         ldhs     s0,0[sp]
+               S01:00000774:  89 D6 07 00
+F00:0703         leave    16
+               S01:00000778:  BF 20 00 00
+F00:0704       	.type	_PutWyde,@function
+F00:0705       	.size	_PutWyde,$-_PutWyde
+F00:0706       #--}
+F00:0707         
+F00:0708       #{++ _PutTetra
+F00:0709       	.align 4
+F00:0710       	.sdreg	29
+F00:0711       #====================================================
+F00:0712       # Basic Block 0
+F00:0713       #====================================================
+F00:0714       _PutTetra:
+F00:0715         enter    16
+               S01:00000780:  AF E0 FF FF
+F00:0716         sths     s0,0[sp]
+               S01:00000784:  95 D6 07 00
+F00:0717         ldo      s0,64[fp]
+               S01:00000788:  86 96 07 02 00 00
+F00:0718       # PutWyde(n >> 16);
+F00:0719         sra      t0,s0,16
+               S01:0000078E:  02 C6 82 02 00 84
+F00:0720         push     t0
+               S01:00000794:  AC 06
+F00:0721         jsr      _PutWyde
+               S01:00000796:  20 42 1D 00 00 00 [R]
+F00:0722       # PutWyde(n);
+F00:0723         push     s0
+               S01:0000079C:  AC 16
+F00:0724         jsr      _PutWyde
+               S01:0000079E:  20 42 1D 00 00 00 [R]
+F00:0725       .00166:
+F00:0726         ldhs     s0,0[sp]
+               S01:000007A4:  89 D6 07 00
+F00:0727         leave    16
+               S01:000007A8:  BF 20 00 00
+F00:0728       	.type	_PutTetra,@function
+F00:0729       	.size	_PutTetra,$-_PutTetra
+F00:0730       #--}
+F00:0731         
+F00:0732       #{++ _PutOcta
+F00:0733       	.align 4
+F00:0734       	.sdreg	29
+F00:0735       #====================================================
+F00:0736       # Basic Block 0
+F00:0737       #====================================================
+F00:0738       _PutOcta:
+F00:0739         enter    16
+               S01:000007B0:  AF E0 FF FF
+F00:0740         sths     s0,0[sp]
+               S01:000007B4:  95 D6 07 00
+F00:0741         ldo      s0,64[fp]
+               S01:000007B8:  86 96 07 02 00 00
+F00:0742       # PutTetra(n >> 32);
+F00:0743         sra      t0,s0,32
+               S01:000007BE:  02 C6 02 02 00 84
+F00:0744         push     t0
+               S01:000007C4:  AC 06
+F00:0745         jsr      _PutTetra
+               S01:000007C6:  20 02 1E 00 00 00 [R]
+F00:0746       # PutTetra(n);
+F00:0747         push     s0
+               S01:000007CC:  AC 16
+F00:0748         jsr      _PutTetra
+               S01:000007CE:  20 02 1E 00 00 00 [R]
+F00:0749       .00176:
+F00:0750         ldhs     s0,0[sp]
+               S01:000007D4:  89 D6 07 00
+F00:0751         leave    16
+               S01:000007D8:  BF 20 00 00
+F00:0752       	.type	_PutOcta,@function
+F00:0753       	.size	_PutOcta,$-_PutOcta
+F00:0754       #--}
+F00:0755        
+F00:0756       #{++ _FlashLEDs
+F00:0757       	.align 4
+F00:0758       	.sdreg	29
+F00:0759         #====================================================
+F00:0760       # Basic Block 0
+F00:0761       #====================================================
+F00:0762       _FlashLEDs:
+F00:0763         enter    48
+               S01:000007E0:  AF A0 FF FF
+F00:0764         sths     s0,0[sp]
+               S01:000007E4:  95 D6 07 00
+F00:0765         sths     s1,16[sp]
+               S01:000007E8:  95 D8 87 00
+F00:0766         sths     s2,32[sp]
+               S01:000007EC:  95 DA 07 01
+F00:0767         ldi      s2,2000000
+               S01:000007F0:  D4 1A 00 24 F4 00
+F00:0768       # int:16* pLEDS = 0;
+F00:0769         mov      s1,r0
+               S01:000007F6:  1D 18 00 00
+F00:0770       # pLEDS += (0xFF910000/sizeof(int:16));
+F00:0771         add      s1,s1,4287692800
+               S01:000007FA:  49 FE 00 00 D4 18 03 00 88 FC
+F00:0772       # *pLEDS = 0xAAAA;
+F00:0773         ldi      t0,43690
+               S01:00000804:  D4 06 50 55 05 00
+F00:0774         stw      t0,[s1]
+               S01:0000080A:  91 06 03 00 00 00
+F00:0775       # for (n = 0; n < 2000000; n++)
+F00:0776         mov      s0,r0
+               S01:00000810:  1D 16 00 00
+F00:0777         bge      s0,s2,.00191
+               S01:00000814:  29 C0 6A FC 01 00
+F00:0778       .00190:
+F00:0779       # *pLEDS = n >> 13;
+F00:0780         sra      t0,s0,13
+               S01:0000081A:  02 C6 6A 02 00 84
+F00:0781         stw      t0,[s1]
+               S01:00000820:  91 06 03 00 00 00
+F00:0782         add      s0,s0,1
+               S01:00000826:  04 D6 0A 00
+F00:0783         blt      s0,s2,.00190
+               S01:0000082A:  28 C0 6A FC FF FF
+F00:0784       .00191:
+F00:0785       .00189:
+F00:0786         ldhs     s0,0[sp]
+               S01:00000830:  89 D6 07 00
+F00:0787         ldhs     s1,16[sp]
+               S01:00000834:  89 D8 87 00
+F00:0788         ldhs     s2,32[sp]
+               S01:00000838:  89 DA 07 01
+F00:0789         leave    0
+               S01:0000083C:  BF 00 00 00
+F00:0790       	.type	_FlashLEDs,@function
+F00:0791       	.size	_FlashLEDs,$-_FlashLEDs
+F00:0792       #--}
+F00:0793         
+F00:0794       #{++ _ShowSprites
+F00:0795       	.align 4
+F00:0796       	.sdreg	29
+F00:0797         
+F00:0798       	.align	4
+F00:0799       	.align 4
+F00:0800       	.sdreg	29
+F00:0801             #====================================================
+F00:0802       # Basic Block 0
+F00:0803       #====================================================
+F00:0804       _SetSpriteColor:
+F00:0805         enter    128
+               S01:00000840:  AF 00 FF FF
+F00:0806         lea      gp,_bss_start
+               S01:00000844:  8A 3A 00 00 00 00 [R]
+F00:0807         sths     s0,0[sp]
+               S01:0000084A:  95 D6 07 00
+F00:0808         sths     s1,16[sp]
+               S01:0000084E:  95 D8 87 00
+F00:0809         sths     s2,32[sp]
+               S01:00000852:  95 DA 07 01
+F00:0810         sths     s3,48[sp]
+               S01:00000856:  95 DC 87 01
+F00:0811         sths     s4,64[sp]
+               S01:0000085A:  95 DE 07 02
+F00:0812         sths     s5,80[sp]
+               S01:0000085E:  95 E0 87 02
+F00:0813         sths     s6,96[sp]
+               S01:00000862:  95 E2 07 03
+F00:0814         sths     s7,112[sp]
+               S01:00000866:  95 E4 87 03
+F00:0815       # int:16* pSpr = 0;
+F00:0816         mov      s5,r0
+               S01:0000086A:  1D 20 00 00
+F00:0817         mov      s4,r0
+               S01:0000086E:  1D 1E 00 00
+F00:0818         ldi      t0,4287300568
+               S01:00000872:  49 FE 00 00 D4 06 C0 1E 58 FC
+F00:0819         sto      t0,-88[fp]
+               S01:0000087C:  93 86 47 FD FF FF
+F00:0820       # pScreen += (0xFF800000/sizeof(int));
+F00:0821         add      s4,s4,4286578688
+               S01:00000882:  49 FE 00 00 D4 DE 03 00 00 FC
+F00:0822       # pScreen[10] = DBGAttr|'A';
+F00:0823         ldo      t1,_DBGAttr[gp]
+               S01:0000088C:  86 48 C7 28 00 00 [R]
+F00:0824         ldi      t2,65
+               S01:00000892:  04 0A 08 02
+F00:0825         sxc      t2,t2
+               S01:00000896:  AA 4A 01 F0 11 0A
+F00:0826         or       t0,t1,t2
+               S01:0000089C:  1D 06 29 00
+F00:0827         sto      t0,80[s4]
+               S01:000008A0:  93 C6 83 02 00 00
+F00:0828       # pScreen[11] = DBGAttr + 'A';
+F00:0829         ldo      t1,_DBGAttr[gp]
+               S01:000008A6:  86 48 C7 28 00 00 [R]
+F00:0830         ldi      t2,65
+               S01:000008AC:  04 0A 08 02
+F00:0831         sxc      t2,t2
+               S01:000008B0:  AA 4A 01 F0 11 0A
+F00:0832         add      t0,t1,t2
+               S01:000008B6:  19 06 29 00
+F00:0833         sto      t0,88[s4]
+               S01:000008BA:  93 C6 C3 02 00 00
+F00:0834       # pSpr += (0x00300000/sizeof(int:16));
+F00:0835         add      s5,s5,3145728
+               S01:000008C0:  D4 20 04 00 80 01
+F00:0836       # pScreen[12] = DBGAttr + 'A';
+F00:0837         ldo      t1,_DBGAttr[gp]
+               S01:000008C6:  86 48 C7 28 00 00 [R]
+F00:0838         ldi      t2,65
+               S01:000008CC:  04 0A 08 02
+F00:0839         sxc      t2,t2
+               S01:000008D0:  AA 4A 01 F0 11 0A
+F00:0840         add      t0,t1,t2
+               S01:000008D6:  19 06 29 00
+F00:0841         sto      t0,96[s4]
+               S01:000008DA:  93 C6 03 03 00 00
+F00:0842       # for (m = 0; m < 32; m++) {
+F00:0843         mov      s1,r0
+               S01:000008E0:  1D 18 00 00
+F00:0844         sgt      t0,s1,31
+               S01:000008E4:  1B 06 FB 00
+F00:0845         bnez     t0,.00244
+               S01:000008E8:  12 C8 18 E0
+F00:0846       .00243:
+F00:0847       # pScreen[11] = DBGAttr + 'A' + m;
+F00:0848         ldo      t2,_DBGAttr[gp]
+               S01:000008EC:  86 4A C7 28 00 00 [R]
+F00:0849         ldi      t3,65
+               S01:000008F2:  04 0C 08 02
+F00:0850         sxc      t3,t3
+               S01:000008F6:  AA 8C 01 F0 11 0A
+F00:0851         add      t1,t2,t3
+               S01:000008FC:  19 48 31 00
+F00:0852         add      t0,t1,s1
+               S01:00000900:  19 06 61 00
+F00:0853         sto      t0,88[s4]
+               S01:00000904:  93 C6 C3 02 00 00
+F00:0854       # c = my_rand(0);
+F00:0855         push     r0
+               S01:0000090A:  AC 00
+F00:0856         jsr      _my_rand
+               S01:0000090C:  20 42 16 00 00 00 [R]
+F00:0857         mov      t0,a0
+               S01:00000912:  1D 46 00 00
+F00:0858         mov      s3,t0
+               S01:00000916:  1D DC 00 00
+F00:0859       # k = m * 2048;
+F00:0860         sll      s2,s1,11
+               S01:0000091A:  58 1A 5B 02
+F00:0861       # for (n = 0; n < 2048; n++) {
+F00:0862         mov      s0,r0
+               S01:0000091E:  1D 16 00 00
+F00:0863         sgt      t0,s0,2047
+               S01:00000922:  1B C6 FA 3F
+F00:0864         bnez     t0,.00247
+               S01:00000926:  12 DE 00 E0
+F00:0865       .00246:
+F00:0866       # pSpr[k + n] = c;
+F00:0867         add      t1,s2,s0
+               S01:0000092A:  19 48 5B 00
+F00:0868         sll      t0,t1,1
+               S01:0000092E:  58 06 09 02
+F00:0869         stw      s3,[t0+s5]
+               S01:00000932:  C1 DC 80 00 00 00
+F00:0870         add      s0,s0,1
+               S01:00000938:  04 D6 0A 00
+F00:0871         slt      t0,s0,2048
+               S01:0000093C:  18 C6 02 00
+F00:0872         bnez     t0,.00246
+               S01:00000940:  12 CA F8 FF
+F00:0873       .00247:
+F00:0874         add      s1,s1,1
+               S01:00000944:  04 18 0B 00
+F00:0875         slt      t0,s1,32
+               S01:00000948:  18 06 03 01
+F00:0876         bnez     t0,.00243
+               S01:0000094C:  12 C0 E8 FF
+F00:0877       .00244:
+F00:0878       # c = 0x7fff;
+F00:0879         ldi      s3,32767
+               S01:00000950:  D4 1C F8 FF 03 00
+F00:0880       # for (m = 0; m < 32; m++) {
+F00:0881         mov      s1,r0
+               S01:00000956:  1D 18 00 00
+F00:0882         sgt      t0,s1,31
+               S01:0000095A:  1B 06 FB 00
+F00:0883         bnez     t0,.00250
+               S01:0000095E:  12 D2 48 E0
+F00:0884       .00249:
+F00:0885       # pScreen[12] = DBGAttr + 'A' + m;
+F00:0886         ldo      t2,_DBGAttr[gp]
+               S01:00000962:  86 4A C7 28 00 00 [R]
+F00:0887         ldi      t3,65
+               S01:00000968:  04 0C 08 02
+F00:0888         sxc      t3,t3
+               S01:0000096C:  AA 8C 01 F0 11 0A
+F00:0889         add      t1,t2,t3
+               S01:00000972:  19 48 31 00
+F00:0890         add      t0,t1,s1
+               S01:00000976:  19 06 61 00
+F00:0891         sto      t0,96[s4]
+               S01:0000097A:  93 C6 03 03 00 00
+F00:0892       # k = m * 2048;
+F00:0893         sll      s2,s1,11
+               S01:00000980:  58 1A 5B 02
+F00:0894       # for (n = 0; n < 56; n++)	// Top
+F00:0895         mov      s0,r0
+               S01:00000984:  1D 16 00 00
+F00:0896         sgt      t0,s0,55
+               S01:00000988:  1B C6 BA 01
+F00:0897         bnez     t0,.00253
+               S01:0000098C:  12 DE 00 E0
+F00:0898       .00252:
+F00:0899       # pSpr[k + n] = c;
+F00:0900         add      t1,s2,s0
+               S01:00000990:  19 48 5B 00
+F00:0901         sll      t0,t1,1
+               S01:00000994:  58 06 09 02
+F00:0902         stw      s3,[t0+s5]
+               S01:00000998:  C1 DC 80 00 00 00
+F00:0903         add      s0,s0,1
+               S01:0000099E:  04 D6 0A 00
+F00:0904         slt      t0,s0,56
+               S01:000009A2:  18 C6 C2 01
+F00:0905         bnez     t0,.00252
+               S01:000009A6:  12 CA F8 FF
+F00:0906       .00253:
+F00:0907       # for (n = 0; n < 56; n++)	// Bottom
+F00:0908         mov      s0,r0
+               S01:000009AA:  1D 16 00 00
+F00:0909         sgt      t0,s0,55
+               S01:000009AE:  1B C6 BA 01
+F00:0910         bnez     t0,.00256
+               S01:000009B2:  12 C2 08 E0
+F00:0911       .00255:
+F00:0912       # pSpr[k + 35*56 + n] = c;
+F00:0913         add      t2,s2,1960
+               S01:000009B6:  04 4A 43 3D
+F00:0914         add      t1,t2,s0
+               S01:000009BA:  19 48 59 00
+F00:0915         sll      t0,t1,1
+               S01:000009BE:  58 06 09 02
+F00:0916         stw      s3,[t0+s5]
+               S01:000009C2:  C1 DC 80 00 00 00
+F00:0917         add      s0,s0,1
+               S01:000009C8:  04 D6 0A 00
+F00:0918         slt      t0,s0,56
+               S01:000009CC:  18 C6 C2 01
+F00:0919         bnez     t0,.00255
+               S01:000009D0:  12 C6 F8 FF
+F00:0920       .00256:
+F00:0921       # for (n = 0; n < 36; n++)	// Left
+F00:0922         mov      s0,r0
+               S01:000009D4:  1D 16 00 00
+F00:0923         sgt      t0,s0,35
+               S01:000009D8:  1B C6 1A 01
+F00:0924         bnez     t0,.00259
+               S01:000009DC:  12 C2 08 E0
+F00:0925       .00258:
+F00:0926       # pSpr[k + n * 56] = c;
+F00:0927         mul      t2,s0,56
+               S01:000009E0:  06 CA C2 01
+F00:0928         add      t1,s2,t2
+               S01:000009E4:  19 48 2B 00
+F00:0929         sll      t0,t1,1
+               S01:000009E8:  58 06 09 02
+F00:0930         stw      s3,[t0+s5]
+               S01:000009EC:  C1 DC 80 00 00 00
+F00:0931         add      s0,s0,1
+               S01:000009F2:  04 D6 0A 00
+F00:0932         slt      t0,s0,36
+               S01:000009F6:  18 C6 22 01
+F00:0933         bnez     t0,.00258
+               S01:000009FA:  12 C6 F8 FF
+F00:0934       .00259:
+F00:0935       # for (n = 0; n < 36; n++)	// Right
+F00:0936         mov      s0,r0
+               S01:000009FE:  1D 16 00 00
+F00:0937         sgt      t0,s0,35
+               S01:00000A02:  1B C6 1A 01
+F00:0938         bnez     t0,.00262
+               S01:00000A06:  12 C6 08 E0
+F00:0939       .00261:
+F00:0940       # pSpr[k + 55 + n * 56] = c;
+F00:0941         add      t2,s2,55
+               S01:00000A0A:  04 4A BB 01
+F00:0942         mul      t3,s0,56
+               S01:00000A0E:  06 CC C2 01
+F00:0943         add      t1,t2,t3
+               S01:00000A12:  19 48 31 00
+F00:0944         sll      t0,t1,1
+               S01:00000A16:  58 06 09 02
+F00:0945         stw      s3,[t0+s5]
+               S01:00000A1A:  C1 DC 80 00 00 00
+F00:0946         add      s0,s0,1
+               S01:00000A20:  04 D6 0A 00
+F00:0947         slt      t0,s0,36
+               S01:00000A24:  18 C6 22 01
+F00:0948         bnez     t0,.00261
+               S01:00000A28:  12 C2 F8 FF
+F00:0949       .00262:
+F00:0950       # for (n = 0; n < 36; n++)
+F00:0951         mov      s0,r0
+               S01:00000A2C:  1D 16 00 00
+F00:0952         sgt      t0,s0,35
+               S01:00000A30:  1B C6 1A 01
+F00:0953         bnez     t0,.00265
+               S01:00000A34:  12 C2 08 E0
+F00:0954       .00264:
+F00:0955       # pSpr[k + n * 57] = c;
+F00:0956         mul      t2,s0,57
+               S01:00000A38:  06 CA CA 01
+F00:0957         add      t1,s2,t2
+               S01:00000A3C:  19 48 2B 00
+F00:0958         sll      t0,t1,1
+               S01:00000A40:  58 06 09 02
+F00:0959         stw      s3,[t0+s5]
+               S01:00000A44:  C1 DC 80 00 00 00
+F00:0960         add      s0,s0,1
+               S01:00000A4A:  04 D6 0A 00
+F00:0961         slt      t0,s0,36
+               S01:00000A4E:  18 C6 22 01
+F00:0962         bnez     t0,.00264
+               S01:00000A52:  12 C6 F8 FF
+F00:0963       .00265:
+F00:0964       # for (n = 0; n < 36; n++)
+F00:0965         mov      s0,r0
+               S01:00000A56:  1D 16 00 00
+F00:0966         sgt      t0,s0,35
+               S01:00000A5A:  1B C6 1A 01
+F00:0967         bnez     t0,.00268
+               S01:00000A5E:  12 C6 08 E0
+F00:0968       .00267:
+F00:0969       # pSpr[k + n * 55 + 55] = c;
+F00:0970         mul      t3,s0,55
+               S01:00000A62:  06 CC BA 01
+F00:0971         add      t2,s2,t3
+               S01:00000A66:  19 4A 33 00
+F00:0972         add      t1,t2,55
+               S01:00000A6A:  04 48 B9 01
+F00:0973         sll      t0,t1,1
+               S01:00000A6E:  58 06 09 02
+F00:0974         stw      s3,[t0+s5]
+               S01:00000A72:  C1 DC 80 00 00 00
+F00:0975         add      s0,s0,1
+               S01:00000A78:  04 D6 0A 00
+F00:0976         slt      t0,s0,36
+               S01:00000A7C:  18 C6 22 01
+F00:0977         bnez     t0,.00267
+               S01:00000A80:  12 C2 F8 FF
+F00:0978       .00268:
+F00:0979         add      s1,s1,1
+               S01:00000A84:  04 18 0B 00
+F00:0980         slt      t0,s1,32
+               S01:00000A88:  18 06 03 01
+F00:0981         bnez     t0,.00249
+               S01:00000A8C:  12 D6 B0 FF
+F00:0982       .00250:
+F00:0983       # pScreen[13] = DBGAttr + 'A' + m;
+F00:0984         ldo      t2,_DBGAttr[gp]
+               S01:00000A90:  86 4A C7 28 00 00 [R]
+F00:0985         ldi      t3,65
+               S01:00000A96:  04 0C 08 02
+F00:0986         sxc      t3,t3
+               S01:00000A9A:  AA 8C 01 F0 11 0A
+F00:0987         add      t1,t2,t3
+               S01:00000AA0:  19 48 31 00
+F00:0988         add      t0,t1,s1
+               S01:00000AA4:  19 06 61 00
+F00:0989         sto      t0,104[s4]
+               S01:00000AA8:  93 C6 43 03 00 00
+F00:0990       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x0B0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((tªïØ
+F00:0991         exi56    115345024
+               S01:00000AAE:  4C 80 06 E0 06 00 00 00
+F00:0992         ldi      s7,4272
+               S01:00000AB6:  D4 24 80 85 00 00
+F00:0993       # a1 = ((0xFF8B) << 64)|(0xFF8B)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:0994         exim     4329327034368
+               S01:00000ABC:  50 00 00 00 00 E0 07 00
+F00:0995         exi56    71929019896954880
+               S01:00000AC4:  4C 00 00 00 00 10 8B FF
+F00:0996         ldi      s6,65419
+               S01:00000ACC:  D4 22 58 FC 07 00
+F00:0997       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:0998         push     s7,s6
+               S01:00000AD2:  AD 64 04 00
+F00:0999         jsr      _MapPage
+               S01:00000AD6:  20 72 07 00 00 00 [R]
+F00:1000       # *pSprVDT = 0xFFFFFFFF;
+F00:1001         ldi      t0,4294967295
+               S01:00000ADC:  49 FE 00 00 D4 06 F8 FF FF FF
+F00:1002       # for (m = 0; m < 10000000; m++)
+F00:1003         mov      s1,r0
+               S01:00000AE6:  1D 18 00 00
+F00:1004         sgt      t0,s1,9999999
+               S01:00000AEA:  DB 06 FB B3 C4 04
+F00:1005         bnez     t0,.00271
+               S01:00000AF0:  12 D2 00 E0
+F00:1006       .00270:
+F00:1007       # ;
+F00:1008         add      s1,s1,1
+               S01:00000AF4:  04 18 0B 00
+F00:1009         slt      t0,s1,10000000
+               S01:00000AF8:  D3 06 03 B4 C4 04
+F00:1010         bnez     t0,.00270
+               S01:00000AFE:  12 D6 F8 FF
+F00:1011       .00271:
+F00:1012       # pScreen[14] = DBGAttr + 'A' + m;
+F00:1013         ldo      t2,_DBGAttr[gp]
+               S01:00000B02:  86 4A C7 28 00 00 [R]
+F00:1014         ldi      t3,65
+               S01:00000B08:  04 0C 08 02
+F00:1015         sxc      t3,t3
+               S01:00000B0C:  AA 8C 01 F0 11 0A
+F00:1016         add      t1,t2,t3
+               S01:00000B12:  19 48 31 00
+F00:1017         add      t0,t1,s1
+               S01:00000B16:  19 06 61 00
+F00:1018         sto      t0,112[s4]
+               S01:00000B1A:  93 C6 83 03 00 00
+F00:1019       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x0B0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((dÜÿÖ
+F00:1020         exi56    115345024
+               S01:00000B20:  4C 80 06 E0 06 00 00 00
+F00:1021         ldi      s7,4272
+               S01:00000B28:  D4 24 80 85 00 00
+F00:1022       # a1 = ((0xFF8B) << 64)|(0xFF8B)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1023         exim     4329327034368
+               S01:00000B2E:  50 00 00 00 00 E0 07 00
+F00:1024         exi56    71929019896954880
+               S01:00000B36:  4C 00 00 00 00 10 8B FF
+F00:1025         ldi      s6,65419
+               S01:00000B3E:  D4 22 58 FC 07 00
+F00:1026       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:1027         push     s7,s6
+               S01:00000B44:  AD 64 04 00
+F00:1028         jsr      _MapPage
+               S01:00000B48:  20 72 07 00 00 00 [R]
+F00:1029       # *pSprVDT = 0xFFFFFFFF;
+F00:1030         ldi      t0,4294967295
+               S01:00000B4E:  49 FE 00 00 D4 06 F8 FF FF FF
+F00:1031       .00242:
+F00:1032         ldhs     s0,0[sp]
+               S01:00000B58:  89 D6 07 00
+F00:1033         ldhs     s1,16[sp]
+               S01:00000B5C:  89 D8 87 00
+F00:1034         ldhs     s2,32[sp]
+               S01:00000B60:  89 DA 07 01
+F00:1035         ldhs     s3,48[sp]
+               S01:00000B64:  89 DC 87 01
+F00:1036         ldhs     s4,64[sp]
+               S01:00000B68:  89 DE 07 02
+F00:1037         ldhs     s5,80[sp]
+               S01:00000B6C:  89 E0 87 02
+F00:1038         ldhs     s6,96[sp]
+               S01:00000B70:  89 E2 07 03
+F00:1039         ldhs     s7,112[sp]
+               S01:00000B74:  89 E4 87 03
+F00:1040         leave    0
+               S01:00000B78:  BF 00 00 00
+F00:1041       	.type	_SetSpriteColor,@function
+F00:1042       	.size	_SetSpriteColor,$-_SetSpriteColor
+F00:1043       #--}
+F00:1044        
+F00:1045       #{++ _SetSpritePosAndSpeed
+F00:1046       	.align 4
+F00:1047       	.sdreg	29
+F00:1048          #====================================================
+F00:1049       # Basic Block 0
+F00:1050       #====================================================
+F00:1051       _SetSpritePosAndSpeed:
+F00:1052         enter    64
+               S01:00000B80:  AF 80 FF FF
+F00:1053         lea      gp,_bss_start
+               S01:00000B84:  8A 3A 00 00 00 00 [R]
+F00:1054         sths     s0,0[sp]
+               S01:00000B8A:  95 D6 07 00
+F00:1055         sths     s1,16[sp]
+               S01:00000B8E:  95 D8 87 00
+F00:1056         sths     s2,32[sp]
+               S01:00000B92:  95 DA 07 01
+F00:1057         sths     s3,48[sp]
+               S01:00000B96:  95 DC 87 01
+F00:1058       # int:16* pSpr16 = 0;
+F00:1059         mov      s1,r0
+               S01:00000B9A:  1D 18 00 00
+F00:1060       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x0B0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((0«ß
+F00:1061         exi56    115345024
+               S01:00000B9E:  4C 80 06 E0 06 00 00 00
+F00:1062         ldi      s3,4272
+               S01:00000BA6:  D4 1C 80 85 00 00
+F00:1063       # a1 = ((0xFF8B) << 64)|(0xFF8B)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1064         exim     4329327034368
+               S01:00000BAC:  50 00 00 00 00 E0 07 00
+F00:1065         exi56    71929019896954880
+               S01:00000BB4:  4C 00 00 00 00 10 8B FF
+F00:1066         ldi      s2,65419
+               S01:00000BBC:  D4 1A 58 FC 07 00
+F00:1067       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:1068         push     s3,s2
+               S01:00000BC2:  AD 5C 03 00
+F00:1069         jsr      _MapPage
+               S01:00000BC6:  20 72 07 00 00 00 [R]
+F00:1070       # pSpr16 += (0xFF8B0000/sizeof(int:16));
+F00:1071         add      s1,s1,4287299584
+               S01:00000BCC:  49 FE 00 00 D4 18 03 00 58 FC
+F00:1072       # for (n = 0; n < 32; n++)
+F00:1073         mov      s0,r0
+               S01:00000BD6:  1D 16 00 00
+F00:1074         sgt      t0,s0,31
+               S01:00000BDA:  1B C6 FA 00
+F00:1075         bnez     t0,.00287
+               S01:00000BDE:  12 C8 60 E0
+F00:1076       .00286:
+F00:1077         sll      t0,s0,3
+               S01:00000BE2:  58 C6 1A 02
+F00:1078         lea      t1,_xx[gp]
+               S01:00000BE6:  8A 48 07 08 00 00 [R]
+F00:1079         sto      t0,-64[fp]
+               S01:00000BEC:  93 86 07 FE FF FF
+F00:1080         sto      t1,-80[fp]
+               S01:00000BF2:  93 88 87 FD FF FF
+F00:1081         sto      t2,-96[fp]
+               S01:00000BF8:  93 8A 07 FD FF FF
+F00:1082         sto      t3,-112[fp]
+               S01:00000BFE:  93 8C 87 FC FF FF
+F00:1083         push     r0
+               S01:00000C04:  AC 00
+F00:1084         jsr      _my_rand
+               S01:00000C06:  20 42 16 00 00 00 [R]
+F00:1085         ldo      t1,-80[fp]
+               S01:00000C0C:  86 88 87 FD FF FF
+F00:1086         ldo      t0,-64[fp]
+               S01:00000C12:  86 86 07 FE FF FF
+F00:1087         mov      t4,a0
+               S01:00000C18:  1D 4E 00 00
+F00:1088         and      t3,t4,511
+               S01:00000C1C:  08 CC F9 0F
+F00:1089         add      t2,t3,210
+               S01:00000C20:  04 8A 91 06
+F00:1090         sto      t2,[t0+t1]
+               S01:00000C24:  C3 CA 20 00 00 00
+F00:1091         sll      t0,s0,3
+               S01:00000C2A:  58 C6 1A 02
+F00:1092         lea      t1,_yy[gp]
+               S01:00000C2E:  8A 48 07 10 00 00 [R]
+F00:1093         sto      t0,-64[fp]
+               S01:00000C34:  93 86 07 FE FF FF
+F00:1094         sto      t1,-80[fp]
+               S01:00000C3A:  93 88 87 FD FF FF
+F00:1095         sto      t2,-96[fp]
+               S01:00000C40:  93 8A 07 FD FF FF
+F00:1096         sto      t3,-112[fp]
+               S01:00000C46:  93 8C 87 FC FF FF
+F00:1097         push     r0
+               S01:00000C4C:  AC 00
+F00:1098         jsr      _my_rand
+               S01:00000C4E:  20 42 16 00 00 00 [R]
+F00:1099         ldo      t1,-80[fp]
+               S01:00000C54:  86 88 87 FD FF FF
+F00:1100         ldo      t0,-64[fp]
+               S01:00000C5A:  86 86 07 FE FF FF
+F00:1101         mov      t4,a0
+               S01:00000C60:  1D 4E 00 00
+F00:1102         and      t3,t4,511
+               S01:00000C64:  08 CC F9 0F
+F00:1103         add      t2,t3,36
+               S01:00000C68:  04 8A 21 01
+F00:1104         sto      t2,[t0+t1]
+               S01:00000C6C:  C3 CA 20 00 00 00
+F00:1105         sll      t0,s0,3
+               S01:00000C72:  58 C6 1A 02
+F00:1106         lea      t1,_dx[gp]
+               S01:00000C76:  8A 48 07 18 00 00 [R]
+F00:1107         sto      t0,-64[fp]
+               S01:00000C7C:  93 86 07 FE FF FF
+F00:1108         sto      t1,-80[fp]
+               S01:00000C82:  93 88 87 FD FF FF
+F00:1109         sto      t2,-96[fp]
+               S01:00000C88:  93 8A 07 FD FF FF
+F00:1110         sto      t3,-112[fp]
+               S01:00000C8E:  93 8C 87 FC FF FF
+F00:1111         push     r0
+               S01:00000C94:  AC 00
+F00:1112         jsr      _my_rand
+               S01:00000C96:  20 42 16 00 00 00 [R]
+F00:1113         ldo      t1,-80[fp]
+               S01:00000C9C:  86 88 87 FD FF FF
+F00:1114         ldo      t0,-64[fp]
+               S01:00000CA2:  86 86 07 FE FF FF
+F00:1115         mov      t4,a0
+               S01:00000CA8:  1D 4E 00 00
+F00:1116         and      t3,t4,7
+               S01:00000CAC:  08 CC 39 00
+F00:1117         sub      t2,t3,4
+               S01:00000CB0:  04 8A E1 3F
+F00:1118         sto      t2,[t0+t1]
+               S01:00000CB4:  C3 CA 20 00 00 00
+F00:1119         sll      t0,s0,3
+               S01:00000CBA:  58 C6 1A 02
+F00:1120         lea      t1,_dy[gp]
+               S01:00000CBE:  8A 48 07 20 00 00 [R]
+F00:1121         sto      t0,-64[fp]
+               S01:00000CC4:  93 86 07 FE FF FF
+F00:1122         sto      t1,-80[fp]
+               S01:00000CCA:  93 88 87 FD FF FF
+F00:1123         sto      t2,-96[fp]
+               S01:00000CD0:  93 8A 07 FD FF FF
+F00:1124         sto      t3,-112[fp]
+               S01:00000CD6:  93 8C 87 FC FF FF
+F00:1125         push     r0
+               S01:00000CDC:  AC 00
+F00:1126         jsr      _my_rand
+               S01:00000CDE:  20 42 16 00 00 00 [R]
+F00:1127         ldo      t1,-80[fp]
+               S01:00000CE4:  86 88 87 FD FF FF
+F00:1128         ldo      t0,-64[fp]
+               S01:00000CEA:  86 86 07 FE FF FF
+F00:1129         mov      t4,a0
+               S01:00000CF0:  1D 4E 00 00
+F00:1130         and      t3,t4,7
+               S01:00000CF4:  08 CC 39 00
+F00:1131         sub      t2,t3,4
+               S01:00000CF8:  04 8A E1 3F
+F00:1132         sto      t2,[t0+t1]
+               S01:00000CFC:  C3 CA 20 00 00 00
+F00:1133       # pSpr16[n*8] = xx[n];
+F00:1134         sll      t1,s0,3
+               S01:00000D02:  58 C8 1A 02
+F00:1135         sll      t0,t1,1
+               S01:00000D06:  58 06 09 02
+F00:1136         sll      t1,s0,3
+               S01:00000D0A:  58 C8 1A 02
+F00:1137         lea      t2,_xx[gp]
+               S01:00000D0E:  8A 4A 07 08 00 00 [R]
+F00:1138         ldo      t3,[t1+t2]
+               S01:00000D14:  B6 0C 29 00 00 00
+F00:1139         stw      t3,[t0+s1]
+               S01:00000D1A:  C1 CC 60 00 00 00
+F00:1140       # pSpr16[n*8+1] = yy[n];
+F00:1141         sll      t2,s0,3
+               S01:00000D20:  58 CA 1A 02
+F00:1142         add      t1,t2,1
+               S01:00000D24:  04 48 09 00
+F00:1143         sll      t0,t1,1
+               S01:00000D28:  58 06 09 02
+F00:1144         sll      t1,s0,3
+               S01:00000D2C:  58 C8 1A 02
+F00:1145         lea      t2,_yy[gp]
+               S01:00000D30:  8A 4A 07 10 00 00 [R]
+F00:1146         ldo      t3,[t1+t2]
+               S01:00000D36:  B6 0C 29 00 00 00
+F00:1147         stw      t3,[t0+s1]
+               S01:00000D3C:  C1 CC 60 00 00 00
+F00:1148       # pSpr16[n*8+2] = 0x2a30;		// set size 48x42
+F00:1149         sll      t2,s0,3
+               S01:00000D42:  58 CA 1A 02
+F00:1150         add      t1,t2,2
+               S01:00000D46:  04 48 11 00
+F00:1151         sll      t0,t1,1
+               S01:00000D4A:  58 06 09 02
+F00:1152         ldi      t1,10800
+               S01:00000D4E:  D4 08 80 51 01 00
+F00:1153         stw      t1,[t0+s1]
+               S01:00000D54:  C1 C8 60 00 00 00
+F00:1154         add      s0,s0,1
+               S01:00000D5A:  04 D6 0A 00
+F00:1155         slt      t0,s0,32
+               S01:00000D5E:  18 C6 02 01
+F00:1156         bnez     t0,.00286
+               S01:00000D62:  12 C0 A0 FF
+F00:1157       .00287:
+F00:1158       .00285:
+F00:1159         ldhs     s0,0[sp]
+               S01:00000D66:  89 D6 07 00
+F00:1160         ldhs     s1,16[sp]
+               S01:00000D6A:  89 D8 87 00
+F00:1161         ldhs     s2,32[sp]
+               S01:00000D6E:  89 DA 07 01
+F00:1162         ldhs     s3,48[sp]
+               S01:00000D72:  89 DC 87 01
+F00:1163         leave    0
+               S01:00000D76:  BF 00 00 00
+F00:1164       	.type	_SetSpritePosAndSpeed,@function
+F00:1165       	.size	_SetSpritePosAndSpeed,$-_SetSpritePosAndSpeed
+F00:1166       #--}
+F00:1167        
+F00:1168       #{++ _MoveSprites
+F00:1169       	.align 4
+F00:1170       	.sdreg	29
+F00:1171             
+F00:1172       	.align	4
+F00:1173       #====================================================
+F00:1174       # Basic Block 0
+F00:1175       #====================================================
+F00:1176       _MoveSprites:
+F00:1177         enter    128
+               S01:00000D80:  AF 00 FF FF
+F00:1178         lea      gp,_bss_start
+               S01:00000D84:  8A 3A 00 00 00 00 [R]
+F00:1179         sths     s0,0[sp]
+               S01:00000D8A:  95 D6 07 00
+F00:1180         sths     s1,16[sp]
+               S01:00000D8E:  95 D8 87 00
+F00:1181         sths     s2,32[sp]
+               S01:00000D92:  95 DA 07 01
+F00:1182         sths     s3,48[sp]
+               S01:00000D96:  95 DC 87 01
+F00:1183         sths     s4,64[sp]
+               S01:00000D9A:  95 DE 07 02
+F00:1184         sths     s5,80[sp]
+               S01:00000D9E:  95 E0 87 02
+F00:1185         sths     s6,96[sp]
+               S01:00000DA2:  95 E2 07 03
+F00:1186         sths     s7,112[sp]
+               S01:00000DA6:  95 E4 87 03
+F00:1187       # int:64* pScreen = 0;
+F00:1188         mov      s3,r0
+               S01:00000DAA:  1D 1C 00 00
+F00:1189         sto      r0,-16[fp]
+               S01:00000DAE:  93 80 87 FF FF FF
+F00:1190       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x0B0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((0›«Ò
+F00:1191         exi56    115345024
+               S01:00000DB4:  4C 80 06 E0 06 00 00 00
+F00:1192         ldi      t0,4272
+               S01:00000DBC:  D4 06 80 85 00 00
+F00:1193         sths     t0,-88[fp]
+               S01:00000DC2:  95 86 47 FD
+F00:1194       # a1 = ((0xFF8B) << 64)|(0xFF8B)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1195         exim     4329327034368
+               S01:00000DC6:  50 00 00 00 00 E0 07 00
+F00:1196         exi56    71929019896954880
+               S01:00000DCE:  4C 00 00 00 00 10 8B FF
+F00:1197         ldi      t0,65419
+               S01:00000DD6:  D4 06 58 FC 07 00
+F00:1198         sths     t0,-112[fp]
+               S01:00000DDC:  95 86 87 FC
+F00:1199       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:1200         ldhs     t0,-88[fp]
+               S01:00000DE0:  89 86 47 FD
+F00:1201         push     t0
+               S01:00000DE4:  AC 06
+F00:1202         ldhs     t0,-112[fp]
+               S01:00000DE6:  89 86 87 FC
+F00:1203         push     t0
+               S01:00000DEA:  AC 06
+F00:1204         jsr      _MapPage
+               S01:00000DEC:  20 72 07 00 00 00 [R]
+F00:1205       # pSpr16 += (0xFF8B0000/sizeof(int:16));
+F00:1206         ldo      t0,-16[fp]
+               S01:00000DF2:  86 86 87 FF FF FF
+F00:1207         add      t0,t0,4287299584
+               S01:00000DF8:  49 FE 00 00 D4 C6 00 00 58 FC
+F00:1208         sto      t0,-16[fp]
+               S01:00000E02:  93 86 87 FF FF FF
+F00:1209       # pScreen += (0xFF800000/sizeof(int));
+F00:1210         add      s3,s3,4286578688
+               S01:00000E08:  49 FE 00 00 D4 9C 03 00 00 FC
+F00:1211       .00335:
+F00:1212       # for (m = 0; m < 100000; m++)
+F00:1213         mov      s1,r0
+               S01:00000E12:  1D 18 00 00
+F00:1214         sgt      t0,s1,99999
+               S01:00000E16:  DB 06 FB 34 0C 00
+F00:1215         bnez     t0,.00338
+               S01:00000E1C:  12 D2 00 E0
+F00:1216       .00337:
+F00:1217       # ;
+F00:1218         add      s1,s1,1
+               S01:00000E20:  04 18 0B 00
+F00:1219         slt      t0,s1,100000
+               S01:00000E24:  D3 06 03 35 0C 00
+F00:1220         bnez     t0,.00337
+               S01:00000E2A:  12 D6 F8 FF
+F00:1221       .00338:
+F00:1222       # for (n = 0; n < 32; n++) {
+F00:1223         mov      s0,r0
+               S01:00000E2E:  1D 16 00 00
+F00:1224         sgt      t0,s0,31
+               S01:00000E32:  1B C6 FA 00
+F00:1225         bnez     t0,.00341
+               S01:00000E36:  12 CE 60 E0
+F00:1226       .00340:
+F00:1227       # bypassTest();
+F00:1228         jsr      _bypassTest
+               S01:00000E3A:  20 42 18 00 00 00 [R]
+F00:1229       # j = xx[n];
+F00:1230         sll      t0,s0,3
+               S01:00000E40:  58 C6 1A 02
+F00:1231         lea      t1,_xx[gp]
+               S01:00000E44:  8A 48 07 08 00 00 [R]
+F00:1232         ldo      s5,[t0+t1]
+               S01:00000E4A:  B6 E0 20 00 00 00
+F00:1233       # k = dx[n];
+F00:1234         sll      t0,s0,3
+               S01:00000E50:  58 C6 1A 02
+F00:1235         lea      t1,_dx[gp]
+               S01:00000E54:  8A 48 07 18 00 00 [R]
+F00:1236         ldo      s6,[t0+t1]
+               S01:00000E5A:  B6 E2 20 00 00 00
+F00:1237       # a = yy[n];
+F00:1238         sll      t0,s0,3
+               S01:00000E60:  58 C6 1A 02
+F00:1239         lea      t1,_yy[gp]
+               S01:00000E64:  8A 48 07 10 00 00 [R]
+F00:1240         ldo      s7,[t0+t1]
+               S01:00000E6A:  B6 E4 20 00 00 00
+F00:1241       # b = dy[n];
+F00:1242         sll      t0,s0,3
+               S01:00000E70:  58 C6 1A 02
+F00:1243         lea      t1,_dy[gp]
+               S01:00000E74:  8A 48 07 20 00 00 [R]
+F00:1244         ldo      s4,[t0+t1]
+               S01:00000E7A:  B6 DE 20 00 00 00
+F00:1245         slt      t0,s5,210
+               S01:00000E80:  18 06 94 06
+F00:1246         slt      t1,s6,r0
+               S01:00000E84:  4E 48 04 00
+F00:1247         and      s2,t0,t1
+               S01:00000E88:  1A DA 20 00
+F00:1248       # pScreen[0] = t + 0x7FE0F041;
+F00:1249         add      t0,s2,2145448001
+               S01:00000E8C:  47 7E D4 46 0B 82 07 FF
+F00:1250         sto      t0,[s3]
+               S01:00000E94:  93 86 03 00 00 00
+F00:1251       # if (t)
+F00:1252         beqz     s2,.00348
+               S01:00000E9A:  10 5A 03 E0
+F00:1253       # dx[n] = -k;
+F00:1254         sll      t0,s0,3
+               S01:00000E9E:  58 C6 1A 02
+F00:1255         lea      t1,_dx[gp]
+               S01:00000EA2:  8A 48 07 18 00 00 [R]
+F00:1256         neg      t2,s6
+               S01:00000EA8:  02 0A 88 00 00 0A
+F00:1257         sto      t2,[t0+t1]
+               S01:00000EAE:  C3 CA 20 00 00 00
+F00:1258       .00348:
+F00:1259         sgt      t0,s5,962
+               S01:00000EB4:  1B 06 14 1E
+F00:1260         slt      t1,r0,s6
+               S01:00000EB8:  4E 08 88 00
+F00:1261         and      s2,t0,t1
+               S01:00000EBC:  1A DA 20 00
+F00:1262       # pScreen[1] = t + 0x7FE0F041;
+F00:1263         add      t0,s2,2145448001
+               S01:00000EC0:  47 7E D4 46 0B 82 07 FF
+F00:1264         sto      t0,8[s3]
+               S01:00000EC8:  93 86 43 00 00 00
+F00:1265       # if (t)
+F00:1266         beqz     s2,.00355
+               S01:00000ECE:  10 5A 03 E0
+F00:1267       # dx[n] = -k;
+F00:1268         sll      t0,s0,3
+               S01:00000ED2:  58 C6 1A 02
+F00:1269         lea      t1,_dx[gp]
+               S01:00000ED6:  8A 48 07 18 00 00 [R]
+F00:1270         neg      t2,s6
+               S01:00000EDC:  02 0A 88 00 00 0A
+F00:1271         sto      t2,[t0+t1]
+               S01:00000EE2:  C3 CA 20 00 00 00
+F00:1272       .00355:
+F00:1273         slt      t0,s7,36
+               S01:00000EE8:  18 86 24 01
+F00:1274         slt      t1,s4,r0
+               S01:00000EEC:  4E C8 03 00
+F00:1275         and      s2,t0,t1
+               S01:00000EF0:  1A DA 20 00
+F00:1276       # pScreen[2] = t + 0x7FE0F041;
+F00:1277         add      t0,s2,2145448001
+               S01:00000EF4:  47 7E D4 46 0B 82 07 FF
+F00:1278         sto      t0,16[s3]
+               S01:00000EFC:  93 86 83 00 00 00
+F00:1279       # if (t)
+F00:1280         beqz     s2,.00362
+               S01:00000F02:  10 5A 03 E0
+F00:1281       # dy[n] = -b;
+F00:1282         sll      t0,s0,3
+               S01:00000F06:  58 C6 1A 02
+F00:1283         lea      t1,_dy[gp]
+               S01:00000F0A:  8A 48 07 20 00 00 [R]
+F00:1284         neg      t2,s4
+               S01:00000F10:  02 0A 78 00 00 0A
+F00:1285         sto      t2,[t0+t1]
+               S01:00000F16:  C3 CA 20 00 00 00
+F00:1286       .00362:
+F00:1287         sgt      t0,s7,584
+               S01:00000F1C:  1B 86 44 12
+F00:1288         slt      t1,r0,s4
+               S01:00000F20:  4E 08 78 00
+F00:1289         and      s2,t0,t1
+               S01:00000F24:  1A DA 20 00
+F00:1290       # pScreen[3] = t + 0x7FE0F041;
+F00:1291         add      t0,s2,2145448001
+               S01:00000F28:  47 7E D4 46 0B 82 07 FF
+F00:1292         sto      t0,24[s3]
+               S01:00000F30:  93 86 C3 00 00 00
+F00:1293       # if (t)
+F00:1294         beqz     s2,.00369
+               S01:00000F36:  10 5A 03 E0
+F00:1295       # dy[n] = -b;
+F00:1296         sll      t0,s0,3
+               S01:00000F3A:  58 C6 1A 02
+F00:1297         lea      t1,_dy[gp]
+               S01:00000F3E:  8A 48 07 20 00 00 [R]
+F00:1298         neg      t2,s4
+               S01:00000F44:  02 0A 78 00 00 0A
+F00:1299         sto      t2,[t0+t1]
+               S01:00000F4A:  C3 CA 20 00 00 00
+F00:1300       .00369:
+F00:1301       # pSpr16[n*8] = j;
+F00:1302         sll      t1,s0,3
+               S01:00000F50:  58 C8 1A 02
+F00:1303         sll      t0,t1,1
+               S01:00000F54:  58 06 09 02
+F00:1304         stw      s5,[t0+fp]
+               S01:00000F58:  C1 E0 F0 00 00 00
+F00:1305       # pSpr16[n*8+1] = a;
+F00:1306         sll      t2,s0,3
+               S01:00000F5E:  58 CA 1A 02
+F00:1307         add      t1,t2,1
+               S01:00000F62:  04 48 09 00
+F00:1308         sll      t0,t1,1
+               S01:00000F66:  58 06 09 02
+F00:1309         stw      s7,[t0+fp]
+               S01:00000F6A:  C1 E4 F0 00 00 00
+F00:1310       # xx[n] = j + dx[n];
+F00:1311         sll      t0,s0,3
+               S01:00000F70:  58 C6 1A 02
+F00:1312         lea      t1,_xx[gp]
+               S01:00000F74:  8A 48 07 08 00 00 [R]
+F00:1313         sll      t3,s0,3
+               S01:00000F7A:  58 CC 1A 02
+F00:1314         lea      t4,_dx[gp]
+               S01:00000F7E:  8A 4E 07 18 00 00 [R]
+F00:1315         ldo      t3,[t3+t4]
+               S01:00000F84:  B6 8C 39 00 00 00
+F00:1316         add      t2,s5,t3
+               S01:00000F8A:  19 0A 34 00
+F00:1317         sto      t2,[t0+t1]
+               S01:00000F8E:  C3 CA 20 00 00 00
+F00:1318       # yy[n] = a + dy[n];
+F00:1319         sll      t0,s0,3
+               S01:00000F94:  58 C6 1A 02
+F00:1320         lea      t1,_yy[gp]
+               S01:00000F98:  8A 48 07 10 00 00 [R]
+F00:1321         sll      t3,s0,3
+               S01:00000F9E:  58 CC 1A 02
+F00:1322         lea      t4,_dy[gp]
+               S01:00000FA2:  8A 4E 07 20 00 00 [R]
+F00:1323         ldo      t3,[t3+t4]
+               S01:00000FA8:  B6 8C 39 00 00 00
+F00:1324         add      t2,s7,t3
+               S01:00000FAE:  19 8A 34 00
+F00:1325         sto      t2,[t0+t1]
+               S01:00000FB2:  C3 CA 20 00 00 00
+F00:1326         add      s0,s0,1
+               S01:00000FB8:  04 D6 0A 00
+F00:1327         slt      t0,s0,32
+               S01:00000FBC:  18 C6 02 01
+F00:1328         bnez     t0,.00340
+               S01:00000FC0:  12 DA 98 FF
+F00:1329       .00341:
+F00:1330         beqz     r0,.00335
+               S01:00000FC4:  10 0E 90 FF
+F00:1331       .00334:
+F00:1332         ldhs     s0,0[sp]
+               S01:00000FC8:  89 D6 07 00
+F00:1333         ldhs     s1,16[sp]
+               S01:00000FCC:  89 D8 87 00
+F00:1334         ldhs     s2,32[sp]
+               S01:00000FD0:  89 DA 07 01
+F00:1335         ldhs     s3,48[sp]
+               S01:00000FD4:  89 DC 87 01
+F00:1336         ldhs     s4,64[sp]
+               S01:00000FD8:  89 DE 07 02
+F00:1337         ldhs     s5,80[sp]
+               S01:00000FDC:  89 E0 87 02
+F00:1338         ldhs     s6,96[sp]
+               S01:00000FE0:  89 E2 07 03
+F00:1339         ldhs     s7,112[sp]
+               S01:00000FE4:  89 E4 87 03
+F00:1340         leave    0
+               S01:00000FE8:  BF 00 00 00
+F00:1341       	.type	_MoveSprites,@function
+F00:1342       	.size	_MoveSprites,$-_MoveSprites
+F00:1343       #--}
+F00:1344        
+F00:1345       #{++ _main
+F00:1346       	.align 4
+F00:1347       	.sdreg	29
+F00:1348              
+F00:1349       	.align	4
+F00:1350       #====================================================
+F00:1351       # Basic Block 0
+F00:1352       #====================================================
+F00:1353       _main:
+F00:1354         enter    128
+               S01:00000FF0:  AF 00 FF FF
+F00:1355         lea      gp,_bss_start
+               S01:00000FF4:  8A 3A 00 00 00 00 [R]
+F00:1356         lea      gp1,_rodata_start
+               S01:00000FFA:  8A 38 00 00 00 00 [R]
+F00:1357         sths     s0,0[sp]
+               S01:00001000:  95 D6 07 00
+F00:1358         sths     s1,16[sp]
+               S01:00001004:  95 D8 87 00
+F00:1359         sths     s2,32[sp]
+               S01:00001008:  95 DA 07 01
+F00:1360         sths     s3,48[sp]
+               S01:0000100C:  95 DC 87 01
+F00:1361         sths     s4,64[sp]
+               S01:00001010:  95 DE 07 02
+F00:1362         sths     s5,80[sp]
+               S01:00001014:  95 E0 87 02
+F00:1363         sths     s6,96[sp]
+               S01:00001018:  95 E2 07 03
+F00:1364         sths     s7,112[sp]
+               S01:0000101C:  95 E4 87 03
+F00:1365         ldi      s6,100000
+               S01:00001020:  D4 22 00 35 0C 00
+F00:1366       # int:64* pScreen = 0;
+F00:1367         mov      s1,r0
+               S01:00001026:  1D 18 00 00
+F00:1368         mov      s7,r0
+               S01:0000102A:  1D 24 00 00
+F00:1369         lea      t0,rom_bios_c_371[gp1]
+               S01:0000102E:  8A 06 07 00 00 00 [R]
+F00:1370         sto      t0,-40[fp]
+               S01:00001034:  93 86 C7 FE FF FF
+F00:1371         ldi      t0,4294836224
+               S01:0000103A:  49 FE 00 00 D4 06 00 00 F0 FF
+F00:1372         sto      t0,-48[fp]
+               S01:00001044:  93 86 87 FE FF FF
+F00:1373         mov      s4,r0
+               S01:0000104A:  1D 1E 00 00
+F00:1374       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x391) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((LNdÙ
+F00:1375         exi56    115345024
+               S01:0000104E:  4C 80 06 E0 06 00 00 00
+F00:1376         ldi      s2,5009
+               S01:00001056:  D4 1A 88 9C 00 00
+F00:1377       # a1 = ((0xFF91) << 64)|(0xFF91)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1378         exim     4329327034368
+               S01:0000105C:  50 00 00 00 00 E0 07 00
+F00:1379         exi56    71935616966721536
+               S01:00001064:  4C 00 00 00 00 10 91 FF
+F00:1380         ldi      s3,65425
+               S01:0000106C:  D4 1C 88 FC 07 00
+F00:1381       # MapPage(a0,a1);
+F00:1382         push     s2,s3
+               S01:00001072:  AD 9A 03 00
+F00:1383         jsr      _MapPage
+               S01:00001076:  20 72 07 00 00 00 [R]
+F00:1384       # pLEDS += (0xFF910000/sizeof(int:16));
+F00:1385         add      s4,s4,4287692800
+               S01:0000107C:  49 FE 00 00 D4 DE 03 00 88 FC
+F00:1386       # *pLEDS = 0xAAAA;
+F00:1387         ldi      t0,43690
+               S01:00001086:  D4 06 50 55 05 00
+F00:1388         stw      t0,[s4]
+               S01:0000108C:  91 C6 03 00 00 00
+F00:1389       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x380) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|(((q€Ô
+F00:1390         exi56    115345024
+               S01:00001092:  4C 80 06 E0 06 00 00 00
+F00:1391         ldi      s2,4992
+               S01:0000109A:  D4 1A 00 9C 00 00
+F00:1392       # a1 = ((0xFF80) << 64)|(0xFF80)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1393         exim     4329327034368
+               S01:000010A0:  50 00 00 00 00 E0 07 00
+F00:1394         exi56    71916925269049344
+               S01:000010A8:  4C 00 00 00 00 10 80 FF
+F00:1395         ldi      s3,65408
+               S01:000010B0:  D4 1C 00 FC 07 00
+F00:1396       # MapPage(a0,a1);
+F00:1397         push     s2,s3
+               S01:000010B6:  AD 9A 03 00
+F00:1398         jsr      _MapPage
+               S01:000010BA:  20 72 07 00 00 00 [R]
+F00:1399       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x381) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((ÐˆÖ
+F00:1400         exi56    115345024
+               S01:000010C0:  4C 80 06 E0 06 00 00 00
+F00:1401         ldi      s2,4993
+               S01:000010C8:  D4 1A 08 9C 00 00
+F00:1402       # a1 = ((0xFF81) << 64)|(0xFF81)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1403         exim     4329327034368
+               S01:000010CE:  50 00 00 00 00 E0 07 00
+F00:1404         exi56    71918024780677120
+               S01:000010D6:  4C 00 00 00 00 10 81 FF
+F00:1405         ldi      s3,65409
+               S01:000010DE:  D4 1C 08 FC 07 00
+F00:1406       # MapPage(a0,a1);
+F00:1407         push     s2,s3
+               S01:000010E4:  AD 9A 03 00
+F00:1408         jsr      _MapPage
+               S01:000010E8:  20 72 07 00 00 00 [R]
+F00:1409       # scrpos = 0;
+F00:1410         sto      r0,_scrpos[gp]
+               S01:000010EE:  93 40 47 28 00 00 [R]
+F00:1411       # ShowSprites(0x00);
+F00:1412         push     r0
+               S01:000010F4:  AC 00
+F00:1413         jsr      _ShowSprites
+               S01:000010F6:  20 02 04 00 00 00 [R]
+F00:1414       # MapPages();
+F00:1415         jsr      _MapPages
+               S01:000010FC:  20 42 0E 00 00 00 [R]
+F00:1416       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x014) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((hr@Õ
+F00:1417         exi56    115345024
+               S01:00001102:  4C 80 06 E0 06 00 00 00
+F00:1418         ldi      s2,4116
+               S01:0000110A:  D4 1A A0 80 00 00
+F00:1419       # a1 = ((0xFF94) << 64)|(0xFF94)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:1420         exim     4329327034368
+               S01:00001110:  50 00 00 00 00 E0 07 00
+F00:1421         exi56    71938915501604864
+               S01:00001118:  4C 00 00 00 00 10 94 FF
+F00:1422         ldi      s3,65428
+               S01:00001120:  D4 1C A0 FC 07 00
+F00:1423       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:1424         push     s2,s3
+               S01:00001126:  AD 9A 03 00
+F00:1425         jsr      _MapPage
+               S01:0000112A:  20 72 07 00 00 00 [R]
+F00:1426       # *pLEDS = 0x01;
+F00:1427         ldi      t0,1
+               S01:00001130:  04 06 08 00
+F00:1428         stw      t0,[s4]
+               S01:00001134:  91 C6 03 00 00 00
+F00:1429       # state++;
+F00:1430         ldo      t0,_state[gp]
+               S01:0000113A:  86 46 07 28 00 00 [R]
+F00:1431         add      t0,t0,1
+               S01:00001140:  04 C6 08 00
+F00:1432         sto      t0,_state[gp]
+               S01:00001144:  93 46 07 28 00 00 [R]
+F00:1433       # FlashLEDs();
+F00:1434         jsr      _FlashLEDs
+               S01:0000114A:  20 82 1F 00 00 00 [R]
+F00:1435       # *pLEDS = 0x55;
+F00:1436         ldi      t0,85
+               S01:00001150:  04 06 A8 02
+F00:1437         stw      t0,[s4]
+               S01:00001154:  91 C6 03 00 00 00
+F00:1438       # DBGAttr = 0x03FFFE0003FF0000;
+F00:1439         ldi      t0,288228177195499520
+               S01:0000115A:  4B 02 00 FE FF 03 D4 06 00 00 F8 1F
+F00:1440         sto      t0,_DBGAttr[gp]
+               S01:00001166:  93 46 C7 28 00 00 [R]
+F00:1441       # pMem += (0xFFFC0000/sizeof(int));
+F00:1442         add      s7,s7,4294705152
+               S01:0000116C:  49 FE 00 00 D4 A4 04 00 E0 FF
+F00:1443       # pScreen += (0xFF800000/sizeof(int:64));
+F00:1444         add      s1,s1,4286578688
+               S01:00001176:  49 FE 00 00 D4 18 03 00 00 FC
+F00:1445       # DBGClearScreen();
+F00:1446         jsr      _DBGClearScreen
+               S01:00001180:  20 C2 50 00 00 00 [R]
+F00:1447       # DBGHomeCursor();
+F00:1448         jsr      _DBGHomeCursor
+               S01:00001186:  20 42 54 00 00 00 [R]
+F00:1449       # pScreen[0] = DBGAttr|'A';
+F00:1450         ldo      t1,_DBGAttr[gp]
+               S01:0000118C:  86 48 C7 28 00 00 [R]
+F00:1451         ldi      t2,65
+               S01:00001192:  04 0A 08 02
+F00:1452         sxc      t2,t2
+               S01:00001196:  AA 4A 01 F0 11 0A
+F00:1453         or       t0,t1,t2
+               S01:0000119C:  1D 06 29 00
+F00:1454         sto      t0,[s1]
+               S01:000011A0:  93 06 03 00 00 00
+F00:1455       # pScreen[1] = DBGAttr|'A';
+F00:1456         ldo      t1,_DBGAttr[gp]
+               S01:000011A6:  86 48 C7 28 00 00 [R]
+F00:1457         ldi      t2,65
+               S01:000011AC:  04 0A 08 02
+F00:1458         sxc      t2,t2
+               S01:000011B0:  AA 4A 01 F0 11 0A
+F00:1459         or       t0,t1,t2
+               S01:000011B6:  1D 06 29 00
+F00:1460         sto      t0,8[s1]
+               S01:000011BA:  93 06 43 00 00 00
+F00:1461       # pScreen[2] = DBGAttr|'A';
+F00:1462         ldo      t1,_DBGAttr[gp]
+               S01:000011C0:  86 48 C7 28 00 00 [R]
+F00:1463         ldi      t2,65
+               S01:000011C6:  04 0A 08 02
+F00:1464         sxc      t2,t2
+               S01:000011CA:  AA 4A 01 F0 11 0A
+F00:1465         or       t0,t1,t2
+               S01:000011D0:  1D 06 29 00
+F00:1466         sto      t0,16[s1]
+               S01:000011D4:  93 06 83 00 00 00
+F00:1467       # pScreen[3] = DBGAttr|'A';
+F00:1468         ldo      t1,_DBGAttr[gp]
+               S01:000011DA:  86 48 C7 28 00 00 [R]
+F00:1469         ldi      t2,65
+               S01:000011E0:  04 0A 08 02
+F00:1470         sxc      t2,t2
+               S01:000011E4:  AA 4A 01 F0 11 0A
+F00:1471         or       t0,t1,t2
+               S01:000011EA:  1D 06 29 00
+F00:1472         sto      t0,24[s1]
+               S01:000011EE:  93 06 C3 00 00 00
+F00:1473       # n = 1;
+F00:1474         ldi      s0,1
+               S01:000011F4:  04 16 08 00
+F00:1475       # if (n)
+F00:1476         beqz     s0,.00401
+               S01:000011F8:  10 DE 02 E0
+F00:1477       # pScreen[4] = DBGAttr|'B';
+F00:1478         ldo      t1,_DBGAttr[gp]
+               S01:000011FC:  86 48 C7 28 00 00 [R]
+F00:1479         ldi      t2,66
+               S01:00001202:  04 0A 10 02
+F00:1480         sxc      t2,t2
+               S01:00001206:  AA 4A 01 F0 11 0A
+F00:1481         or       t0,t1,t2
+               S01:0000120C:  1D 06 29 00
+F00:1482         sto      t0,32[s1]
+               S01:00001210:  93 06 03 01 00 00
+F00:1483       .00401:
+F00:1484       # n++;
+F00:1485         add      s0,s0,1
+               S01:00001216:  04 D6 0A 00
+F00:1486       # if (n==2)
+F00:1487         bne      s0,2,.00403
+               S01:0000121A:  27 C0 12 FE 02 00
+F00:1488       # pScreen[5] = DBGAttr|'C';
+F00:1489         ldo      t1,_DBGAttr[gp]
+               S01:00001220:  86 48 C7 28 00 00 [R]
+F00:1490         ldi      t2,67
+               S01:00001226:  04 0A 18 02
+F00:1491         sxc      t2,t2
+               S01:0000122A:  AA 4A 01 F0 11 0A
+F00:1492         or       t0,t1,t2
+               S01:00001230:  1D 06 29 00
+F00:1493         sto      t0,40[s1]
+               S01:00001234:  93 06 43 01 00 00
+F00:1494       .00403:
+F00:1495       # if (n==4)
+F00:1496         bne      s0,4,.00405
+               S01:0000123A:  27 C0 22 FE 02 00
+F00:1497       # pScreen[6] = DBGAttr|'D';
+F00:1498         ldo      t1,_DBGAttr[gp]
+               S01:00001240:  86 48 C7 28 00 00 [R]
+F00:1499         ldi      t2,68
+               S01:00001246:  04 0A 20 02
+F00:1500         sxc      t2,t2
+               S01:0000124A:  AA 4A 01 F0 11 0A
+F00:1501         or       t0,t1,t2
+               S01:00001250:  1D 06 29 00
+F00:1502         sto      t0,48[s1]
+               S01:00001254:  93 06 83 01 00 00
+F00:1503       .00405:
+F00:1504       # bypassTest();
+F00:1505         jsr      _bypassTest
+               S01:0000125A:  20 42 18 00 00 00 [R]
+F00:1506       # DBGCRLF();
+F00:1507         jsr      _DBGCRLF
+               S01:00001260:  20 82 6D 00 00 00 [R]
+F00:1508         lea      t0,_DBGAttr[gp]
+               S01:00001266:  8A 46 C7 28 00 00 [R]
+F00:1509         push     t0
+               S01:0000126C:  AC 06
+F00:1510         jsr      _PutTetra
+               S01:0000126E:  20 02 1E 00 00 00 [R]
+F00:1511       # DBGDisplayChar(' ');
+F00:1512         ldi      t0,32
+               S01:00001274:  04 06 00 01
+F00:1513         push     t0
+               S01:00001278:  AC 06
+F00:1514         jsr      _DBGDisplayChar
+               S01:0000127A:  20 42 5B 00 00 00 [R]
+F00:1515       # PutTetra(0x87654321);
+F00:1516         ldi      t0,2271560481
+               S01:00001280:  49 86 00 00 D4 06 08 19 2A 3B
+F00:1517         push     t0
+               S01:0000128A:  AC 06
+F00:1518         jsr      _PutTetra
+               S01:0000128C:  20 02 1E 00 00 00 [R]
+F00:1519       # DBGDisplayChar(' ');
+F00:1520         ldi      t0,32
+               S01:00001292:  04 06 00 01
+F00:1521         push     t0
+               S01:00001296:  AC 06
+F00:1522         jsr      _DBGDisplayChar
+               S01:00001298:  20 42 5B 00 00 00 [R]
+F00:1523       # __asm {
+F00:1524         #asm     
+F00:1525       			csrrd	a0,r0,0x3036
+               S01:0000129E:  0F 02 B0 81 01 00
+F00:1526       			sub		sp,sp,8
+               S01:000012A4:  04 FE C7 3F
+F00:1527       			sto		a0,[sp]
+               S01:000012A8:  93 C2 07 00 00 00
+F00:1528       			jsr		lk1,_PutTetra
+               S01:000012AE:  20 02 1E 00 00 00 [R]
+F00:1529       # ShowSprites(0xAAAAAAAA);
+F00:1530         ldi      t0,2863311530
+               S01:000012B4:  48 AA 00 00 D4 06 50 55 55 55
+F00:1531         push     t0
+               S01:000012BE:  AC 06
+F00:1532         jsr      _ShowSprites
+               S01:000012C0:  20 02 04 00 00 00 [R]
+F00:1533       # DBGCRLF();
+F00:1534         jsr      _DBGCRLF
+               S01:000012C6:  20 82 6D 00 00 00 [R]
+F00:1535       # DBGDisplayChar(' ');
+F00:1536         ldi      t0,32
+               S01:000012CC:  04 06 00 01
+F00:1537         push     t0
+               S01:000012D0:  AC 06
+F00:1538         jsr      _DBGDisplayChar
+               S01:000012D2:  20 42 5B 00 00 00 [R]
+F00:1539       # DBGCRLF();
+F00:1540         jsr      _DBGCRLF
+               S01:000012D8:  20 82 6D 00 00 00 [R]
+F00:1541       # PutWyde(bootstr[0]);
+F00:1542         ldo      t0,-40[fp]
+               S01:000012DE:  86 86 C7 FE FF FF
+F00:1543         ldw      t0,[t0]
+               S01:000012E4:  82 C6 00 00 00 00
+F00:1544         push     t0
+               S01:000012EA:  AC 06
+F00:1545         jsr      _PutWyde
+               S01:000012EC:  20 42 1D 00 00 00 [R]
+F00:1546       # DBGCRLF();
+F00:1547         jsr      _DBGCRLF
+               S01:000012F2:  20 82 6D 00 00 00 [R]
+F00:1548       # DBGDisplayChar(' ');
+F00:1549         ldi      t0,32
+               S01:000012F8:  04 06 00 01
+F00:1550         push     t0
+               S01:000012FC:  AC 06
+F00:1551         jsr      _DBGDisplayChar
+               S01:000012FE:  20 42 5B 00 00 00 [R]
+F00:1552       # my_srand(1234,4567);
+F00:1553         ldi      t0,1234
+               S01:00001304:  04 06 90 26
+F00:1554         push     t0
+               S01:00001308:  AC 06
+F00:1555         ldi      t0,4567
+               S01:0000130A:  D4 06 B8 8E 00 00
+F00:1556         push     t0
+               S01:00001310:  AC 06
+F00:1557         jsr      _my_srand
+               S01:00001312:  20 C2 13 00 00 00 [R]
+F00:1558       # SetSpriteColor();
+F00:1559         jsr      _SetSpriteColor
+               S01:00001318:  20 02 21 00 00 00 [R]
+F00:1560       # state++;
+F00:1561         ldo      t0,_state[gp]
+               S01:0000131E:  86 46 07 28 00 00 [R]
+F00:1562         add      t0,t0,1
+               S01:00001324:  04 C6 08 00
+F00:1563         sto      t0,_state[gp]
+               S01:00001328:  93 46 07 28 00 00 [R]
+F00:1564       # SetSpritePosAndSpeed();
+F00:1565         jsr      _SetSpritePosAndSpeed
+               S01:0000132E:  20 02 2E 00 00 00 [R]
+F00:1566       .00407:
+F00:1567       # MoveSprites();
+F00:1568         jsr      _MoveSprites
+               S01:00001334:  20 02 36 00 00 00 [R]
+F00:1569         beqz     r0,.00407
+               S01:0000133A:  10 1A F8 FF
+F00:1570       .00409:
+F00:1571       # for (n = 0; n < 100000; n = n + 1)
+F00:1572         mov      s0,r0
+               S01:0000133E:  1D 16 00 00
+F00:1573         bge      s0,s6,.00412
+               S01:00001342:  29 C0 8A FC 05 00
+F00:1574       .00411:
+F00:1575       # pScreen[my_abs(my_rand(0))%(64*32)+64] = my_rand(0);
+F00:1576         sto      t0,-128[fp]
+               S01:00001348:  93 86 07 FC FF FF
+F00:1577         sto      t1,-144[fp]
+               S01:0000134E:  93 88 87 FB FF FF
+F00:1578         sto      t2,-160[fp]
+               S01:00001354:  93 8A 07 FB FF FF
+F00:1579         push     r0
+               S01:0000135A:  AC 00
+F00:1580         jsr      _my_rand
+               S01:0000135C:  20 42 16 00 00 00 [R]
+F00:1581         mov      t3,a0
+               S01:00001362:  1D 4C 00 00
+F00:1582         push     t3
+               S01:00001366:  AC 0C
+F00:1583         jsr      _my_abs
+               S01:00001368:  20 02 13 00 00 00 [R]
+F00:1584         mov      t3,a0
+               S01:0000136E:  1D 4C 00 00
+F00:1585         and      t2,t3,2047
+               S01:00001372:  08 8A F9 3F
+F00:1586         add      t1,t2,64
+               S01:00001376:  04 48 01 02
+F00:1587         sll      t0,t1,3
+               S01:0000137A:  58 06 19 02
+F00:1588         push     r0
+               S01:0000137E:  AC 00
+F00:1589         jsr      _my_rand
+               S01:00001380:  20 42 16 00 00 00 [R]
+F00:1590         mov      t3,a0
+               S01:00001386:  1D 4C 00 00
+F00:1591         sto      t3,[t0+s1]
+               S01:0000138A:  C3 CC 60 00 00 00
+F00:1592         add      s0,s0,1
+               S01:00001390:  04 D6 0A 00
+F00:1593         blt      s0,s6,.00411
+               S01:00001394:  28 C0 8A FC FB FF
+F00:1594       .00412:
+F00:1595       # for (m = 0; m < 10000; m = m + 1) {
+F00:1596         mov      s5,r0
+               S01:0000139A:  1D 20 00 00
+F00:1597         sgt      t0,s5,9999
+               S01:0000139E:  DB 06 7C 38 01 00
+F00:1598         bnez     t0,.00415
+               S01:000013A4:  12 CE 10 E0
+F00:1599       .00414:
+F00:1600       # pScreen = 0;
+F00:1601         mov      s1,r0
+               S01:000013A8:  1D 18 00 00
+F00:1602       # pScreen += (0xFF800010/sizeof(int));
+F00:1603         add      s1,s1,4286578704
+               S01:000013AC:  49 FE 00 00 D4 18 83 00 00 FC
+F00:1604       # for (n = 0; n < 64*33; n = n + 1)
+F00:1605         mov      s0,r0
+               S01:000013B6:  1D 16 00 00
+F00:1606         sgt      t0,s0,2111
+               S01:000013BA:  1B C6 FA 01
+F00:1607         bnez     t0,.00418
+               S01:000013BE:  12 C6 08 E0
+F00:1608       .00417:
+F00:1609       # *pScreen++ = my_rand(0);
+F00:1610         push     r0
+               S01:000013C2:  AC 00
+F00:1611         jsr      _my_rand
+               S01:000013C4:  20 42 16 00 00 00 [R]
+F00:1612         mov      t0,a0
+               S01:000013CA:  1D 46 00 00
+F00:1613         sto      t0,[s1]
+               S01:000013CE:  93 06 03 00 00 00
+F00:1614         add      s1,s1,8
+               S01:000013D4:  04 18 43 00
+F00:1615         add      s0,s0,1
+               S01:000013D8:  04 D6 0A 00
+F00:1616         slt      t0,s0,2112
+               S01:000013DC:  18 C6 02 02
+F00:1617         bnez     t0,.00417
+               S01:000013E0:  12 C2 F8 FF
+F00:1618       .00418:
+F00:1619         add      s5,s5,1
+               S01:000013E4:  04 20 0C 00
+F00:1620         slt      t0,s5,10000
+               S01:000013E8:  D3 06 84 38 01 00
+F00:1621         bnez     t0,.00414
+               S01:000013EE:  12 DA E8 FF
+F00:1622       .00415:
+F00:1623         beqz     r0,.00409
+               S01:000013F2:  10 0C D0 FF
+F00:1624       .00400:
+F00:1625         ldhs     s0,0[sp]
+               S01:000013F6:  89 D6 07 00
+F00:1626         ldhs     s1,16[sp]
+               S01:000013FA:  89 D8 87 00
+F00:1627         ldhs     s2,32[sp]
+               S01:000013FE:  89 DA 07 01
+F00:1628         ldhs     s3,48[sp]
+               S01:00001402:  89 DC 87 01
+F00:1629         ldhs     s4,64[sp]
+               S01:00001406:  89 DE 07 02
+F00:1630         ldhs     s5,80[sp]
+               S01:0000140A:  89 E0 87 02
+F00:1631         ldhs     s6,96[sp]
+               S01:0000140E:  89 E2 07 03
+F00:1632         ldhs     s7,112[sp]
+               S01:00001412:  89 E4 87 03
+F00:1633         leave    0
+               S01:00001416:  BF 00 00 00
+F00:1634       	.type	_main,@function
+F00:1635       	.size	_main,$-_main
+F00:1636       #--}
+F00:1637        
+F00:1638       #{++ _last_func
+F00:1639       	.align 4
+F00:1640       	.sdreg	29
+F00:1641       #====================================================
+F00:1642       # Basic Block 0
+F00:1643       #====================================================
+F00:1644       _last_func:
+F00:1645         enter    0
+               S01:00001420:  AF 00 00 00
+F00:1646       .00429:
+F00:1647         leave    0
+               S01:00001424:  BF 00 00 00
+F00:1648       	.type	_last_func,@function
+F00:1649       	.size	_last_func,$-_last_func
+F00:1650       #--}
+F00:1651       	.align	4
+F00:1652       	.sdreg	29
+F00:1653       #--}
+F00:1654         
+F00:1655       #{++ _SetVBA
+F00:1656       	.sdreg	29
+F00:1657       #--}
+F00:1658              
+F00:1659       #{++ _UnlockIOFSemaphore
+F00:1660       	.sdreg	29
+F00:1661       #--}
+F00:1662        
+F00:1663       #{++ _UnlockKbdSemaphore
+F00:1664       	.sdreg	29
+F00:1665       #--}
+F00:1666        
+F00:1667       #{++ _GetImLevel
+F00:1668       	.sdreg	29
+F00:1669       #--}
+F00:1670         
+F00:1671       #{++ _RestoreImLevel
+F00:1672       	.sdreg	29
+F00:1673       #--}
+F00:1674          
+F00:1675       #{++ _LEDS
+F00:1676       	.sdreg	29
+F00:1677       #--}
+F00:1678                                
+F00:1679       	.align	4
+F00:1680       	.align 4
+F00:1681       	.sdreg	29
+F00:1682          #====================================================
+F00:1683       # Basic Block 0
+F00:1684       #====================================================
+F00:1685       _DBGClearScreen:
+F00:1686         enter    48
+               S01:00001430:  AF A0 FF FF
+F00:1687         lea      gp,_bss_start
+               S01:00001434:  8A 3A 00 00 00 00 [R]
+F00:1688         sths     s0,0[sp]
+               S01:0000143A:  95 D6 07 00
+F00:1689         sths     s1,16[sp]
+               S01:0000143E:  95 D8 87 00
+F00:1690         sths     s2,32[sp]
+               S01:00001442:  95 DA 07 01
+F00:1691       # p = (int *)0xFF800000;
+F00:1692         ldi      s1,4286578688
+               S01:00001446:  49 FE 00 00 D4 18 00 00 00 FC
+F00:1693       # vc = ' ' | DBGAttr;
+F00:1694         ldo      t1,_DBGAttr[gp]
+               S01:00001450:  86 48 C7 28 00 00 [R]
+F00:1695         or       s2,t1,32
+               S01:00001456:  09 1A 01 01
+F00:1696       # for (n = 0; n < 32*64; n++)
+F00:1697         mov      s0,r0
+               S01:0000145A:  1D 16 00 00
+F00:1698         sgt      t0,s0,2047
+               S01:0000145E:  1B C6 FA 3F
+F00:1699         bnez     t0,.00015
+               S01:00001462:  12 DA 00 E0
+F00:1700       .00014:
+F00:1701       # p[n] = vc;
+F00:1702         sll      t0,s0,3
+               S01:00001466:  58 C6 1A 02
+F00:1703         sto      s2,[t0+s1]
+               S01:0000146A:  C3 DA 60 00 00 00
+F00:1704         add      s0,s0,1
+               S01:00001470:  04 D6 0A 00
+F00:1705         slt      t0,s0,2048
+               S01:00001474:  18 C6 02 00
+F00:1706         bnez     t0,.00014
+               S01:00001478:  12 CE F8 FF
+F00:1707       .00015:
+F00:1708       .00013:
+F00:1709         ldhs     s0,0[sp]
+               S01:0000147C:  89 D6 07 00
+F00:1710         ldhs     s1,16[sp]
+               S01:00001480:  89 D8 87 00
+F00:1711         ldhs     s2,32[sp]
+               S01:00001484:  89 DA 07 01
+F00:1712         leave    0
+               S01:00001488:  BF 00 00 00
+F00:1713       	.type	_DBGClearScreen,@function
+F00:1714       	.size	_DBGClearScreen,$-_DBGClearScreen
+F00:1715       #--}
+F00:1716          
+F00:1717       #{++ _DBGSetVideoReg
+F00:1718       	.align 4
+F00:1719       	.sdreg	29
+F00:1720        #====================================================
+F00:1721       # Basic Block 0
+F00:1722       #====================================================
+F00:1723       _DBGSetVideoReg:
+F00:1724         enter    0
+               S01:00001490:  AF 00 00 00
+F00:1725       .00026:
+F00:1726         leave    32
+               S01:00001494:  BF 40 00 00
+F00:1727       	.type	_DBGSetVideoReg,@function
+F00:1728       	.size	_DBGSetVideoReg,$-_DBGSetVideoReg
+F00:1729       #--}
+F00:1730         
+F00:1731       #{++ _DBGSetCursorPos
+F00:1732       	.align 4
+F00:1733       	.sdreg	29
+F00:1734        #====================================================
+F00:1735       # Basic Block 0
+F00:1736       #====================================================
+F00:1737       _DBGSetCursorPos:
+F00:1738         enter    16
+               S01:000014A0:  AF E0 FF FF
+F00:1739         sths     s0,0[sp]
+               S01:000014A4:  95 D6 07 00
+F00:1740       # p = (int *)0xFF81DF00;
+F00:1741         ldi      s0,4286701312
+               S01:000014A8:  49 FE 00 00 D4 16 00 F8 0E FC
+F00:1742       # p[18] = pos;
+F00:1743         ldo      t0,64[fp]
+               S01:000014B2:  86 86 07 02 00 00
+F00:1744         stw      t0,4286701312+36
+               S01:000014B8:  49 FE 00 00 91 06 20 F9 0E FC
+F00:1745       .00036:
+F00:1746         ldhs     s0,0[sp]
+               S01:000014C2:  89 D6 07 00
+F00:1747         leave    16
+               S01:000014C6:  BF 20 00 00
+F00:1748       	.type	_DBGSetCursorPos,@function
+F00:1749       	.size	_DBGSetCursorPos,$-_DBGSetCursorPos
+F00:1750       #--}
+F00:1751        
+F00:1752       #{++ _DBGUpdateCursorPos
+F00:1753       	.align 4
+F00:1754       	.sdreg	29
+F00:1755        #====================================================
+F00:1756       # Basic Block 0
+F00:1757       #====================================================
+F00:1758       _DBGUpdateCursorPos:
+F00:1759         enter    16
+               S01:000014D0:  AF E0 FF FF
+F00:1760         lea      gp,_bss_start
+               S01:000014D4:  8A 3A 00 00 00 00 [R]
+F00:1761         sths     s0,0[sp]
+               S01:000014DA:  95 D6 07 00
+F00:1762       # pos = DBGCursorRow * 64 + DBGCursorCol;
+F00:1763         ldwu     t2,_DBGCursorRow[gp]
+               S01:000014DE:  83 4A A7 28 00 00 [R]
+F00:1764         sll.w    t1,t2,6
+               S01:000014E4:  58 48 31 02
+F00:1765         ldwu     t2,_DBGCursorCol[gp]
+               S01:000014E8:  83 4A 87 28 00 00 [R]
+F00:1766         add      s0,t1,t2
+               S01:000014EE:  19 16 29 00
+F00:1767       # DBGSetCursorPos(pos);
+F00:1768         push     s0
+               S01:000014F2:  AC 16
+F00:1769         jsr      _DBGSetCursorPos
+               S01:000014F4:  20 82 52 00 00 00 [R]
+F00:1770       .00046:
+F00:1771         ldhs     s0,0[sp]
+               S01:000014FA:  89 D6 07 00
+F00:1772         leave    0
+               S01:000014FE:  BF 00 00 00
+F00:1773       	.type	_DBGUpdateCursorPos,@function
+F00:1774       	.size	_DBGUpdateCursorPos,$-_DBGUpdateCursorPos
+F00:1775       #--}
+F00:1776        
+F00:1777       #{++ _DBGHomeCursor
+F00:1778       	.align 4
+F00:1779       	.sdreg	29
+F00:1780       #====================================================
+F00:1781       # Basic Block 0
+F00:1782       #====================================================
+F00:1783       _DBGHomeCursor:
+F00:1784         enter    0
+               S01:00001510:  AF 00 00 00
+F00:1785         lea      gp,_bss_start
+               S01:00001514:  8A 3A 00 00 00 00 [R]
+F00:1786       # DBGCursorCol = 0;
+F00:1787         stw      r0,_DBGCursorCol[gp]
+               S01:0000151A:  91 40 87 28 00 00 [R]
+F00:1788       # DBGCursorRow = 0;
+F00:1789         stw      r0,_DBGCursorRow[gp]
+               S01:00001520:  91 40 A7 28 00 00 [R]
+F00:1790       # DBGUpdateCursorPos();
+F00:1791         jsr      _DBGUpdateCursorPos
+               S01:00001526:  20 42 53 00 00 00 [R]
+F00:1792       .00056:
+F00:1793         leave    0
+               S01:0000152C:  BF 00 00 00
+F00:1794       	.type	_DBGHomeCursor,@function
+F00:1795       	.size	_DBGHomeCursor,$-_DBGHomeCursor
+F00:1796       #--}
+F00:1797         
+F00:1798       #{++ _DBGBlankLine
+F00:1799       	.align 4
+F00:1800       	.sdreg	29
+F00:1801           #====================================================
+F00:1802       # Basic Block 0
+F00:1803       #====================================================
+F00:1804       _DBGBlankLine:
+F00:1805         enter    48
+               S01:00001530:  AF A0 FF FF
+F00:1806         lea      gp,_bss_start
+               S01:00001534:  8A 3A 00 00 00 00 [R]
+F00:1807         sths     s0,0[sp]
+               S01:0000153A:  95 D6 07 00
+F00:1808         sths     s1,16[sp]
+               S01:0000153E:  95 D8 87 00
+F00:1809         sths     s2,32[sp]
+               S01:00001542:  95 DA 07 01
+F00:1810       # p = (int *)0xFF800000;
+F00:1811         ldi      s1,4286578688
+               S01:00001546:  49 FE 00 00 D4 18 00 00 00 FC
+F00:1812       # p = p + row * 64;
+F00:1813         ldo      t3,64[fp]
+               S01:00001550:  86 8C 07 02 00 00
+F00:1814         sll      t2,t3,6
+               S01:00001556:  58 8A 31 02
+F00:1815         sll      t1,t2,3
+               S01:0000155A:  58 48 19 02
+F00:1816         add      s1,s1,t1
+               S01:0000155E:  19 18 23 00
+F00:1817       # vc = DBGAttr | ' ';
+F00:1818         ldo      t1,_DBGAttr[gp]
+               S01:00001562:  86 48 C7 28 00 00 [R]
+F00:1819         ldi      t2,32
+               S01:00001568:  04 0A 00 01
+F00:1820         sxc      t2,t2
+               S01:0000156C:  AA 4A 01 F0 11 0A
+F00:1821         or       s2,t1,t2
+               S01:00001572:  1D 1A 29 00
+F00:1822       # for (nn = 0; nn < 64; nn++)
+F00:1823         mov      s0,r0
+               S01:00001576:  1D 16 00 00
+F00:1824         sgt      t0,s0,63
+               S01:0000157A:  1B C6 FA 01
+F00:1825         bnez     t0,.00071
+               S01:0000157E:  12 DA 00 E0
+F00:1826       .00070:
+F00:1827       # p[nn] = vc;
+F00:1828         sll      t0,s0,3
+               S01:00001582:  58 C6 1A 02
+F00:1829         sto      s2,[t0+s1]
+               S01:00001586:  C3 DA 60 00 00 00
+F00:1830         add      s0,s0,1
+               S01:0000158C:  04 D6 0A 00
+F00:1831         slt      t0,s0,64
+               S01:00001590:  18 C6 02 02
+F00:1832         bnez     t0,.00070
+               S01:00001594:  12 CE F8 FF
+F00:1833       .00071:
+F00:1834       .00069:
+F00:1835         ldhs     s0,0[sp]
+               S01:00001598:  89 D6 07 00
+F00:1836         ldhs     s1,16[sp]
+               S01:0000159C:  89 D8 87 00
+F00:1837         ldhs     s2,32[sp]
+               S01:000015A0:  89 DA 07 01
+F00:1838         leave    16
+               S01:000015A4:  BF 20 00 00
+F00:1839       	.type	_DBGBlankLine,@function
+F00:1840       	.size	_DBGBlankLine,$-_DBGBlankLine
+F00:1841       #--}
+F00:1842        
+F00:1843       #{++ _DBGScrollUp
+F00:1844       	.align 4
+F00:1845       	.sdreg	29
+F00:1846           #====================================================
+F00:1847       # Basic Block 0
+F00:1848       #====================================================
+F00:1849       _DBGScrollUp:
+F00:1850         enter    64
+               S01:000015B0:  AF 80 FF FF
+F00:1851         sths     s0,0[sp]
+               S01:000015B4:  95 D6 07 00
+F00:1852         sths     s1,16[sp]
+               S01:000015B8:  95 D8 87 00
+F00:1853         sths     s2,32[sp]
+               S01:000015BC:  95 DA 07 01
+F00:1854         sths     s3,48[sp]
+               S01:000015C0:  95 DC 87 01
+F00:1855       # int:64 *scrn = (int *)0xFF800000;
+F00:1856         ldi      s3,4286578688
+               S01:000015C4:  49 FE 00 00 D4 1C 00 00 00 FC
+F00:1857         ldi      s2,4286579200
+               S01:000015CE:  49 FE 00 00 D4 1A 00 10 00 FC
+F00:1858       # count = 32 * 64;
+F00:1859         ldi      s1,2048
+               S01:000015D8:  04 18 00 00
+F00:1860       # for (nn = 0; nn < count; nn++)
+F00:1861         mov      s0,r0
+               S01:000015DC:  1D 16 00 00
+F00:1862         bge      s0,s1,.00087
+               S01:000015E0:  29 C0 62 FC 02 00
+F00:1863       .00086:
+F00:1864       # scrn[nn] = scrn2[nn];
+F00:1865         sll      t0,s0,3
+               S01:000015E6:  58 C6 1A 02
+F00:1866         sll      t1,s0,3
+               S01:000015EA:  58 C8 1A 02
+F00:1867         ldo      t2,[t1+s2]
+               S01:000015EE:  B6 0A 69 00 00 00
+F00:1868         sto      t2,[t0+s3]
+               S01:000015F4:  C3 CA 70 00 00 00
+F00:1869         add      s0,s0,1
+               S01:000015FA:  04 D6 0A 00
+F00:1870         blt      s0,s1,.00086
+               S01:000015FE:  28 C0 62 FC FE FF
+F00:1871       .00087:
+F00:1872       # DBGBlankLine(32-1);
+F00:1873         ldi      t0,31
+               S01:00001604:  04 06 F8 00
+F00:1874         push     t0
+               S01:00001608:  AC 06
+F00:1875         jsr      _DBGBlankLine
+               S01:0000160A:  20 C2 54 00 00 00 [R]
+F00:1876       .00085:
+F00:1877         ldhs     s0,0[sp]
+               S01:00001610:  89 D6 07 00
+F00:1878         ldhs     s1,16[sp]
+               S01:00001614:  89 D8 87 00
+F00:1879         ldhs     s2,32[sp]
+               S01:00001618:  89 DA 07 01
+F00:1880         ldhs     s3,48[sp]
+               S01:0000161C:  89 DC 87 01
+F00:1881         leave    0
+               S01:00001620:  BF 00 00 00
+F00:1882       	.type	_DBGScrollUp,@function
+F00:1883       	.size	_DBGScrollUp,$-_DBGScrollUp
+F00:1884       #--}
+F00:1885        
+F00:1886       #{++ _DBGIncrementCursorRow
+F00:1887       	.align 4
+F00:1888       	.sdreg	29
+F00:1889       #====================================================
+F00:1890       # Basic Block 0
+F00:1891       #====================================================
+F00:1892       _DBGIncrementCursorRow:
+F00:1893         enter    0
+               S01:00001630:  AF 00 00 00
+F00:1894         lea      gp,_bss_start
+               S01:00001634:  8A 3A 00 00 00 00 [R]
+F00:1895       # if (DBGCursorRow < 32 - 1) {
+F00:1896         ldwu     t0,_DBGCursorRow[gp]
+               S01:0000163A:  83 46 A7 28 00 00 [R]
+F00:1897         bge      t0,31,.00101
+               S01:00001640:  29 C0 F8 FE 02 00
+F00:1898       # DBGCursorRow++;
+F00:1899         ldw      t0,_DBGCursorRow[gp]
+               S01:00001646:  82 46 A7 28 00 00 [R]
+F00:1900         add      t0,t0,1
+               S01:0000164C:  04 C6 08 00
+F00:1901         stw      t0,_DBGCursorRow[gp]
+               S01:00001650:  91 46 A7 28 00 00 [R]
+F00:1902       # DBGUpdateCursorPos();
+F00:1903         jsr      _DBGUpdateCursorPos
+               S01:00001656:  20 42 53 00 00 00 [R]
+F00:1904       .00100:
+F00:1905         leave    0
+               S01:0000165C:  BF 00 00 00
+F00:1906       .00101:
+F00:1907       # DBGScrollUp();
+F00:1908         jsr      _DBGScrollUp
+               S01:00001660:  20 C2 56 00 00 00 [R]
+F00:1909       # DBGCursorRow--;
+F00:1910         ldw      t0,_DBGCursorRow[gp]
+               S01:00001666:  82 46 A7 28 00 00 [R]
+F00:1911         sub      t0,t0,1
+               S01:0000166C:  04 C6 F8 3F
+F00:1912         stw      t0,_DBGCursorRow[gp]
+               S01:00001670:  91 46 A7 28 00 00 [R]
+F00:1913         beqz     r0,.00100
+               S01:00001676:  10 06 F8 FF
+F00:1914       	.type	_DBGIncrementCursorRow,@function
+F00:1915       	.size	_DBGIncrementCursorRow,$-_DBGIncrementCursorRow
+F00:1916       #--}
+F00:1917        
+F00:1918       #{++ _DBGIncrementCursorPos
+F00:1919       	.align 4
+F00:1920       	.sdreg	29
+F00:1921       #====================================================
+F00:1922       # Basic Block 0
+F00:1923       #====================================================
+F00:1924       _DBGIncrementCursorPos:
+F00:1925         enter    0
+               S01:00001680:  AF 00 00 00
+F00:1926         lea      gp,_bss_start
+               S01:00001684:  8A 3A 00 00 00 00 [R]
+F00:1927       # if (DBGCursorCol < 64) {
+F00:1928         ldwu     t0,_DBGCursorCol[gp]
+               S01:0000168A:  83 46 87 28 00 00 [R]
+F00:1929         sgt      t1,t0,63
+               S01:00001690:  1B C8 F8 01
+F00:1930         bnez     t1,.00115
+               S01:00001694:  12 1E 01 E0
+F00:1931       # DBGCursorCol++;
+F00:1932         ldw      t0,_DBGCursorCol[gp]
+               S01:00001698:  82 46 87 28 00 00 [R]
+F00:1933         add      t0,t0,1
+               S01:0000169E:  04 C6 08 00
+F00:1934         stw      t0,_DBGCursorCol[gp]
+               S01:000016A2:  91 46 87 28 00 00 [R]
+F00:1935       # DBGUpdateCursorPos();
+F00:1936         jsr      _DBGUpdateCursorPos
+               S01:000016A8:  20 42 53 00 00 00 [R]
+F00:1937       .00114:
+F00:1938         leave    0
+               S01:000016AE:  BF 00 00 00
+F00:1939       .00115:
+F00:1940       # DBGCursorCol = 0;
+F00:1941         stw      r0,_DBGCursorCol[gp]
+               S01:000016B2:  91 40 87 28 00 00 [R]
+F00:1942       # DBGIncrementCursorRow();
+F00:1943         jsr      _DBGIncrementCursorRow
+               S01:000016B8:  20 C2 58 00 00 00 [R]
+F00:1944         beqz     r0,.00114
+               S01:000016BE:  10 10 F8 FF
+F00:1945       	.type	_DBGIncrementCursorPos,@function
+F00:1946       	.size	_DBGIncrementCursorPos,$-_DBGIncrementCursorPos
+F00:1947       #--}
+F00:1948         
+F00:1949       #{++ _DBGDisplayChar
+F00:1950       	.align 4
+F00:1951       	.sdreg	29
+F00:1952         #====================================================
+F00:1953       # Basic Block 0
+F00:1954       #====================================================
+F00:1955       _DBGDisplayChar:
+F00:1956         enter    64
+               S01:000016D0:  AF 80 FF FF
+F00:1957         lea      gp,_bss_start
+               S01:000016D4:  8A 3A 00 00 00 00 [R]
+F00:1958         sths     s0,0[sp]
+               S01:000016DA:  95 D6 07 00
+F00:1959         sths     s1,16[sp]
+               S01:000016DE:  95 D8 87 00
+F00:1960         sths     s2,32[sp]
+               S01:000016E2:  95 DA 07 01
+F00:1961         sths     s3,48[sp]
+               S01:000016E6:  95 DC 87 01
+F00:1962         ldw      s2,64[fp]
+               S01:000016EA:  82 9A 07 02 00 00
+F00:1963         ldi      s3,4286578688
+               S01:000016F0:  49 FE 00 00 D4 1C 00 00 00 FC
+F00:1964       # switch(ch) {
+F00:1965         ldi      t0,144
+               S01:000016FA:  04 06 80 04
+F00:1966         bgt      s2,t0,.00288
+               S01:000016FE:  2B 40 1B FC 03 00
+F00:1967         blt      s2,t0,.00289
+               S01:00001704:  28 40 1B FC 25 00
+F00:1968       # if (DBGCursorRow > 0) {
+F00:1969         ldwu     t0,_DBGCursorRow[gp]
+               S01:0000170A:  83 46 A7 28 00 00 [R]
+F00:1970         bge      r0,t0,.00290
+               S01:00001710:  29 00 18 FC 01 00
+F00:1971       # DBGCursorRow--;
+F00:1972         ldw      t0,_DBGCursorRow[gp]
+               S01:00001716:  82 46 A7 28 00 00 [R]
+F00:1973         sub      t0,t0,1
+               S01:0000171C:  04 C6 F8 3F
+F00:1974         stw      t0,_DBGCursorRow[gp]
+               S01:00001720:  91 46 A7 28 00 00 [R]
+F00:1975       # DBGUpdateCursorPos();
+F00:1976         jsr      _DBGUpdateCursorPos
+               S01:00001726:  20 42 53 00 00 00 [R]
+F00:1977       .00290:
+F00:1978       # break;
+F00:1979         beqz     r0,.00238
+               S01:0000172C:  10 00 08 E1
+F00:1980       .00288:
+F00:1981         ldi      t0,146
+               S01:00001730:  04 06 90 04
+F00:1982         bgt      s2,t0,.00292
+               S01:00001734:  2B 40 1B FC 03 00
+F00:1983         blt      s2,t0,.00293
+               S01:0000173A:  28 40 1B FC 19 00
+F00:1984       # if (DBGCursorRow < 32-1) {
+F00:1985         ldwu     t0,_DBGCursorRow[gp]
+               S01:00001740:  83 46 A7 28 00 00 [R]
+F00:1986         bge      t0,31,.00294
+               S01:00001746:  29 C0 F8 FE 01 00
+F00:1987       # DBGCursorRow++;
+F00:1988         ldw      t0,_DBGCursorRow[gp]
+               S01:0000174C:  82 46 A7 28 00 00 [R]
+F00:1989         add      t0,t0,1
+               S01:00001752:  04 C6 08 00
+F00:1990         stw      t0,_DBGCursorRow[gp]
+               S01:00001756:  91 46 A7 28 00 00 [R]
+F00:1991       # DBGUpdateCursorPos();
+F00:1992         jsr      _DBGUpdateCursorPos
+               S01:0000175C:  20 42 53 00 00 00 [R]
+F00:1993       .00294:
+F00:1994       # break;
+F00:1995         beqz     r0,.00238
+               S01:00001762:  10 0A F8 E0
+F00:1996       .00292:
+F00:1997         ldi      t0,147
+               S01:00001766:  04 06 98 04
+F00:1998         bgt      s2,t0,.00296
+               S01:0000176A:  2B 40 1B FC 03 00
+F00:1999         blt      s2,t0,.00297
+               S01:00001770:  28 40 1B FC 0F 00
+F00:2000       # if (DBGCursorCol > 0) {
+F00:2001         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001776:  83 46 87 28 00 00 [R]
+F00:2002         bge      r0,t0,.00298
+               S01:0000177C:  29 00 18 FC 01 00
+F00:2003       # DBGCursorCol--;
+F00:2004         ldw      t0,_DBGCursorCol[gp]
+               S01:00001782:  82 46 87 28 00 00 [R]
+F00:2005         sub      t0,t0,1
+               S01:00001788:  04 C6 F8 3F
+F00:2006         stw      t0,_DBGCursorCol[gp]
+               S01:0000178C:  91 46 87 28 00 00 [R]
+F00:2007       # DBGUpdateCursorPos();
+F00:2008         jsr      _DBGUpdateCursorPos
+               S01:00001792:  20 42 53 00 00 00 [R]
+F00:2009       .00298:
+F00:2010       # break;
+F00:2011         beqz     r0,.00238
+               S01:00001798:  10 14 E8 E0
+F00:2012       .00296:
+F00:2013         ldi      t0,147
+               S01:0000179C:  04 06 98 04
+F00:2014         bne      s2,t0,.00300
+               S01:000017A0:  27 40 1B FC 02 00
+F00:2015       # if (DBGCursorCol > 0) {
+F00:2016         ldwu     t0,_DBGCursorCol[gp]
+               S01:000017A6:  83 46 87 28 00 00 [R]
+F00:2017         bge      r0,t0,.00301
+               S01:000017AC:  29 00 18 FC 01 00
+F00:2018       # DBGCursorCol--;
+F00:2019         ldw      t0,_DBGCursorCol[gp]
+               S01:000017B2:  82 46 87 28 00 00 [R]
+F00:2020         sub      t0,t0,1
+               S01:000017B8:  04 C6 F8 3F
+F00:2021         stw      t0,_DBGCursorCol[gp]
+               S01:000017BC:  91 46 87 28 00 00 [R]
+F00:2022       # DBGUpdateCursorPos();
+F00:2023         jsr      _DBGUpdateCursorPos
+               S01:000017C2:  20 42 53 00 00 00 [R]
+F00:2024       .00301:
+F00:2025       # break;
+F00:2026         beqz     r0,.00238
+               S01:000017C8:  10 04 E0 E0
+F00:2027       .00300:
+F00:2028         ldi      t0,148
+               S01:000017CC:  04 06 A0 04
+F00:2029         bne      s2,t0,.00303
+               S01:000017D0:  27 40 1B FC 02 00
+F00:2030       # if (DBGCursorCol==0)
+F00:2031         ldwu     t0,_DBGCursorCol[gp]
+               S01:000017D6:  83 46 87 28 00 00 [R]
+F00:2032         bnez     t0,.00304
+               S01:000017DC:  12 CA 00 E0
+F00:2033       # DBGCursorRow = 0;
+F00:2034         stw      r0,_DBGCursorRow[gp]
+               S01:000017E0:  91 40 A7 28 00 00 [R]
+F00:2035       .00304:
+F00:2036       # DBGCursorCol = 0;
+F00:2037         stw      r0,_DBGCursorCol[gp]
+               S01:000017E6:  91 40 87 28 00 00 [R]
+F00:2038       # DBGUpdateCursorPos();
+F00:2039         jsr      _DBGUpdateCursorPos
+               S01:000017EC:  20 42 53 00 00 00 [R]
+F00:2040       # break;
+F00:2041         beqz     r0,.00238
+               S01:000017F2:  10 1A D0 E0
+F00:2042       .00303:
+F00:2043         ldi      t0,153
+               S01:000017F6:  04 06 C8 04
+F00:2044         bne      s2,t0,.00287
+               S01:000017FA:  27 40 1B FC 32 00
+F00:2045       # p = (int *)0xFF800000 + DBGCursorRow * 64;
+F00:2046         ldwu     t3,_DBGCursorRow[gp]
+               S01:00001800:  83 4C A7 28 00 00 [R]
+F00:2047         sll      t2,t3,6
+               S01:00001806:  58 8A 31 02
+F00:2048         sll      t1,t2,3
+               S01:0000180A:  58 48 19 02
+F00:2049         add      s1,t1,s3
+               S01:0000180E:  19 18 71 00
+F00:2050       # for (nn = DBGCursorCol; nn < 64-1; nn++) {
+F00:2051         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001812:  83 46 87 28 00 00 [R]
+F00:2052         sxc      s0,t0
+               S01:00001818:  AA D6 00 F0 11 0A
+F00:2053         sgt      t0,s0,62
+               S01:0000181E:  1B C6 F2 01
+F00:2054         bnez     t0,.00308
+               S01:00001822:  12 C8 08 E0
+F00:2055       .00307:
+F00:2056       # p[nn] = p[nn+1];
+F00:2057         sll      t0,s0,3
+               S01:00001826:  58 C6 1A 02
+F00:2058         add      t2,s0,1
+               S01:0000182A:  04 CA 0A 00
+F00:2059         sll      t1,t2,3
+               S01:0000182E:  58 48 19 02
+F00:2060         ldo      t2,[t1+s1]
+               S01:00001832:  B6 0A 61 00 00 00
+F00:2061         sto      t2,[t0+s1]
+               S01:00001838:  C3 CA 60 00 00 00
+F00:2062         add      s0,s0,1
+               S01:0000183E:  04 D6 0A 00
+F00:2063         slt      t0,s0,63
+               S01:00001842:  18 C6 FA 01
+F00:2064         bnez     t0,.00307
+               S01:00001846:  12 C0 F8 FF
+F00:2065       .00308:
+F00:2066       # p[nn] = DBGAttr | ' ';
+F00:2067         sll      t0,s0,3
+               S01:0000184A:  58 C6 1A 02
+F00:2068         ldo      t2,_DBGAttr[gp]
+               S01:0000184E:  86 4A C7 28 00 00 [R]
+F00:2069         ldi      t3,32
+               S01:00001854:  04 0C 00 01
+F00:2070         sxc      t3,t3
+               S01:00001858:  AA 8C 01 F0 11 0A
+F00:2071         or       t1,t2,t3
+               S01:0000185E:  1D 48 31 00
+F00:2072         sto      t1,[t0+s1]
+               S01:00001862:  C3 C8 60 00 00 00
+F00:2073       # break;
+F00:2074         beqz     r0,.00238
+               S01:00001868:  10 04 B8 E0
+F00:2075       .00297:
+F00:2076         ldi      t0,146
+               S01:0000186C:  04 06 90 04
+F00:2077         bne      s2,t0,.00310
+               S01:00001870:  27 40 1B FC 02 00
+F00:2078       # if (DBGCursorRow < 32-1) {
+F00:2079         ldwu     t0,_DBGCursorRow[gp]
+               S01:00001876:  83 46 A7 28 00 00 [R]
+F00:2080         bge      t0,31,.00311
+               S01:0000187C:  29 C0 F8 FE 01 00
+F00:2081       # DBGCursorRow++;
+F00:2082         ldw      t0,_DBGCursorRow[gp]
+               S01:00001882:  82 46 A7 28 00 00 [R]
+F00:2083         add      t0,t0,1
+               S01:00001888:  04 C6 08 00
+F00:2084         stw      t0,_DBGCursorRow[gp]
+               S01:0000188C:  91 46 A7 28 00 00 [R]
+F00:2085       # DBGUpdateCursorPos();
+F00:2086         jsr      _DBGUpdateCursorPos
+               S01:00001892:  20 42 53 00 00 00 [R]
+F00:2087       .00311:
+F00:2088       # break;
+F00:2089         beqz     r0,.00238
+               S01:00001898:  10 14 A8 E0
+F00:2090       .00310:
+F00:2091         ldi      t0,147
+               S01:0000189C:  04 06 98 04
+F00:2092         bne      s2,t0,.00287
+               S01:000018A0:  27 40 1B FC 27 00
+F00:2093       # if (DBGCursorCol > 0) {
+F00:2094         ldwu     t0,_DBGCursorCol[gp]
+               S01:000018A6:  83 46 87 28 00 00 [R]
+F00:2095         bge      r0,t0,.00314
+               S01:000018AC:  29 00 18 FC 01 00
+F00:2096       # DBGCursorCol--;
+F00:2097         ldw      t0,_DBGCursorCol[gp]
+               S01:000018B2:  82 46 87 28 00 00 [R]
+F00:2098         sub      t0,t0,1
+               S01:000018B8:  04 C6 F8 3F
+F00:2099         stw      t0,_DBGCursorCol[gp]
+               S01:000018BC:  91 46 87 28 00 00 [R]
+F00:2100       # DBGUpdateCursorPos();
+F00:2101         jsr      _DBGUpdateCursorPos
+               S01:000018C2:  20 42 53 00 00 00 [R]
+F00:2102       .00314:
+F00:2103       # break;
+F00:2104         beqz     r0,.00238
+               S01:000018C8:  10 04 A0 E0
+F00:2105       .00293:
+F00:2106         ldi      t0,144
+               S01:000018CC:  04 06 80 04
+F00:2107         bne      s2,t0,.00316
+               S01:000018D0:  27 40 1B FC 02 00
+F00:2108       # if (DBGCursorRow > 0) {
+F00:2109         ldwu     t0,_DBGCursorRow[gp]
+               S01:000018D6:  83 46 A7 28 00 00 [R]
+F00:2110         bge      r0,t0,.00317
+               S01:000018DC:  29 00 18 FC 01 00
+F00:2111       # DBGCursorRow--;
+F00:2112         ldw      t0,_DBGCursorRow[gp]
+               S01:000018E2:  82 46 A7 28 00 00 [R]
+F00:2113         sub      t0,t0,1
+               S01:000018E8:  04 C6 F8 3F
+F00:2114         stw      t0,_DBGCursorRow[gp]
+               S01:000018EC:  91 46 A7 28 00 00 [R]
+F00:2115       # DBGUpdateCursorPos();
+F00:2116         jsr      _DBGUpdateCursorPos
+               S01:000018F2:  20 42 53 00 00 00 [R]
+F00:2117       .00317:
+F00:2118       # break;
+F00:2119         beqz     r0,.00238
+               S01:000018F8:  10 14 90 E0
+F00:2120       .00316:
+F00:2121         ldi      t0,145
+               S01:000018FC:  04 06 88 04
+F00:2122         bne      s2,t0,.00319
+               S01:00001900:  27 40 1B FC 02 00
+F00:2123       # if (DBGCursorCol < 64 - 1) {
+F00:2124         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001906:  83 46 87 28 00 00 [R]
+F00:2125         sgt      t1,t0,62
+               S01:0000190C:  1B C8 F0 01
+F00:2126         bnez     t1,.00320
+               S01:00001910:  12 1A 01 E0
+F00:2127       # DBGCursorCol++;
+F00:2128         ldw      t0,_DBGCursorCol[gp]
+               S01:00001914:  82 46 87 28 00 00 [R]
+F00:2129         add      t0,t0,1
+               S01:0000191A:  04 C6 08 00
+F00:2130         stw      t0,_DBGCursorCol[gp]
+               S01:0000191E:  91 46 87 28 00 00 [R]
+F00:2131       # DBGUpdateCursorPos();
+F00:2132         jsr      _DBGUpdateCursorPos
+               S01:00001924:  20 42 53 00 00 00 [R]
+F00:2133       .00320:
+F00:2134       # break;
+F00:2135         beqz     r0,.00238
+               S01:0000192A:  10 02 88 E0
+F00:2136       .00319:
+F00:2137         ldi      t0,146
+               S01:0000192E:  04 06 90 04
+F00:2138         bne      s2,t0,.00287
+               S01:00001932:  27 40 1B FC 1E 00
+F00:2139       # if (DBGCursorRow < 32-1) {
+F00:2140         ldwu     t0,_DBGCursorRow[gp]
+               S01:00001938:  83 46 A7 28 00 00 [R]
+F00:2141         bge      t0,31,.00323
+               S01:0000193E:  29 C0 F8 FE 01 00
+F00:2142       # DBGCursorRow++;
+F00:2143         ldw      t0,_DBGCursorRow[gp]
+               S01:00001944:  82 46 A7 28 00 00 [R]
+F00:2144         add      t0,t0,1
+               S01:0000194A:  04 C6 08 00
+F00:2145         stw      t0,_DBGCursorRow[gp]
+               S01:0000194E:  91 46 A7 28 00 00 [R]
+F00:2146       # DBGUpdateCursorPos();
+F00:2147         jsr      _DBGUpdateCursorPos
+               S01:00001954:  20 42 53 00 00 00 [R]
+F00:2148       .00323:
+F00:2149       # break;
+F00:2150         beqz     r0,.00238
+               S01:0000195A:  10 12 78 E0
+F00:2151       .00289:
+F00:2152         bgt      s2,10,.00325
+               S01:0000195E:  2B 40 53 FE 01 00
+F00:2153         blt      s2,10,.00326
+               S01:00001964:  28 40 53 FE 0B 00
+F00:2154       # DBGCursorCol = 0;
+F00:2155         stw      r0,_DBGCursorCol[gp]
+               S01:0000196A:  91 40 87 28 00 00 [R]
+F00:2156       # DBGIncrementCursorRow();
+F00:2157         jsr      _DBGIncrementCursorRow
+               S01:00001970:  20 C2 58 00 00 00 [R]
+F00:2158       # break;
+F00:2159         beqz     r0,.00238
+               S01:00001976:  10 16 70 E0
+F00:2160       .00325:
+F00:2161         bgt      s2,12,.00327
+               S01:0000197A:  2B 40 63 FE 01 00
+F00:2162         blt      s2,12,.00328
+               S01:00001980:  28 40 63 FE 07 00
+F00:2163       # DBGClearScreen();
+F00:2164         jsr      _DBGClearScreen
+               S01:00001986:  20 C2 50 00 00 00 [R]
+F00:2165       # DBGHomeCursor();
+F00:2166         jsr      _DBGHomeCursor
+               S01:0000198C:  20 42 54 00 00 00 [R]
+F00:2167       # break;
+F00:2168         beqz     r0,.00238
+               S01:00001992:  10 1A 68 E0
+F00:2169       .00327:
+F00:2170         bne      s2,12,.00329
+               S01:00001996:  27 40 63 FE 01 00
+F00:2171       # DBGClearScreen();
+F00:2172         jsr      _DBGClearScreen
+               S01:0000199C:  20 C2 50 00 00 00 [R]
+F00:2173       # DBGHomeCursor();
+F00:2174         jsr      _DBGHomeCursor
+               S01:000019A2:  20 42 54 00 00 00 [R]
+F00:2175       # break;
+F00:2176         beqz     r0,.00238
+               S01:000019A8:  10 04 68 E0
+F00:2177       .00329:
+F00:2178         bne      s2,13,.00330
+               S01:000019AC:  27 40 6B FE 01 00
+F00:2179       # DBGCursorCol = 0;
+F00:2180         stw      r0,_DBGCursorCol[gp]
+               S01:000019B2:  91 40 87 28 00 00 [R]
+F00:2181       # DBGUpdateCursorPos();
+F00:2182         jsr      _DBGUpdateCursorPos
+               S01:000019B8:  20 42 53 00 00 00 [R]
+F00:2183       # break;
+F00:2184         beqz     r0,.00238
+               S01:000019BE:  10 0E 60 E0
+F00:2185       .00330:
+F00:2186         ldi      t0,144
+               S01:000019C2:  04 06 80 04
+F00:2187         bne      s2,t0,.00287
+               S01:000019C6:  27 40 1B FC 15 00
+F00:2188       # if (DBGCursorRow > 0) {
+F00:2189         ldwu     t0,_DBGCursorRow[gp]
+               S01:000019CC:  83 46 A7 28 00 00 [R]
+F00:2190         bge      r0,t0,.00332
+               S01:000019D2:  29 00 18 FC 01 00
+F00:2191       # DBGCursorRow--;
+F00:2192         ldw      t0,_DBGCursorRow[gp]
+               S01:000019D8:  82 46 A7 28 00 00 [R]
+F00:2193         sub      t0,t0,1
+               S01:000019DE:  04 C6 F8 3F
+F00:2194         stw      t0,_DBGCursorRow[gp]
+               S01:000019E2:  91 46 A7 28 00 00 [R]
+F00:2195       # DBGUpdateCursorPos();
+F00:2196         jsr      _DBGUpdateCursorPos
+               S01:000019E8:  20 42 53 00 00 00 [R]
+F00:2197       .00332:
+F00:2198       # break;
+F00:2199         beqz     r0,.00238
+               S01:000019EE:  10 1E 50 E0
+F00:2200       .00328:
+F00:2201         bne      s2,10,.00334
+               S01:000019F2:  27 40 53 FE 01 00
+F00:2202       # DBGCursorCol = 0;
+F00:2203         stw      r0,_DBGCursorCol[gp]
+               S01:000019F8:  91 40 87 28 00 00 [R]
+F00:2204       # DBGIncrementCursorRow();
+F00:2205         jsr      _DBGIncrementCursorRow
+               S01:000019FE:  20 C2 58 00 00 00 [R]
+F00:2206       # break;
+F00:2207         beqz     r0,.00238
+               S01:00001A04:  10 08 50 E0
+F00:2208       .00334:
+F00:2209         bne      s2,12,.00287
+               S01:00001A08:  27 40 63 FE 11 00
+F00:2210       # DBGClearScreen();
+F00:2211         jsr      _DBGClearScreen
+               S01:00001A0E:  20 C2 50 00 00 00 [R]
+F00:2212       # DBGHomeCursor();
+F00:2213         jsr      _DBGHomeCursor
+               S01:00001A14:  20 42 54 00 00 00 [R]
+F00:2214       # break;
+F00:2215         beqz     r0,.00238
+               S01:00001A1A:  10 12 48 E0
+F00:2216       .00326:
+F00:2217         bne      s2,8,.00336
+               S01:00001A1E:  27 40 43 FE 08 00
+F00:2218       # if (DBGCursorCol > 0) {
+F00:2219         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001A24:  83 46 87 28 00 00 [R]
+F00:2220         bge      r0,t0,.00337
+               S01:00001A2A:  29 00 18 FC 07 00
+F00:2221       # DBGCursorCol--;
+F00:2222         ldw      t0,_DBGCursorCol[gp]
+               S01:00001A30:  82 46 87 28 00 00 [R]
+F00:2223         sub      t0,t0,1
+               S01:00001A36:  04 C6 F8 3F
+F00:2224         stw      t0,_DBGCursorCol[gp]
+               S01:00001A3A:  91 46 87 28 00 00 [R]
+F00:2225       # p = (int *)0xFF800000 + DBGCursorRow * 64;
+F00:2226         ldwu     t3,_DBGCursorRow[gp]
+               S01:00001A40:  83 4C A7 28 00 00 [R]
+F00:2227         sll      t2,t3,6
+               S01:00001A46:  58 8A 31 02
+F00:2228         sll      t1,t2,3
+               S01:00001A4A:  58 48 19 02
+F00:2229         add      s1,t1,s3
+               S01:00001A4E:  19 18 71 00
+F00:2230       # for (nn = DBGCursorCol; nn < 64-1; nn++) {
+F00:2231         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001A52:  83 46 87 28 00 00 [R]
+F00:2232         sxc      s0,t0
+               S01:00001A58:  AA D6 00 F0 11 0A
+F00:2233         sgt      t0,s0,62
+               S01:00001A5E:  1B C6 F2 01
+F00:2234         bnez     t0,.00340
+               S01:00001A62:  12 C8 08 E0
+F00:2235       .00339:
+F00:2236       # p[nn] = p[nn+1];
+F00:2237         sll      t0,s0,3
+               S01:00001A66:  58 C6 1A 02
+F00:2238         add      t2,s0,1
+               S01:00001A6A:  04 CA 0A 00
+F00:2239         sll      t1,t2,3
+               S01:00001A6E:  58 48 19 02
+F00:2240         ldo      t2,[t1+s1]
+               S01:00001A72:  B6 0A 61 00 00 00
+F00:2241         sto      t2,[t0+s1]
+               S01:00001A78:  C3 CA 60 00 00 00
+F00:2242         add      s0,s0,1
+               S01:00001A7E:  04 D6 0A 00
+F00:2243         slt      t0,s0,63
+               S01:00001A82:  18 C6 FA 01
+F00:2244         bnez     t0,.00339
+               S01:00001A86:  12 C0 F8 FF
+F00:2245       .00340:
+F00:2246       # p[nn] = DBGAttr | ' ';
+F00:2247         sll      t0,s0,3
+               S01:00001A8A:  58 C6 1A 02
+F00:2248         ldo      t2,_DBGAttr[gp]
+               S01:00001A8E:  86 4A C7 28 00 00 [R]
+F00:2249         ldi      t3,32
+               S01:00001A94:  04 0C 00 01
+F00:2250         sxc      t3,t3
+               S01:00001A98:  AA 8C 01 F0 11 0A
+F00:2251         or       t1,t2,t3
+               S01:00001A9E:  1D 48 31 00
+F00:2252         sto      t1,[t0+s1]
+               S01:00001AA2:  C3 C8 60 00 00 00
+F00:2253       .00337:
+F00:2254       # break;
+F00:2255         beqz     r0,.00238
+               S01:00001AA8:  10 04 28 E0
+F00:2256       .00336:
+F00:2257         bne      s2,9,.00342
+               S01:00001AAC:  27 40 4B FE 05 00
+F00:2258       # for (nn = 0; nn < 32; nn++) {
+F00:2259         mov      s0,r0
+               S01:00001AB2:  1D 16 00 00
+F00:2260         sgt      t0,s0,31
+               S01:00001AB6:  1B C6 FA 00
+F00:2261         bnez     t0,.00344
+               S01:00001ABA:  12 C6 10 E0
+F00:2262       .00343:
+F00:2263       # if (DBGCursorCol < tabstops[nn]) {
+F00:2264         ldwu     t0,_DBGCursorCol[gp]
+               S01:00001ABE:  83 46 87 28 00 00 [R]
+F00:2265         sll      t1,s0,1
+               S01:00001AC4:  58 C8 0A 02
+F00:2266         lea      t2,_tabstops[gp]
+               S01:00001AC8:  8A 4A 07 30 00 00 [R]
+F00:2267         ldw      t1,[t1+t2]
+               S01:00001ACE:  B2 08 29 00 00 00
+F00:2268         bge      t0,t1,.00346
+               S01:00001AD4:  29 C0 20 FC 02 00
+F00:2269       # DBGCursorCol = tabstops[nn];
+F00:2270         sll      t0,s0,1
+               S01:00001ADA:  58 C6 0A 02
+F00:2271         lea      t1,_tabstops[gp]
+               S01:00001ADE:  8A 48 07 30 00 00 [R]
+F00:2272         ldw      t2,[t0+t1]
+               S01:00001AE4:  B2 CA 20 00 00 00
+F00:2273         stw      t2,_DBGCursorCol[gp]
+               S01:00001AEA:  91 4A 87 28 00 00 [R]
+F00:2274       # break;
+F00:2275         beqz     r0,.00344
+               S01:00001AF0:  10 10 00 E0
+F00:2276       .00346:
+F00:2277         add      s0,s0,1
+               S01:00001AF4:  04 D6 0A 00
+F00:2278         slt      t0,s0,32
+               S01:00001AF8:  18 C6 02 01
+F00:2279         bnez     t0,.00343
+               S01:00001AFC:  12 C2 F0 FF
+F00:2280       .00344:
+F00:2281         beqz     r0,.00238
+               S01:00001B00:  10 0C 10 E0
+F00:2282       .00342:
+F00:2283         bne      s2,10,.00287
+               S01:00001B04:  27 40 53 FE 01 00
+F00:2284       # DBGCursorCol = 0;
+F00:2285         stw      r0,_DBGCursorCol[gp]
+               S01:00001B0A:  91 40 87 28 00 00 [R]
+F00:2286       # DBGIncrementCursorRow();
+F00:2287         jsr      _DBGIncrementCursorRow
+               S01:00001B10:  20 C2 58 00 00 00 [R]
+F00:2288       # break;
+F00:2289         beqz     r0,.00238
+               S01:00001B16:  10 16 08 E0
+F00:2290       .00287:
+F00:2291       # p = (int *)0xFF800000;
+F00:2292         mov      s1,s3
+               S01:00001B1A:  1D 98 03 00
+F00:2293       # nn = DBGCursorRow * 64 + DBGCursorCol;
+F00:2294         ldwu     t2,_DBGCursorRow[gp]
+               S01:00001B1E:  83 4A A7 28 00 00 [R]
+F00:2295         sll.w    t1,t2,6
+               S01:00001B24:  58 48 31 02
+F00:2296         ldwu     t2,_DBGCursorCol[gp]
+               S01:00001B28:  83 4A 87 28 00 00 [R]
+F00:2297         add      s0,t1,t2
+               S01:00001B2E:  19 16 29 00
+F00:2298       # p[nn] = DBGAttr | ch;
+F00:2299         sll      t0,s0,3
+               S01:00001B32:  58 C6 1A 02
+F00:2300         ldo      t2,_DBGAttr[gp]
+               S01:00001B36:  86 4A C7 28 00 00 [R]
+F00:2301         or       t1,t2,s2
+               S01:00001B3C:  1D 48 69 00
+F00:2302         sto      t1,[t0+s1]
+               S01:00001B40:  C3 C8 60 00 00 00
+F00:2303       # DBGIncrementCursorPos();
+F00:2304         jsr      _DBGIncrementCursorPos
+               S01:00001B46:  20 02 5A 00 00 00 [R]
+F00:2305       .00238:
+F00:2306       .00237:
+F00:2307         ldhs     s0,0[sp]
+               S01:00001B4C:  89 D6 07 00
+F00:2308         ldhs     s1,16[sp]
+               S01:00001B50:  89 D8 87 00
+F00:2309         ldhs     s2,32[sp]
+               S01:00001B54:  89 DA 07 01
+F00:2310         ldhs     s3,48[sp]
+               S01:00001B58:  89 DC 87 01
+F00:2311         leave    16
+               S01:00001B5C:  BF 20 00 00
+F00:2312       	.type	_DBGDisplayChar,@function
+F00:2313       	.size	_DBGDisplayChar,$-_DBGDisplayChar
+F00:2314       #--}
+F00:2315        
+F00:2316       #{++ _DBGCRLF
+F00:2317       	.align 4
+F00:2318       	.sdreg	29
+F00:2319       #====================================================
+F00:2320       # Basic Block 0
+F00:2321       #====================================================
+F00:2322       _DBGCRLF:
+F00:2323         enter    0
+               S01:00001B60:  AF 00 00 00
+F00:2324       # DBGDisplayChar('\r');
+F00:2325         ldi      t0,13
+               S01:00001B64:  04 06 68 00
+F00:2326         push     t0
+               S01:00001B68:  AC 06
+F00:2327         jsr      _DBGDisplayChar
+               S01:00001B6A:  20 42 5B 00 00 00 [R]
+F00:2328       # DBGDisplayChar('\n');
+F00:2329         ldi      t0,10
+               S01:00001B70:  04 06 50 00
+F00:2330         push     t0
+               S01:00001B74:  AC 06
+F00:2331         jsr      _DBGDisplayChar
+               S01:00001B76:  20 42 5B 00 00 00 [R]
+F00:2332       .00358:
+F00:2333         leave    0
+               S01:00001B7C:  BF 00 00 00
+F00:2334       	.type	_DBGCRLF,@function
+F00:2335       	.size	_DBGCRLF,$-_DBGCRLF
+F00:2336       #--}
+F00:2337         
+F00:2338       #{++ _DBGDisplayString
+F00:2339       	.align 4
+F00:2340       	.sdreg	29
+F00:2341        #====================================================
+F00:2342       # Basic Block 0
+F00:2343       #====================================================
+F00:2344       _DBGDisplayString:
+F00:2345         enter    32
+               S01:00001B80:  AF C0 FF FF
+F00:2346         sths     s0,0[sp]
+               S01:00001B84:  95 D6 07 00
+F00:2347         sths     s1,16[sp]
+               S01:00001B88:  95 D8 87 00
+F00:2348         ldo      s0,64[fp]
+               S01:00001B8C:  86 96 07 02 00 00
+F00:2349       # while (ch = *s) { DBGDisplayChar(ch); s++; }
+F00:2350         ldw      s1,[s0]
+               S01:00001B92:  82 D8 02 00 00 00
+F00:2351         beqz     s1,.00372
+               S01:00001B98:  10 1E 03 E0
+F00:2352       .00371:
+F00:2353         push     s1
+               S01:00001B9C:  AC 18
+F00:2354         jsr      _DBGDisplayChar
+               S01:00001B9E:  20 42 5B 00 00 00 [R]
+F00:2355         add      s0,s0,2
+               S01:00001BA4:  04 D6 12 00
+F00:2356         ldw      s1,[s0]
+               S01:00001BA8:  82 D8 02 00 00 00
+F00:2357         sne      t0,s1,r0,1
+               S01:00001BAE:  00 06 0B 00
+F00:2358         bnez     t0,.00371
+               S01:00001BB2:  12 CA F8 FF
+F00:2359       .00372:
+F00:2360       .00370:
+F00:2361         ldhs     s0,0[sp]
+               S01:00001BB6:  89 D6 07 00
+F00:2362         ldhs     s1,16[sp]
+               S01:00001BBA:  89 D8 87 00
+F00:2363         leave    16
+               S01:00001BBE:  BF 20 00 00
+F00:2364       	.type	_DBGDisplayString,@function
+F00:2365       	.size	_DBGDisplayString,$-_DBGDisplayString
+F00:2366       #--}
+F00:2367         
+F00:2368       #{++ _DBGDisplayAsciiString
+F00:2369       	.align 4
+F00:2370       	.sdreg	29
+F00:2371        #====================================================
+F00:2372       # Basic Block 0
+F00:2373       #====================================================
+F00:2374       _DBGDisplayAsciiString:
+F00:2375         enter    32
+               S01:00001BD0:  AF C0 FF FF
+F00:2376         sths     s0,0[sp]
+               S01:00001BD4:  95 D6 07 00
+F00:2377         sths     s1,16[sp]
+               S01:00001BD8:  95 D8 87 00
+F00:2378         ldo      s0,64[fp]
+               S01:00001BDC:  86 96 07 02 00 00
+F00:2379       # while (ch = *s) { DBGDisplayChar(ch); s++; }
+F00:2380         ldw      s1,[s0]
+               S01:00001BE2:  82 D8 02 00 00 00
+F00:2381         beqz     s1,.00386
+               S01:00001BE8:  10 1E 03 E0
+F00:2382       .00385:
+F00:2383         push     s1
+               S01:00001BEC:  AC 18
+F00:2384         jsr      _DBGDisplayChar
+               S01:00001BEE:  20 42 5B 00 00 00 [R]
+F00:2385         add      s0,s0,2
+               S01:00001BF4:  04 D6 12 00
+F00:2386         ldw      s1,[s0]
+               S01:00001BF8:  82 D8 02 00 00 00
+F00:2387         sne      t0,s1,r0,1
+               S01:00001BFE:  00 06 0B 00
+F00:2388         bnez     t0,.00385
+               S01:00001C02:  12 CA F8 FF
+F00:2389       .00386:
+F00:2390       .00384:
+F00:2391         ldhs     s0,0[sp]
+               S01:00001C06:  89 D6 07 00
+F00:2392         ldhs     s1,16[sp]
+               S01:00001C0A:  89 D8 87 00
+F00:2393         leave    16
+               S01:00001C0E:  BF 20 00 00
+F00:2394       	.type	_DBGDisplayAsciiString,@function
+F00:2395       	.size	_DBGDisplayAsciiString,$-_DBGDisplayAsciiString
+F00:2396       #--}
+F00:2397         
+F00:2398       #{++ _DBGDisplayStringCRLF
+F00:2399       	.align 4
+F00:2400       	.sdreg	29
+F00:2401       #====================================================
+F00:2402       # Basic Block 0
+F00:2403       #====================================================
+F00:2404       _DBGDisplayStringCRLF:
+F00:2405         enter    0
+               S01:00001C20:  AF 00 00 00
+F00:2406       # DBGDisplayString(s);
+F00:2407         ldo      t0,64[fp]
+               S01:00001C24:  86 86 07 02 00 00
+F00:2408         push     t0
+               S01:00001C2A:  AC 06
+F00:2409         jsr      _DBGDisplayString
+               S01:00001C2C:  20 02 6E 00 00 00 [R]
+F00:2410       # DBGCRLF();
+F00:2411         jsr      _DBGCRLF
+               S01:00001C32:  20 82 6D 00 00 00 [R]
+F00:2412       .00396:
+F00:2413         leave    16
+               S01:00001C38:  BF 20 00 00
+F00:2414       	.type	_DBGDisplayStringCRLF,@function
+F00:2415       	.size	_DBGDisplayStringCRLF,$-_DBGDisplayStringCRLF
+F00:2416       #--}
+F00:2417         
+F00:2418       #{++ _DBGDisplayAsciiStringCRLF
+F00:2419       	.align 4
+F00:2420       	.sdreg	29
+F00:2421       #====================================================
+F00:2422       # Basic Block 0
+F00:2423       #====================================================
+F00:2424       _DBGDisplayAsciiStringCRLF:
+F00:2425         enter    0
+               S01:00001C40:  AF 00 00 00
+F00:2426       # DBGDisplayAsciiString(s);
+F00:2427         ldo      t0,64[fp]
+               S01:00001C44:  86 86 07 02 00 00
+F00:2428         push     t0
+               S01:00001C4A:  AC 06
+F00:2429         jsr      _DBGDisplayAsciiString
+               S01:00001C4C:  20 42 6F 00 00 00 [R]
+F00:2430       # DBGCRLF();
+F00:2431         jsr      _DBGCRLF
+               S01:00001C52:  20 82 6D 00 00 00 [R]
+F00:2432       .00406:
+F00:2433         leave    16
+               S01:00001C58:  BF 20 00 00
+F00:2434       	.type	_DBGDisplayAsciiStringCRLF,@function
+F00:2435       	.size	_DBGDisplayAsciiStringCRLF,$-_DBGDisplayAsciiStringCRLF
+F00:2436       #--}
+F00:2437         
+F00:2438       #{++ _DBGHideCursor
+F00:2439       	.align 4
+F00:2440       	.sdreg	29
+F00:2441         #====================================================
+F00:2442       # Basic Block 0
+F00:2443       #====================================================
+F00:2444       _DBGHideCursor:
+F00:2445         enter    32
+               S01:00001C60:  AF C0 FF FF
+F00:2446         sths     s0,0[sp]
+               S01:00001C64:  95 D6 07 00
+F00:2447         sths     s1,16[sp]
+               S01:00001C68:  95 D8 87 00
+F00:2448       # p = (int *)0xFF81DF00;
+F00:2449         ldi      s0,4286701312
+               S01:00001C6C:  49 FE 00 00 D4 16 00 F8 0E FC
+F00:2450       # val = p[6];
+F00:2451         ldo      s1,4286701312+48
+               S01:00001C76:  49 FE 00 00 86 18 80 F9 0E FC
+F00:2452       # if (hide) {
+F00:2453         ldo      t0,64[fp]
+               S01:00001C80:  86 86 07 02 00 00
+F00:2454         beqz     t0,.00419
+               S01:00001C86:  10 C2 08 E0
+F00:2455         and      t1,s1,4294901760
+               S01:00001C8A:  49 FE 00 00 D8 08 03 00 F8 FF
+F00:2456         or       t0,t1,65535
+               S01:00001C94:  D9 06 F9 FF 07 00
+F00:2457         sto      t0,4286701312+48
+               S01:00001C9A:  49 FE 00 00 93 06 80 F9 0E FC
+F00:2458         beqz     r0,.00420
+               S01:00001CA4:  10 1C 00 E0
+F00:2459       .00419:
+F00:2460         and      t1,s1,4294901760
+               S01:00001CA8:  49 FE 00 00 D8 08 03 00 F8 FF
+F00:2461         or       t0,t1,231
+               S01:00001CB2:  09 06 39 07
+F00:2462         sto      t0,4286701312+48
+               S01:00001CB6:  49 FE 00 00 93 06 80 F9 0E FC
+F00:2463       .00420:
+F00:2464       .00418:
+F00:2465         ldhs     s0,0[sp]
+               S01:00001CC0:  89 D6 07 00
+F00:2466         ldhs     s1,16[sp]
+               S01:00001CC4:  89 D8 87 00
+F00:2467         leave    16
+               S01:00001CC8:  BF 20 00 00
+F00:2468       	.type	_DBGHideCursor,@function
+F00:2469       	.size	_DBGHideCursor,$-_DBGHideCursor
+F00:2470       #--}
+F00:2471       	.rodata
+F00:2472       	.p2align	12
+F00:2473       	.align	16
+F00:2474       	.align	8
+F00:2475       	.type	rom_bios_c_371,@object
+F00:2476       	.size	rom_bios_c_371,48
+F00:2477       rom_bios_c_371: # Thor2021 SoC Booting...
+F00:2478       	.2byte	84,104,111,114,50,48,50,49
+               S02:00000000:  54 00
+               S02:00000002:  68 00
+               S02:00000004:  6F 00
+               S02:00000006:  72 00
+               S02:00000008:  32 00
+               S02:0000000A:  30 00
+               S02:0000000C:  32 00
+               S02:0000000E:  31 00
+F00:2479       	.2byte	32,83,111,67,32,66,111,111
+               S02:00000010:  20 00
+               S02:00000012:  53 00
+               S02:00000014:  6F 00
+               S02:00000016:  43 00
+               S02:00000018:  20 00
+               S02:0000001A:  42 00
+               S02:0000001C:  6F 00
+               S02:0000001E:  6F 00
+F00:2480       	.2byte	116,105,110,103,46,46,46,0
+               S02:00000020:  74 00
+               S02:00000022:  69 00
+               S02:00000024:  6E 00
+               S02:00000026:  67 00
+               S02:00000028:  2E 00
+               S02:0000002A:  2E 00
+               S02:0000002C:  2E 00
+               S02:0000002E:  00 00
+F00:2481       	.extern	_rand
+F00:2482       	.extern	_SieveOfEratosthenes
+F00:2483       	.extern	_DBGHomeCursor
+F00:2484       	.extern	_DBGCRLF
+F00:2485       	.extern	_DBGClearScreen
+F00:2486       	.extern	_srand
+F00:2487       	.extern	_DBGDisplayChar
+F00:2488       	.extern	_DBGDisplayAsciiStringCRLF
+F00:2489       	.extern	_DBGAttr
+F00:2490       	.extern	_MapPage
+F00:2491                                                                                                                               i1ýÒ
+F00:2492       #{++ _UnlockSemaphore
+F00:2493       	.align	16
+F00:2494       	.extern	_mmu_Free512kPage
+F00:2495       	.extern	_mmu_Alloc8kPage
+F00:2496       	.extern	_mmu_alloc
+F00:2497       	.extern	_mmu_MapCardMemory
+F00:2498       	.extern	_IOFocusNdx
+F00:2499       	.extern	_mmu_SetOperateKey
+F00:2500       	.extern	_puthexnum
+F00:2501       	.extern	_mmu_AllocateMap
+F00:2502       	.extern	_mmu_SetMapEntry
+F00:2503       	.extern	_mmu_Alloc512kPage
+F00:2504       	.extern	_mmu_FreeMap
+F00:2505       	.extern	_mmu_Free8kPage
+F00:2506       	.extern	_mmu_free
+F00:2507       	.extern	_mmu_SetAccessKey
+F00:2508       	.data
+F00:2509       	.p2align	12
+F00:2510       _data_a:
+F00:2511       	.space	10
+F00:2512       	.align	8
+F00:2513       	.align	8
+F00:2514       #====================================================
+F00:2515       # Basic Block 0
+F00:2516       #====================================================
+F00:2517       _ShowSprites:
+F00:2518         enter    48
+               S03:00000100:  AF A0 FF FF
+F00:2519         sths     s0,0[sp]
+               S03:00000104:  95 D6 07 00
+F00:2520         sths     s1,16[sp]
+               S03:00000108:  95 D8 87 00
+F00:2521         sths     s2,32[sp]
+               S03:0000010C:  95 DA 07 01
+F00:2522       # int:32 *pSprEN = 0xFF8B03C0;
+F00:2523         ldi      s2,4287300544
+               S03:00000110:  49 FE 00 00 D4 1A 00 1E 58 FC
+F00:2524       # a0 = ((1) << 46)|((1) << 47)|((6) << 48)|((0) << 36)|((6) << 32)|((0x0B0) << 0)|((4) << 10)|((0) << 14)|((0) << 16)|((e2áÓ
+F00:2525         exi56    115345024
+               S03:0000011A:  4C 80 06 E0 06 00 00 00
+F00:2526         ldi      s1,4272
+               S03:00000122:  D4 18 80 85 00 00
+F00:2527       # a1 = ((0xFF8B) << 64)|(0xFF8B)|((0) << 52)|((1) << 60)|((0) << 122)|((63) << 116)|((0) << 63);
+F00:2528         exim     4329327034368
+               S03:00000128:  50 00 00 00 00 E0 07 00
+F00:2529         exi56    71929019896954880
+               S03:00000130:  4C 00 00 00 00 10 8B FF
+F00:2530         ldi      s0,65419
+               S03:00000138:  D4 16 58 FC 07 00
+F00:2531       # MapPage(a0,a1);//0x3F000018003FE00FF940);
+F00:2532         push     s1,s0
+               S03:0000013E:  AD D8 02 00
+F00:2533         jsr      _MapPage
+               S03:00000142:  20 72 07 00 00 00 [R]
+F00:2534       # *pSprEN = which;
+F00:2535         ldo      t0,64[fp]
+               S03:00000148:  86 86 07 02 00 00
+F00:2536         stt      t0,4287300544
+               S03:0000014E:  49 FE 00 00 92 06 00 1E 58 FC
+F00:2537       .00202:
+F00:2538         ldhs     s0,0[sp]
+               S03:00000158:  89 D6 07 00
+F00:2539         ldhs     s1,16[sp]
+               S03:0000015C:  89 D8 87 00
+F00:2540         ldhs     s2,32[sp]
+               S03:00000160:  89 DA 07 01
+F00:2541         leave    16
+               S03:00000164:  BF 20 00 00
+F00:2542       	.type	_ShowSprites,@function
+F00:2543       	.size	_ShowSprites,$-_ShowSprites
+F00:2544       #--}
+F00:2545        
+F00:2546       #{++ _SetSpriteColor
+F00:2547       	.align	8
+F00:2548       	.align	8
+F00:2549       	.bss
+F00:2550       	.p2align	12
+F00:2551       _bss_a:
+F00:2552       	.space	10
+F00:2553       	.align	8
+F00:2554       	.type	_xx,@object
+F00:2555       	.size	_xx,256
+F00:2556       _xx:
+F00:2557       	.space	256,0x00                    
+F00:2558       	.align	8
+F00:2559       	.type	_yy,@object
+F00:2560       	.size	_yy,256
+F00:2561       _yy:
+F00:2562       	.space	256,0x00                    
+F00:2563       	.align	8
+F00:2564       	.type	_dx,@object
+F00:2565       	.size	_dx,256
+F00:2566       _dx:
+F00:2567       	.space	256,0x00                    
+F00:2568       	.align	8
+F00:2569       	.type	_dy,@object
+F00:2570       	.size	_dy,256
+F00:2571       _dy:
+F00:2572       	.space	256,0x00                    
+F00:2573        
+F00:2574       	.align	2
+F00:2575       	.type	_state,@object
+F00:2576       	.size	_state,8
+F00:2577       _state:
+F00:2578       	.space	8,0x00                    
+F00:2579        
+F00:2580       	.align	2
+F00:2581       	.type	_scrpos,@object
+F00:2582       	.size	_scrpos,8
+F00:2583       _scrpos:
+F00:2584       	.space	8,0x00                    
+F00:2585                     
+F00:2586       #{++ _foo
+F00:2587       	.align	2
+F00:2588       	.type	_DBGCursorCol,@object
+F00:2589       	.size	_DBGCursorCol,2
+F00:2590       _DBGCursorCol:
+F00:2591       	.space	2,0x00                    
+F00:2592        
+F00:2593       	.align	2
+F00:2594       	.type	_DBGCursorRow,@object
+F00:2595       	.size	_DBGCursorRow,2
+F00:2596       _DBGCursorRow:
+F00:2597       	.space	2,0x00                    
+F00:2598        
+F00:2599       	.align	2
+F00:2600       	.type	_DBGAttr,@object
+F00:2601       	.size	_DBGAttr,8
+F00:2602       _DBGAttr:
+F00:2603       	.space	8,0x00                    
+F00:2604             
+F00:2605       	.align	8
+F00:2606       	.type	_tabstops,@object
+F00:2607       	.size	_tabstops,64
+F00:2608       _tabstops:
+F00:2609       	.space	64,0x00                    
+F00:2610        
+F00:2611       #{++ _DBGClearScreen
+F00:2612       
+
+
+Sections:
+S01  .text
+S02  .rodata
+S03  .data
+S04  .bss
+
+
+Sources:
+F00  secsorted.asm
+F01  d:\cores2022\Thor\software\boot\bios-const.t64
+
+
+Symbols:
+_bss_a LAB (0x0) UNUSED sec=.bss 
+ *tmp000000039* LAB (0x168) UNUSED sec=.data 
+ _ShowSprites .00202 LAB (0x158) UNUSED sec=.data 
+_data_a LAB (0x0) UNUSED sec=.data 
+_mmu_SetAccessKey IMP UNUSED EXPORT 
+_mmu_free IMP UNUSED EXPORT 
+_mmu_Free8kPage IMP UNUSED EXPORT 
+_mmu_FreeMap IMP UNUSED EXPORT 
+_mmu_Alloc512kPage IMP UNUSED EXPORT 
+_mmu_SetMapEntry IMP UNUSED EXPORT 
+_mmu_AllocateMap IMP UNUSED EXPORT 
+_puthexnum IMP UNUSED EXPORT 
+_mmu_SetOperateKey IMP UNUSED EXPORT 
+_IOFocusNdx IMP UNUSED EXPORT 
+_mmu_MapCardMemory IMP UNUSED EXPORT 
+_mmu_alloc IMP UNUSED EXPORT 
+_mmu_Alloc8kPage IMP UNUSED EXPORT 
+_mmu_Free512kPage IMP UNUSED EXPORT 
+_srand IMP UNUSED EXPORT 
+_SieveOfEratosthenes IMP UNUSED EXPORT 
+_rand IMP UNUSED EXPORT 
+ *tmp000000038* LAB (0x1ccc) UNUSED sec=.text 
+ _DBGHideCursor .00418 LAB (0x1cc0) UNUSED sec=.text 
+ _DBGHideCursor .00420 LAB (0x1cc0) sec=.text 
+ _DBGHideCursor .00419 LAB (0x1ca8) sec=.text 
+_DBGHideCursor LAB (0x1c60) type=func size=complex expression sec=.text 
+ *tmp000000037* LAB (0x1c5c) UNUSED sec=.text 
+ _DBGDisplayAsciiStringCRLF .00406 LAB (0x1c58) UNUSED sec=.text 
+_DBGDisplayAsciiStringCRLF LAB (0x1c40) EXPORT type=func size=complex expression sec=.text 
+ *tmp000000036* LAB (0x1c3c) UNUSED sec=.text 
+ _DBGDisplayStringCRLF .00396 LAB (0x1c38) UNUSED sec=.text 
+_DBGDisplayStringCRLF LAB (0x1c20) type=func size=complex expression sec=.text 
+ *tmp000000035* LAB (0x1c12) UNUSED sec=.text 
+ _DBGDisplayAsciiString .00384 LAB (0x1c06) UNUSED sec=.text 
+ _DBGDisplayAsciiString .00385 LAB (0x1bec) sec=.text 
+ _DBGDisplayAsciiString .00386 LAB (0x1c06) sec=.text 
+_DBGDisplayAsciiString LAB (0x1bd0) REF type=func size=complex expression sec=.text 
+ *tmp000000034* LAB (0x1bc2) UNUSED sec=.text 
+ _DBGDisplayString .00370 LAB (0x1bb6) UNUSED sec=.text 
+ _DBGDisplayString .00371 LAB (0x1b9c) sec=.text 
+ _DBGDisplayString .00372 LAB (0x1bb6) sec=.text 
+_DBGDisplayString LAB (0x1b80) REF type=func size=complex expression sec=.text 
+ *tmp000000033* LAB (0x1b80) UNUSED sec=.text 
+ _DBGCRLF .00358 LAB (0x1b7c) UNUSED sec=.text 
+ *tmp000000032* LAB (0x1b60) UNUSED sec=.text 
+ _DBGDisplayChar .00237 LAB (0x1b4c) UNUSED sec=.text 
+ _DBGDisplayChar .00346 LAB (0x1af4) sec=.text 
+_tabstops LAB (0x600) REF type=obj size=64=0x40 sec=.bss 
+ _DBGDisplayChar .00343 LAB (0x1abe) sec=.text 
+ _DBGDisplayChar .00344 LAB (0x1b00) sec=.text 
+ _DBGDisplayChar .00342 LAB (0x1b04) sec=.text 
+ _DBGDisplayChar .00339 LAB (0x1a66) sec=.text 
+ _DBGDisplayChar .00340 LAB (0x1a8a) sec=.text 
+ _DBGDisplayChar .00337 LAB (0x1aa8) sec=.text 
+ _DBGDisplayChar .00336 LAB (0x1aac) sec=.text 
+ _DBGDisplayChar .00334 LAB (0x1a08) sec=.text 
+ _DBGDisplayChar .00332 LAB (0x19ee) sec=.text 
+ _DBGDisplayChar .00330 LAB (0x19c2) sec=.text 
+ _DBGDisplayChar .00329 LAB (0x19ac) sec=.text 
+ _DBGDisplayChar .00328 LAB (0x19f2) sec=.text 
+ _DBGDisplayChar .00327 LAB (0x1996) sec=.text 
+ _DBGDisplayChar .00326 LAB (0x1a1e) sec=.text 
+ _DBGDisplayChar .00325 LAB (0x197a) sec=.text 
+ _DBGDisplayChar .00323 LAB (0x195a) sec=.text 
+ _DBGDisplayChar .00320 LAB (0x192a) sec=.text 
+ _DBGDisplayChar .00319 LAB (0x192e) sec=.text 
+ _DBGDisplayChar .00317 LAB (0x18f8) sec=.text 
+ _DBGDisplayChar .00316 LAB (0x18fc) sec=.text 
+ _DBGDisplayChar .00314 LAB (0x18c8) sec=.text 
+ _DBGDisplayChar .00311 LAB (0x1898) sec=.text 
+ _DBGDisplayChar .00310 LAB (0x189c) sec=.text 
+ _DBGDisplayChar .00307 LAB (0x1826) sec=.text 
+ _DBGDisplayChar .00308 LAB (0x184a) sec=.text 
+ _DBGDisplayChar .00287 LAB (0x1b1a) sec=.text 
+ _DBGDisplayChar .00304 LAB (0x17e6) sec=.text 
+ _DBGDisplayChar .00303 LAB (0x17f6) sec=.text 
+ _DBGDisplayChar .00301 LAB (0x17c8) sec=.text 
+ _DBGDisplayChar .00300 LAB (0x17cc) sec=.text 
+ _DBGDisplayChar .00298 LAB (0x1798) sec=.text 
+ _DBGDisplayChar .00297 LAB (0x186c) sec=.text 
+ _DBGDisplayChar .00296 LAB (0x179c) sec=.text 
+ _DBGDisplayChar .00294 LAB (0x1762) sec=.text 
+ _DBGDisplayChar .00293 LAB (0x18cc) sec=.text 
+ _DBGDisplayChar .00292 LAB (0x1766) sec=.text 
+ _DBGDisplayChar .00238 LAB (0x1b4c) sec=.text 
+ _DBGDisplayChar .00290 LAB (0x172c) sec=.text 
+ _DBGDisplayChar .00289 LAB (0x195e) sec=.text 
+ _DBGDisplayChar .00288 LAB (0x1730) sec=.text 
+ *tmp000000031* LAB (0x16c2) UNUSED sec=.text 
+ _DBGIncrementCursorPos .00114 LAB (0x16ae) sec=.text 
+ _DBGIncrementCursorPos .00115 LAB (0x16b2) sec=.text 
+_DBGIncrementCursorPos LAB (0x1680) REF type=func size=complex expression sec=.text 
+ *tmp000000030* LAB (0x167a) UNUSED sec=.text 
+ _DBGIncrementCursorRow .00100 LAB (0x165c) sec=.text 
+ _DBGIncrementCursorRow .00101 LAB (0x1660) sec=.text 
+_DBGIncrementCursorRow LAB (0x1630) REF type=func size=complex expression sec=.text 
+ *tmp000000029* LAB (0x1624) UNUSED sec=.text 
+ _DBGScrollUp .00085 LAB (0x1610) UNUSED sec=.text 
+ _DBGScrollUp .00086 LAB (0x15e6) sec=.text 
+ _DBGScrollUp .00087 LAB (0x1604) sec=.text 
+_DBGScrollUp LAB (0x15b0) REF type=func size=complex expression sec=.text 
+ *tmp000000028* LAB (0x15a8) UNUSED sec=.text 
+ _DBGBlankLine .00069 LAB (0x1598) UNUSED sec=.text 
+ _DBGBlankLine .00070 LAB (0x1582) sec=.text 
+ _DBGBlankLine .00071 LAB (0x1598) sec=.text 
+_DBGBlankLine LAB (0x1530) REF type=func size=complex expression sec=.text 
+ *tmp000000027* LAB (0x1530) UNUSED sec=.text 
+ _DBGHomeCursor .00056 LAB (0x152c) UNUSED sec=.text 
+ *tmp000000026* LAB (0x1502) UNUSED sec=.text 
+ _DBGUpdateCursorPos .00046 LAB (0x14fa) UNUSED sec=.text 
+_DBGCursorCol LAB (0x510) REF type=obj size=2=0x2 sec=.bss 
+_DBGCursorRow LAB (0x514) REF type=obj size=2=0x2 sec=.bss 
+_DBGUpdateCursorPos LAB (0x14d0) REF type=func size=complex expression sec=.text 
+ *tmp000000025* LAB (0x14ca) UNUSED sec=.text 
+ _DBGSetCursorPos .00036 LAB (0x14c2) UNUSED sec=.text 
+_DBGSetCursorPos LAB (0x14a0) REF type=func size=complex expression sec=.text 
+ *tmp000000024* LAB (0x1498) UNUSED sec=.text 
+ _DBGSetVideoReg .00026 LAB (0x1494) UNUSED sec=.text 
+_DBGSetVideoReg LAB (0x1490) type=func size=complex expression sec=.text 
+ *tmp000000023* LAB (0x148c) UNUSED sec=.text 
+ _DBGClearScreen .00013 LAB (0x147c) UNUSED sec=.text 
+ _DBGClearScreen .00014 LAB (0x1466) sec=.text 
+ _DBGClearScreen .00015 LAB (0x147c) sec=.text 
+ *tmp000000022* LAB (0x1428) UNUSED sec=.text 
+ _last_func .00429 LAB (0x1424) UNUSED sec=.text 
+_last_func LAB (0x1420) type=func size=complex expression sec=.text 
+ *tmp000000021* LAB (0x141a) UNUSED sec=.text 
+ _main .00400 LAB (0x13f6) UNUSED sec=.text 
+ _main .00417 LAB (0x13c2) sec=.text 
+ _main .00418 LAB (0x13e4) sec=.text 
+ _main .00414 LAB (0x13a8) sec=.text 
+ _main .00415 LAB (0x13f2) sec=.text 
+ _main .00411 LAB (0x1348) sec=.text 
+ _main .00412 LAB (0x139a) sec=.text 
+ _main .00409 LAB (0x133e) sec=.text 
+ _main .00407 LAB (0x1334) sec=.text 
+_DBGCRLF LAB (0x1b60) EXPORT REF type=func size=complex expression sec=.text 
+ _main .00405 LAB (0x125a) sec=.text 
+ _main .00403 LAB (0x123a) sec=.text 
+ _main .00401 LAB (0x1216) sec=.text 
+_DBGHomeCursor LAB (0x1510) EXPORT REF type=func size=complex expression sec=.text 
+_DBGClearScreen LAB (0x1430) EXPORT REF type=func size=complex expression sec=.text 
+_state LAB (0x500) REF type=obj size=8=0x8 sec=.bss 
+_ShowSprites LAB (0x100) REF type=func size=complex expression sec=.data 
+rom_bios_c_371 LAB (0x0) REF type=obj size=48=0x30 sec=.rodata 
+_rodata_start IMP REF 
+ *tmp000000020* LAB (0xfec) UNUSED sec=.text 
+ _MoveSprites .00334 LAB (0xfc8) UNUSED sec=.text 
+ _MoveSprites .00369 LAB (0xf50) sec=.text 
+ _MoveSprites .00362 LAB (0xf1c) sec=.text 
+ _MoveSprites .00355 LAB (0xee8) sec=.text 
+ _MoveSprites .00348 LAB (0xeb4) sec=.text 
+ _MoveSprites .00340 LAB (0xe3a) sec=.text 
+ _MoveSprites .00341 LAB (0xfc4) sec=.text 
+ _MoveSprites .00337 LAB (0xe20) sec=.text 
+ _MoveSprites .00338 LAB (0xe2e) sec=.text 
+ _MoveSprites .00335 LAB (0xe12) sec=.text 
+_MoveSprites LAB (0xd80) REF type=func size=complex expression sec=.text 
+ *tmp000000019* LAB (0xd7a) UNUSED sec=.text 
+ _SetSpritePosAndSpeed .00285 LAB (0xd66) UNUSED sec=.text 
+_dy LAB (0x400) REF type=obj size=256=0x100 sec=.bss 
+_dx LAB (0x300) REF type=obj size=256=0x100 sec=.bss 
+_yy LAB (0x200) REF type=obj size=256=0x100 sec=.bss 
+_xx LAB (0x100) REF type=obj size=256=0x100 sec=.bss 
+ _SetSpritePosAndSpeed .00286 LAB (0xbe2) sec=.text 
+ _SetSpritePosAndSpeed .00287 LAB (0xd66) sec=.text 
+_SetSpritePosAndSpeed LAB (0xb80) REF type=func size=complex expression sec=.text 
+ *tmp000000018* LAB (0xb7c) UNUSED sec=.text 
+ _SetSpriteColor .00242 LAB (0xb58) UNUSED sec=.text 
+ _SetSpriteColor .00270 LAB (0xaf4) sec=.text 
+ _SetSpriteColor .00271 LAB (0xb02) sec=.text 
+ _SetSpriteColor .00267 LAB (0xa62) sec=.text 
+ _SetSpriteColor .00268 LAB (0xa84) sec=.text 
+ _SetSpriteColor .00264 LAB (0xa38) sec=.text 
+ _SetSpriteColor .00265 LAB (0xa56) sec=.text 
+ _SetSpriteColor .00261 LAB (0xa0a) sec=.text 
+ _SetSpriteColor .00262 LAB (0xa2c) sec=.text 
+ _SetSpriteColor .00258 LAB (0x9e0) sec=.text 
+ _SetSpriteColor .00259 LAB (0x9fe) sec=.text 
+ _SetSpriteColor .00255 LAB (0x9b6) sec=.text 
+ _SetSpriteColor .00256 LAB (0x9d4) sec=.text 
+ _SetSpriteColor .00252 LAB (0x990) sec=.text 
+ _SetSpriteColor .00253 LAB (0x9aa) sec=.text 
+ _SetSpriteColor .00249 LAB (0x962) sec=.text 
+ _SetSpriteColor .00250 LAB (0xa90) sec=.text 
+ _SetSpriteColor .00246 LAB (0x92a) sec=.text 
+ _SetSpriteColor .00247 LAB (0x944) sec=.text 
+ _SetSpriteColor .00243 LAB (0x8ec) sec=.text 
+ _SetSpriteColor .00244 LAB (0x950) sec=.text 
+_SetSpriteColor LAB (0x840) REF type=func size=complex expression sec=.text 
+ *tmp000000017* LAB (0x840) UNUSED sec=.text 
+ _FlashLEDs .00189 LAB (0x830) UNUSED sec=.text 
+ _FlashLEDs .00190 LAB (0x81a) sec=.text 
+ _FlashLEDs .00191 LAB (0x830) sec=.text 
+_FlashLEDs LAB (0x7e0) REF type=func size=complex expression sec=.text 
+ *tmp000000016* LAB (0x7dc) UNUSED sec=.text 
+ _PutOcta .00176 LAB (0x7d4) UNUSED sec=.text 
+_PutOcta LAB (0x7b0) type=func size=complex expression sec=.text 
+ *tmp000000015* LAB (0x7ac) UNUSED sec=.text 
+ _PutTetra .00166 LAB (0x7a4) UNUSED sec=.text 
+_PutTetra LAB (0x780) REF type=func size=complex expression sec=.text 
+ *tmp000000014* LAB (0x77c) UNUSED sec=.text 
+ _PutWyde .00156 LAB (0x774) UNUSED sec=.text 
+_PutWyde LAB (0x750) REF type=func size=complex expression sec=.text 
+ *tmp000000013* LAB (0x74c) UNUSED sec=.text 
+ _PutByte .00146 LAB (0x744) UNUSED sec=.text 
+_PutByte LAB (0x720) REF type=func size=complex expression sec=.text 
+ *tmp000000012* LAB (0x71c) UNUSED sec=.text 
+ _PutNybble .00134 LAB (0x714) UNUSED sec=.text 
+_DBGDisplayChar LAB (0x16d0) EXPORT REF type=func size=complex expression sec=.text 
+ _PutNybble .00135 LAB (0x704) sec=.text 
+_PutNybble LAB (0x6d0) REF type=func size=complex expression sec=.text 
+ *tmp000000011* LAB (0x6c4) UNUSED sec=.text 
+ _TstDisplayChar .00122 LAB (0x6bc) UNUSED sec=.text 
+_scrpos LAB (0x508) REF type=obj size=8=0x8 sec=.bss 
+_bss_start IMP REF 
+_TstDisplayChar LAB (0x670) type=func size=complex expression sec=.text 
+ *tmp000000010* LAB (0x668) UNUSED sec=.text 
+ _ramtest .00112 LAB (0x664) UNUSED sec=.text 
+_ramtest LAB (0x660) type=func size=complex expression sec=.text 
+ *tmp000000009* LAB (0x658) UNUSED sec=.text 
+ _bypassTest .00102 LAB (0x654) UNUSED sec=.text 
+_DBGAttr LAB (0x518) EXPORT REF type=obj size=8=0x8 sec=.bss 
+_bypassTest LAB (0x610) REF type=func size=complex expression sec=.text 
+ *tmp000000008* LAB (0x610) UNUSED sec=.text 
+ _my_rand .00092 LAB (0x5fc) UNUSED sec=.text 
+_my_rand LAB (0x590) REF type=func size=complex expression sec=.text 
+ *tmp000000007* LAB (0x58a) UNUSED sec=.text 
+ _my_srand .00079 LAB (0x576) UNUSED sec=.text 
+ _my_srand .00080 LAB (0x54c) sec=.text 
+ _my_srand .00081 LAB (0x576) sec=.text 
+_my_srand LAB (0x4f0) REF type=func size=complex expression sec=.text 
+ *tmp000000006* LAB (0x4e6) UNUSED sec=.text 
+ _my_abs .00064 LAB (0x4de) UNUSED sec=.text 
+ _my_abs .00065 LAB (0x4da) sec=.text 
+_my_abs LAB (0x4c0) REF type=func size=complex expression sec=.text 
+ *tmp000000005* LAB (0x4b4) UNUSED sec=.text 
+ _UnmapPage .00052 LAB (0x4b0) UNUSED sec=.text 
+_UnmapPage LAB (0x490) type=func size=complex expression sec=.text 
+ *tmp000000004* LAB (0x490) UNUSED sec=.text 
+ _MapPages .00033 LAB (0x480) UNUSED sec=.text 
+ _MapPages .00040 LAB (0x462) sec=.text 
+ _MapPages .00041 LAB (0x480) sec=.text 
+ _MapPages .00037 LAB (0x418) sec=.text 
+ _MapPages .00038 LAB (0x436) sec=.text 
+ _MapPages .00034 LAB (0x3ce) sec=.text 
+ _MapPages .00035 LAB (0x3ea) sec=.text 
+_MapPages LAB (0x390) REF type=func size=complex expression sec=.text 
+ *tmp000000003* LAB (0x382) UNUSED sec=.text 
+ _foo .00012 LAB (0x37e) UNUSED sec=.text 
+_foo LAB (0x370) type=func size=complex expression sec=.text 
+ PAMInit .0003 LAB (0x358) sec=.text 
+ PAMInit .0001 LAB (0x338) sec=.text 
+ PAMInit .0002 LAB (0x30c) sec=.text 
+PAMInit LAB (0x308) UNUSED sec=.text 
+ PAMShare .0002 LAB (0x2fe) sec=.text 
+ PAMShare .0001 LAB (0x304) sec=.text 
+ PAMFree .0002 LAB (0x2b8) sec=.text 
+ PAMFree .0001 LAB (0x2ca) sec=.text 
+pump2 LAB (0x2ca) sec=.text 
+pump1 LAB (0x2d0) sec=.text 
+PAMFree LAB (0x278) UNUSED sec=.text 
+PAMAllocOutOfMem LAB (0x26a) sec=.text 
+ PAMAlloc .0003 LAB (0x22c) sec=.text 
+PAMShare LAB (0x2d6) sec=.text 
+ PAMAlloc .0001 LAB (0x248) sec=.text 
+ PAMAlloc .0002 LAB (0x204) sec=.text 
+PAMAlloc LAB (0x1f0) UNUSED sec=.text 
+PAMShareCounts EXPR(0=0x0) 
+PAMLastAllocate EXPR(68719460384=0xfffffc020) 
+LTU EXPR(5=0x5) 
+GEU EXPR(13=0xd) 
+E_NoMem EXPR(12=0xc) 
+E_NotAlloc EXPR(9=0x9) UNUSED 
+E_Ok EXPR(0=0x0) 
+OSPAGES EXPR(16=0x10) UNUSED 
+MMU_ENTRIES EXPR(4096=0x1000) UNUSED 
+STACK_PAGES EXPR(8=0x8) 
+NUM_PERM_PAGES_LO EXPR(768=0x300) 
+LOGPGSZ EXPR(12=0xc) 
+PGSZ EXPR(4096=0x1000) UNUSED 
+MEMSZ EXPR(131072=0x20000) 
+ *tmp000000002* LAB (0x1f0) UNUSED sec=.text 
+_MapPage LAB (0x1dc) EXPORT REF type=func size=complex expression sec=.text 
+ *tmp000000001* LAB (0x1dc) UNUSED sec=.text 
+ IRQRoutM3 .0004 LAB (0x1d6) sec=.text 
+IRQRoutM3 LAB (0x1c0) UNUSED sec=.text 
+ IRQRoutM2 .0004 LAB (0x196) sec=.text 
+IRQRoutM2 LAB (0x180) UNUSED sec=.text 
+ IRQRoutM1 .0004 LAB (0x156) sec=.text 
+IRQRoutM1 LAB (0x140) UNUSED sec=.text 
+ IRQRout .0004 LAB (0x116) sec=.text 
+ *tmp000000000* LAB (0x72) UNUSED sec=.text 
+_main LAB (0xff0) REF type=func size=complex expression sec=.text 
+ ms1 .0002 LAB (0x66) sec=.text 
+IRQRout LAB (0x100) REF type=func size=complex expression sec=.text 
+ ms1 .0003 LAB (0x3e) UNUSED sec=.text 
+ms1 LAB (0xc) UNUSED sec=.text 
+MachineStart LAB (0xc) REF type=func size=complex expression sec=.text 
+LEDS EXPR(-7274496=0xffffffffff910000) UNUSED 
+RODATABASE EXPR(4294836224=0xfffe0000) UNUSED 
+IOBASE EXPR(4286578688=0xff800000) UNUSED 
+CSR_MTVEC EXPR(12336=0x3030) 
+__VASM EXPR(0=0x0) INTERNAL 
+__MSDOSFS EXPR(0=0x0) INTERNAL 
+
+There have been no errors.

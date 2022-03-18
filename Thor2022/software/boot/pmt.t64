@@ -1,0 +1,431 @@
+ 
+	.bss
+	.align	2
+
+	.bss
+	.type	__noname_var0,@object
+	.size	__noname_var0,2
+__noname_var0:
+
+	.space	2,0x00                    
+
+             
+	.data
+	.align	2
+
+	.type	pmt_1,@object
+	.size	pmt_1,4
+pmt_1: # _free_list
+
+	.space	4,0x00                    
+ 
+	.align	2
+
+	.type	pmt_2,@object
+	.size	pmt_2,4
+pmt_2: # _active_list
+
+	.space	4,0x00                    
+ 
+	.align	2
+
+	.type	pmt_3,@object
+	.size	pmt_3,4
+pmt_3: # _inactive_list
+
+	.space	4,0x00                    
+ 
+	.align	8
+
+	.type	pmt_4,@object
+	.size	pmt_4,8
+pmt_4: # _pmts
+
+	.space	8,0x00                    
+ 
+#{++ _PMTInit
+
+	.text
+	.align	4
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_PMTInit:
+  enter    48
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  lea      s2,pmt_4[gp]
+# int k;
+  mov      s1,r0
+# for (k = 0; k < 8192 * 2; k++)
+  mov      s0,r0
+  sgt      t0,s0,16383
+  bnez     t0,.00022
+.00021:
+# pmt[k] = 0;
+  sll      t0,s0,4
+  sth      r0,[t0+s1]
+  add      s0,s0,1
+  slt      t0,s0,16384
+  bnez     t0,.00021
+.00022:
+# pmts = 0;
+  sto      r0,[s2]
+# free_list = 1;
+  ldi      t0,1
+  stt      t0,pmt_1[gp]
+# active_list = 0;
+  stt      r0,pmt_2[gp]
+# inactive_list = 0;
+  stt      r0,pmt_3[gp]
+# for (k = 1; k < 8192; k++) {
+  ldi      s0,1
+  sgt      t0,s0,8191
+  bnez     t0,.00025
+.00024:
+# pmts[k].list = k + 1;
+  sll      t1,s0,5
+  ldo      t2,[s2]
+  add      t0,t1,t2
+  add      t1,s0,1
+  stt      t1,16[t0]
+.00026:
+  add      s0,s0,1
+  slt      t0,s0,8192
+  bnez     t0,.00024
+.00025:
+# pmts[k].list = 0;
+  sll      t1,s0,5
+  ldo      t2,[s2]
+  add      t0,t1,t2
+  stt      r0,16[t0]
+.00020:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  leave    0
+	.type	_PMTInit,@function
+	.size	_PMTInit,$-_PMTInit
+
+
+#--}
+    
+#{++ _PMTAlloc
+
+	.align 4
+
+	.sdreg	29
+  #====================================================
+# Basic Block 0
+#====================================================
+_PMTAlloc:
+  enter    112
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  sths     s2,32[sp]
+  sths     s3,48[sp]
+  sths     s4,64[sp]
+  sths     s5,80[sp]
+  sths     s6,96[sp]
+  ldo      s2,80[fp]
+  lea      s3,pmt_2[gp]
+  lea      s4,pmt_4[gp]
+  ldo      s5,64[fp]
+# while (!LockSysSemaphore());
+  jsr      _LockSysSemaphore
+  mov      t0,a0
+  sne      t0,t0,r0,1
+  bnez     t0,.00057
+.00056:
+  sto      t0,-112[fp]
+  jsr      _LockSysSemaphore
+  mov      t1,a0
+  not      t0,t1
+  sne      t0,t0,r0,1
+  bnez     t0,.00056
+.00057:
+# rv = free_list;
+  ldo      t0,pmt_1[gp]
+  sxo      s1,t0
+# if (rv==0) {
+  bnez     s1,.00058
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# if (err)
+  beqz     s2,.00060
+# *err = E_NoMem;
+  ldi      t0,53
+  sto      t0,[s2]
+.00060:
+# return (0);
+  mov      a0,r0
+.00055:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  ldhs     s2,32[sp]
+  ldhs     s3,48[sp]
+  ldhs     s4,64[sp]
+  ldhs     s5,80[sp]
+  ldhs     s6,96[sp]
+  leave    48
+.00058:
+# if (!PMTCheckKey(key)) {
+  push     s5
+  jsr      _PMTCheckKey
+  add      sp,sp,16
+  mov      t0,a0
+  sne      t0,t0,r0,1
+  bnez     t0,.00062
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# if (err)
+  beqz     s2,.00064
+# *err = E_BadKey;
+  ldi      t0,8
+  sto      t0,[s2]
+.00064:
+# return (0);
+  mov      a0,r0
+  beqz     r0,.00055
+.00062:
+# free_list = pmts[free_list].list;
+  ldo      t2,pmt_1[gp]
+  sll      t1,t2,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  ldo      t1,16[t0]
+  stt      t1,pmt_1[gp]
+# pmts[rv].list = 0;
+  sll      t1,s1,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  stt      r0,16[t0]
+# pmts[rv].key = key;
+  sll      t1,s1,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  stt      s5,8[t0]
+# pmts[rv].flags = flags | (((1) & 1) << 4);
+  sll      t1,s1,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  ldo      t2,72[fp]
+  or       t1,t2,16
+  stt      t1,12[t0]
+# if (active_list==0) {
+  ldo      t0,[s3]
+  bnez     t0,.00066
+# active_list = rv;
+  stt      s1,[s3]
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# if (err)
+  beqz     s2,.00068
+# *err = E_Ok;
+  sto      r0,[s2]
+.00068:
+# return (rv << 16);
+  sll      a0,s1,16
+  beqz     r0,.00055
+.00066:
+# for (al = active_list; al > 0; al = pmts[al].list)
+  ldt      s0,[s3]
+  bge      r0,s0,.00071
+.00070:
+# pal = al;
+  mov      s6,s0
+  sll      t1,s0,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  ldt      s0,16[t0]
+  blt      r0,s0,.00070
+.00071:
+# pmts[pal].list = rv;
+  sll      t1,s6,5
+  ldo      t2,[s4]
+  add      t0,t1,t2
+  stt      s1,16[t0]
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# if (err)
+  beqz     s2,.00073
+# *err = E_Ok;
+  sto      r0,[s2]
+.00073:
+# return (rv << 16);
+  sll      a0,s1,16
+  beqz     r0,.00055
+	.type	_PMTAlloc,@function
+	.size	_PMTAlloc,$-_PMTAlloc
+
+
+#--}
+  
+#{++ _PMTFree
+
+	.align 4
+
+	.sdreg	29
+ #====================================================
+# Basic Block 0
+#====================================================
+_PMTFree:
+  enter    32
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  lea      s1,pmt_4[gp]
+# v = p >> 16;
+  ldo      t1,64[fp]
+  sra      s0,t1,16
+# if (v >= 8192)
+  slt      t0,s0,8192
+  bnez     t0,.00091
+# return (E_Arg);
+  ldi      a0,6
+.00090:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  leave    16
+.00091:
+# while (!LockSysSemaphore());
+  jsr      _LockSysSemaphore
+  mov      t0,a0
+  sne      t0,t0,r0,1
+  bnez     t0,.00094
+.00093:
+  sto      t0,-32[fp]
+  jsr      _LockSysSemaphore
+  mov      t1,a0
+  not      t0,t1
+  sne      t0,t0,r0,1
+  bnez     t0,.00093
+.00094:
+# if (PMTCheckKey(pmts[v].key)) {
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  ldtu     t0,8[t0]
+  push     t0
+  jsr      _PMTCheckKey
+  add      sp,sp,16
+  mov      t0,a0
+  beqz     t0,.00095
+# pmts[v].key = 0;
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  stt      r0,8[t0]
+# pmts[v].list = free_list;
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  ldo      t1,pmt_1[gp]
+  stt      t1,16[t0]
+# free_list = v;
+  stt      s0,pmt_1[gp]
+.00095:
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# return (E_Ok);
+  mov      a0,r0
+  beqz     r0,.00090
+	.type	_PMTFree,@function
+	.size	_PMTFree,$-_PMTFree
+
+
+#--}
+  
+#{++ _PMTShare
+
+	.align 4
+
+	.sdreg	29
+ #====================================================
+# Basic Block 0
+#====================================================
+_PMTShare:
+  enter    32
+  lea      gp,_bss_start
+  sths     s0,0[sp]
+  sths     s1,16[sp]
+  lea      s1,pmt_4[gp]
+# v = p >> 16;
+  ldo      t1,64[fp]
+  sra      s0,t1,16
+# if (v >= 8192)
+  slt      t0,s0,8192
+  bnez     t0,.00115
+# return (E_Arg);
+  ldi      a0,6
+.00114:
+  ldhs     s0,0[sp]
+  ldhs     s1,16[sp]
+  leave    16
+.00115:
+# while (!LockSysSemaphore());
+  jsr      _LockSysSemaphore
+  mov      t0,a0
+  sne      t0,t0,r0,1
+  bnez     t0,.00118
+.00117:
+  sto      t0,-32[fp]
+  jsr      _LockSysSemaphore
+  mov      t1,a0
+  not      t0,t1
+  sne      t0,t0,r0,1
+  bnez     t0,.00117
+.00118:
+# if (PMTCheckKey(pmts[v].key))
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  ldtu     t0,8[t0]
+  push     t0
+  jsr      _PMTCheckKey
+  add      sp,sp,16
+  mov      t0,a0
+  beqz     t0,.00119
+# if (pmts[v].share_count != 0xffff)
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  ldwu     t0,2[t0]
+  seq      t1,t0,65535
+  bnez     t1,.00121
+# pmts[v].share_count++;
+  sll      t1,s0,5
+  ldo      t2,[s1]
+  add      t0,t1,t2
+  sll      t2,s0,5
+  ldo      t3,[s1]
+  add      t1,t2,t3
+  ldo      t2,2[t1]
+  add      t2,t2,1
+  sto      t2,2[t1]
+.00121:
+.00119:
+# UnlockSysSemaphore();
+  jsr      _UnlockSysSemaphore
+# return (E_Ok);
+  mov      a0,r0
+  beqz     r0,.00114
+	.type	_PMTShare,@function
+	.size	_PMTShare,$-_PMTShare
+
+
+#--}
+
+	.rodata
+	.align	16
+
+	.extern	_PMTCheckKey
+	.extern	_UnlockSysSemaphore
+	.extern	_LockSysSemaphore
