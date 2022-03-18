@@ -137,30 +137,31 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [31:0] pad32;
+	Thor2022_pkg::Address padr;	// physical address of the PDE
+	logic [2:0] lvl;
+	logic v;
+	logic d;
+	logic u;
+	logic a;
+	logic [24:0] pad25;
 	logic [5:0] mb;
 	logic [5:0] me;
 	logic sc;
 	logic sw;
 	logic sr;
 	logic sx;
-	logic v;
+	logic [7:0] pl;
+	logic n;
 	logic g;
 	logic av;
-	logic [4:0] pad;
-	logic d;
-	logic u;
 	logic s;
-	logic a;
 	logic c;
 	logic w;
 	logic r;
 	logic x;
-	logic [2:0] lvl;
-	logic n;
-	logic [7:0] pl;
-	logic [51:0] ppn;
-} HIER_PTE;	// 128 bits
+	logic [15:0] pad16;
+	logic [47:0] ppn;
+} HIER_PTE;	// 128 bits + address
 
 typedef struct packed
 {
@@ -170,9 +171,9 @@ typedef struct packed
 	logic d;
 	logic u;
 	logic a;
-	logic [4:0] pad;
-	logic [51:0] ppn;
-} PDE;
+	logic [8:0] pad9;
+	logic [111:0] vpn;
+} PDE;	// 128 bits + address
 
 typedef struct packed
 {
@@ -192,6 +193,14 @@ typedef struct packed
 {
 	PTE [`PtePerPtg-1:0] ptes;
 } PTG;	// 1280 bits
+
+typedef struct packed
+{
+	logic v;
+	Thor2022_pkg::Address dadr;
+	PTG ptg;
+} PTGCE;
+parameter PTGC_DEP = 8;
 
 parameter MEMORY_INIT = 7'd0;
 parameter MEMORY_IDLE = 7'd1;

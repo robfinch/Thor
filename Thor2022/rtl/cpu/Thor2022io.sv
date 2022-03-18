@@ -40,7 +40,7 @@ import const_pkg::*;
 import Thor2022_pkg::*;
 
 module Thor2022io(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, clock,
-		irq_i, icause_i,
+		nmi_i, irq_i, icause_i,
 		vpa_o, vda_o, bte_o, cti_o, bok_i, cyc_o, stb_o, lock_o, ack_i,
     err_i, we_o, sel_o, adr_o, dat_i, dat_o, cr_o, sr_o, rb_i, state_o, trigger_o);
 input [63:0] hartid_i;
@@ -50,6 +50,7 @@ input clk2x_i;
 input clk2d_i;
 input wc_clk_i;
 input clock;					// MMU clock algorithm
+input nmi_i;
 input [2:0] irq_i;
 input [8:0] icause_i;
 output vpa_o;
@@ -741,8 +742,8 @@ Thor2022_bitfield ubf
 Thor2022_crypto ucrypto
 (
 	.ir(xir),
-	.m(xm),
-	.z(xz),
+	.m(xmaskbit),
+	.z(xzbit),
 	.a(xa[63:0]),
 	.b(xb[63:0]),
 	.c(xc0[63:0]),
@@ -880,8 +881,8 @@ SLTUI,SLTUIL:	res2 = xa < imm;
 SGTUI,SGTUIL:	res2 = xa > imm;
 DJMP:					res2 = xa - 2'd1;
 //STSET:				res2 = xc0 - 2'd1;
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOR,LDHS,
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHR,LDHS,
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX:
 							res2 = memresp.res;
 BSET:							
 	case(xir[31:29])
@@ -941,7 +942,7 @@ Thor2022_BTB_x1 ubtb
 (
 	.rst(rst_i),
 	.clk(clk_g),
-	.wr(wExbranch & wval),
+	.wr(wExBranch & wval),
 	.wip(wip),
 	.wtgt(wJmptgt),
 	.takb(wtakb),
@@ -2017,6 +2018,7 @@ begin
   	memreq.func2 <= MR_STO;
   	memreq.sel <= 16'h00FF;
   	memreq.adr <= xb;
+  	memreq.adr[6] <= xir[33];	// update indicator
   	memreq.dat <= xa;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
@@ -2104,6 +2106,8 @@ begin
 `ifndef OVERLAPPED_PIPELINE
 		goto (MEMORY);
 `endif
+		m256 <= FALSE;
+		m512 <= FALSE;
 		mistk_depth <= xistk_depth;
 		mval <= xval;
 		mir <= xir;

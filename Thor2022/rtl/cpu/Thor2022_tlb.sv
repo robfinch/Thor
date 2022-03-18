@@ -83,7 +83,7 @@ Address last_ladr, last_iadr;
 
 reg [1:0] al;
 reg LRU;
-reg [2:0] state;
+reg [2:0] state = 'd0;
 parameter ST_RST = 3'd0;
 parameter ST_RUN = 3'd1;
 parameter ST_AGE1 = 3'd2;
@@ -105,16 +105,18 @@ reg [ASSOC-1:0] wrtlb;
 genvar g1;
 generate begin : gWrtlb
 	for (g1 = 0; g1 < ASSOC; g1 = g1 + 1)
-		always_comb begin
-			wrtlb = 'd0;
+		always_ff @(posedge clk_g) begin
+			wrtlb[g1] <= 'd0;
 			if (state==ST_RUN) begin
-				if (LRU && tlbadr_i[13:10]!=ASSOC-1)
-					wrtlb[ASSOC-2] = wrtlb_i;
+				if (LRU && tlbadr_i[13:10]!=ASSOC-1) begin
+					if (g1==ASSOC-2)
+						wrtlb[g1] <= wrtlb_i;
+				end
 				else begin
 					if (g1 < ASSOC-1)
-		 				wrtlb[g1] = (tlbadr_i[15:14]==2'b10 ? randway==g1 : tlbadr_i[13:10]==g1) && wrtlb_i;
+		 				wrtlb[g1] <= (tlbadr_i[15:14]==2'b10 ? randway==g1 : tlbadr_i[13:10]==g1) && wrtlb_i;
 		 			else
-		 				wrtlb[g1] = tlbadr_i[13:10]==g1 && wrtlb_i;
+		 				wrtlb[g1] <= tlbadr_i[13:10]==g1 && wrtlb_i;
 	 			end
  			end
  		end
@@ -211,7 +213,7 @@ edge_det edclk (.rst(rst_i), .clk(clk_g), .i(clock), .pe(pe_clock), .ne(), .ee()
 
 always_ff @(posedge clk_g)
 if (rst_i) begin
-	state <= 3'b001;
+	state <= ST_RST;
 	tlbeni <= 1'b1;		// forces ready low
 	tlbwrr <= 'd0;
 	count <= 13'h0FC0;	// Map only last 256kB
@@ -236,6 +238,7 @@ ST_RST:
 		13'b011:
 			begin
 				tlbwrr[ASSOC-1] <= 1'b1; 
+				tlbdat_rst <= 'd0;
 				tlbdat_rst.asid <= 12'h00;
 				tlbdat_rst.bc <= 4'h0;
 				tlbdat_rst.g <= 1'b1;
@@ -254,19 +257,19 @@ ST_RST:
 				tlbdat_rst.sx <= 1'b1;
 				// FFFC0000
 				// 1111_1111_11_ 11_1100_0000 _0000_0000_0000
-				tlbdat_rst.vpn <= {52'h000FFC0};
+				tlbdat_rst.vpn <= {44'h000FF,count[7:0]};
 				tlbdat_rst.ppn <= {44'h000FF,count[7:0]};
 				tlbdat_rst.mb <= 6'd0;
 				tlbdat_rst.me <= 6'd63;
 				rcount <= count[9:0];
 			end // Map 16MB ROM/IO area
-		13'b1??: begin state <= ST_RUN; tlbwrr <= 'd0; end
+		13'b1??: begin state <= ST_RUN; tlbwrr[ASSOC-1] <= 1'd1; end
 		default:	;
 		endcase
 		count <= count + 2'd1;
 	end
 ST_RUN:
-	if (dumped_entry.d)
+	if (dumped_entry.d && |dumped_entry.adr)
 		state <= ST_WRITE_PTE;
 	else if (clock_r) begin
 		rcount <= rcount + 2'd1;
@@ -311,35 +314,40 @@ end
 assign rdy_o = ~tlbeni;
 
 integer n2;
-always_comb
+always_ff @(posedge clk_g)
 begin
 	case(state)
 	ST_RST:	
 		begin
-			tlbadri = rcount;
-			tlbdati[ASSOC-1] = tlbdat_rst;
+			tlbadri <= rcount;
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+				tlbdati[n2] <= tlbdat_rst;
 		end
 	ST_RUN:
 		begin
-			tlbadri = tlbadr_i;
+			tlbadri <= tlbadr_i;
 			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
-				tlbdati[n2] = tlbdat_i;
+				tlbdati[n2] <= tlbdat_i;
 		end
 	ST_AGE1,ST_AGE2,ST_AGE3:
-		tlbadri = rcount;
+		begin
+			tlbadri <= rcount;
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+				tlbdati[n2] <= tlbdat_i;
+		end
 	ST_AGE4:
 		begin
-			tlbadri = rcount;
+			tlbadri <= rcount;
 			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdati[n2] = tlbdato[n2];
-				tlbdati[n2].access_count = {1'b0,tlbdato[n2].access_count[31:1]};
+				tlbdati[n2] <= tlbdato[n2];
+				tlbdati[n2].access_count <= {1'b0,tlbdato[n2].access_count[31:1]};
 			end
 		end
 	default:
 		begin
-			tlbadri = tlbadr_i;
+			tlbadri <= tlbadr_i;
 			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
-				tlbdati[n2] = tlbdat_i;
+				tlbdati[n2] <= tlbdat_i;
 		end
 	endcase
 end
@@ -403,7 +411,7 @@ for (g = 0; g < ASSOC; g = g + 1)
 	  .clkb(clk_g),    // input wire clkb
 	  .enb(xlaten_i),      // input wire enb
 	  .web(wr[g]),      // input wire [0 : 0] web
-	  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+	  .addrb(adr_i[25:16]),  // input wire [9 : 0] addrb
 	  .dinb(tentryi[g]),    // input wire [63 : 0] dinb
 	  .doutb(tentryo[g])  // output wire [63 : 0] doutb
 	);
@@ -438,16 +446,17 @@ else begin
 			tlbmiss_adr_o <= iadr_i;
 			tlbkey_o <= 32'hFFFFFFFF;
 			hit <= 4'd15;
+			acr_o <= 4'h0;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[15:10]==iadr_i[31:26] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
 			  	padr_o[9:0] <= iadr_i[9:0];
 			  	padr_o[15:10] <= iadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
-					if ({1'b0,iadr_i[15:10]} + tentryo[n].mb > {1'b0,tentryo[n].me})
-						acr_o <= 'd0;
-					else
+					if (iadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
 						acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																	{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
+					else
+						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;
 					tlbmiss_o <= FALSE;
 					hit <= n;
@@ -468,16 +477,17 @@ else begin
 			tlbmiss_adr_o <= dadr_i;
 			tlbkey_o <= 32'hFFFFFFFF;
 			hit <= 4'd15;
+			acr_o <= 4'h0;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				if (tentryo[n].vpn[15:10]==dadr_i[31:26] && (tentryo[n].asid==asid_i || tentryo[n].g) && tentryo[n].v) begin
 			  	padr_o[9:0] <= dadr_i[9:0];
 			  	padr_o[15:10] <= dadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
-					if ({1'b0,dadr_i[15:10]} + tentryo[n].mb > {1'b0,tentryo[n].me})
-						acr_o <= 'd0;
-					else
+					if (dadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
 						acr_o <= sys_mode_i ? {tentryo[n].sc,tentryo[n].sr,tentryo[n].sw,tentryo[n].sx} :
 																	{tentryo[n].c,tentryo[n].r,tentryo[n].w,tentryo[n].x};
+					else
+						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;
 					tlbmiss_o <= FALSE;
 					hit <= n;

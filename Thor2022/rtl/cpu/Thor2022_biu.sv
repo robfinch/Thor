@@ -194,7 +194,7 @@ reg [5:0] rgn_adr;
 Value rgn_dat;
 Value rgn_dat_o;
 
-Thor2022_active_region
+Thor2022_active_region uargn
 (
 	.clk(clk),
 	.wr(rgn_wr),
@@ -695,6 +695,7 @@ Thor2022_tlb utlb (
 reg [7:0] fault_code;
 PTG ptg;
 PTE tmptlbe2;
+PTGCE [PTGC_DEP-1:0] ptgc;
 reg pte_found;
 wire [2:0] entry_num;
 reg [3:0] span_lo, span_hi;
@@ -749,7 +750,7 @@ reg [12:0] adr_slice;
 HIER_PTE hier_pte;
 PDE pde;
 reg wr_pte;
-PTCE [7:0] ptc;
+PTCE [11:0] ptc;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
@@ -1155,7 +1156,7 @@ else begin
 			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			tlb_ib.adr <= dadr;
-			wr_ptg <= 1'b1;
+//			wr_ptg <= 1'b1;
 //			ptg[entry_num * $bits(PTE) + 132] <= 1'b1;	// The 'a' bit in the pte
 //			if (tmptlbe.av)
 //				call (IPT_RW_PTG2,IPT_FETCH3);
@@ -1194,18 +1195,13 @@ else begin
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to read / write a page table group.
 	//
-	// Reads or writes only as much as it needs to. For writes just the PTE needs
-	// to be updated. For reads, the PTG is read up until a translation match is
-	// found or the entire PTG is read.
+	// Writes only as much as it needs to. For writes just the PTE needs
+	// to be updated.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	IPT_RW_PTG2:
 		begin
 			ipt_miss_count <= ipt_miss_count + 2'd1;
-			goto (IPT_RW_PTG3);
-		end
-
-	IPT_RW_PTG3:
-		begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
@@ -1229,11 +1225,20 @@ else begin
   		4'd6: dat_o <= ptg[1023:895];
   		4'd7: dat_o <= ptg[1151:1024];
   		4'd8:	dat_o <= ptg[1279:1152];
-  		4'd9:	dat_o <= ptg[1407:1280];
-  		4'd10:	dat_o <= ptg[1535:1408];
+//  		4'd9:	dat_o <= ptg[1407:1280];
+//  		4'd10:	dat_o <= ptg[1535:1408];
   		default:	;
   		endcase
   		goto (IPT_RW_PTG4);
+			if (!wr_ptg) begin
+				for (n4 = 0; n4 < PTGC_DEP; n4 = n4 + 1) begin
+					if (ptgc[n4].dadr == dadr && ptgc[n4].v) begin
+						tDeactivateBus();
+						ptg <= ptgc[n4];
+						ret();
+					end
+				end
+			end
 		end
 	IPT_RW_PTG4:
 		begin
@@ -1256,12 +1261,16 @@ else begin
 		    	4'd7: ptg[1023:896] <= dat_i;
 		    	4'd8: ptg[1151:1024] <= dat_i;
 		    	4'd9: ptg[1279:1152] <= dat_i;
-		    	4'd10: 	ptg[1407:1280] <= dat_i;
-		    	4'd11: 	ptg[1535:1408] <= dat_i;
+//		    	4'd10: 	ptg[1407:1280] <= dat_i;
+//		    	4'd11: 	ptg[1535:1408] <= dat_i;
 		    	default:	;
 		    	endcase
-		    	// If the PTE was found we can quit reading data early.
-		      if (pte_found || dcnt[3:0]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+		      if (dcnt[3:0]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+		      	for (n4 = 1; n4 < PTGC_DEP; n4 = n4 + 1)
+		      		ptgc[n4] <= ptgc[n4-1];
+		      	ptgc[0].dadr <= dadr;
+	      		ptgc[0].ptg <= {dat_i,ptg[1151:0]};
+	      		ptgc[0].v <= 1'b1;
 		      	tDeactivateBus();
 		      	daccess <= FALSE;
 		      	ret();
@@ -1287,7 +1296,7 @@ else begin
 	IPT_WRITE_PTE:
 		begin
 			ptg <= 'd0;
-			ptg <= tlb_dat[191:0] << (tlb_dat.en * $bits(PTE));	// will cause entry_num to be zero.
+			ptg <= tlb_dat[159:0] << (tlb_dat.en * $bits(PTE));	// will cause entry_num to be zero.
 			case(tlb_dat.en)
 			3'd0:	dadr <= tlb_dat.adr;
 			3'd1:	dadr <= tlb_dat.adr + 12'd16;
@@ -1298,6 +1307,7 @@ else begin
 			3'd6:	dadr <= tlb_dat.adr + 12'd144;
 			3'd7:	dadr <= tlb_dat.adr + 12'd160;
 			endcase
+			tInvalidatePtgc(tlb_dat.adr,tlb_dat.adr + 12'd160);
 			miss_adr <= {tlb_dat.vpn,12'd0};
 			wr_ptg <= 1'b1;
 			goto (IPT_RW_PTG2);
@@ -1401,10 +1411,7 @@ else begin
 		  		begin
 		  			hier_pte[15:0] <= pde[15:0];
 		  			adr_slice <= {miss_adr[27:16],1'b0};
-		  			if (miss_adr[AWID-1:28] != 'd0 && miss_adr[AWID-1:28] != {AWID-28{1'b1}})
-		  				tPageFault(0,miss_adr);
-		  			else
-			  			call (PT_RW_PTE1, PT_FETCH3);
+		  			call (PT_RW_PTE1, PT_FETCH3);
 		  		end
 /*		  	
 		  	3'd2:
@@ -1523,10 +1530,8 @@ else begin
 			daccess <= TRUE;
 			iaccess <= FALSE;
 			dadr <= {hier_pte[15:0],adr_slice[12:1],4'h0};
-			goto (PT_RW_PTE2);
+			goto (PT_RW_PTE3);
 		end
-	PT_RW_PTE2:
-		goto (PT_RW_PTE3);
 	PT_RW_PTE3:
 		begin
 			if (!ack_i) begin
@@ -1574,20 +1579,18 @@ else begin
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	PT_RW_PDE1:
 		begin
-			goto (PT_RW_PDE2);
+			goto (PT_RW_PDE3);
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
 			dadr <= {pde[15:0],adr_slice[12:1],4'h0};
 			if (!wr_pte)
-				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+				for (n4 = 0; n4 < 12; n4 = n4 + 1)
 					if (ptc[n4].adr=={pde[15:0],adr_slice[12:0],3'h0} && ptc[n4].v) begin
 						pde <= ptc[n4].pde;
 						ret();
 					end
 		end
-	PT_RW_PDE2:
-		goto (PT_RW_PDE3);
 	PT_RW_PDE3:
 		if (!ack_i) begin
 			vda_o <= HIGH;
@@ -1611,7 +1614,7 @@ else begin
 	PT_RW_PDE5:
 		begin
 			if (pde.v) begin
-				for (n4 = 0; n4 < 7; n4 = n4 + 1)
+				for (n4 = 0; n4 < 11; n4 = n4 + 1)
 					ptc[n4+1] <= ptc[n4];
 				ptc[0].v <= 1'b1;
 				ptc[0].adr <= dadr|{adr_slice[0],3'b0};
@@ -1672,6 +1675,17 @@ else begin
 		goto (MEMORY_IDLE);
 	endcase
 end
+
+task tInvalidatePtgc;
+input Address adrlo;
+input Address adrhi;
+integer n5;
+begin
+	for (n5 = 0; n5 < PTGC_DEP; n5 = n5 + 1)
+		if (ptgc[n5].dadr >= adrlo && ptgc[n5].dadr <= adrhi)
+			ptgc[n5].v <= 1'b0;
+end
+endtask
 
 task tMemoryIdle;
 begin
@@ -1847,7 +1861,8 @@ begin
     	sel_o <= 16'hFFFF;
 //	      sel_o <= sel[15:0];
     dat_o <= dat[127:0];
-		tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1],we_o);
+    we_o <= LOW;
+		tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
     case(memreq.func)
     MR_LOAD,MR_LOADZ,MR_MOVLD,M_JALI://,RTS2:
     	begin
@@ -1863,8 +1878,9 @@ begin
     	end
     MR_STORE,MR_MOVST,M_CALL:
     	begin
+				tInvalidatePtgc(adr_o,adr_o + 12'd160);
     		// Invalidate PTCEs when a store occurs to the PDE
-				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+				for (n4 = 0; n4 < 12; n4 = n4 + 1)
 					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
 						ptc[n4].v <= 1'b0;
   			cr_o <= memreq.func2==MR_STOC;
@@ -2002,11 +2018,13 @@ begin
 //	      	sel_o <= sel[31:16];
     	dat_o <= dat[255:128];
    		// Invalidate PTCEs when a store occurs to the PDE
-    	if (memreq.func==MR_STORE)
-				for (n4 = 0; n4 < 8; n4 = n4 + 1)
+    	if (memreq.func==MR_STORE) begin
+				tInvalidatePtgc(adr_o,adr_o + 12'd160);
+				for (n4 = 0; n4 < 12; n4 = n4 + 1)
 					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
 						ptc[n4].v <= 1'b0;
-			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1],we_o);
+			end
+			tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
   	end
   end
 end
@@ -2300,17 +2318,16 @@ endtask
 task tPMAEA;
 input wr;
 input tlbwr;
-output reg wro;
 begin
-	wro <= 1'b0;
+	we_o <= 1'b0;
   if (keyViolation && omode == 2'd0)
   	tKeyViolation(adr_o);
   // PMA Check
- 	wro <= wr & tlbwr & region.at[1];
+ 	we_o <= wr & tlbwr & region.at[1];
   if (wr && !region.at[1])
-  	tWriteViolation(adr_o);
+  	tWriteViolation(dadr);
   else if (~wr && !region.at[2])
-    tReadViolation(adr_o);
+    tReadViolation(dadr);
 //	memresp.cause <= {8'h80,FLT_PMA};
 	dcachable <= dcachable & region.at[3];
 end

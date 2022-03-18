@@ -52,8 +52,8 @@ package Thor2022_pkg;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 
-//`define SUPPORT_HASHPT	1
-`define SUPPORT_HIERPT	1
+`define SUPPORT_HASHPT	1
+//`define SUPPORT_HIERPT	1
 
 parameter RSTIP	= 64'hFF000007FFFD0000;
 
@@ -343,6 +343,7 @@ parameter RORH		= 7'h4C;
 // OSR2
 parameter REX			= 7'h10;
 parameter RTI			= 7'h13;
+parameter RGNRW		= 7'h1C;
 parameter TLBRW		= 7'h1E;
 parameter MFSEL		= 7'h28;
 parameter MTSEL		= 7'h29;
