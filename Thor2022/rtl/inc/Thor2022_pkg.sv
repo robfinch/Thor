@@ -52,8 +52,17 @@ package Thor2022_pkg;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 
+
+// The following adds support for hardware page table walking. If not used
+// software must load the TLB on a miss.
+`define SUPPORT_HWWALK	1
+
 `define SUPPORT_HASHPT	1
 //`define SUPPORT_HIERPT	1
+
+// The following adds caching of PDEs and PTGs to improve performance at the
+// cost of additional logic.
+//`define SUPPORT_MMU_CACHE	1
 
 parameter RSTIP	= 64'hFF000007FFFD0000;
 
@@ -96,8 +105,8 @@ parameter DBEQZ		= 8'h11;
 parameter DJEQZ		= 8'h11;
 parameter BNEZ		= 8'h12;
 parameter	JNEZ		= 8'h12;
-parameter DBNEZ		= 8'h13;
-parameter DJNEZ		= 8'h13;
+//parameter DBNEZ		= 8'h13;
+//parameter DJNEZ		= 8'h13;
 parameter OR2R		= 8'h13;
 parameter XOR2R		= 8'h14;
 parameter MULFI		= 8'h15;
@@ -213,7 +222,7 @@ parameter BFCHG			= 4'hA;
 parameter BFCLR			= 4'hB;
 parameter PUSH		= 8'hAC;
 parameter PUSH2R	= 8'hAD;
-parameter PUSH3R	= 8'hAE;
+parameter PUSH4R	= 8'hAE;
 parameter ENTER		= 8'hAF;
 
 parameter LDBX		= 8'hB0;
@@ -231,7 +240,7 @@ parameter LEAVE		= 8'hBF;
 
 parameter POP			= 8'hBC;
 parameter POP2R		= 8'hBD;
-parameter POP3R		= 8'hBE;
+parameter POP4R		= 8'hBE;
 
 parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
@@ -287,6 +296,7 @@ parameter NABS		= 7'h07;
 parameter SQRT		= 7'h08;
 parameter V2BITS	= 7'h18;
 parameter BITS2V	= 7'h19;
+parameter PTGHASH	= 7'h2F;
 
 // R2
 parameter NAND		= 7'h00;
@@ -341,10 +351,17 @@ parameter ROLH		= 7'h4B;
 parameter RORH		= 7'h4C;
 
 // OSR2
+parameter PUSHQ		= 7'h08;
+parameter POPQ		= 7'h09;
+parameter PEEKQ		= 7'h0A;
+parameter STATQ		= 7'h0B;
+parameter RESETQ	= 7'h0C;
 parameter REX			= 7'h10;
 parameter RTI			= 7'h13;
 parameter RGNRW		= 7'h1C;
 parameter TLBRW		= 7'h1E;
+parameter LDPTG		= 7'h24;
+parameter STPTG		= 7'h25;
 parameter MFSEL		= 7'h28;
 parameter MTSEL		= 7'h29;
 
@@ -474,6 +491,7 @@ parameter MR_MTSEL = 4'd9;
 parameter MR_MOVLD = 4'd10;
 parameter MR_MOVST = 4'd11;
 parameter MR_RGN = 4'd12;
+parameter MR_PTG = 4'd15;
 
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_SEMA	= 16'h?00C;
@@ -882,6 +900,8 @@ parameter MR_LDOR	= 4'd4;
 parameter MR_LDOB	= 4'd5;
 parameter MR_LDOO = 4'd6;
 parameter MR_LDH	= 4'd7;
+parameter MR_LDPTG = 4'd0;
+parameter MR_STPTG = 4'd1;
 parameter MR_LDDESC = 4'd12;
 parameter MR_LEA	= 4'd14;
 parameter MR_STB	= 4'd0;
@@ -1022,6 +1042,7 @@ typedef struct packed
 	logic lean;
 	logic tlb;
 	logic rgn;
+	logic ptg;
 	logic stset;
 	logic stmov;
 	logic stfnd;
@@ -1057,6 +1078,7 @@ typedef struct packed
 	logic mflk;
 	logic mtlk;
 	logic enter;
+	logic push;
 	logic flowchg;
 	logic [3:0] Ca;
 	logic [3:0] Ct;

@@ -55,7 +55,7 @@ begin
 	o = 'd0;
 	o[0] = a==b;
 	o[1] = $signed(a) < $signed(b);
-	o[2] = $signed(a) < $signed(b) || a==b;
+	o[2] = $signed(a) <= $signed(b);
 	o[5] = a < b;
 	o[6] = a <= b;
 	o[8] = a != b;

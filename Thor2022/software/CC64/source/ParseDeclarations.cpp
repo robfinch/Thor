@@ -2099,6 +2099,7 @@ int Declaration::declare(SYM* parent, int ilc, int ztype, SYM** symo)
 	SYM* fp;
 	TABLE* table = itable;
 	e_sc al = istorage_class;
+	static int old_nbytes = 0;
 
 	decl_level++;
 	if (decl_level == 1)
@@ -2205,6 +2206,9 @@ int Declaration::declare(SYM* parent, int ilc, int ztype, SYM** symo)
 				}
 				//isTypedef = FALSE;
 			}
+			if (bit_width > 0 && bit_offset > 0)
+				nbytes = old_nbytes - ilc;
+			old_nbytes = ilc + nbytes;
 			if (!sp->IsTypedef() && !sp->tp->IsFunc() && nbytes > 0)
 				nbytes = GenerateStorage(nbytes, al, ilc);
 			dfs.printf("G");

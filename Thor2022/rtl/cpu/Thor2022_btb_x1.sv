@@ -74,6 +74,6 @@ end
 always_ff @(posedge rclk)
   radr <= ip[10:1];
 assign hit = mem[radr].insadr==ip && mem[radr].v;
-assign btgt = hit ? mem[radr].tgtadr : nip;
+assign tgt = hit ? mem[radr].tgtadr : nip;
 
 endmodule

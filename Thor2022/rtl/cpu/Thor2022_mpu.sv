@@ -109,6 +109,7 @@ wire [15:0] sel;
 wire [63:0] adr;
 reg [127:0] dati;
 wire [127:0] dato;
+wire nmi;
 wire [2:0] irq;
 wire [7:0] cause;
 wire pic_ack;
@@ -234,7 +235,7 @@ Thor2022_pic upic1
 	.i31(pit_out0),	// time slice interrupt
 	.irqo({irq3,irq}),
 	.nmii(1'b0),
-	.nmio(),
+	.nmio(nmi),
 	.causeo(cause)
 );
 
@@ -266,6 +267,7 @@ Thor2022io ucpu1
   .wc_clk_i(tm_clk_i),
   .clock(pit_out3),		// MMU clock algorithm
 //    .div_clk_i(div_clk_i),
+	.nmi_i(nmi),
   .irq_i(irq),
   .icause_i(cause),
   .cti_o(cti),

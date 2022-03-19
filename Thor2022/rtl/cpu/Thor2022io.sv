@@ -296,7 +296,7 @@ reg xStorer, xStoren;
 reg xStoo;
 reg [2:0] xSeg;
 reg [2:0] xMemsz;
-reg xTlb, xRgn;
+reg xTlb, xRgn, xPtg;
 reg xBset, xStmov, xStfnd, xStcmp;
 reg xCsr,xSync;
 reg xMtlk;
@@ -422,7 +422,7 @@ wire sie = status[3][1];
 wire hie = status[3][2];
 wire mie = status[3][3];
 wire die = status[3][4];
-reg [7:0] asid;
+reg [11:0] asid;
 Value gdt;
 Selector ldt;
 Selector keytbl;
@@ -473,7 +473,7 @@ Thor2022_decoder udec (
 
 `ifdef OVERLAPPED_PIPELINE
 always_comb
-if (Ra==6'd0)
+if (Ra=='d0)
   rfoa = {VALUE_SIZE{1'b0}};
 else if (deco.Ravec)
 	rfoa = vroa;
@@ -657,6 +657,14 @@ Thor2022_compare ucmp2
 	.o(cmpio)
 );
 
+wire [15:0] hash;
+Thor2022_ipt_hash uhash1
+(
+	.asid(asid),
+	.adr(xa),
+	.hash(hash)
+);
+
 wire [7:0] cntlz_out;
 cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 
@@ -798,6 +806,7 @@ R1:
 	case(xir.r1.func)
 	CNTLZ:	res2 = {121'd0,cntlz_out};
 	CNTLO:	res2 = {121'd0,cntlz_out};
+	PTGHASH:	res2 = {hash,3'd0};
 	default:	res2 = 'd0;
 	endcase
 R2:
@@ -859,6 +868,7 @@ AND2R:				res2 = xa & xb;
 OR2R:					res2 = xa | xb | pn;
 XOR2R:				res2 = xa ^ xb ^ pn;
 SLT2R:				res2 = $signed(xa) < $signed(xb);
+CMP2R:				res2 = cmpo;
 LEAX:					res2 = xa + (xb << xSc);
 ADDI,ADDIL,LEA:		res2 = xa + imm + pn;
 SUBFI,SUBFIL:	res2 = imm - xa - pn;
@@ -1088,7 +1098,7 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 
 `ifdef OVERLAPPED_PIPELINE
 wire stall_i = !ihit;
-wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov|deco.enter) &&
+wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov|deco.enter|deco.push) &&
 								(((|xcause || xFlowchg || xLoad) && xval) ||
 								 ((|mcause || mFlowchg) && mval) ||
 								 ((|wcause || wFlowchg) && wval))) ||
@@ -1146,7 +1156,7 @@ end
 
 task inv_i;
 begin
-	micro_ip <= 6'd0;
+	micro_ip <= 'd0;
 //  ival <= INV;
   icause <= 16'h0;
 end
@@ -1232,6 +1242,7 @@ begin
 	pfx_cnt <= 3'd0;
 //	cr0 <= 64'h300000001;
 	cr0 <= 64'h200000001;
+	ptbr <= 'd0;
 	rst_cnt <= 6'd0;
 	xCsr <= 1'b0;
 	mCsr <= 1'b0;
@@ -1249,7 +1260,7 @@ begin
 	gie <= FALSE;
 	pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
 	plStack <= 64'hffffffffffffffff;	// PL = 255
-	asid <= 8'h00;
+	asid <= 'h0;
 	istk_depth <= 4'd1;
 	icause <= 16'h0000;
 	dcause <= 16'h0000;
@@ -1360,7 +1371,7 @@ WAIT_MEM2:
 					if (memreq.func2==MR_LDOO)
 						m512 <= TRUE;
 				end
-				else if (memreq.func==MR_TLB) begin
+				else if (memreq.func==MR_TLB || memreq.func==MR_PTG) begin
 					m256 <= TRUE;
 				end
 				else if (memreq.func==MR_RGN)
@@ -1548,12 +1559,13 @@ begin
 			// POP Ra,Rb
 			7'd3:		begin micro_ip <= 7'd4; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
 			7'd4:		begin micro_ip <= 7'd5; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,LDH}; end	// LDOS $Rb,[$SP]
-			7'd5:		begin micro_ip <= 7'd0; ir <= {13'h020,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
-			// POP Ra,Rb,Rc
-			7'd6:		begin micro_ip <= 7'd7; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd7:		begin micro_ip <= 7'd8; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,LDH}; end	// LDOS $Rb,[$SP]
-			7'd8:		begin micro_ip <= 7'd9; ir <= {29'h20,5'd31,micro_ir[23:19],1'b0,LDH}; end	// LDOS $Rc,[$SP]
-			7'd9:		begin micro_ip <= 7'd0; ir <= {13'h030,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
+//			7'd5:		begin micro_ip <= 7'd0; ir <= {13'h020,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
+			// POP Ra,Rb,Rc,Rd
+			7'd5:		begin micro_ip <= 7'd6; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,(micro_ir[31:29]>=3'd1)?LDH:NOP}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd6:		begin micro_ip <= 7'd7; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?LDH:NOP}; end	// LDOS $Rb,[$SP]
+			7'd7:		begin micro_ip <= 7'd8; ir <= {29'h20,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?LDH:NOP}; end	// LDOS $Rc,[$SP]
+			7'd8:		begin micro_ip <= 7'd9; ir <= {29'h30,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]>=3'd4)?LDH:NOP}; end	// LDOS $Rc,[$SP]
+			7'd9:		begin micro_ip <= 7'd0; ir <= {6'h0,micro_ir[31:29],4'h0,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
 			// PUSH Ra
 			7'd10:	begin micro_ip <= 7'd11; ir <= {13'h1FF0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
 			7'd11:	begin micro_ip <= 7'd0;  ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
@@ -1561,11 +1573,12 @@ begin
 			7'd12:	begin micro_ip <= 7'd13; ir <= {13'h1FE0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
 			7'd13:	begin micro_ip <= 7'd14; ir <= {29'h00,5'd31,micro_ir[18:14],1'b0,STH}; end	// STOS $Rb,[$SP]
 			7'd14:	begin micro_ip <= 7'd0;  ir <= {29'h10,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,8[$SP]
-			// PUSH Ra,Rb,Rc
-			7'd15:	begin micro_ip <= 7'd16; ir <= {14'h1FD0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
-			7'd16:	begin micro_ip <= 7'd17; ir <= {29'h00,5'd31,micro_ir[23:19],1'b0,STH}; end	// STOS $Rc,[$SP]
-			7'd17:	begin micro_ip <= 7'd18; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,STH}; end	// STOS $Rb,8[$SP]
-			7'd18:	begin micro_ip <= 7'd0;  ir <= {29'h20,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
+			// PUSH Ra,Rb,Rc,Rd
+			7'd15:	begin micro_ip <= 7'd16; ir <= {{5'h1F,4'h0-micro_ir[31:29],4'h0},5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
+			7'd16:	begin micro_ip <= 7'd17; ir <= {29'h00,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]==3'd4)?STH:NOP}; end	// STOS $Rc,[$SP]
+			7'd17:	begin micro_ip <= 7'd18; ir <= {22'd0,micro_ir[31:29]-2'd3,4'h0,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?STH:NOP}; end	// STOS $Rb,8[$SP]
+			7'd18:	begin micro_ip <= 7'd19; ir <= {22'd0,micro_ir[31:29]-2'd2,4'h0,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?STH:NOP}; end	// STOS $Rb,8[$SP]
+			7'd19:	begin micro_ip <= 7'd0;  ir <= {22'd0,micro_ir[31:29]-2'd1,4'h0,5'd31,micro_ir[13:9],1'b0,(micro_ir[31:29]>=3'd1)?STH:NOP}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
 			// LEAVE
 			7'd20:	begin micro_ip <= 7'd21; ir <= {13'h000,5'd30,5'd31,1'b0,ADDI};	end						// ADD $SP,$FP,#0
 			7'd21:	begin micro_ip <= 7'd22; ir <= {29'h00,5'd31,5'd30,1'b0,LDH}; end				// LDO $FP,[$SP]
@@ -1658,11 +1671,11 @@ begin
 		if (micro_ip==7'd0)
 			case(insn.any.opcode)
 			POP:		begin micro_ip <= 7'd1; ip <= ip; end
-			POP2R:	begin micro_ip <= 7'd3; ip <= ip; end
-			POP3R:	begin micro_ip <= 7'd6; ip <= ip; end
+//			POP2R:	begin micro_ip <= 7'd3; ip <= ip; end
+			POP4R:	begin micro_ip <= 7'd5; ip <= ip; end
 			PUSH:		begin micro_ip <= 7'd10; ip <= ip; end
-			PUSH2R:	begin micro_ip <= 7'd12; ip <= ip; end
-			PUSH3R:	begin micro_ip <= 7'd15; ip <= ip; end
+//			PUSH2R:	begin micro_ip <= 7'd12; ip <= ip; end
+			PUSH4R:	begin micro_ip <= 7'd15; ip <= ip; end
 			ENTER:	begin micro_ip <= 7'd32; ip <= ip; end
 			LEAVE:	begin micro_ip <= 7'd20; ip <= ip; end
 //			STOO:		begin if (insn[10]) begin micro_ip <= 7'd28; ip <= ip; end end
@@ -1780,6 +1793,7 @@ begin
 		xLoad <= deco.load;
 		xTlb <= deco.tlb;
 		xRgn <= deco.rgn;
+		xPtg <= deco.ptg;
 		xBset <= deco.stset;
 		xStmov <= deco.stmov;
 		xStcmp <= deco.stcmp;
@@ -1871,7 +1885,7 @@ begin
   	byt:		begin memreq.func2 <= MR_LDB; memreq.sel <= 16'h0001; end
   	wyde:		begin memreq.func2 <= MR_LDW; memreq.sel <= 16'h0003; end
   	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
-  	octa:		begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h00FF; end
+  	octa:		begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
   	hexi:		begin memreq.func2 <= MR_LDH; memreq.sel <= 16'hFFFF; end
   	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
   	endcase
@@ -2020,6 +2034,17 @@ begin
   	memreq.adr <= xb;
   	memreq.adr[6] <= xir[33];	// update indicator
   	memreq.dat <= xa;
+  	memreq.wr <= TRUE;
+  	goto (WAIT_MEM1);
+	end
+  else if (xPtg) begin
+  	memreq.tid <= tid;
+  	tid <= tid + 2'd1;
+  	memreq.func <= MR_PTG;
+  	memreq.func2 <= xir.r3.func==LDPTG ? MR_LDPTG :MR_STPTG;
+  	memreq.sel <= 16'hFFFF;
+  	memreq.adr <= xa;
+  	memreq.dat <= {xc0,xb};
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
 	end

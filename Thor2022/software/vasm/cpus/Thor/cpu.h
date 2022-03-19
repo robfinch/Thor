@@ -146,6 +146,7 @@ typedef struct {
 #define ENTER	39
 #define LEAVE	40
 #define EXI56F	41
+#define R4 42
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)

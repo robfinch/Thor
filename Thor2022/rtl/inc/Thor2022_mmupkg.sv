@@ -108,6 +108,9 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic [31:0] pad32;
+	logic [31:0] access_count;
+	logic [31:0] key;
 	logic [11:0] asid;
 	logic sc;
 	logic sw;
@@ -133,7 +136,7 @@ typedef struct packed
 	logic n;
 	logic [7:0] pl;
 	logic [51:0] ppn;
-} PTE;	// 160 bits
+} PTE;	// 256 bits
 
 typedef struct packed
 {
@@ -183,7 +186,7 @@ typedef struct packed
 } PTCE;
 
 `define PtePerPtg 8
-`define PtgSize 1280
+`define PtgSize 2048
 `define StripsPerPtg	10
 
 integer PtePerPtg = `PtePerPtg;
@@ -265,6 +268,7 @@ parameter IPT_RW_PTG3 = 7'd70;
 parameter IPT_RW_PTG4 = 7'd71;
 parameter IPT_RW_PTG5 = 7'd72;
 parameter IPT_WRITE_PTE = 7'd75;
+parameter IPT_IDLE = 7'd76;
 parameter PT_FETCH1 = 7'd81;
 parameter PT_FETCH2 = 7'd82;
 parameter PT_FETCH3 = 7'd83;
@@ -291,5 +295,8 @@ parameter PT_RW_PDE4 = 7'd111;
 parameter PT_RW_PDE5 = 7'd112;
 parameter PT_RW_PDE6 = 7'd113;
 parameter PT_RW_PDE7 = 7'd114;
+parameter PTG1 = 7'd115;
+parameter PTG2 = 7'd116;
+parameter PTG3 = 7'd117;
 
 endpackage

@@ -64,7 +64,7 @@ Rb = ir.r3.Rb;
 rfwr = `FALSE;
 // Target register
 case(ir.any.opcode)
-JEQZ,JNEZ,DJEQZ,DJNEZ:
+JEQZ,JNEZ:
 	Rt = 'd0;
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	Rt = 'd0;
@@ -83,7 +83,7 @@ default:	Rt = ir[13:9];
 endcase
 // Rc
 case(ir.any.opcode)
-STB,STW,STT,STO,STHC,STH,STPTR:
+STB,STW,STT,STO,STHC,STH,STHS,STPTR:
 	Rc = ir.st.Rs;
 STBX,STWX,STTX,STOX,STHCX,STHX,STPTRX:
 	Rc = ir.stx.Rs;
@@ -109,7 +109,7 @@ case(ir.any.opcode)
 CSR:
 	deco.lk = ir.csr.regno[3:0];
 // Cannot update ca[0] with a branch
-JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
+JMP,DJMP,JEQZ,JNEZ:
 	deco.lk = {2'b0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.lk = {2'b0,ir.jxx.lk};
@@ -130,7 +130,7 @@ CSR:
 	default:	deco.carfwr = `FALSE;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
+JMP,DJMP,JEQZ,JNEZ:
 	deco.carfwr = ir.jxx.lk != 2'd0;
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.carfwr = ir.jxx.lk != 2'd0;
@@ -148,7 +148,7 @@ CSR:
 			deco.Cat = 4'd0;
 	default:	deco.Cat = 4'd0;
 	endcase
-JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
+JMP,DJMP,JEQZ,JNEZ:
 	deco.Cat = {2'b0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Cat = {2'b0,ir.jxx.lk};
@@ -168,6 +168,16 @@ R2,F2,DF2,P2:
 R3,F3,DF3,P3:
 	case(ir.r3.func)
 	default:	rfwr = `TRUE;
+	endcase
+OSR2:
+	case(ir.r3.func)
+	POPQ:			rfwr = `TRUE;
+	PEEKQ:		rfwr = `TRUE;
+	STATQ:		rfwr = `TRUE;
+	LDPTG:		rfwr = `TRUE;
+	RGNRW:		rfwr = `TRUE;
+	TLBRW:		rfwr = `TRUE;
+	default:	rfwr = `FALSE;
 	endcase
 BTFLD:
 	case(ir.r3.func)
@@ -191,7 +201,7 @@ LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	rfwr = `TRUE;
 LEA,LEAX:	rfwr = `TRUE;
-ADD2R,AND2R,OR2R,XOR2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
+ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
 	rfwr = `TRUE;
 SLLR2,SLLHR2:
 	rfwr = `TRUE;
@@ -263,7 +273,7 @@ deco.imm = imm;
 
 case(ir.any.opcode)
 R2,R3,BTFLD:	deco.Tb = ir.r3.Tb;
-ADD2R,AND2R,OR2R,XOR2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
+ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
 	deco.Tb = ir[25:24];
 SLLHR2,SLLR2:
 	deco.Tb = ir[25:24];
@@ -375,7 +385,7 @@ LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
 LDHS,LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
-STHS,STOOX,STH,STHX,STHCX:	deco.memsz = hexi;
+STHS,STOOX,STH,STHC,STHX,STHCX:	deco.memsz = hexi;
 STPTR,STPTRX:	deco.memsz = ptr;
 default:	deco.memsz = octa;
 endcase
@@ -475,7 +485,7 @@ deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
 deco.divalli = deco.divi|deco.divui|deco.divsui;
 
 deco.is_cbranch = ir.jxx.Ca==3'd7 && (ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3);
-deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ || ir.any.opcode==DJEQZ || ir.any.opcode==DJNEZ;
+deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ;
 if (deco.jxx)
 	deco.jmptgt = {{109{ir.jxx.Tgthi[18]}},ir.jxx.Tgthi,1'b0};
 else if (deco.jxz)
@@ -489,6 +499,7 @@ deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
 deco.sync = ir.any.opcode==CSR || ir.any.opcode==SYNC;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 deco.rgn = ir.any.opcode==OSR2 && ir.r3.func==RGNRW;
+deco.ptg = ir.any.opcode==OSR2 && (ir.r3.func==LDPTG || ir.r3.func==STPTG);
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
 deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
@@ -498,7 +509,7 @@ deco.lean = ir.any.opcode==LEAX;
 case(ir.any.opcode)
 R2,R3:
 	deco.Rvm = ir.r3.m;
-ADD2R,AND2R,OR2R,XOR2R,SLT2R:
+ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
 	deco.Rvm = ir.any[31:29];
 default:
 	if (deco.ril & ir.any.v)
@@ -514,7 +525,7 @@ endcase
 case(ir.any.opcode)
 R2,R3:
 	deco.Rz = ir.r3.z;
-ADD2R,AND2R,OR2R,XOR2R,SLT2R:
+ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
 	deco.Rz = ir.any[28];
 default:
 	if (deco.ril & ir.any.v)
@@ -545,6 +556,7 @@ deco.stcmp = ir.any.opcode==STCMP;
 deco.mflk = ir.any.opcode==MFLK;
 deco.mtlk = ir.any.opcode==MTLK;
 deco.enter = ir.any.opcode==ENTER;
+deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH2R || ir.any.opcode==PUSH4R;
 deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.jxx || deco.jxz || deco.rts;
 
 if (deco.mflk)
@@ -567,7 +579,7 @@ CSR:
 	default:	deco.Ct = 4'h8 + distk_depth;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP,JEQZ,JNEZ,DJEQZ,DJNEZ:
+JMP,DJMP,JEQZ,JNEZ:
 	deco.Ct = {2'd0,ir.jxx.lk};
 JBC,JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Ct = {2'd0,ir.jxx.lk};

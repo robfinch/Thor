@@ -1463,7 +1463,10 @@ void OCODE::OptPush()
 	if (ip && !ip->remove) {
 		if (ip->opcode == op_push) {
 			if (ip->oper1->mode == am_reg) {
-				oper2 = makereg(ip->oper1->preg);
+				if (oper2==nullptr)
+					oper2 = makereg(ip->oper1->preg);
+				else if (oper3==nullptr)
+					oper3 = makereg(ip->oper1->preg);
 				ip->MarkRemove();
 			}
 		}
@@ -1712,13 +1715,13 @@ void OCODE::store(txtoStream& ofs)
 			ap2->store(ofs);
 			if (ap3 != NULL) {
 				if (op == op_push || op == op_pop)
-					ofs.printf("/");
+					ofs.printf(",");
 				else
 					ofs.printf(",");
 				ap3->store(ofs);
 				if (ap4 != NULL) {
 					if (op == op_push || op == op_pop)
-						ofs.printf("/");
+						ofs.printf(",");
 					else
 						ofs.printf(",");
 					ap4->store(ofs);

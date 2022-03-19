@@ -659,6 +659,7 @@ VirtualAddress tlbmiss_adr;
 VirtualAddress miss_adr;
 reg wr_ptg;
 
+`ifndef SUPPORT_HASHPT
 Thor2022_tlb utlb (
   .rst_i(rst),
   .clk_i(tlbclk),
@@ -687,12 +688,17 @@ Thor2022_tlb utlb (
   .m_dat_o(tlb_dat),
   .m_ack_i(tlb_ack)
 );
+`endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // IPT
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
+reg [6:0] ptg_state = IPT_IDLE;
 reg [7:0] fault_code;
+reg ptg_fault;
+reg clr_ptg_fault;
+wire ptg_en = ptbr[2];
 PTG ptg;
 PTE tmptlbe2;
 PTGCE [PTGC_DEP-1:0] ptgc;
@@ -701,11 +707,54 @@ wire [2:0] entry_num;
 reg [3:0] span_lo, span_hi;
 wire [15:0] hash;
 reg [127:0] ndat;		// next data output
+reg ptgram_wr;
+reg [13:0] ptgram_adr;
+reg [255:0] ptgram_dati;
+wire [127:0] ptgram_dato;
+reg ptgram_web = 1'b0;
+reg [10:0] ptgram_adrb = 'd0;
+PTG ptgram_datib;
+Address ptg_lookup_address;
+reg [3:0] ptgacr = 4'd15;
+
+// SIM debugging
+reg [5:0] ptg_lac = 'd0;
+Address [63:0] ptg_last_adr;
+
+always_ff @(posedge clk)
+begin
+	if (ptgram_wr) begin
+		ptg_last_adr[ptg_lac] <= ptgram_adr;
+		ptg_lac <= ptg_lac + 1'd1;
+	end
+end
+
+`ifdef SUPPORT_HASHPT
+
+PTG_RAM uptgram (
+  .clka(clk),    // input wire clka
+  .ena(1'b1),      // input wire ena
+  .wea(ptgram_wr),      // input wire [0 : 0] wea
+  .addra(ptgram_adr),  // input wire [13 : 0] addra
+  .dina(ptgram_dati),    // input wire [159 : 0] dina
+  .douta(ptgram_dato),  // output wire [159 : 0] douta
+  .clkb(tlbclk),  // input wire clkb
+  .enb(1'b1),      // input wire enb
+  .web(ptgram_web),      // input wire [0 : 0] web
+  .addrb(ptgram_adrb),  // input wire [10 : 0] addrb
+  .dinb(ptgram_datib),    // input wire [1279 : 0] dinb
+  .doutb(ptg)  // output wire [1279 : 0] doutb
+);
+`endif
+
+Address idadr;
+always_comb
+	idadr = daccess ? dadr : iadr;
 
 Thor2022_ipt_hash uhash
 (
 	.asid(ASID),
-	.adr(miss_adr),
+	.adr(idadr),
 	.hash(hash)
 );
 
@@ -713,11 +762,28 @@ Thor2022_ptg_search uptgs
 (
 	.ptg(ptg),
 	.asid(ASID),
-	.miss_adr(miss_adr),
+	.miss_adr(idadr),
 	.pte(tmptlbe2),
 	.found(pte_found),
 	.entry_num(entry_num)
 );
+
+always @(posedge tlbclk)
+begin
+	if (ptg_en) begin
+		if (pte_found) begin
+			adr_o <= {tmptlbe2.ppn,idadr[15:0]};
+			ptgacr <= {tmptlbe2.c,tmptlbe2.r,tmptlbe2.w,tmptlbe2.x};
+		end
+	end
+	else begin
+		adr_o <= idadr;
+		ptgacr <= 4'd15;
+	end
+end
+
+assign tlbacr = ptgacr;
+assign tlbrdy = 1'b1;
 
 // 0   159  319 479  639  799   959  1119  1279
 // 0 128 255 383 511 639 767 895 1023 1151 1279
@@ -739,6 +805,62 @@ reg [11:0] square_table [0:63];
 initial begin
 	for (j = 0; j < 64; j = j + 1)
 		square_table[j] = j * j;
+end
+
+integer n6;
+always_ff @(posedge tlbclk)
+begin
+	ptgram_web <= 1'b0;
+	if (clr_ptg_fault) begin
+		ipt_miss_count <= 'd0;
+		ptg_fault <= 1'b0;
+	end
+
+	case (ptg_state)
+	IPT_IDLE:
+		begin
+			ipt_miss_count <= 'd0;
+			if (!pte_found && ptg_en) begin
+				ptg_state <= IPT_RW_PTG2;
+				ptgram_adrb <= ptbr + ({(hash + square_table[ipt_miss_count]) & 16'hFFFF,6'h0});
+		 		wr_ptg <= 1'b0;
+			end
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Hardware routine to find an address translation.
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// 
+	IPT_FETCH1:
+		begin
+			// Open addressing with quadratic probing
+			ptgram_adrb <= ptbr + ({(hash + square_table[ipt_miss_count]) & 16'hFFFF,6'h0});
+	    if (ipt_miss_count==6'd12)
+	    	ptg_fault <= 1'b1;
+	    else
+	    	ptg_state <= IPT_RW_PTG2;
+		end
+
+	IPT_RW_PTG2:
+		begin
+			ipt_miss_count <= ipt_miss_count + 2'd1;
+  		ptg_state <= IPT_RW_PTG3;
+		end
+	IPT_RW_PTG3:
+		begin
+	    //ptgram_web <= 1'b1;
+  		ptgram_datib <= ptg;
+  		for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
+  			ptgram_datib.ptes[n6].a <= 1'b1;
+  			ptgram_datib.ptes[n6].access_count <= ptg.ptes[n6].access_count + 2'd1;
+  		end
+  		ptg_state <= pte_found ? IPT_IDLE : IPT_FETCH1;
+		end
+	
+	default:
+		ptg_state <= IPT_IDLE;
+
+	endcase
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -783,7 +905,6 @@ if (rst) begin
 	daccess <= FALSE;
 	ici <= 512'd0;
 	dci <= 512'd0;
-	ptg <= 'd0;
 	memreq_rd <= FALSE;
 	memresp <= 'd0;
   xlaten <= FALSE;
@@ -791,6 +912,7 @@ if (rst) begin
   wr_pte <= 1'b0;
   wr_ptg <= 1'b0;
   tlb_ack <= 1'b0;
+  ptgram_wr <= FALSE;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -799,6 +921,7 @@ else begin
 	memresp.wr <= FALSE;
 	tlbwr <= FALSE;
 	tlb_ack <= FALSE;
+	ptgram_wr <= FALSE;
 
 	case(state)
 	MEMORY_INIT:
@@ -936,6 +1059,23 @@ else begin
 		begin
 			memresp.step <= memreq.step;
 	    memresp.res <= {432'd0,rgn_dat_o};
+	    memresp.cmt <= TRUE;
+			memresp.tid <= memreq.tid;
+			memresp.wr <= TRUE;
+	   	ret();
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Complete RGN access cycle
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	PTG1:
+		goto (PTG2);	// Give time for MR_TLB to process
+	PTG2:
+		goto (PTG3);	// Give time for MR_TLB to process
+	PTG3:
+		begin
+			memresp.step <= memreq.step;
+	    memresp.res <= {384'd0,ptgram_dato};
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 			memresp.wr <= TRUE;
@@ -1124,7 +1264,8 @@ else begin
 				dadr <= {ea[AWID-1:6]+ea[6],6'h0};
 		end
 
-`ifdef SUPPORT_HASHPT
+`ifdef SUPPORT_HWWALK
+`ifdef SUPPORT_HASHPT2
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to find an address translation and update the TLB.
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1230,6 +1371,7 @@ else begin
   		default:	;
   		endcase
   		goto (IPT_RW_PTG4);
+`ifdef SUPPORT_MMU_CACHE  		
 			if (!wr_ptg) begin
 				for (n4 = 0; n4 < PTGC_DEP; n4 = n4 + 1) begin
 					if (ptgc[n4].dadr == dadr && ptgc[n4].v) begin
@@ -1239,6 +1381,7 @@ else begin
 					end
 				end
 			end
+`endif			
 		end
 	IPT_RW_PTG4:
 		begin
@@ -1266,11 +1409,13 @@ else begin
 		    	default:	;
 		    	endcase
 		      if (dcnt[3:0]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+`ifdef SUPPORT_MMU_CACHE		      	
 		      	for (n4 = 1; n4 < PTGC_DEP; n4 = n4 + 1)
 		      		ptgc[n4] <= ptgc[n4-1];
 		      	ptgc[0].dadr <= dadr;
 	      		ptgc[0].ptg <= {dat_i,ptg[1151:0]};
 	      		ptgc[0].v <= 1'b1;
+`endif	      		
 		      	tDeactivateBus();
 		      	daccess <= FALSE;
 		      	ret();
@@ -1584,12 +1729,14 @@ else begin
 			daccess <= TRUE;
 			iaccess <= FALSE;
 			dadr <= {pde[15:0],adr_slice[12:1],4'h0};
+`ifdef SUPPORT_MMU_CACHE			
 			if (!wr_pte)
 				for (n4 = 0; n4 < 12; n4 = n4 + 1)
 					if (ptc[n4].adr=={pde[15:0],adr_slice[12:0],3'h0} && ptc[n4].v) begin
 						pde <= ptc[n4].pde;
 						ret();
 					end
+`endif					
 		end
 	PT_RW_PDE3:
 		if (!ack_i) begin
@@ -1614,16 +1761,19 @@ else begin
 	PT_RW_PDE5:
 		begin
 			if (pde.v) begin
+`ifdef SUPPORT_MMU_CACHE				
 				for (n4 = 0; n4 < 11; n4 = n4 + 1)
 					ptc[n4+1] <= ptc[n4];
 				ptc[0].v <= 1'b1;
 				ptc[0].adr <= dadr|{adr_slice[0],3'b0};
 				ptc[0].pde <= pde;
+`endif				
 				ret();
 			end
 			else
 				tPageFault(fault_code,miss_adr);
 		end
+`endif	// SUPPORT_HWWALK
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Subroutine to fetch access rights.
@@ -1681,15 +1831,17 @@ input Address adrlo;
 input Address adrhi;
 integer n5;
 begin
+`ifdef SUPPORT_MMU_CACHE
 	for (n5 = 0; n5 < PTGC_DEP; n5 = n5 + 1)
 		if (ptgc[n5].dadr >= adrlo && ptgc[n5].dadr <= adrhi)
 			ptgc[n5].v <= 1'b0;
+`endif			
 end
 endtask
 
 task tMemoryIdle;
 begin
-	ipt_miss_count <= 'd0;
+//	ipt_miss_count <= 'd0;
 	if (tlbrdy) begin
 		iaccess <= FALSE;
 		daccess <= FALSE;
@@ -1738,6 +1890,13 @@ begin
 			rgn_adr <= memreq.adr[5:0];
 			rgn_dat <= memreq.dat;
 			goto (RGN1);
+		end
+	MR_PTG:
+		begin
+			ptgram_wr <= memreq.func2==MR_STPTG;
+			ptgram_adr <= memreq.adr[13:0];
+			ptgram_dati <= memreq.dat[255:0];
+			goto (PTG1);
 		end
 	MR_LOAD,MR_LOADZ,MR_MOVLD:
 		case(memreq.func2)
@@ -1848,10 +2007,17 @@ endtask
 task tMemoryActivateLo;
 begin
   dwait <= 3'd0;
+`ifndef SUPPORT_HASHPT
   goto (MEMORY_ACKLO);
 	if (tlbmiss)
  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
+`endif
+`ifdef SUPPORT_HASHPT
+  if (memreq.func != MR_CACHE && (pte_found || !ptg_en)) begin
+  	goto (MEMORY_ACKLO);
+`else 		
   else if (memreq.func != MR_CACHE) begin
+`endif
   	vda_o <= HIGH;
     cyc_o <= HIGH;
     stb_o <= HIGH;
@@ -2001,12 +2167,18 @@ endtask
 task tMemoryActivateHi;
 begin
   xlaten <= FALSE;
+`ifndef SUPPORT_HASHPT
   dwait <= 3'd0;
 //    dadr <= adr_o;
   goto (MEMORY_ACKHI);
 	if (tlbmiss)
  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 	else begin
+`else 		
+	if (pte_found || !ptg_en) begin
+	  dwait <= 3'd0;
+  	goto (MEMORY_ACKHI);
+`endif
 		if (dhit && (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==M_JALI/*|| memreq.func==RTS2*/) && dce && tlbacr[3])
  			tDeactivateBus();
 		else begin
@@ -2183,7 +2355,6 @@ input Address ba;
 input [6:0] st;
 input [7:0] fc;
 begin
-	ptg <= 'd0;
 	tDeactivateBus();
 	miss_adr <= ba;
 	if (ptbr[4]) begin

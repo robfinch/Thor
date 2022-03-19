@@ -117,8 +117,9 @@ mnemonic mnemonics[]={
 
 	"cmp", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x540000000102LL,6},	
 	"cmp", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x540000000102LL,6},	
-	"cmp", {OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x540000000002LL,6},	
-	"cmp", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD0LL,6,0x50,4},
+	"cmp", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x0000000CLL,4},	
+	"cmp", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD0LL,6,0x0BLL,4},
+	
 	"cmpu", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x560000000102LL,6},	
 	"cmpu", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x560000000102LL,6},	
 	"cmpu", {OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x560000000002LL,6},	
@@ -228,6 +229,8 @@ mnemonic mnemonics[]={
 	"ldou",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x87LL},
 	"ldou",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x87LL,6},	
 	"ldou",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB7LL,4},	
+	
+	"ldptg",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R3RR,CPU_ALL,0,0x480000000007LL,6},	
 
 	"ldt",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x84LL,6},	
 	"ldt",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x84LL,6},	
@@ -255,8 +258,8 @@ mnemonic mnemonics[]={
 	"mfsel",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	
 
-	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x1DLL,4},	
-	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x1DLL,4},	
+	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,4},	
+	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,4},	
 //	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 //	"move",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A10F00000AALL,6},
@@ -321,18 +324,22 @@ mnemonic mnemonics[]={
 
 	"pfi",	{OP_REG,0,0,0,0},{R3RR,CPU_ALL,0,0x220000000007LL,6},	
 
-	"pop",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x000000BELL,4},	
-	"pop",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x000000BDLL,4},	
+	"pop",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x800000BELL,4},	
+	"pop",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x600000BELL,4},	
+	"pop",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x400000BELL,4},	
 	"pop",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x000BCLL,2},	
 
 	"popq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	
 	"popq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	
 
+	"ptghash", {OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x5E000001,4},
+
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x281000000002LL,6},
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
 
-	"push",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x000000AELL,4},	
-	"push",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x000000ADLL,4},	
+	"push",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x800000AELL,4},	
+	"push",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x600000AELL,4},	
+	"push",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x400000AELL,4},	
 	"push",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x000ACLL,2},	
 
 	"pushq",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	
@@ -433,6 +440,7 @@ mnemonic mnemonics[]={
 	"sto",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x93LL,6,0x95LL,4},	
 	"sto",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x93LL,6},	
 	"sto",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC3LL,4},	
+	"stptg",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R3RR,CPU_ALL,0,0x4A0000000007LL,6},	
 	"stt",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,0x92LL,6},	
 	"stt",	{OP_REG,OP_SEL|OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,0x92LL,6},	
 	"stt",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xC2LL,4},	
@@ -1458,10 +1466,16 @@ illreloc:
 }
 
 
-static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
+static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 {
 	if (insn) {
 		switch(mnemo->ext.format) {
+		case R1:
+			if (i==0)
+				*insn = *insn| (RT(op->basereg & 0x1f));
+			else if (i==1)
+				*insn = *insn| (RA(op->basereg & regmask));
+			break;
 		case MV:
 		case CSR:
 		case R2:
@@ -1473,6 +1487,7 @@ static void eval_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==2)
 				*insn = *insn| (RB(op->basereg & regmask)) | (TB(0));
 			break;
+		case R4:
 		case R3:
 		case R3RR:
 			if (i==0)
@@ -1638,7 +1653,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mn
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
 			if (insn)
-				*insn = *insn | ((val & 0x3ffffLL) << 11LL) | (((val >> 18LL) & 0xffffLL) << 32LL);
+				*insn = *insn | (((val >> 1LL) & 0x3ffffLL) << 11LL) | ((((val >> 1LL) >> 18LL) & 0xffffLL) << 32LL);
 		}
 		else if (mnemo->ext.format==ENTER) {
 			isize = 4;
@@ -1741,7 +1756,7 @@ j1:
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
 			if (insn)
-				*insn = *insn | ((val & 0x3ffffLL) << 11LL) | (((val >> 18LL) & 0xffffLL) << 32LL);
+				*insn = *insn | (((val >> 1LL) & 0x3ffffLL) << 11LL) | ((((val >> 1LL) >> 18LL) & 0xffffLL) << 32LL);
 		}
 		else if (mnemo->ext.format==R2) {
 			isize = 4;
@@ -2189,7 +2204,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 
 		TRACE("Etho2:");
 		if (op.type==OP_REG) {
-			eval_reg(insn, &op, mnemo, i);
+			encode_reg(insn, &op, mnemo, i);
 		}
 		else if (mnemo->operand_type[i]==OP_LK) {
 			if (insn) {

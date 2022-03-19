@@ -39,10 +39,10 @@ import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
 module Thor2022_ipt_hash(asid, adr, hash);
-input [7:0] asid;
+input [11:0] asid;
 input Address adr;
 output [15:0] hash;
 
-assign hash = {asid,8'h0} ^ adr[29:14];
+assign hash = adr[28:18] ^ asid[10:0] ^ asid[11];
 
 endmodule
