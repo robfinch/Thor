@@ -55,7 +55,7 @@ begin
   entry_num <= 'd0;
 	for (k = 0; k < Thor2022_mmupkg::PtePerPtg; k = k + 1) begin
 		if (!found && 
-			(ptg.ptes[k].vpn[19:10]==miss_adr[31:22] && (ptg.ptes[k].s || ptg.ptes[k].vpn[9:0]==miss_adr[21:12])) &&
+			(ptg.ptes[k].vpn[15:10]==miss_adr[31:26] && (ptg.ptes[k].s || ptg.ptes[k].vpn[9:0]==miss_adr[25:16])) &&
 			(ptg.ptes[k].g || ptg.ptes[k].asid==asid) && ptg.ptes[k].v) begin
 			pte = ptg.ptes[k];
 			entry_num <= k;

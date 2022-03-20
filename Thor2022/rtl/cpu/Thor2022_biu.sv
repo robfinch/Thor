@@ -822,7 +822,7 @@ begin
 			ipt_miss_count <= 'd0;
 			if (!pte_found && ptg_en) begin
 				ptg_state <= IPT_RW_PTG2;
-				ptgram_adrb <= ptbr + ({(hash + square_table[ipt_miss_count]) & 16'hFFFF,6'h0});
+				ptgram_adrb <= hash & 16'hFFFF;
 		 		wr_ptg <= 1'b0;
 			end
 		end
@@ -834,7 +834,7 @@ begin
 	IPT_FETCH1:
 		begin
 			// Open addressing with quadratic probing
-			ptgram_adrb <= ptbr + ({(hash + square_table[ipt_miss_count]) & 16'hFFFF,6'h0});
+			ptgram_adrb <= ((hash + square_table[ipt_miss_count]) & 16'hFFFF);
 	    if (ipt_miss_count==6'd12)
 	    	ptg_fault <= 1'b1;
 	    else
@@ -847,8 +847,10 @@ begin
   		ptg_state <= IPT_RW_PTG3;
 		end
 	IPT_RW_PTG3:
+		ptg_state <= IPT_RW_PTG4;
+	IPT_RW_PTG4:
 		begin
-	    //ptgram_web <= 1'b1;
+	    ptgram_web <= 1'b1;
   		ptgram_datib <= ptg;
   		for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
   			ptgram_datib.ptes[n6].a <= 1'b1;
