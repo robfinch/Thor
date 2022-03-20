@@ -123,6 +123,7 @@ parameter SGTUI		= 8'h1F;
 
 parameter JMP			= 8'h20;
 parameter DJMP		= 8'h21;
+parameter JBSI		= 8'h22;
 parameter JBC			= 8'h24;
 parameter JOR			= 8'h24;
 parameter JBS			= 8'h25;
@@ -581,6 +582,12 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic [7:0] micro_ip;
+	logic [31:0] offs;
+} CodeAddress;
+
+typedef struct packed
+{
 	Offset offs;
 } VirtualAddress;
 
@@ -630,8 +637,8 @@ typedef struct packed
 typedef struct packed
 {
 	logic [31:0] imm;
-	logic [5:0] pad;
-	logic [1:0] Tb;
+	logic [6:0] pad;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
@@ -645,7 +652,7 @@ typedef struct packed
 	logic [6:0] func;
 	logic [2:0] m;
 	logic z;
-	logic [1:0] pad2;
+	logic [1:0] sz;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
 	logic v;
@@ -658,8 +665,9 @@ typedef struct packed
 	logic [6:0] func;
 	logic [2:0] m;
 	logic z;
-	logic [2:0] pad3;
-	logic [1:0] Tb;
+	logic [2:0] sz;
+	logic p;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
@@ -673,10 +681,12 @@ typedef struct packed
 	logic [6:0] func;
 	logic [2:0] m;
 	logic z;
-	logic [3:0] pad4;
-	logic [1:0] Tc;
+	logic [1:0] pad2;
+	logic [2:0] sz;
+	logic p;
+	logic Tc;
 	logic [4:0] Rc;
-	logic [1:0] Tb;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
@@ -703,9 +713,9 @@ typedef struct packed
 typedef struct packed
 {
 	logic [15:0] pad;
-	logic [18:0] Tgthi;
+	logic [19:0] Tgthi;
 	logic [2:0] Ca;
-	logic [1:0] Tb;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [2:0] cm;
@@ -776,8 +786,8 @@ typedef struct packed
 	logic [2:0] m;
 	logic z;
 	logic c;
-	logic pad1;
-	logic [1:0] Tb;
+	logic [1:0] pad2;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
@@ -811,8 +821,8 @@ typedef struct packed
 	logic [2:0] m;
 	logic z;
 	logic c;
-	logic pad1;
-	logic [1:0] Tb;
+	logic [1:0] pad2;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rs;
@@ -825,11 +835,11 @@ typedef struct packed
 	logic [15:0] pad;
 	logic [3:0] func;
 	logic S;
-	logic [4:0] pad5;
+	logic [6:0] pad5;
 	logic [4:0] Me;
-	logic [1:0] Tc;
+	logic Tc;
 	logic [4:0] Rc;
-	logic [1:0] Tb;
+	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [4:0] Rt;
@@ -1289,8 +1299,8 @@ R2:
 	endcase
 R3:
 	case(isn.r3.func)
-	CHK:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
-	MUX:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
+	CHK:	Source2Valid = isn.r3.Rb==6'd0;
+	MUX:	Source2Valid = isn.r3.Rb==6'd0;
 	default:	Source2Valid = `TRUE;
 	endcase
 ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
@@ -1303,8 +1313,8 @@ OSR2:
 	default: Source2Valid = `TRUE;
 	endcase
 // Branches
-8'h2x:	Source2Valid = isn.jxx.Rb==6'd0 || isn.jxx.Tb[1];
-8'h3x:	Source2Valid = isn.jxx.Rb==6'd0 || isn.jxx.Tb[1];
+8'h2x:	Source2Valid = isn.jxx.Rb==6'd0;
+8'h3x:	Source2Valid = isn.jxx.Rb==6'd0;
 DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
 	Source2Valid = `TRUE;
 CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
@@ -1329,38 +1339,38 @@ F1:
 	FSYNC:		Source2Valid = `TRUE;
 	default:	Source2Valid = `TRUE;
 	endcase
-F2:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
-F3:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
+F2:	Source2Valid = isn.r2.Rb==6'd0;
+F3:	Source2Valid = isn.r3.Rb==6'd0;
 DF1:
 	case(isn.r1.func)
 	DFSYNC:		Source2Valid = `TRUE;
 	default:	Source2Valid = `TRUE;
 	endcase
-DF2:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
-DF3:	Source2Valid = isn.r3.Rb==6'd0 || isn.r2.Tb[1];
+DF2:	Source2Valid = isn.r2.Rb==6'd0;
+DF3:	Source2Valid = isn.r3.Rb==6'd0;
 P1:
 	case(isn.r1.func)
 	PSYNC:		Source2Valid = `TRUE;
 	default:	Source2Valid = `TRUE;
 	endcase
-P2:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
-P3:	Source2Valid = isn.r3.Rb==6'd0 || isn.r3.Tb[1];
-8'h8x:	Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 || isn.r2.Tb[1] : `TRUE;
+P2:	Source2Valid = isn.r2.Rb==6'd0;
+P3:	Source2Valid = isn.r3.Rb==6'd0;
+8'h8x:	Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 : `TRUE;
 8'h9x:	Source2Valid = `VAL;
 SYS:	Source2Valid = `TRUE;
 INT:	Source2Valid = `TRUE;
 MOV:	Source2Valid = `TRUE;
 BTFLD:	
 	case(isn.rm.func)
-	default:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
+	default:	Source2Valid = isn.r2.Rb==6'd0;
 	endcase
-LDxX:	Source2Valid = isn.ldx.Rb==6'd0 || isn.ldx.Tb[1];
-STxX:	Source2Valid = isn.stx.Rb==6'd0 || isn.stx.Tb[1];
-8'hDx:Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 || isn.r2.Tb[1] : `TRUE;
+LDxX:	Source2Valid = isn.ldx.Rb==6'd0;
+STxX:	Source2Valid = isn.stx.Rb==6'd0;
+8'hDx:Source2Valid = isn.ld.v ? isn.r2.Rb==6'b0 : `TRUE;
 8'hEx:Source2Valid = `VAL;
 NOP:	Source2Valid = `TRUE;
 RTS:	Source2Valid = `TRUE;
-BCD:	Source2Valid = isn.r2.Rb==6'd0 || isn.r2.Tb[1];
+BCD:	Source2Valid = isn.r2.Rb==6'd0;
 SYNC,MEMSB,MEMDB,WFI:	Source2Valid = `TRUE;
 SEI:	Source2Valid = `TRUE;
 default:
@@ -1373,23 +1383,23 @@ input Instruction isn;
 casez(isn.any.opcode)
 R3:
 	case(isn.r3.func)
-	CHK:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
-	MUX:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
+	CHK:	Source3Valid = isn.r3.Rc==6'd0;
+	MUX:	Source3Valid = isn.r3.Rc==6'd0;
 	default:	Source3Valid = `TRUE;
 	endcase
 // Branches
 8'h2x:	Source3Valid = `FALSE;
 8'h3x:	Source3Valid = `FALSE;
-F3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
-DF3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
-P3:	Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
+F3:	Source3Valid = isn.r3.Rc==6'd0;
+DF3:	Source3Valid = isn.r3.Rc==6'd0;
+P3:	Source3Valid = isn.r3.Rc==6'd0;
 8'h9x:	Source3Valid = isn.st.Rs==6'd0;
-BTFLD:	Source3Valid = isn.rm.Rc==6'd0 || isn.rm.Tc[1];
+BTFLD:	Source3Valid = isn.rm.Rc==6'd0;
 STBX:	Source3Valid = isn.stx.Rs==6'd0;
 STWX:	Source3Valid = isn.stx.Rs==6'd0;
 STTX:	Source3Valid = isn.stx.Rs==6'd0;
 STOX:	Source3Valid = isn.stx.Rs==6'd0;
-8'hEx:Source3Valid = isn.r3.Rc==6'd0 || isn.r3.Tc[1];
+8'hEx:Source3Valid = isn.r3.Rc==6'd0;
 default:
 	Source3Valid = `TRUE;
 endcase

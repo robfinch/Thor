@@ -59,6 +59,7 @@ case(inst.jxx.cm)
 	JGT:	takb = $signed(a) > $signed(b);
 	JBC:	takb = ~a[b[6:0]];
 	JBS:	takb =  a[b[6:0]];
+	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
@@ -107,6 +108,7 @@ case(inst.jxx.cm)
 	JGT:	takb = $signed(a) > $signed(b);
 	JBC:	takb = ~a[b[6:0]];
 	JBS:	takb =  a[b[6:0]];
+	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
@@ -123,6 +125,7 @@ case(inst.jxx.cm)
 	JGT:	takb = a > b;
 	JBC:	takb = ~a[b[6:0]];
 	JBS:	takb =  a[b[6:0]];
+	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;

@@ -11,6 +11,20 @@ extern void srand(unsigned int);
 extern void DBGDisplayChar(char);
 extern void DBGDisplayAsciiStringCRLF(char *);
 extern void MapPage(int a0, int a1);
+extern unsigned long PtgHash(unsigned long va);
+extern void StPtg(unsigned long a0, unsigned long a1, unsigned long a2);
+
+// a2
+#define PTE_CRWX(x)	((x) << 0)
+#define PTE_DUSA(x)	((x) << 4)
+#define PTE_BC(x)		((x) << 8)
+#define PTE_AV(x)		((x) << 13)
+#define PTE_G(x)		((x) << 14)
+#define PTE_V(x)		((x) << 15)
+#define PTE_SCRWX(x)	((x) << 16)
+#define PTE_ASID(x)	((x) << 20)
+#define PTE_KEY(x)	((x) << 32)
+#define PTE_AC(x)		((x) << 64)
 
 // a1
 #define PTE_PPN(x)	(x)
@@ -27,7 +41,7 @@ extern void MapPage(int a0, int a1);
 #define PTE_AL(x)				((x) << 14)
 #define PTE_S(x)				((x) << 16)
 #define PTE_W(x)				((x) << 31)
-
+/*
 #define PTE_CRWX(x)	((x) << 32)
 #define PTE_DUSA(x)	((x) << 36)
 #define PTE_BC(x)		((x) << 40)
@@ -36,7 +50,7 @@ extern void MapPage(int a0, int a1);
 #define PTE_V(x)		((x) << 47)
 #define PTE_SCRWX(x)	((x) << 48)
 #define PTE_ASID(x)	((x) << 52)
-
+*/
 
 /*
 void __interrupt syscall()
@@ -60,39 +74,49 @@ bool foo (register int a, register int b)
 void MapPages()
 {
 	int m;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
+	// 4MB low memory
+	// way = 0, entry $000, write = true
+	for (m = 0; m < 1 /*64*/; m++) {
+		a0 = PtgHash(m << 16);
+		a1 = PTE_VPN(m)|PTE_PPN(m)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
+		a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+		StPtg(a0,a1,a2);
+	}
 	// 64k at 0xFFFCxxxx
 	// fixed way, entry $3C0, write = true
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(15)|PTE_DUSA(0)|PTE_CRWX(15)|PTE_ENTRYNO(0x3FC)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFFFC0000)|(((0xFFFC0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFFFC)|PTE_PPN(0xFFFC)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-//	a1 = 0x3F000038003FF00FFFC0;
-	for (m = 0; m < 16; m++) {
-		MapPage(a0,a1);
-		a0++;
-		a1++;
-	}
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+	a0 = PtgHash(0xFFFD0000)|(((0xFFFD0000) >> 16) & 3);
+	a1 = PTE_VPN(0xFFFD)|PTE_PPN(0xFFFD)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(1);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(13)|PTE_DUSA(0)|PTE_CRWX(13)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+	a0 = PtgHash(0xFFFE0000)|(((0xFFFE0000) >> 16) & 3);
+	a1 = PTE_VPN(0xFFFE)|PTE_PPN(0xFFFE)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(2);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(13)|PTE_DUSA(0)|PTE_CRWX(13)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+	a0 = PtgHash(0xFFFF0000)|(((0xFFFF0000) >> 16) & 3);
+	a1 = PTE_VPN(0xFFFF)|PTE_PPN(0xFFFF)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(3);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(13)|PTE_DUSA(0)|PTE_CRWX(13)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+
 	// 128k at 0x00300000
 	// 0x300000
 	// 0x0000_0000_00_11_0000_0000_ 0000_0000_0000
 	//   1111_1111_10 00_0000_0000 _0000_0000_0000
 	// choose random way, entry $300, write = true
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x30)|PTE_WAY(4)|PTE_AL(2)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
-	a1 = PTE_VPN(0x30)|PTE_PPN(0x30)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	for (m = 0; m < 32; m++) {
-		MapPage(a0,a1);
-		a0++;
-		a1++;
-	}
-	// 4MB low memory
-	// way = 0, entry $000, write = true
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(14)|PTE_DUSA(0)|PTE_CRWX(14)|PTE_ENTRYNO(0x000)|PTE_WAY(0)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
-	a1 = PTE_VPN(0x000)|PTE_PPN(0x000)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	for (m = 0; m < 1024; m++) {
-		MapPage(a0,a1);
-		a0++;
-		a1++;
-	}
+	a0 = PtgHash(0x00300000)|(((0x00300000) >> 16) & 3);
+	a1 = PTE_VPN(0x0030)|PTE_PPN(0x0030)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+	a0 = PtgHash(0x00310000)|(((0x00310000) >> 16) & 3);
+	a1 = PTE_VPN(0x0031)|PTE_PPN(0x0031)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(1);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+
 }
 
 void UnmapPage(int pgno)
@@ -110,11 +134,12 @@ void my_srand(int a, int b)
 {
 	int:32* pRand = 0;
 	int ch;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x140)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF940000)|(((0xFF940000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF94)|PTE_PPN(0xFF94)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	pRand += (0xFF940000/sizeof(int:32));
 	for (ch = 0; ch < 256; ch++) {
 		pRand[1] = ch;
@@ -127,11 +152,12 @@ int my_rand(int ch)
 {
 	int:32* pRand = 0;
 	int r;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x140)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF940000)|(((0xFF940000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF94)|PTE_PPN(0xFF94)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	pRand += (0xFF940000/sizeof(int:32));
 	pRand[1] = ch;
 	r = *pRand;
@@ -218,11 +244,12 @@ void FlashLEDs()
 void ShowSprites(int which)
 {
 	int:32 *pSprEN = 0xFF8B03C0;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x0B0)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF8B0000)|(((0xFF8B0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF8B)|PTE_PPN(0xFF8B)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);//0x3F000018003FE00FF940);		
 	*pSprEN = which;
 //	UnmapPage(0x8000000000000CB0);
 }
@@ -234,7 +261,7 @@ void SetSpriteColor()
 	int:16* pSpr = 0;
 	int m,n,c,k;
 	int:64* pScreen = 0;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
 	pScreen += (0xFF800000/sizeof(int));
 	pScreen[10] = DBGAttr|'A';
@@ -269,9 +296,10 @@ void SetSpriteColor()
 	}
 	pScreen[13] = DBGAttr + 'A' + m;
 	// Turn on Vertical Sync DMA trigger.
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x0B0)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF8B0000)|(((0xFF8B0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF8B)|PTE_PPN(0xFF8B)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	int:32 *pSprVDT = 0xFF8B03D8;
 	*pSprVDT = 0xFFFFFFFF;
 	// Delay a bit to allow some vertical sync times to occur.
@@ -279,9 +307,10 @@ void SetSpriteColor()
 		;
 	pScreen[14] = DBGAttr + 'A' + m;
 	// Turn on Vertical Sync DMA trigger.
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x0B0)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF8B0000)|(((0xFF8B0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF8B)|PTE_PPN(0xFF8B)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	int:32 *pSprVDT = 0xFF8B03D8;
 	*pSprVDT = 0xFFFFFFFF;
 //	UnmapPage(0x8000000000000CB0);
@@ -291,11 +320,12 @@ void SetSpritePosAndSpeed()
 {
 	int:16* pSpr16 = 0;
 	int n;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 	
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x0B0)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF8B0000)|(((0xFF8B0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF8B)|PTE_PPN(0xFF8B)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	pSpr16 += (0xFF8B0000/sizeof(int:16));
 	for (n = 0; n < 32; n++) 
 	{
@@ -317,12 +347,13 @@ void MoveSprites()
 	int m,n;
 	int j,k,a,b;
 	int t;
-	unsigned long a0, a1;
+	unsigned long a0, a1, a2;
 
 	// Map sprite registers	
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x0B0)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF8B0000)|(((0xFF8B0000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF8B)|PTE_PPN(0xFF8B)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	pSpr16 += (0xFF8B0000/sizeof(int:16));
 	pScreen += (0xFF800000/sizeof(int));
 
@@ -377,23 +408,35 @@ int main()
 	char* bootstr = "Thor2021 SoC Booting...";
 	char *btstr = 0xFFFE0000;
 	int:16* pLEDS = 0;
-	unsigned long int a0,a1;
+	unsigned long int a0,a1,a2;
 
-	// Map LEDs
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x391)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
-	a1 = PTE_VPN(0xFF91)|PTE_PPN(0xFF91)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);
 	pLEDS += (0xFF910000/sizeof(int:16));
 	*pLEDS = 0xAAAA;
 
+	// Zero out page table
+	for (n = 0; n < 1 /*6384*/; n = n + 1)
+		StPtg(n,0,0);
+	
+	MapPages();
+	TurnOnPt();
+
+	// Map LEDs
+	a0 = PtgHash(0xFF910000)|(((0xFF910000) >> 16) & 3);
+	a1 = PTE_VPN(0xFF91)|PTE_PPN(0xFF91)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
+	*pLEDS = 0x5555;
+
 	// Map Text Screen
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x380)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF800000)|(((0xFF800000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF80)|PTE_PPN(0xFF80)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 	// Map Text Registers
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x381)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF810000)|(((0xFF810000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF81)|PTE_PPN(0xFF81)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 
 
 	scrpos = 0;
@@ -401,12 +444,12 @@ int main()
 //		switch(state) {
 //		case 0:
 	ShowSprites(0x00);
-	MapPages();
 	// Map random number generator
 //	MapPage(0x8000000000000D40,0x008E000FF80FF940);		
-	a0 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_ENTRYNO(0x014)|PTE_WAY(4)|PTE_AL(0)|PTE_S(0)|PTE_W(1)|PTE_AV(1);
+	a0 = PtgHash(0xFF940000)|(((0xFF940000) >> 16) & 3);
 	a1 = PTE_VPN(0xFF94)|PTE_PPN(0xFF94)|PTE_PL(0)|PTE_N(1)|PTE_MB(0)|PTE_ME(63)|PTE_EN(0);
-	MapPage(a0,a1);//0x3F000018003FE00FF940);		
+	a2 = PTE_G(1)|PTE_V(1)|PTE_SCRWX(6)|PTE_DUSA(0)|PTE_CRWX(6)|PTE_AV(1);
+	StPtg(a0,a1,a2);
 //	int* pLEDS = 0;
 //	pLEDS += (0xFF910000/sizeof(int));
 	*pLEDS = 0x01;

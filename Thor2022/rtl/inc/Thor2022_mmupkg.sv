@@ -298,5 +298,8 @@ parameter PT_RW_PDE7 = 7'd114;
 parameter PTG1 = 7'd115;
 parameter PTG2 = 7'd116;
 parameter PTG3 = 7'd117;
+parameter IPT_CLOCK1 = 7'd1;
+parameter IPT_CLOCK2 = 7'd2;
+parameter IPT_CLOCK3 = 7'd3;
 
 endpackage

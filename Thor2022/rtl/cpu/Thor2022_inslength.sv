@@ -77,6 +77,7 @@ JMP:	 	o = 4'd6;
 DJMP:		o = 4'd6;
 JBC:		o = 4'd6;
 JBS:		o = 4'd6;
+JBSI:		o = 4'd6;
 JEQ:		o = 4'd6;
 JNE:		o = 4'd6;
 JLT:		o = 4'd6;

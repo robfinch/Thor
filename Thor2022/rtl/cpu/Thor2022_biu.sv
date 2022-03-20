@@ -43,7 +43,7 @@ module Thor2022_biu(rst,clk,tlbclk,clock,UserMode,MUserMode,omode,ASID,bounds_ch
 	ip,ihit,ifStall,ic_line,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bok_i, bte_o, cti_o, vpa_o, vda_o, cyc_o, stb_o, ack_i, we_o, sel_o, adr_o,
-	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr);
+	dat_i, dat_o, sr_o, cr_o, rb_i, dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault);
 parameter AWID=32;
 input rst;
 input clk;
@@ -88,6 +88,8 @@ output reg dce;							// data cache enable
 input [19:0] keys [0:7];
 input [2:0] arange;
 input Address ptbr;
+output reg ipage_fault;
+input clr_ipage_fault;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -716,6 +718,9 @@ reg [10:0] ptgram_adrb = 'd0;
 PTG ptgram_datib;
 Address ptg_lookup_address;
 reg [3:0] ptgacr = 4'd15;
+wire pe_clock;
+reg clock_r = 1'b0;
+reg [10:0] clock_count = 'd0;
 
 // SIM debugging
 reg [5:0] ptg_lac = 'd0;
@@ -740,7 +745,7 @@ PTG_RAM uptgram (
   .douta(ptgram_dato),  // output wire [159 : 0] douta
   .clkb(tlbclk),  // input wire clkb
   .enb(1'b1),      // input wire enb
-  .web(ptgram_web),      // input wire [0 : 0] web
+  .web(ptgram_web & ~ptgram_wr),      // input wire [0 : 0] web
   .addrb(ptgram_adrb),  // input wire [10 : 0] addrb
   .dinb(ptgram_datib),    // input wire [1279 : 0] dinb
   .doutb(ptg)  // output wire [1279 : 0] doutb
@@ -772,8 +777,11 @@ always @(posedge tlbclk)
 begin
 	if (ptg_en) begin
 		if (pte_found) begin
-			adr_o <= {tmptlbe2.ppn,idadr[15:0]};
-			ptgacr <= {tmptlbe2.c,tmptlbe2.r,tmptlbe2.w,tmptlbe2.x};
+			adr_o <= {tmptlbe2.ppn,idadr[15:10]+tmptlbe2.mb,idadr[9:0]};
+			if (idadr[15:10] + tmptlbe2.mb <= tmptlbe2.me)
+				ptgacr <= {tmptlbe2.c,tmptlbe2.r,tmptlbe2.w,tmptlbe2.x};
+			else
+				ptgacr <= 4'd0;
 		end
 	end
 	else begin
@@ -807,14 +815,18 @@ initial begin
 		square_table[j] = j * j;
 end
 
+edge_det uclked1 (.rst(rst_i), .clk(tlbclk), .ce(1'b1), .i(clock), .pe(pe_clock), .ne(), .ee());
+
 integer n6;
 always_ff @(posedge tlbclk)
 begin
 	ptgram_web <= 1'b0;
-	if (clr_ptg_fault) begin
+	if (clr_ptg_fault|clr_ipage_fault) begin
 		ipt_miss_count <= 'd0;
 		ptg_fault <= 1'b0;
 	end
+	if (pe_clock)
+		clock_r <= 1'b1;
 
 	case (ptg_state)
 	IPT_IDLE:
@@ -823,7 +835,12 @@ begin
 			if (!pte_found && ptg_en) begin
 				ptg_state <= IPT_RW_PTG2;
 				ptgram_adrb <= hash & 16'hFFFF;
-		 		wr_ptg <= 1'b0;
+			end
+			else if (clock_r) begin
+				clock_r <= 1'b0;
+				ptg_state <= IPT_CLOCK1;
+				ptgram_adrb <= clock_count;
+				clock_count <= clock_count + 2'd1;
 			end
 		end
 
@@ -852,11 +869,25 @@ begin
 		begin
 	    ptgram_web <= 1'b1;
   		ptgram_datib <= ptg;
-  		for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
-  			ptgram_datib.ptes[n6].a <= 1'b1;
-  			ptgram_datib.ptes[n6].access_count <= ptg.ptes[n6].access_count + 2'd1;
-  		end
+			ptgram_datib.ptes[0].a <= 1'b1;
+			ptgram_datib.ptes[0].access_count <= ptg.ptes[0].access_count + 2'd1;
   		ptg_state <= pte_found ? IPT_IDLE : IPT_FETCH1;
+		end
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Age access counts
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	IPT_CLOCK1:
+		ptg_state <= IPT_CLOCK2;
+	IPT_CLOCK2:
+		ptg_state <= IPT_CLOCK3;
+	IPT_CLOCK3:
+		begin
+	    ptgram_web <= 1'b1;
+  		ptgram_datib <= ptg;
+ 			ptgram_datib.ptes[0].access_count <= {1'b0,ptg.ptes[0].access_count[31:1]};
+  		ptg_state <= IPT_IDLE;
 		end
 	
 	default:
@@ -915,6 +946,8 @@ if (rst) begin
   wr_ptg <= 1'b0;
   tlb_ack <= 1'b0;
   ptgram_wr <= FALSE;
+	clr_ptg_fault <= 1'b0;
+	ipage_fault <= 1'b0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -924,6 +957,9 @@ else begin
 	tlbwr <= FALSE;
 	tlb_ack <= FALSE;
 	ptgram_wr <= FALSE;
+	clr_ptg_fault <= 1'b0;
+	if (clr_ipage_fault)
+		ipage_fault <= 1'b0;
 
 	case(state)
 	MEMORY_INIT:
@@ -1105,23 +1141,35 @@ else begin
 		end
 	// Hardware subroutine to fetch instruction cache line
 	IFETCH1:
-	  if (!ack_i) begin
-	  	// Cache miss, select an entry in the victim cache to
-	  	// update.
-			ivcnt <= ivcnt + 2'd1;
-			if (ivcnt>=3'd4)
-				ivcnt <= 3'd0;
-			ivcache[ivcnt] <= ic_line;
-			ivtag[ivcnt] <= ic_tag;
-			ivvalid[ivcnt] <= TRUE;
-	  	vpa_o <= HIGH;
-	  	bte_o <= 2'b00;
-	  	cti_o <= 3'b001;	// constant address burst cycle
-	    cyc_o <= HIGH;
-			stb_o <= HIGH;
-	    sel_o <= 16'hFFFF;
-  		goto (IFETCH2);
-	  end
+		begin
+`ifdef SUPPORT_HASHPT			
+			if (ptg_fault) begin
+				ipage_fault <= 1'b1;
+				ici <= {40{8'b0,NOP}};
+				goto (IFETCH3);
+			end
+			if (pte_found || !ptg_en)
+`endif			
+			begin
+			  if (!ack_i) begin
+			  	// Cache miss, select an entry in the victim cache to
+			  	// update.
+					ivcnt <= ivcnt + 2'd1;
+					if (ivcnt>=3'd4)
+						ivcnt <= 3'd0;
+					ivcache[ivcnt] <= ic_line;
+					ivtag[ivcnt] <= ic_tag;
+					ivvalid[ivcnt] <= TRUE;
+			  	vpa_o <= HIGH;
+			  	bte_o <= 2'b00;
+			  	cti_o <= 3'b001;	// constant address burst cycle
+			    cyc_o <= HIGH;
+					stb_o <= HIGH;
+			    sel_o <= 16'hFFFF;
+		  		goto (IFETCH2);
+			  end
+			end
+		end
 	IFETCH2:
 	  begin
 	  	stb_o <= HIGH;
@@ -1156,7 +1204,7 @@ else begin
 		begin
 		  ic_wway <= waycnt;
 		  xlaten <= FALSE;
-		  ret();
+	  	ret();
 		end
 	IFETCH3a:
 		begin
@@ -2015,6 +2063,10 @@ begin
  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 `endif
 `ifdef SUPPORT_HASHPT
+	if (ptg_fault) begin
+		clr_ptg_fault <= 1'b1;
+		tPageFault(FLT_DPF,dadr);
+	end
   if (memreq.func != MR_CACHE && (pte_found || !ptg_en)) begin
   	goto (MEMORY_ACKLO);
 `else 		
@@ -2177,6 +2229,10 @@ begin
  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 	else begin
 `else 		
+	if (ptg_fault) begin
+		clr_ptg_fault <= 1'b1;
+		tPageFault(FLT_DPF,dadr);
+	end
 	if (pte_found || !ptg_en) begin
 	  dwait <= 3'd0;
   	goto (MEMORY_ACKHI);

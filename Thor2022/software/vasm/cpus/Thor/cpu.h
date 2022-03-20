@@ -150,12 +150,12 @@ typedef struct {
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)
-#define RB(x)		(((x) & 0x7fLL) << 19LL)
-#define TB(x)		(((x) & 3LL) << 24LL)
-#define RC(x)		(((x) & 0x7fLL) << 26LL)
-#define TC(x)		(((x) & 3LL) << 31LL)
+#define RB(x)		(((x) & 0x3fLL) << 19LL)
+#define TB(x)		(((x) & 1LL) << 24LL)
+#define RC(x)		(((x) & 0x3fLL) << 25LL)
+#define TC(x)		(((x) & 1LL) << 30LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
-#define CAB(x)		(((x) & 7LL) << 26LL)
+#define CAB(x)		(((x) & 7LL) << 25LL)
 
 /* special data operand types: */
 #define OP_D8  0x40001001

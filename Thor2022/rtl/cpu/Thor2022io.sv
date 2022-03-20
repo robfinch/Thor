@@ -121,6 +121,8 @@ Address caregfile [0:15];
 (* ram_style="block" *)
 Value vregfile [0:31][0:63];
 reg [63:0] vm_regfile [0:7];
+wire ipage_fault;
+reg clr_ipage_fault = 1'b0;
 
 integer n1;
 initial begin
@@ -143,15 +145,15 @@ reg [15:0] icause;
 Instruction insn;
 Instruction micro_ir,micro_ir1;
 reg advance_i;
-Address ip;
+CodeAddress ip;
 reg [6:0] micro_ip;
 wire ipredict_taken;
 wire ihit;
 wire [pL1ICacheLineSize-1:0] ic_line;
 wire [3:0] ilen;
 wire btb_hit;
-Address btb_tgt;
-Address next_ip;
+CodeAddress btb_tgt;
+CodeAddress next_ip;
 wire run;
 reg [2:0] pfx_cnt;		// prefix counter
 reg [7:0] istep;
@@ -161,7 +163,7 @@ reg [7:0] istep;
 reg dval;
 reg [15:0] dcause;
 Instruction ir;
-Address dip;
+CodeAddress dip;
 reg [2:0] cioreg;
 reg dpfx;
 reg advance_d;
@@ -249,7 +251,7 @@ reg xval;
 reg [15:0] xcause;
 Address xbadAddr;
 Instruction xir;
-Address xip;
+CodeAddress xip;
 reg [3:0] xlen;
 reg advance_x;
 reg [4:0] xRt,xRa,xRb,xRc,tRt;
@@ -261,8 +263,8 @@ reg xRtvec;
 reg [2:0] xCat;
 Value xa,xb,xc0,xc1,pn;
 Value imm;
-Address xca;
-Address xcares;
+CodeAddress xca;
+CodeAddress xcares;
 reg xmaskbit;
 reg xzbit;
 reg [2:0] xSc;
@@ -309,7 +311,7 @@ wire memresp_fifo_v;
 reg [7:0] tid;
 reg [128:0] res,res2;
 Value crypto_res, carry_res;
-Address cares;
+CodeAddress cares;
 reg ld_vtmp;
 reg [7:0] xstep;
 reg [2:0] xrm,xdfrm;
@@ -318,12 +320,12 @@ reg xIsDF;
 // Memory
 reg mval;
 Instruction mir;
-Address mip;
+CodeAddress mip;
 reg advance_m;
 reg [15:0] mcause;
 Address mbadAddr;
-Address mca;
-Address mcares;
+CodeAddress mca;
+CodeAddress mcares;
 reg mrfwr, m512, m256;
 reg mcarfwr;
 reg mvmrfwr;
@@ -347,19 +349,19 @@ reg [511:0] mres512;
 reg [7:0] mstep;
 reg mzbit;
 reg mmaskbit;
-Address mJmptgt;
+CodeAddress mJmptgt;
 reg mtakb;
 reg mExBranch;
 
 // Writeback stage vars
 reg wval;
 Instruction wir;
-Address wip;
+CodeAddress wip;
 reg [15:0] wcause;
 Address wbadAddr;
-Address wlk;
-Address wca;
-Address wcares;
+CodeAddress wlk;
+CodeAddress wca;
+CodeAddress wcares;
 reg wrfwr, w512, w256;
 reg wvmrfwr;
 reg wcarfwr;
@@ -492,9 +494,7 @@ else
   endcase
 */
 always_comb
-if (Tb[1])
-	rfob = {{58{Tb[0]}},Tb[0],Rb};
-else if (Rb=='d0)
+if (Rb=='d0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
 	rfob = vrob;
@@ -513,9 +513,7 @@ else
   endcase
 */
 always_comb
-if (Tc[1])
-	rfoc0 = {{58{Tc[0]}},Tc[0],Rc};
-else if (Rc=='d0)
+if (Rc=='d0)
 	rfoc0 = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
 	rfoc0 = vroc;
@@ -583,9 +581,7 @@ else
   endcase
 */
 always_comb
-if (Tb[1])
-	rfob = {{58{Tb[0]}},Tb[0],Rb};
-else if (Rb=='d0)
+if (Rb=='d0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
 	rfob = vrob;
@@ -598,9 +594,7 @@ else
   endcase
 */
 always_comb
-if (Tc[1])
-	rfoc0 = {{58{Tc[0]}},Tc[0],Rc};
-else if (Rc=='d0)
+if (Rc=='d0)
 	rfoc0 = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
 	rfoc0 = vroc;
@@ -950,6 +944,7 @@ Thor2022_inslength uil(insn, ilen);
 
 always_comb
 begin
+	next_ip.micro_ip = 'd0;
  	next_ip.offs = ip.offs + ilen;
 end
 
@@ -958,14 +953,14 @@ Thor2022_BTB_x1 ubtb
 	.rst(rst_i),
 	.clk(clk_g),
 	.wr(wExBranch & wval),
-	.wip(wip),
+	.wip(wip.offs),
 	.wtgt(wJmptgt),
 	.takb(wtakb),
 	.rclk(~clk_g),
-	.ip(ip),
+	.ip(ip.offs),
 	.tgt(btb_tgt),
 	.hit(btb_hit),
-	.nip(next_ip)
+	.nip(next_ip.offs)
 );
 
 Thor2022_gselectPredictor ubp
@@ -974,9 +969,9 @@ Thor2022_gselectPredictor ubp
 	.clk(clk_g),
 	.en(bpe),
 	.xisBranch(xJxx),
-	.xip(xip),
+	.xip(xip.offs),
 	.takb(takb),
-	.ip(ip),
+	.ip(ip.offs),
 	.predict_taken(ipredict_taken)
 );
 
@@ -992,7 +987,7 @@ Thor2022_biu ubiu
 	.ASID(asid),
 	.bounds_chk(),
 	.pe(pe),
-	.ip(ip),
+	.ip(ip.offs),
 	.ihit(ihit),
 	.ifStall(!run),
 	.ic_line(ic_line),
@@ -1021,7 +1016,9 @@ Thor2022_biu ubiu
 	.dce(dce),
 	.keys(keys),
 	.arange(),
-	.ptbr(ptbr)
+	.ptbr(ptbr),
+	.ipage_fault(ipage_fault),
+	.clr_ipage_fault(clr_ipage_fault)
 );
 
 always_comb
@@ -1261,6 +1258,7 @@ begin
 	wLoad <= FALSE;
 	memresp_fifo_rd <= FALSE;
 	gdt <= 64'hFFFFFFFFFFFFFFC0;	// startup table (bit 75 to 12)
+	ip.micro_ip <= 'd0;
 	ip.offs <= 32'hFFFD0000;
 	gie <= FALSE;
 	pmStack <= 64'h3e3e3e3e3e3e3e3e;	// Machine mode, irq level 7, ints disabled
@@ -1299,6 +1297,7 @@ begin
 	rm <= 'd0;
 	dfrm <= 'd0;
 	xIsDF <= 1'b0;
+	clr_ipage_fault <= 1'b1;
 end
 endtask
 
@@ -1314,6 +1313,7 @@ begin
 		ld_time <= FALSE;
 	if (clr_wc_time_irq && !wc_time_irq)
 		clr_wc_time_irq <= FALSE;
+	clr_ipage_fault <= 1'b0;
 end
 endtask
 
@@ -1561,10 +1561,6 @@ begin
 			// POP Ra
 			7'd1:		begin micro_ip <= 7'd2; ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
 			7'd2:		begin micro_ip <= 7'd0; ir <= {13'h010,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
-			// POP Ra,Rb
-			7'd3:		begin micro_ip <= 7'd4; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,LDH}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd4:		begin micro_ip <= 7'd5; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,LDH}; end	// LDOS $Rb,[$SP]
-//			7'd5:		begin micro_ip <= 7'd0; ir <= {13'h020,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#16
 			// POP Ra,Rb,Rc,Rd
 			7'd5:		begin micro_ip <= 7'd6; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,(micro_ir[31:29]>=3'd1)?LDH:NOP}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
 			7'd6:		begin micro_ip <= 7'd7; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?LDH:NOP}; end	// LDOS $Rb,[$SP]
@@ -1574,10 +1570,6 @@ begin
 			// PUSH Ra
 			7'd10:	begin micro_ip <= 7'd11; ir <= {13'h1FF0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-8
 			7'd11:	begin micro_ip <= 7'd0;  ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
-			// PUSH Ra,Rb
-			7'd12:	begin micro_ip <= 7'd13; ir <= {13'h1FE0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-16
-			7'd13:	begin micro_ip <= 7'd14; ir <= {29'h00,5'd31,micro_ir[18:14],1'b0,STH}; end	// STOS $Rb,[$SP]
-			7'd14:	begin micro_ip <= 7'd0;  ir <= {29'h10,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,8[$SP]
 			// PUSH Ra,Rb,Rc,Rd
 			7'd15:	begin micro_ip <= 7'd16; ir <= {{5'h1F,4'h0-micro_ir[31:29],4'h0},5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
 			7'd16:	begin micro_ip <= 7'd17; ir <= {29'h00,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]==3'd4)?STH:NOP}; end	// STOS $Rc,[$SP]
@@ -1676,10 +1668,8 @@ begin
 		if (micro_ip==7'd0)
 			case(insn.any.opcode)
 			POP:		begin micro_ip <= 7'd1; ip <= ip; end
-//			POP2R:	begin micro_ip <= 7'd3; ip <= ip; end
 			POP4R:	begin micro_ip <= 7'd5; ip <= ip; end
 			PUSH:		begin micro_ip <= 7'd10; ip <= ip; end
-//			PUSH2R:	begin micro_ip <= 7'd12; ip <= ip; end
 			PUSH4R:	begin micro_ip <= 7'd15; ip <= ip; end
 			ENTER:	begin micro_ip <= 7'd32; ip <= ip; end
 			LEAVE:	begin micro_ip <= 7'd20; ip <= ip; end
@@ -1696,6 +1686,7 @@ begin
 			default:	;
 			endcase
 		dip <= ip;
+		dip.micro_ip <= micro_ip;
 		dstep <= istep;
 		if (micro_ip==7'd0) begin
 			ir <= insn;
@@ -1728,6 +1719,11 @@ begin
 				icause <= 16'h8000|FLT_PFX;
 				istk_depth <= istk_depth + 2'd1;
 			end
+		end
+		if (ipage_fault) begin
+			icause <= 16'h8000|FLT_CPF;
+			istk_depth <= istk_depth + 2'd1;
+			ir <= NOP_INSN;
 		end
 	end
 	// Wait for cache load
@@ -2258,6 +2254,7 @@ begin
 			if (wcio[0])
 				preg[wcioreg] <= wcarry_res;
 			if (|wcause) begin
+				clr_ipage_fault <= 1'b1;
 		  	if (wcause[15])
 					// IRQ level remains the same unless external IRQ present
 					pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
@@ -2266,7 +2263,7 @@ begin
 				plStack <= {plStack[55:0],8'hFF};
 				cause[2'd3] <= wcause & 16'h80FF;
 				badaddr[2'd3] <= wbadAddr;
-				caregfile[4'd8+wistk_depth] <= ip;
+				caregfile[4'd8+wistk_depth] <= wip;
 				ip.offs <= tvec[3'd3] + {omode,6'h00};
 				inv_i();
 				inv_d();
@@ -2283,6 +2280,7 @@ begin
 						pmStack <= {8'h3E,pmStack[63:8]};
 						plStack <= {8'hFF,plStack[63:8]};
 						ip.offs <= wca.offs;	// 8-1
+						ip.micro_ip <= wca.micro_ip;
 						istk_depth <= istk_depth - 2'd1;
 						inv_i();
 						inv_d();
@@ -2304,7 +2302,7 @@ begin
 						pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 						plStack <= {plStack[55:0],8'hFF};
 						cause[2'd3] <= FLT_PRIV;
-						caregfile[wCt] <= ip;
+						caregfile[wCt] <= wip;
 						ip.offs <= tvec[3'd3] + {omode,6'h00};
 						inv_i();
 						inv_d();
