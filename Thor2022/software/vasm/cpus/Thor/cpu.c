@@ -23,7 +23,7 @@ static short int tmpregs[10] = {3,4,5,6,7,8,9,10,-1,-1};
 static short int saved_regs[10] = {11,12,13,14,15,16,17,18,19,20};
 
 mnemonic mnemonics[]={
-	"abs",	{OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
+	"abs",	{OP_REG,OP_REG,0,0,0}, {R3RR,CPU_ALL,0,0x0C000001LL,4},
 
 	"add", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x080000000102LL,6},
 	"add", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x080000000102LL,6},
@@ -53,19 +53,19 @@ mnemonic mnemonics[]={
 	"bcdmul", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0400000000F5LL,6},	
 	"bcdsub", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0200000000F5LL,6},	
 	
-	"bfalign",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x0000000000AALL,6},
-	"bfchg",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x1400000000AALL,6},
-	"bfchg",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {R3IR,CPU_ALL,0,0x1400100000AALL,6},
-	"bfchg",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x1410000000AALL,6},
-	"bfchg",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x1410100000AALL,6},
-	"bfclr",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x1610100000AALL,6},
-	"bfext",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x0A00000000AALL,6},
-	"bfext",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {R3IR,CPU_ALL,0,0x0A00100000AALL,6},
-	"bfext",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x0A10000000AALL,6},
-	"bfext",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x0A10100000AALL,6},
-	"bfextu",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x0810100000AALL,6},
-	"bfffo",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x0210100000AALL,6},
-	"bfset",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {R3II,CPU_ALL,0,0x1810100000AALL,6},
+	"bfalign",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0000000000AALL,6},
+	"bfchg",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x1400000000AALL,6},
+	"bfchg",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {BFR3IR,CPU_ALL,0,0x1400200000AALL,6},
+	"bfchg",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {BFR3RI,CPU_ALL,0,0x1401000000AALL,6},
+	"bfchg",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x1401200000AALL,6},
+	"bfclr",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x1601200000AALL,6},
+	"bfext",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0A00000000AALL,6},
+	"bfext",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {BFR3IR,CPU_ALL,0,0x0A00200000AALL,6},
+	"bfext",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {BFR3RI,CPU_ALL,0,0x0A01000000AALL,6},
+	"bfext",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0A01200000AALL,6},
+	"bfextu",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0801200000AALL,6},
+	"bfffo",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0201200000AALL,6},
+	"bfset",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x1801200000AALL,6},
 
 	"bmap", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x00000000004CLL,6},	
 	"bmm", 	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x600000000002LL,6},	
@@ -231,7 +231,7 @@ mnemonic mnemonics[]={
 	"ldou",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x87LL,6},	
 	"ldou",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0xB7LL,4},	
 	
-	"ldptg",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R3RR,CPU_ALL,0,0x480000000007LL,6},	
+	"ldptg",	{OP_REG,OP_REG,0,0,0},{R3RR,CPU_ALL,0,0x480000000007LL,6},	
 
 	"ldt",	{OP_REG,OP_SEL|OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0x84LL,6},	
 	"ldt",	{OP_REG,OP_SEL|OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0x84LL,6},	
@@ -263,12 +263,12 @@ mnemonic mnemonics[]={
 	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,4},	
 //	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 //	"move",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
-	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A10F00000AALL,6},
-	"movsxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A11F00000AALL,6},
-	"movsxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A13F00000AALL,6},
-	"movzxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0810F00000AALL,6},
-	"movzxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0811F00000AALL,6},
-	"movzxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0813F00000AALL,6},
+	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A120E0000AALL,6},
+	"movsxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A123E0000AALL,6},
+	"movsxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A121E0000AALL,6},
+	"movzxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x08120E0000AALL,6},
+	"movzxt",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x08123E0000AALL,6},
+	"movzxw",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x08121E0000AALL,6},
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
 	"mtlk",		{OP_LK,OP_REG,0,0,0}, {MTLK,CPU_ALL,0,0x5FLL,2},
@@ -305,6 +305,7 @@ mnemonic mnemonics[]={
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x020000000102LL,6},	
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x020000000102LL,6},	
 	"nor", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x020000000002LL,6},	
+	"not", {OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x08000001LL,4},
 
 	"or", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x120000000102LL,6},	
 	"or", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x120000000102LL,6},	
@@ -367,13 +368,14 @@ mnemonic mnemonics[]={
 	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x860000000002LL,6},	
 	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x860000000002LL,6},	
 	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x860000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_IMM,0,0}, {R3,CPU_ALL,0,0x801000000002LL,6},	
+	"rol",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x860000000002LL,6},
+	"rol",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5B,4},
 
 	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x880000000002LL,6},	
 	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x880000000002LL,6},	
 	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x880000000002LL,6},	
-	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x880000000002LL,6},	
+	"ror",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x880000000002LL,6},
+	"ror",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5C,4},
 	
 	"rts",	{OP_LK,OP_IMM,0,0,0}, {RTS,CPU_ALL,0,0x00F2LL, 2},
 	"rts",	{OP_LK,0,0,0,0}, {RTS,CPU_ALL,0,0x00F2LL, 2},
@@ -407,8 +409,8 @@ mnemonic mnemonics[]={
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R2,CPU_ALL,0,0x58,4},
-	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM,0,0}, {R2,CPU_ALL,0,0x58,4},
-	"sllh",	{OP_REG,OP_REG,OP_REG|OP_IMM,0,0}, {R2,CPU_ALL,0,0x5D,4},
+	"sll",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x800000000002LL,6},
+	"sll",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x58,4},
 
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
@@ -420,12 +422,14 @@ mnemonic mnemonics[]={
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x840000000002LL,6},	
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	
-	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	
+	"sra",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x840000000002LL,6},
+	"sra",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5A,4},
 
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x820000000002LL,6},	
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	
-	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,0,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	
+	"srl",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x820000000002LL,6},
+	"srl",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x59,4},
 
 	"statq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	
 	"statq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	
@@ -460,11 +464,11 @@ mnemonic mnemonics[]={
 	"subf", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0xD5LL,6},
 /* 0000_1010_0001_0001_1111_0000_0000_0000_0000_0000_AALL */
 
-	"sxb",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A10F00000AALL,6},
-	"sxc",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A11F00000AALL,6},	/* alternate mnemonic for sxw */
-	"sxo",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A17F00000AALL,6},
-	"sxw",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A11F00000AALL,6},
-	"sxt",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A13F00000AALL,6},
+	"sxb",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A120E0000AALL,6},	
+	"sxc",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A121E0000AALL,6},	/* alternate mnemonic for sxw */
+	"sxo",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A133E0000AALL,6},
+	"sxw",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A121E0000AALL,6},
+	"sxt",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A123E0000AALL,6},
 
 	"sync", {0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF7LL,2},
 	"sys",	{OP_IMM,0,0,0,0}, {BITS32,CPU_ALL,0,0xA5,4},
@@ -1481,6 +1485,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 		case CSR:
 		case R2:
 		case R3RI:
+		case SHIFTI:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & 0x1f));
 			else if (i==1)
@@ -1563,7 +1568,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 	}
 }
 
-static size_t eval_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mnemonic* mnemo,
+static size_t encode_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mnemonic* mnemo,
 	operand *op, taddr hval, int constexpr, int i, char vector)
 {
 	size_t isize;
@@ -1646,6 +1651,21 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mn
 				if (insn)
 					*insn = *insn | RC(val & regmask) | TC(2);
 		}
+		else if (mnemo->ext.format==BFR3RI || mnemo->ext.format==BFR3IR || mnemo->ext.format==BFR3II) {
+			isize = 6;
+			if (i==2) {
+				if (insn)
+					*insn = *insn | RB(val & regmask) | TB(0) | ((val >> 5LL) & 3LL) << 31LL;
+			}
+			else if (i==3)
+				if (insn)
+					*insn = *insn | RC(val & regmask) | TC(0) | ((val >> 5LL) & 3LL) << 34LL;
+		}
+		else if (mnemo->ext.format==SHIFTI) {
+			isize = 6;
+			if (insn)
+				*insn = *insn | ((val & 0x7fLL) << 29);
+		}
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
 			if (insn)
@@ -1714,7 +1734,7 @@ static size_t eval_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, mn
 			if (insn) {
 				switch(isize) {
 				case 4:	
-					*insn = *insn | ((val & 0x7ffLL) << 19LL);
+					*insn = *insn | ((val & 0x1fffLL) << 19LL);
 					*insn = *insn & ~0xff;	/* clear opcode */
 					*insn = *insn | mnemo->ext.short_opcode;
 					break;
@@ -1749,6 +1769,11 @@ j1:
 			isize = 6;
 			cpu_error(2);
 		}
+		else if (mnemo->ext.format==SHIFTI) {
+			isize = 6;
+			if (insn)
+				*insn = *insn | ((val & 0x7fLL) << 29);
+		}
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
 			if (insn)
@@ -1764,6 +1789,16 @@ j1:
 				if (insn)
 					*insn = *insn | RB(val & 0x1fLL) | TB(2);
 			}
+		}
+		else if (mnemo->ext.format==BFR3RI || mnemo->ext.format==BFR3IR || mnemo->ext.format==BFR3II) {
+			isize = 6;
+			if (i==2) {
+				if (insn)
+					*insn = *insn | RB(val & regmask) | TB(0) | ((val >> 5LL) & 3LL) << 31LL;
+			}
+			else if (i==3)
+				if (insn)
+					*insn = *insn | RC(val & regmask) | TC(0) | ((val >> 5LL) & 3LL) << 34LL;
 		}
 		else if (mnemo->ext.format==ENTER) {
 			isize = 4;
@@ -2258,7 +2293,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
 			TRACE("Etho3:");
-			isize = eval_immed(prefix, prefix2, insn, mnemo, &op, hval, constexpr, i, vector_insn);
+			isize = encode_immed(prefix, prefix2, insn, mnemo, &op, hval, constexpr, i, vector_insn);
     }
     else if (encode_branch(insn, mnemo, &op, val, &isize, i)) {
 			TRACE("Etho4:");
@@ -2373,7 +2408,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
     }
     else if ((mnemo->operand_type[i]&OP_SCNDX) && op.type==OP_SCNDX) {
 			TRACE("Etho6:");
-    	isize = 6;
+    	isize = 4;
   		if (insn) {
   			*insn |= (RA(op.basereg & regmask));
   			/* *insn |= ((val & 0xffLL) << 21LL); */

@@ -341,7 +341,7 @@ Instruction opl[326] =
 { "swp", op_stdp, 8, false },
 { "sws", op_stds,4,0 },
 { "sxb",op_sxb,1,1,false,am_reg,am_reg,0,0 },
-{ "sxc",op_sxw,1,1,false,am_reg,am_reg,0,0 },
+{ "sxc",op_sxc,1,1,false,am_reg,am_reg,0,0 },
 { "sxh",op_sxh,1,1,false,am_reg,am_reg,0,0 },
 { "sxo",op_sxo,1,1,false,am_reg,am_reg,0,0 },
 { "sxp",op_sxp,1,1,false,am_reg,am_reg,0,0 },

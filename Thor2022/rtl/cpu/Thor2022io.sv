@@ -123,6 +123,9 @@ Value vregfile [0:31][0:63];
 reg [63:0] vm_regfile [0:7];
 wire ipage_fault;
 reg clr_ipage_fault = 1'b0;
+wire itlbmiss;
+reg clr_itlbmiss = 1'b0;
+reg wackr;
 
 integer n1;
 initial begin
@@ -255,7 +258,7 @@ CodeAddress xip;
 reg [3:0] xlen;
 reg advance_x;
 reg [4:0] xRt,xRa,xRb,xRc,tRt;
-reg [3:0] xCt;
+reg [3:0] xCt,xCa;
 reg [2:0] xistk_depth;
 reg [2:0] xcioreg;
 reg [1:0] xcio;
@@ -665,9 +668,12 @@ cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 //wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
 //wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
 //wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
+wire [255:0] sllio = {128'd0,xa[127:0]|pn[127:0]} << xir[35:29];
+wire [255:0] srlio = {pn[127:0]|xa[127:0],128'd0} >> xir[35:29];
+wire [255:0] sraio = {{128{xa[127]}},xa[127:0],128'd0} >> xir[35:29];
 wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[6:0];
 wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[6:0];
-wire [255:0] srao = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
+wire [255:0] sraro = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
 
 wire [255:0] mul_prod1;
 reg [255:0] mul_prod;
@@ -735,9 +741,9 @@ Thor2022_divider #(.WID(128)) udiv
 Thor2022_bitfield ubf
 (
 	.ir(xir),
-	.a(xa[63:0]),
-	.b(xb[63:0]),
-	.c(xc0[63:0]),
+	.a(xa),
+	.b(xb),
+	.c(xc0),
 	.o(bf_out)
 );
 
@@ -800,7 +806,8 @@ R1:
 	case(xir.r1.func)
 	CNTLZ:	res2 = {121'd0,cntlz_out};
 	CNTLO:	res2 = {121'd0,cntlz_out};
-	PTGHASH:	res2 = {hash,3'd0};
+	PTGHASH:	res2 = hash;
+	NOT:		res2 = |xa ? 'd0 : 128'd1;
 	default:	res2 = 'd0;
 	endcase
 R2:
@@ -811,11 +818,11 @@ R2:
 	AND:	res2 = xa & xb & xc0;
 	OR:		res2 = xa | xb | xc0;
 	XOR:	res2 = xa ^ xb ^ xc0;
-	SLL:	res2 = sllro[127:0] + xc0;
-	SRL:	res2 = srlro[255:128];
-	SRA:	res2 = srao[255:128];
-	ROL:	res2 = sllro[127:0]|sllro[255:128];
-	ROR:	res2 = srlro[255:128]|srlro[127:0];
+	SLL:	res2 = sllio[127:0];
+	SRL:	res2 = srlio[255:128];
+	SRA:	res2 = sraio[255:128];
+	ROL:	res2 = sllio[127:0]|sllro[255:128];
+	ROR:	res2 = srlio[255:128]|srlro[127:0];
 //	SLLH:	res2 = sllrho[127:0] + xc0;
 //	SRLH:	res2 = srlrho[255:128];
 //	SRAH:	res2 = sraho[255:128];
@@ -868,26 +875,33 @@ SLTU2R:				res2 = xa < xb;
 SGEU2R:				res2 = xa >= xb;
 SGE2R:				res2 = $signed(xa) >= $signed(xb);
 CMP2R:				res2 = cmpo;
-LEAX:					res2 = xa + (xb << xSc);
-ADDI,ADDIL,LEA:		res2 = xa + imm + pn;
+ADDI,ADDIL:		res2 = xa + imm + pn;
 SUBFI,SUBFIL:	res2 = imm - xa - pn;
 ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm | pn;
 XORI,XORIL:		res2 = xa ^ imm ^ pn;
-SLLR2:				res2 = xa << xb[5:0];
+SLLR2:				res2 = sllro[127:0];
+SRLR2:				res2 = srlro[255:128];
+SRAR2:				res2 = sraro[255:128];
+ROLR2:				res2 = sllro[127:0]|sllro[255:128];
+RORR2:				res2 = srlro[127:0]|srlro[255:128];
 //SLLHR2:				res2 = sllrho[127:0];// + xc0;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 MULI,MULIL:		res2 = mul_prod256[127:0] + pn;
-MULUI:MULUIL:	res2 = mul_prod256[127:0] + pn;
+MULUI,MULUIL:	res2 = mul_prod256[127:0] + pn;
 MULFI:				res2 = mul_prod256[127:0] + pn;
 DIVI,DIVIL:		res2 = qo;
 SEQI,SEQIL:		res2 = xa == imm;
 SNEI,SNEIL:		res2 = xa != imm;
 SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
+SLEI,SLEIL:		res2 = $signed(xa) <= $signed(imm);
 SGTI,SGTIL:		res2 = $signed(xa) > $signed(imm);
+SGEI,SGEIL:		res2 = $signed(xa) >= $signed(imm);
 SLTUI,SLTUIL:	res2 = xa < imm;
-SGTUI,SGTUIL:	res2 = xa > imm;
+SLEUIL:				res2 = xa <= imm;
+SGTUIL:				res2 = xa > imm;
+SGEUIL:				res2 = xa >= imm;
 DJMP:					res2 = xa - 2'd1;
 //STSET:				res2 = xc0 - 2'd1;
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHR,LDHS,
@@ -930,13 +944,16 @@ R2:
 	MUL:			carry_res = mul_prod[255:128];
 	MULU:			carry_res = mul_prod[255:128];
 	MULSU:		carry_res = mul_prod[255:128];
-	SLL:			carry_res = sllro[255:128];
-	SRL:			carry_res = srlro[127:0];
-	SRA:			carry_res = srao[127:0];
+	SLL:			carry_res = sllio[255:128];
+	SRL:			carry_res = srlio[127:0];
+	SRA:			carry_res = sraio[127:0];
 	default:	carry_res = 128'd0;
 	endcase
 // (a&b)|(a&~s)|(b&~s)
 ADD2R:	carry_res = res2[128];
+SLLR2:	carry_res = sllro[255:128];
+SRLR2:	carry_res = srlro[127:0];
+SRAR2:	carry_res = sraro[127:0];
 default:	carry_res = 128'd0;
 endcase
 
@@ -975,6 +992,7 @@ Thor2022_gselectPredictor ubp
 	.predict_taken(ipredict_taken)
 );
 
+wire memreq_wack;
 Thor2022_biu ubiu
 (
 	.rst(rst_i),
@@ -993,6 +1011,7 @@ Thor2022_biu ubiu
 	.ic_line(ic_line),
 	.fifoToCtrl_i(memreq),
 	.fifoToCtrl_full_o(),
+	.fifoToCtrl_wack(memreq_wack),
 	.fifoFromCtrl_o(memresp),
 	.fifoFromCtrl_rd(memresp_fifo_rd),
 	.fifoFromCtrl_empty(memresp_fifo_empty),
@@ -1018,7 +1037,9 @@ Thor2022_biu ubiu
 	.arange(),
 	.ptbr(ptbr),
 	.ipage_fault(ipage_fault),
-	.clr_ipage_fault(clr_ipage_fault)
+	.clr_ipage_fault(clr_ipage_fault),
+	.itlbmiss(itlbmiss),
+	.clr_itlbmiss(clr_itlbmiss)
 );
 
 always_comb
@@ -1234,12 +1255,11 @@ begin
 	memreq.tid <= 8'h00;
 	memreq.step <= 6'd0;
 	memreq.wr <= 1'b0;
-	memreq.func <= 4'd0;
-	memreq.func2 <= 3'd0;
-	memreq.adr <= 64'h0;
-	memreq.seg <= 5'd0;
-	memreq.dat <= 128'd0;
-	memreq.sel <= 16'h0;
+	memreq.func <= 'd0;
+	memreq.func2 <= 'd0;
+	memreq.adr <= 'h0;
+	memreq.dat <= 'd0;
+	memreq.sz <= 'h0;
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
 //	cr0 <= 64'h300000001;
@@ -1298,6 +1318,8 @@ begin
 	dfrm <= 'd0;
 	xIsDF <= 1'b0;
 	clr_ipage_fault <= 1'b1;
+	xCa <= 'd0;
+	wackr <= 1'd0;
 end
 endtask
 
@@ -1351,14 +1373,19 @@ RUN:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WAIT_MEM1:
 	begin
-		if (!memresp_fifo_empty) begin
-			memresp_fifo_rd <= TRUE;
-			goto (WAIT_MEM2);
+		if (memreq_wack|wackr) begin
+			wackr <= 1'b1;
+			if (!memresp_fifo_empty) begin
+				memresp_fifo_rd <= TRUE;
+				goto (WAIT_MEM2);
+			end
 		end
 	end
 WAIT_MEM2:
 	begin
-		if (memresp_fifo_v) begin
+		wackr <= 1'b0;
+		if (memresp_fifo_v)
+		begin
 			memresp_fifo_rd <= FALSE;
 			mLoad <= FALSE;
 			mres <= memresp.res;
@@ -1376,11 +1403,9 @@ WAIT_MEM2:
 					if (memreq.func2==MR_LDOO)
 						m512 <= TRUE;
 				end
-				else if (memreq.func==MR_TLB || memreq.func==MR_PTG) begin
+				else if (memreq.sz==3'd5) begin
 					m256 <= TRUE;
 				end
-				else if (memreq.func==MR_RGN)
-					mrfwr <= TRUE;
 				if (|memresp.cause) begin
 					if (~|mcause)
 						mistk_depth <= mistk_depth + 2'd1;
@@ -1725,6 +1750,11 @@ begin
 			istk_depth <= istk_depth + 2'd1;
 			ir <= NOP_INSN;
 		end
+		if (itlbmiss) begin
+			icause <= 16'h8000|FLT_TLBMISS;
+			istk_depth <= istk_depth + 2'd1;
+			ir <= NOP_INSN;
+		end
 	end
 	// Wait for cache load
 	else begin
@@ -1766,6 +1796,7 @@ begin
 		xRc <= Rc;
 		xRt <= Rt;
 		xCt <= Ct;
+		xCa <= deco.Ca;
 		xcioreg <= cioreg;
 		xcio <= cio[1:0];
 		xCat <= deco.Cat;
@@ -1847,9 +1878,6 @@ begin
 				ip.offs <= dip.offs + deco.jmptgt;
 			end
 		end
-		if (deco.jxx||deco.jxz) begin
-  		xcares.offs <= dip.offs + dlen;
-		end
 		if (deco.jmp)
   		xcares.offs <= dip.offs + dlen;
   	else if (deco.mtlk)
@@ -1883,13 +1911,14 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= xLdz ? MR_LOADZ : MR_LOAD;
   	case(xMemsz)
-  	byt:		begin memreq.func2 <= MR_LDB; memreq.sel <= 16'h0001; end
-  	wyde:		begin memreq.func2 <= MR_LDW; memreq.sel <= 16'h0003; end
-  	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
-  	octa:		begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
-  	hexi:		begin memreq.func2 <= MR_LDH; memreq.sel <= 16'hFFFF; end
-  	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
+  	byt:		begin memreq.func2 <= MR_LDB; end
+  	wyde:		begin memreq.func2 <= MR_LDW; end
+  	tetra:	begin memreq.func2 <= MR_LDT; end
+  	octa:		begin memreq.func2 <= MR_LDO; end
+  	hexi:		begin memreq.func2 <= MR_LDH; end
+  	default:	begin memreq.func2 <= MR_LDO; end
   	endcase
+  	memreq.sz <= xMemsz;
   	memreq.adr.offs <= xa + imm;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
@@ -1899,7 +1928,7 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_LOAD;
   	memreq.func2 <= MR_LDOO;
-  	memreq.sel <= 16'hFFFF;
+  	memreq.sz <= hexiquad;
   	memreq.adr.offs <= xa + imm;
   	memreq.adr.offs[5:0] <= 6'h00;
   	memreq.wr <= TRUE;
@@ -1922,13 +1951,14 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= xLdz ? MR_LOADZ : MR_LOAD;
   	case(xMemsz)
-  	byt:		begin memreq.func2 <= MR_LDB; memreq.sel <= 16'h0001; end
-  	wyde:		begin memreq.func2 <= MR_LDW; memreq.sel <= 16'h0003; end
-  	tetra:	begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h000F; end
-  	octa:		begin memreq.func2 <= MR_LDT; memreq.sel <= 16'h00FF; end
-  	hexi:		begin memreq.func2 <= MR_LDH; memreq.sel <= 16'hFFFF; end
-  	default:	begin memreq.func2 <= MR_LDO; memreq.sel <= 16'h00FF; end
+  	byt:		begin memreq.func2 <= MR_LDB; end
+  	wyde:		begin memreq.func2 <= MR_LDW; end
+  	tetra:	begin memreq.func2 <= MR_LDT; end
+  	octa:		begin memreq.func2 <= MR_LDT; end
+  	hexi:		begin memreq.func2 <= MR_LDH; end
+  	default:	begin memreq.func2 <= MR_LDO; end
   	endcase
+  	memreq.sz <= xMemsz;
   	memreq.adr.offs <= siea;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
@@ -1950,12 +1980,13 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
   	case(xMemsz)
-  	byt:		begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
-  	wyde:		begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
-  	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-  	hexi:		begin memreq.func2 <= MR_STH; memreq.sel <= 16'hFFFF; end
-  	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
+  	byt:		begin memreq.func2 <= MR_STB; end
+  	wyde:		begin memreq.func2 <= MR_STW; end
+  	tetra:	begin memreq.func2 <= MR_STT; end
+  	hexi:		begin memreq.func2 <= MR_STH; end
+  	default:	begin memreq.func2 <= MR_STO; end
   	endcase
+  	memreq.sz <= xMemsz;
   	memreq.adr.offs <= xa + imm;
   	memreq.dat <= {xc1,xc0};
   	memreq.wr <= TRUE;
@@ -1966,12 +1997,13 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
   	case(xMemsz)
-  	byt:		begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
-  	wyde:		begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
-  	tetra:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-  	hexi:		begin memreq.func2 <= MR_STH; memreq.sel <= 16'hFFFF; end
-  	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
+  	byt:		begin memreq.func2 <= MR_STB; end
+  	wyde:		begin memreq.func2 <= MR_STW; end
+  	tetra:	begin memreq.func2 <= MR_STT; end
+  	hexi:		begin memreq.func2 <= MR_STH; end
+  	default:	begin memreq.func2 <= MR_STO; end
   	endcase
+  	memreq.sz <= xMemsz;
   	memreq.adr.offs <= siea;
   	memreq.dat <= {xc1,xc0};
   	memreq.wr <= TRUE;
@@ -1983,11 +2015,12 @@ begin
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_STORE;
 	  	case(xir[30:29])
-	  	2'd0:	begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
-	  	2'd1:	begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
-	  	2'd2:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-	  	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
+	  	2'd0:	begin memreq.func2 <= MR_STB; end
+	  	2'd1:	begin memreq.func2 <= MR_STW; end
+	  	2'd2:	begin memreq.func2 <= MR_STT; end
+	  	default:	begin memreq.func2 <= MR_STO; end
 	  	endcase
+	  	memreq.sz <= {1'b0,xir[30:29]};
 	  	memreq.adr.offs <= xa;
 	  	memreq.dat <= xb;
 	  	memreq.wr <= TRUE;
@@ -2002,11 +2035,12 @@ begin
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_MOVLD;
 	  	case(xir[43:41])
-	  	2'd0:	begin memreq.func2 <= MR_STB; memreq.sel <= 16'h0001; end
-	  	2'd1:	begin memreq.func2 <= MR_STW; memreq.sel <= 16'h0003; end
-	  	2'd2:	begin memreq.func2 <= MR_STT; memreq.sel <= 16'h000F; end
-	  	default:	begin memreq.func2 <= MR_STO; memreq.sel <= 16'h00FF; end
+	  	2'd0:	begin memreq.func2 <= MR_STB; end
+	  	2'd1:	begin memreq.func2 <= MR_STW; end
+	  	2'd2:	begin memreq.func2 <= MR_STT; end
+	  	default:	begin memreq.func2 <= MR_STO; end
 	  	endcase
+	  	memreq.sz <= {1'b0,xir[42:41]};
 	  	memreq.adr.offs <= xa + xc0;
 	  	memreq.dat <= xb + xc0;
 	  	memreq.wr <= TRUE;
@@ -2020,7 +2054,7 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_TLB;
   	memreq.func2 <= MR_STO;
-  	memreq.sel <= 16'h00FF;
+  	memreq.sz <= 3'd3;
   	memreq.adr <= 'd0;
   	memreq.dat <= {xb,xa};
   	memreq.wr <= TRUE;
@@ -2031,7 +2065,7 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_RGN;
   	memreq.func2 <= MR_STO;
-  	memreq.sel <= 16'h00FF;
+  	memreq.sz <= 3'd3;
   	memreq.adr <= xb;
   	memreq.adr[6] <= xir[33];	// update indicator
   	memreq.dat <= xa;
@@ -2043,7 +2077,7 @@ begin
   	tid <= tid + 2'd1;
   	memreq.func <= MR_PTG;
   	memreq.func2 <= xir.r3.func==LDPTG ? MR_LDPTG :MR_STPTG;
-  	memreq.sel <= 16'hFFFF;
+  	memreq.sz <= 3'd5;
   	memreq.adr <= xa;
   	memreq.dat <= {xc0,xb};
   	memreq.wr <= TRUE;
@@ -2097,7 +2131,7 @@ task tJmp;
 begin
   if (xJmp) begin
   	mExBranch <= TRUE;
-  	if (xdj ? (xa != 64'd0) : (xir.jmp.Ca != 3'd0 && xir.jmp.Ca != 3'd7))	// ==0,7 was already done at ifetch
+  	if (xdj ? (xa != 64'd0) : (xCa != 3'd0 && xCa != 3'd7))	// ==0,7 was already done at ifetch
   		tBranch(4'd5);
 	end
 end
@@ -2254,7 +2288,10 @@ begin
 			if (wcio[0])
 				preg[wcioreg] <= wcarry_res;
 			if (|wcause) begin
-				clr_ipage_fault <= 1'b1;
+				if ((wcause & 8'hff)==FLT_CPF)
+					clr_ipage_fault <= 1'b1;
+				if ((wcause & 8'hff)==FLT_TLBMISS)
+					clr_itlbmiss <= 1'b1;
 		  	if (wcause[15])
 					// IRQ level remains the same unless external IRQ present
 					pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
@@ -2391,11 +2428,11 @@ begin
   inv_d();
   inv_x();
 	xx <= yy;
-  if (xir.jxx.Ca == 4'd0) begin
+  if (xCa == 4'd0) begin
   	ip.offs <= xJmptgt;
   	mJmptgt.offs <= xJmptgt;
   end
-  else if (xir.jxx.Ca == 4'd7) begin
+  else if (xCa == 4'd7) begin
   	ip.offs <= xip.offs + xJmptgt;
   	mJmptgt.offs <= xip.offs + xJmptgt;
   end

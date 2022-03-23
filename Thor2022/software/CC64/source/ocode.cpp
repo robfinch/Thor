@@ -1341,20 +1341,26 @@ void OCODE::OptLdi()
 
 	if (fwd) {
 		if (oper2->offset && oper2->offset->constflag) {
-			if (fwd->opcode == op_sxt || fwd->opcode == op_sxo) {
-				if (oper2->offset->i >= -(int64_t)2147483648L && oper2->offset->i <= 2147483647L) {
+			if (fwd->opcode == op_sxo) {
+				if (oper2->offset->i128.IsNBit(64)) {
 					fwd->MarkRemove();
 					optimized++;
 				}
 			}
-			if (fwd->opcode == op_sxw) {
-				if (oper2->offset->i >= -32768 && oper2->offset->i <= 32767) {
+			if (fwd->opcode == op_sxt) {
+				if (oper2->offset->i128.IsNBit(32)) {
+					fwd->MarkRemove();
+					optimized++;
+				}
+			}
+			if (fwd->opcode == op_sxw || fwd->opcode == op_sxc) {
+				if (oper2->offset->i128.IsNBit(16)) {
 					fwd->MarkRemove();
 					optimized++;
 				}
 			}
 			if (fwd->opcode == op_sxb) {
-				if (oper2->offset->i >= -128 && oper2->offset->i <= 127) {
+				if (oper2->offset->i128.IsNBit(8)) {
 					fwd->MarkRemove();
 					optimized++;
 				}

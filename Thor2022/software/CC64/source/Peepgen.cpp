@@ -103,7 +103,7 @@ void GenerateMonadic(int op, int len, Operand *ap1)
 	dfs.printf("</GenerateMonadic>\n");
 }
 
-void GenerateDiadic(int op, int len, Operand *ap1, Operand *ap2)
+OCODE* GenerateDiadic(int op, int len, Operand *ap1, Operand *ap2)
 {
 	OCODE *cd;
 	cd = (OCODE *)xalloc(sizeof(OCODE));
@@ -123,6 +123,7 @@ void GenerateDiadic(int op, int len, Operand *ap1, Operand *ap2)
 	cd->loop_depth = looplevel;
 	//AddToPeepList(cd);
 	currentFn->pl.Add(cd);
+	return (cd);
 }
 
 void GenerateTriadic(int op, int len, Operand *ap1, Operand *ap2, Operand *ap3)

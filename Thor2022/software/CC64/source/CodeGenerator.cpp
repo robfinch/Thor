@@ -1356,6 +1356,7 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 		//}
 	}
 	else {
+		OCODE* ip;
 		//if (ap2->mode == am_fpreg) {
 		//	ap3 = GetTempRegister();
 		//	GenerateDiadic(op_ldi, 0, ap3, ap1);
@@ -1369,9 +1370,11 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 		//}
 		//else
 		if (ap1->offset->esize <= 8)
-			GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
+			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
 		else
-			GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i128));
+			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i128));
+		if (ip->oper2)
+			ip->oper2->offset->constflag = true;
 		/*
 		if (ap1->offset->i128.IsNBit(64))
 			GenerateDiadic(cpu.ldi_op, 0, ap2, ap1);

@@ -108,15 +108,17 @@ generate begin : gWrtlb
 		always_ff @(posedge clk_g) begin
 			wrtlb[g1] <= 'd0;
 			if (state==ST_RUN) begin
-				if (LRU && tlbadr_i[13:10]!=ASSOC-1) begin
+				if (LRU && tlbadr_i[2:0]!=ASSOC-1) begin
 					if (g1==ASSOC-2)
 						wrtlb[g1] <= wrtlb_i;
 				end
 				else begin
-					if (g1 < ASSOC-1)
-		 				wrtlb[g1] <= (tlbadr_i[15:14]==2'b10 ? randway==g1 : tlbadr_i[13:10]==g1) && wrtlb_i;
-		 			else
-		 				wrtlb[g1] <= tlbadr_i[13:10]==g1 && wrtlb_i;
+					if (tlbadr_i[2:0]==ASSOC-1) begin
+						if (g1==ASSOC-1)
+		 					wrtlb[g1] <= wrtlb_i;
+		 			end
+					else if (g1 < ASSOC-1)
+		 				wrtlb[g1] <= (al==2'b10 ? randway==g1 : tlbadr_i[2:0]==g1) && wrtlb_i;
 	 			end
  			end
  		end
@@ -126,7 +128,7 @@ TLBE tlbdato [0:ASSOC-1];
 TLBE dumped_entry;
 wire clk_g = clk_i;
 always_comb
-	tlbdat_o <= tlbdato[tlbadr_i[13:10]];
+	tlbdat_o <= tlbdato[tlbadr_i[2:0]];
 
 always_ff @(posedge clk_g)
 begin
@@ -325,7 +327,7 @@ begin
 		end
 	ST_RUN:
 		begin
-			tlbadri <= tlbadr_i;
+			tlbadri <= tlbadr_i[15:5];
 			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
 				tlbdati[n2] <= tlbdat_i;
 		end
@@ -345,7 +347,7 @@ begin
 		end
 	default:
 		begin
-			tlbadri <= tlbadr_i;
+			tlbadri <= tlbadr_i[15:5];
 			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
 				tlbdati[n2] <= tlbdat_i;
 		end

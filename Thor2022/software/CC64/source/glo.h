@@ -300,7 +300,6 @@ extern void SkipSpaces();
 // Stmt.c
 extern Statement *ParseCompoundStatement();
 
-extern void GenerateDiadic(int op, int len, Operand *ap1,Operand *ap2);
 // Symbol.c
 extern SYM *gsearch(std::string na);
 extern SYM *search(std::string na,TABLE *thead);
@@ -365,7 +364,7 @@ extern void GenerateLabel(int labno);
 extern void GenerateZeradic(int op);
 extern void GenerateMonadic(int op, int len, Operand *ap1);
 extern void GenerateMonadicNT(int op, int len, Operand *ap1);
-extern void GenerateDiadic(int op, int len, Operand *ap1, Operand *ap2);
+extern OCODE* GenerateDiadic(int op, int len, Operand *ap1, Operand *ap2);
 extern void GenerateDiadicNT(int op, int len, Operand *ap1, Operand *ap2);
 extern void GenerateTriadic(int op, int len, Operand *ap1, Operand *ap2, Operand *ap3);
 extern void Generate4adic(int op, int len, Operand *ap1, Operand *ap2, Operand *ap3, Operand *ap4);

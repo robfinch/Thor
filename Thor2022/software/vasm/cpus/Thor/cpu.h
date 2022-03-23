@@ -147,6 +147,11 @@ typedef struct {
 #define LEAVE	40
 #define EXI56F	41
 #define R4 42
+#define SHIFTI	43
+#define BFR3RR	44
+#define BFR3IR	45
+#define BFR3RI	46
+#define BFR3II	47
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)

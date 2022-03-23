@@ -71,7 +71,7 @@ initial begin
 	pma_regions[5].start = 32'hFFFFFFFF;
 	pma_regions[5].nd = 32'hFFFFFFFF;
 	pma_regions[5].pmt	 = 32'h00000000;
-	pma_regions[57].cta	= 32'h00000000;
+	pma_regions[5].cta	= 32'h00000000;
 	pma_regions[5].at = 20'h0FF00;		// no access
 
 	// Scratchpad RAM

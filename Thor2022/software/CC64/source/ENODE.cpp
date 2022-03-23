@@ -643,6 +643,7 @@ void ENODE::repexpr()
 	case en_cch:
 	case en_ccw:
 	case en_chw:
+	case en_cwl:
 	case en_uminus:
 	case en_abs:
 	case en_sxb: case en_sxh: case en_sxc:
@@ -887,6 +888,7 @@ void ENODE::scanexpr(int duse)
 	case en_cch:
 	case en_ccw: case en_ccl:
 	case en_chw: case en_chl:
+	case en_cwl:
 		p[0]->scanexpr(duse);
 		break;
 	case en_fieldref:
@@ -900,8 +902,10 @@ void ENODE::scanexpr(int duse)
 	case en_sxb: case en_sxc: case en_sxh:
 	case en_zxb: case en_zxc: case en_zxh:
 	case en_compl:
-	case en_not:
 	case en_chk:
+		p[0]->scanexpr(duse);
+		break;
+	case en_not:
 		p[0]->scanexpr(duse);
 		break;
 	case en_i2p:
