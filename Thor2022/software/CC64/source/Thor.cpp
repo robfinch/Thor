@@ -1328,7 +1328,7 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 	case am_reg:
   case am_imm:
 /*
-        nn = round8(ep->esize); 
+        nn = roundWord(ep->esize); 
         if (nn > 8) {// && (ep->tp->type==bt_struct || ep->tp->type==bt_union)) {           // structure or array ?
             ap2 = GetTempRegister();
             GenerateTriadic(op_subui,0,makereg(regSP),makereg(regSP),MakeImmediate(nn));
@@ -1473,11 +1473,13 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	for (nn = 0, p = plist; p != NULL; p = p->p[1], nn++) {
 		pl[nn] = p->p[0];
 	}
-	if (nn > 3)
+	// ToDo: fix order of push instructions, they are coming out in the reverse order
+	// to what is needed. So always use store instructions for now.
+	if (nn > 4)
 		large_argcount = true;
 //	large_argcount = true;	// disable for now
 	maxnn = nn;
-	for(--nn, i = 0; nn >= 0; --nn,i++ )
+	for(nn = large_argcount ? nn-1 : 0, i = 0; large_argcount ? nn >= 0 : nn < maxnn; large_argcount ? nn-- : nn++,i++ )
   {
 		if (pl[nn]->etype == bt_pointer) {
 			if (pl[nn]->tp->btpp == nullptr) {
@@ -1606,7 +1608,7 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
         i = 0;
   /*
     	if ((sym->tp->btpp->type==bt_struct || sym->tp->btpp->type==bt_union) && sym->tp->btpp->size > 8) {
-            nn = tmpAlloc(sym->tp->btpp->size) + lc_auto + round8(sym->tp->btpp->size);
+            nn = tmpAlloc(sym->tp->btpp->size) + lc_auto + roundWord(sym->tp->btpp->size);
             GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
             i = 1;
         }
@@ -1686,7 +1688,7 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
         i = 0;
     /*
     	if ((node->p[0]->tp->btpp->type==bt_struct || node->p[0]->tp->btpp->type==bt_union) && node->p[0]->tp->btpp->size > 8) {
-            nn = tmpAlloc(node->p[0]->tp->btpp->size) + lc_auto + round8(node->p[0]->tp->btpp->size);
+            nn = tmpAlloc(node->p[0]->tp->btpp->size) + lc_auto + roundWord(node->p[0]->tp->btpp->size);
             GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
             i = 1;
         }

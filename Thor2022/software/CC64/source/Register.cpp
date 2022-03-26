@@ -269,14 +269,15 @@ int IsSavedReg(int rg)
 
 void SpillRegister(Operand *ap, int number)
 {
-	GenerateDiadic(op_sto,0,ap,cg.MakeIndexed(currentFn->GetTempBot()-ap->deep*sizeOfWord,regFP));
+	GenerateDiadic(op_sth,0,ap,cg.MakeIndexed(currentFn->GetTempBot()+ap->deep*sizeOfWord,regFP));
 	if (pass==1)
 		max_stack_use = max(max_stack_use, (ap->deep+1) * sizeOfWord);
-    //reg_stack[reg_stack_ptr].Operand = ap;
-    //reg_stack[reg_stack_ptr].f.allocnum = number;
-    if (reg_alloc[number].f.isPushed=='T')
-		fatal("SpillRegister(): register already spilled");
-    reg_alloc[number].f.isPushed = 'T';
+  //reg_stack[reg_stack_ptr].Operand = ap;
+  //reg_stack[reg_stack_ptr].f.allocnum = number;
+  if (reg_alloc[number].f.isPushed=='T')
+	fatal("SpillRegister(): register already spilled");
+  reg_alloc[number].f.isPushed = 'T';
+	reg_in_use[ap->preg] = -1;
 }
 
 void SpillFPRegister(Operand *ap, int number)
@@ -293,7 +294,7 @@ void SpillFPRegister(Operand *ap, int number)
 
 void SpillPositRegister(Operand* ap, int number)
 {
-	GenerateDiadic(op_psto, 0, ap, cg.MakeIndexed(currentFn->GetTempBot() - ap->deep * sizeOfWord, regFP));
+	GenerateDiadic(op_psto, 0, ap, cg.MakeIndexed(currentFn->GetTempBot() + ap->deep * sizeOfWord, regFP));
 	if (pass == 1)
 		max_stack_use = max(max_stack_use, (ap->deep + 1) * sizeOfWord);
 	preg_stack[preg_stack_ptr].Operand = ap;
@@ -310,7 +311,7 @@ void LoadRegister(int regno, int number)
 	if (reg_in_use[regno] >= 0)
 		fatal("LoadRegister():register still in use");
 	reg_in_use[regno] = number;
-	GenerateDiadic(op_ldo,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()-number*sizeOfWord,regFP));
+	GenerateDiadic(op_ldh,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP));
     reg_alloc[number].f.isPushed = 'F';
 }
 
@@ -400,7 +401,7 @@ void initstack()
 Operand *GetTempRegister()
 {
 	Operand *ap;
-    Function *sym = currentFn;
+  Function *sym = currentFn;
 	int number;
 	int nr, nn;
 
@@ -423,16 +424,17 @@ Operand *GetTempRegister()
 		SpillRegister(makereg(cpu.tmpregs[next_reg]),number);
 	}
 	TRACE(printf("GetTempRegister:r%d\r\n", next_reg);)
-    reg_in_use[cpu.tmpregs[next_reg]] = reg_alloc_ptr;
-    ap = allocOperand();
-    ap->mode = am_reg;
-    ap->preg = cpu.tmpregs[next_reg];
+  reg_in_use[cpu.tmpregs[next_reg]] = reg_alloc_ptr;
+  ap = allocOperand();
+  ap->mode = am_reg;
+  ap->preg = cpu.tmpregs[next_reg];
 	ap->pdeep = ap->deep;
-    ap->deep = reg_alloc_ptr;
-    reg_alloc[reg_alloc_ptr].reg = cpu.tmpregs[next_reg];
-    reg_alloc[reg_alloc_ptr].Operand = ap;
-    reg_alloc[reg_alloc_ptr].f.isPushed = 'F';
-	if (next_reg++ >= NumTempRegs()) {// regLastTemp) {
+  ap->deep = reg_alloc_ptr;
+  reg_alloc[reg_alloc_ptr].reg = cpu.tmpregs[next_reg];
+  reg_alloc[reg_alloc_ptr].Operand = ap;
+  reg_alloc[reg_alloc_ptr].f.isPushed = 'F';
+	next_reg++;
+	if (next_reg >= NumTempRegs()) {// regLastTemp) {
 		wrapno++;
 		rap[wrapno] = reg_alloc_ptr;
 		next_reg = 0;// regFirstTemp;		/* wrap around */
@@ -633,8 +635,8 @@ void checkbrstack()
  */
 void validate(Operand *ap)
 {
-    Function *sym = currentFn;
-		unsigned int frg = (unsigned)0;// regFirstTemp;
+	Function *sym = currentFn;
+	unsigned int frg = (unsigned)0;// regFirstTemp;
 
 	if (ap->typep!=&stdvector)
     switch (ap->mode) {
@@ -795,8 +797,9 @@ common:
 		if (IsTempReg(ap->preg)) {
 			if (reg_in_use[ap->preg]==-1)
 				return;
-			if (next_reg-- <= frg) {
-				next_reg = regLastTemp;
+			next_reg--;
+			if (next_reg <= frg) {
+				next_reg = cpu.NumTmpRegs-1;// regLastTemp;
 				wrapno--;
 			}
 			number = reg_in_use[ap->preg];
@@ -807,9 +810,10 @@ common:
     case am_indx2:
 		if (IsTempReg(ap->sreg)) {
 			if (reg_in_use[ap->sreg]==-1)
-				return;
-			if (next_reg-- <= frg) {
-				next_reg = regLastTemp;
+				goto common;
+			next_reg--;
+			if (next_reg <= frg) {
+				next_reg = cpu.NumTmpRegs - 1;// regLastTemp;
 				wrapno--;
 			}
 			number = reg_in_use[ap->sreg];
@@ -829,8 +833,8 @@ common:
 		fatal("ReleaseTempRegister(): no registers are allocated");
   //  if (reg_alloc_ptr != number)
 		//fatal("ReleaseTempRegister()/3");
-    if (reg_alloc[number].f.isPushed=='T')
-		fatal("ReleaseTempRegister(): register on stack");
+	//if (reg_alloc[number].f.isPushed=='T')
+	//	fatal("ReleaseTempRegister(): register on stack");
 }
 
 void ReleaseTempVectorMaskRegister()

@@ -141,7 +141,7 @@ Statement *Function::ParseBody()
 	while (lc_auto % sizeOfWord)	// round frame size to word
 		++lc_auto;
 	if (pass==1)
-		stkspace = round8(lc_auto);
+		stkspace = roundWord(lc_auto);
 	if (!IsInline) {
 		pass = 1;
 		if (pl.tail)
@@ -151,14 +151,14 @@ Statement *Function::ParseBody()
 		ip = pl.tail;
 		looplevel = 0;
 		max_reg_alloc_ptr = 0;
-		max_stack_use = 0;
+		max_stack_use = compiler.GetReturnBlockSize();
 		label = nextlabel;
 		Generate();
 		if (pass == 1) {
-			stkspace += (ArgRegCount - regFirstArg) * sizeOfWord;
+			stkspace += (ArgRegCount/* - regFirstArg*/) * sizeOfWord;
 			argbot = -stkspace;
 			stkspace += max_stack_use;// GetTempMemSpace();
-			tempbot = -stkspace;
+			tempbot = -stkspace ;
 		}
 		pass = 2;
 		pl.tail = ip;
@@ -798,14 +798,14 @@ void Function::SetupReturnBlock()
 	if (cpu.SupportsEnter)
 	{
 		if (stkspace < 32767) {
-			GenerateMonadic(op_enter, 0, MakeImmediate(stkspace));
+			GenerateMonadic(op_enter, 0, MakeImmediate(-tempbot));
 			//			GenerateMonadic(op_link, 0, MakeImmediate(stkspace));
 						//spAdjust = pl.tail;
 			alstk = true;
 		}
 		else {
 			GenerateMonadic(op_enter, 0, MakeImmediate(32760));
-			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(stkspace - 32760));
+			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(-tempbot - 32760));
 			//GenerateMonadic(op_link, 0, MakeImmediate(SizeofReturnBlock() * sizeOfWord));
 			alstk = true;
 		}
@@ -1719,8 +1719,8 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 		// and unions use the type size. There could also be arrays
 		// passed.
 		if (!noParmOffset)
-			poffset += round8(sp1->tp->size);
-		if (round8(sp1->tp->size) > sizeOfWord && !sp1->tp->IsVectorType())
+			poffset += roundWord(sp1->tp->size);
+		if (roundWord(sp1->tp->size) > sizeOfWord && !sp1->tp->IsVectorType())
 			IsLeaf = FALSE;
 		sp1->storage_class = sc_auto;
 	}

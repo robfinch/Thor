@@ -103,7 +103,7 @@ public:
 	static bool IsEqual(Int128 *a, Int128 *b);
 	static bool IsLessThan(Int128 *a, Int128 *b);
 	static bool IsUnsignedLessThan(Int128* a, Int128* b);
-	static bool IsEQ(Int128* a, Int128* b) { return (IsLessThan(a, b)); };
+	static bool IsEQ(Int128* a, Int128* b) { return (IsEqual(a, b)); };
 	static bool IsLT(Int128* a, Int128* b) { return (IsLessThan(a, b)); };
 	static bool IsLE(Int128 *a, Int128 *b) { return (IsEqual(a, b) ||  IsLessThan(a, b)); };
 	static bool IsGE(Int128 *a, Int128 *b) { return (IsEqual(a, b) || !IsLessThan(a, b)); };

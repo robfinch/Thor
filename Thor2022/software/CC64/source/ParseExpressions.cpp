@@ -1087,9 +1087,9 @@ SYM *CreateDummyParameters(ENODE *ep, SYM *parent, TYP *tp)
 		// Check for aggregate types passed as parameters. Structs
 		// and unions use the type size. There could also be arrays
 		// passed.
-		poffset += round8(sp1->tp->size);
-		poffset = round8(poffset);
-//		if (round8(sp1->tp->size) > 8)
+		poffset += roundWord(sp1->tp->size);
+		poffset = roundWord(poffset);
+//		if (roundWord(sp1->tp->size) > 8)
 		sp1->storage_class = sc_auto;
 		sp1->next = 0;
 
@@ -2235,9 +2235,13 @@ TYP *Expression::ParseShiftOps(ENODE **node, SYM* symi)
 						}
 						ep1->esize = tp1->size;
 						PromoteConstFlag(ep1);
+						if (ep1->constflag) {
+							opt_const_unchecked(&ep1);
+							opt_const_unchecked(&ep2);
 						}
-                    }
-            }
+					}
+        }
+      }
     *node = ep1;
  xit:
      if (*node)
@@ -2503,9 +2507,66 @@ xit:
 
 TYP *Expression::ParseBitwiseOrOps(ENODE **node, SYM* symi)
 {
-	ENODE *ep1, *ep2;
+	ENODE *ep1, *ep2, *ep3;
 	TYP *tp1, *tp2;
-
+	ENODE* p[50];
+	TYP* t[50];
+	int n,k,j;
+	bool did = false;
+	
+	Enter("Binop");
+	*node = (ENODE*)NULL;
+	/*
+	t[0] = ParseBitwiseXorOps(&p[0], symi);
+	ep1 = p[0];
+	tp1 = t[0];
+	if (t[0] == 0) {
+		tp1 = t[0];
+		goto xit;
+	}
+	for (n = 1; n < 50 && lastst==bitorr; n++) {
+		NextToken();
+		t[n] = ParseBitwiseXorOps(&p[n], symi);
+		if (t[n] == nullptr)
+			error(ERR_IDEXPECT);
+	}
+	if (n < 2)
+		goto xit1;
+	for (k = 0; k < n-1; k++) {
+		for (j = k + 1; j < n; j++) {
+			if (p[j]) {
+				if (p[k]->constflag && p[j]->constflag) {
+					// To detect if a link was formed by forcefit.
+					ep3 = p[k];
+					ep2 = p[j];
+					tp1 = forcefit(&p[j], t[j], &p[k], t[k], true, false);
+					// If no link was formed and we have constants, do the operation.
+					if (ep3 == p[k] && ep2 == p[j]) {
+						if (!Int128::IsEQ(&p[k]->i128, Int128::Zero()) || !Int128::IsEQ(&p[j]->i128, Int128::Zero()))
+							printf("hi");
+						Int128::BitOr(&p[k]->i128, &p[k]->i128, &p[j]->i128);
+						p[j]->i128 = *Int128::Zero();
+					}
+				}
+			}
+			else {
+				break;
+			}
+		}
+	}
+	for (k = 0; k < n - 1; k+=2) {
+		p[k] = makenode(en_or, p[k], p[k+1]);
+		opt_const_unchecked(&p[k]);
+	}
+	for (k = 0; k < n - 1; k += 2)
+		p[k / 2] = makenode(en_or, p[k], p[k + 1]);
+	ep1 = p[0];
+	opt_const_unchecked(&ep1);
+	ep1->tp = tp1;
+	ep1->esize = tp1->size;
+	ep1->etype = tp1->type;
+	PromoteConstFlag(ep1);
+	*/
 	Enter("Binop");
 	*node = (ENODE *)NULL;
 	tp1 = ParseBitwiseXorOps(&ep1, symi);
@@ -2524,6 +2585,7 @@ TYP *Expression::ParseBitwiseOrOps(ENODE **node, SYM* symi)
 			PromoteConstFlag(ep1);
 		}
 	}
+xit1:
 	*node = ep1;
 xit:
 	if (*node)
@@ -2531,6 +2593,7 @@ xit:
 	Leave("Binop", 0);
 	return (tp1);
 }
+
 
 TYP *Expression::ParseAndOps(ENODE **node, SYM* symi)
 {

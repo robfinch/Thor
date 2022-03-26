@@ -366,6 +366,7 @@ public:
 	Function();
 	void RemoveDuplicates();
 	int GetTempBot() { return (tempbot); };
+	int GetTempTop() { return (argbot); };
 	void CheckParameterListMatch(Function *s1, Function *s2);
 	bool CheckSignatureMatch(Function *a, Function *b) const;
 	TypeArray *GetParameterTypes();

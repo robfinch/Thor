@@ -55,9 +55,10 @@ package Thor2022_pkg;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
-`define SUPPORT_HWWALK	1
+//`define SUPPORT_HWWALK	1
 
 `define SUPPORT_HASHPT	1
+//`define SUPPORT_HASHPT2	1
 //`define SUPPORT_HIERPT	1
 
 // The following adds caching of PDEs and PTGs to improve performance at the
@@ -160,17 +161,18 @@ parameter SRLR2		= 8'h59;
 parameter SRAR2		= 8'h5A;
 parameter ROLR2		= 8'h5B;
 parameter RORR2		= 8'h5C;
-parameter SLLHR2	= 8'h5D;
+parameter SGEIL		= 8'h5D;
 parameter MFLK		= 8'h5E;
 parameter MTLK		= 8'h5F;
 
-parameter CMPUI		= 8'h60;
+parameter SGEI		= 8'h60;
 parameter F1			= 8'h61;
 parameter F2			= 8'h62;
 parameter F3			= 8'h63;
 parameter DF1			= 8'h65;
 parameter DF2			= 8'h66;
 parameter DF3			= 8'h67;
+parameter SLEI		= 8'h68;
 parameter P1			= 8'h69;
 parameter P2			= 8'h6A;
 parameter P3			= 8'h6B;
@@ -187,7 +189,7 @@ parameter LDOU		= 8'h87;
 parameter LDH			= 8'h88;
 parameter LDHS		= 8'h89;
 //parameter LLA			= 8'h88;
-parameter LEA			= 8'h8A;
+parameter LDHP		= 8'h8A;
 parameter LDHR		= 8'h8B;
 parameter LDOO		= 8'h8C;
 parameter LDCTX		= 8'h8D;
@@ -199,7 +201,8 @@ parameter STO			= 8'h93;
 parameter STH			= 8'h94;
 parameter STHS		= 8'h95;
 parameter STHC		= 8'h96;
-parameter STOO		= 8'h97;
+parameter STHP		= 8'h97;
+parameter STOO		= 8'h9C;
 parameter BSET		= 8'h98;
 parameter STMOV		= 8'h99;
 parameter STCMP		= 8'h9A;
@@ -235,7 +238,7 @@ parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
 parameter LDOUX		= 8'hB7;
 parameter LDHX		= 8'hB8;
-parameter LEAX		= 8'hBA;
+parameter LDHPX		= 8'hBA;
 parameter LDHRX		= 8'hBB;
 parameter LEAVE		= 8'hBF;
 
@@ -249,15 +252,16 @@ parameter STTX		= 8'hC2;
 parameter STOX		= 8'hC3;
 parameter STHX		= 8'hC4;
 parameter STHCX		= 8'hC6;
-parameter STOOX		= 8'hC7;
-parameter LDOOX		= 8'hCC;
+parameter STHPX		= 8'hC7;
+parameter STOOX		= 8'hCC;
+parameter LDOOX		= 8'hCD;
 parameter CACHEX	= 8'hCF;
 
 parameter LDxX		= 8'hB0;
 parameter STxX		= 8'hC0;
 
 parameter CMPIL		= 8'hD0;
-parameter CMPUIL	= 8'hD1;
+parameter SLEIL		= 8'hD1;
 parameter MULIL		= 8'hD2;
 parameter SLTIL		= 8'hD3;
 parameter ADDIL		= 8'hD4;
@@ -274,6 +278,8 @@ parameter MULUIL	= 8'hDE;
 parameter SGTUIL	= 8'hDF;
 
 parameter ADDIXL	= 8'hE4;
+parameter SLEUIL	= 8'hE6;
+parameter SGEUIL	= 8'hE7;
 
 parameter NOP			= 8'hF1;
 parameter RTS			= 8'hF2;
@@ -292,6 +298,7 @@ parameter NOP_INSN	= NOP;
 parameter CNTLZ		= 7'h00;
 parameter CNTLO		= 7'h01;
 parameter CNTPOP	= 7'h02;
+parameter NOT			= 7'h04;
 parameter ABS			= 7'h06;
 parameter NABS		= 7'h07;
 parameter SQRT		= 7'h08;
@@ -910,10 +917,10 @@ parameter MR_LDOR	= 4'd4;
 parameter MR_LDOB	= 4'd5;
 parameter MR_LDOO = 4'd6;
 parameter MR_LDH	= 4'd7;
+parameter MR_LDHP = 4'd8;
 parameter MR_LDPTG = 4'd0;
 parameter MR_STPTG = 4'd1;
 parameter MR_LDDESC = 4'd12;
-parameter MR_LEA	= 4'd14;
 parameter MR_STB	= 4'd0;
 parameter MR_STW	= 4'd1;
 parameter MR_STT	= 4'd2;
@@ -921,7 +928,8 @@ parameter MR_STO	= 4'd3;
 parameter MR_STOC	= 4'd4;
 parameter MR_STOO	= 4'd5;
 parameter MR_STH	= 4'd7;
-parameter MR_STPTR	= 4'd8;
+parameter MR_STHP	= 4'd8;
+parameter MR_STPTR	= 4'd9;
 
 typedef struct packed
 {
@@ -931,10 +939,9 @@ typedef struct packed
 	logic [3:0] func;		// function to perform
 	logic [3:0] func2;	// more resolution to function
 	Address adr;
-	logic [4:0] seg;
 	logic [255:0] dat;
-	logic [15:0] sel;		// data byte select, indicates size of data
-} MemoryRequest;	// 332
+	logic [3:0] sz;		// indicates size of data
+} MemoryRequest;	// 315
 
 // All the fields in this structure are *output* back to the system.
 typedef struct packed
@@ -1003,6 +1010,8 @@ parameter wyde = 3'd1;
 parameter tetra = 3'd2;
 parameter octa = 3'd3;
 parameter hexi = 3'd4;
+parameter hexipair = 3'd5;
+parameter hexiquad = 3'd6;
 parameter ptr = 3'd7;
 
 typedef struct packed

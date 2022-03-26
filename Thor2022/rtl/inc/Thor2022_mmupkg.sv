@@ -50,33 +50,22 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [3:0] pad4;
-	logic [7:0] pl;
-	logic sc;
-	logic sw;
-	logic sr;
-	logic sx;
 	logic v;
 	logic n;
-	logic [1:0] pad2;
-	logic [3:0] aclhi;
-	logic d;
-	logic u;
-	logic s;
-	logic a;
-	logic c;
-	logic w;
-	logic r;
-	logic x;
-	logic [31:0] key;
+	logic [13:0] rfu;
+	logic [15:0] pci;
+	logic [7:0] pl;
+	logic [23:0] key;
 	logic [31:0] access_count;
 	logic [15:0] acl;
 	logic [15:0] share_count;
-} PMTE;
+} PMTE;	// 128 bits
 
 typedef struct packed
 {
 	Thor2022_pkg::Address adr;
+	logic [15:0] rfu;
+	logic [15:0] pci;
 	logic [31:0] access_count;
 	logic [31:0] key;
 	logic [11:0] asid;
@@ -97,46 +86,28 @@ typedef struct packed
 	logic w;
 	logic r;
 	logic x;
-	logic [5:0] mb;
-	logic [5:0] me;
-	logic [51:0] vpn;
-	logic [2:0] en;
+	logic [3:0] mb;
+	logic [3:0] me;
+	logic [15:0] vpn;
 	logic n;
 	logic [7:0] pl;
-	logic [51:0] ppn;
-} TLBE;	// 256 bits
+	logic [15:0] ppn;
+} TLBE;	// 288 bits
 
 typedef struct packed
 {
-	logic [31:0] pad32;
-	logic [31:0] access_count;
-	logic [31:0] key;
-	logic [11:0] asid;
-	logic sc;
-	logic sw;
-	logic sr;
-	logic sx;
+	logic [9:0] asid;
+	logic [3:0] bc;
+	logic [1:0] pad2;
+	logic [15:0] vpn;
 	logic v;
 	logic g;
-	logic av;
-	logic pad1;
-	logic [3:0] bc;
-	logic d;
-	logic u;
-	logic s;
-	logic a;
-	logic c;
-	logic w;
-	logic r;
-	logic x;
-	logic [5:0] mb;
-	logic [5:0] me;
-	logic [51:0] vpn;
-	logic [2:0] en;
-	logic n;
-	logic [7:0] pl;
-	logic [51:0] ppn;
-} PTE;	// 256 bits
+	logic [2:0] rwx;
+	logic [2:0] wh;
+	logic [3:0] mb;
+	logic [3:0] me;
+	logic [15:0] ppn;
+} PTE;	// 64 bits
 
 typedef struct packed
 {
@@ -267,6 +238,7 @@ parameter IPT_RW_PTG2 = 7'd69;
 parameter IPT_RW_PTG3 = 7'd70;
 parameter IPT_RW_PTG4 = 7'd71;
 parameter IPT_RW_PTG5 = 7'd72;
+parameter IPT_RW_PTG6 = 7'd73;
 parameter IPT_WRITE_PTE = 7'd75;
 parameter IPT_IDLE = 7'd76;
 parameter PT_FETCH1 = 7'd81;

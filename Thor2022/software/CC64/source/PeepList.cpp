@@ -163,7 +163,7 @@ void PeepList::Add(OCODE *cd)
 		return;
 	if (head == NULL)
 	{
-		ArgRegCount = regFirstArg;
+		ArgRegCount = 0;// regFirstArg;
 		head = tail = cd;
 		cd->fwd = nullptr;
 		cd->back = nullptr;
@@ -178,13 +178,13 @@ void PeepList::Add(OCODE *cd)
 	}
 	if (cd->opcode != op_label) {
 		if (cd->oper1 && IsArgumentReg(cd->oper1->preg))
-			ArgRegCount = max(ArgRegCount, cd->oper1->preg);
+			ArgRegCount = max(ArgRegCount, IsArgReg(cd->oper1->preg)-1);
 		if (cd->oper2 && IsArgumentReg(cd->oper2->preg))
-			ArgRegCount = max(ArgRegCount, cd->oper2->preg);
+			ArgRegCount = max(ArgRegCount, IsArgReg(cd->oper2->preg)-1);
 		if (cd->oper3 && IsArgumentReg(cd->oper3->preg))
-			ArgRegCount = max(ArgRegCount, cd->oper3->preg);
+			ArgRegCount = max(ArgRegCount, IsArgReg(cd->oper3->preg)-1);
 		if (cd->oper4 && IsArgumentReg(cd->oper4->preg))
-			ArgRegCount = max(ArgRegCount, cd->oper4->preg);
+			ArgRegCount = max(ArgRegCount, IsArgReg(cd->oper4->preg)-1);
 	}
 }
 

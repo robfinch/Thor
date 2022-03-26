@@ -252,7 +252,7 @@ any1_mem_fifo #(.WID($bits(MemoryRequest))) uififo1
 );
 assign fifoToCtrl_v = TRUE;
 */
-
+/*
 Thor2022_mem_req_queue umreqq
 (
 	.rst(rst),
@@ -272,9 +272,9 @@ Thor2022_mem_req_queue umreqq
 	.ldo1(),
 	.found1()
 );
-
+*/
+assign fifoToCtrl_wack = 1'b1;
 // 236 wide
-/*
 MemoryRequestFifo uififo1
 (
   .clk(clk),      // input wire clk
@@ -287,7 +287,7 @@ MemoryRequestFifo uififo1
   .empty(fifoToCtrl_empty),  // output wire empty
   .valid(fifoToCtrl_v)  // output wire valid
 );
-*/
+
 
 /*
 bc_fifo16X #(.WID($bits(MemoryRequest))) uififo1
@@ -722,6 +722,34 @@ Thor2022_tlb utlb (
 `endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+reg pmtram_ena;
+reg pmtram_wea;
+reg [13:0] pmtram_adra;
+reg [159:0] pmtram_dina;
+wire [159:0] pmtram_douta;
+reg pmtram_web;
+reg [13:0] pmtram_adrb;
+PMTE pmtram_dinb;
+PMTE pmtram_doutb;
+
+PMT_RAM pmtram1 (
+  .clka(clk),    // input wire clka
+  .ena(pmtram_ena),      // input wire ena
+  .wea(pmtram_wea),      // input wire [0 : 0] wea
+  .addra(pmtram_adra),  // input wire [13 : 0] addra
+  .dina(pmtram_dina),    // input wire [159 : 0] dina
+  .douta(pmtram_douta),  // output wire [159 : 0] douta
+  .clkb(tlbclk),    // input wire clkb
+  .enb(1'b1),      // input wire enb
+  .web(pmtram_web),      // input wire [0 : 0] web
+  .addrb(pmtram_adrb),  // input wire [13 : 0] addrb
+  .dinb(pmtram_dinb),    // input wire [159 : 0] dinb
+  .doutb(pmtram_doutb)  // output wire [159 : 0] doutb
+);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // IPT
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -740,17 +768,17 @@ wire [15:0] hash;
 reg [127:0] ndat;		// next data output
 reg ptgram_wr;
 reg ptgram_en;
-reg [13:0] ptgram_adr;
-reg [255:0] ptgram_dati;
+reg [14:0] ptgram_adr;
+reg [127:0] ptgram_dati;
 wire [127:0] ptgram_dato;
 reg ptgram_web = 1'b0;
-reg [10:0] ptgram_adrb = 'd0;
+reg [11:0] ptgram_adrb = 'd0;
 PTG ptgram_datib;
 Address ptg_lookup_address;
 reg [3:0] ptgacr = 4'd15;
 wire pe_clock;
 reg clock_r = 1'b0;
-reg [10:0] clock_count = 'd0;
+reg [11:0] clock_count = 'd0;
 
 // SIM debugging
 reg [5:0] ptg_lac = 'd0;
@@ -803,9 +831,19 @@ Thor2022_ptg_search uptgs
 `endif
 
 `ifdef SUPPORT_HASHPT
-Address idadr;
+// Hold onto the previous idadr if none is selected, to allow the update of
+// the PTG RAM to complete without changes. A PTG write cycle will bounce
+// back to the memory IDLE state almost immediately, this leaves the address
+// to be maintained.
+Address idadr, prev_idadr;
 always_comb
-	idadr = daccess ? dadr : iadr;
+	case(1'b1)
+	daccess: idadr <= dadr;
+	iaccess: idadr <= iadr;
+	default:	idadr <= 32'hFF7FFFFF;
+	endcase
+always_ff @(posedge clk)
+	prev_idadr <= idadr;
 
 Thor2022_ipt_hash uhash
 (
@@ -828,9 +866,9 @@ always @(posedge tlbclk)
 begin
 	if (ptg_en) begin
 		if (pte_found) begin
-			adr_o <= {tmptlbe2.ppn,idadr[15:10]+tmptlbe2.mb,idadr[9:0]};
-			if (idadr[15:10] + tmptlbe2.mb <= tmptlbe2.me)
-				ptgacr <= {tmptlbe2.c,tmptlbe2.r,tmptlbe2.w,tmptlbe2.x};
+			adr_o <= {tmptlbe2.ppn,idadr[15:12]+tmptlbe2.mb,idadr[11:0]};
+			if (idadr[15:12] + tmptlbe2.mb <= tmptlbe2.me)
+				ptgacr <= tmptlbe2.rwx;
 			else
 				ptgacr <= 4'd0;
 		end
@@ -868,32 +906,42 @@ initial begin
 		square_table[j] = j * j;
 end
 
+wire cd_idadr;
+reg cd_idadr_r;
 edge_det uclked1 (.rst(rst), .clk(tlbclk), .ce(1'b1), .i(clock), .pe(pe_clock), .ne(), .ee());
+change_det uchgdt1 (.rst(rst), .clk(tlbclk), .ce(1'b1), .i(idadr), .cd(cd_idadr));
 
+reg [15:0] hash_r;
 `ifdef SUPPORT_HASHPT
 integer n6;
 always_ff @(posedge tlbclk)
-begin
-	ptgram_web <= 1'b0;
+if (rst)
+	pmtram_dinb <= 'd0;
+else begin
+	pmtram_web <= 1'b0;
 	if (clr_ptg_fault|clr_ipage_fault) begin
 		ipt_miss_count <= 'd0;
 		ptg_fault <= 1'b0;
 	end
 	if (pe_clock)
 		clock_r <= 1'b1;
+	if (cd_idadr)
+		cd_idadr_r <= TRUE;
 
 	case (ptg_state)
 	IPT_IDLE:
 		begin
 			ipt_miss_count <= 'd0;
-			if (!pte_found && ptg_en) begin
+			if ((!pte_found || cd_idadr_r) && ptg_en && (iaccess||daccess)) begin
+				cd_idadr_r <= FALSE;
 				ptg_state <= IPT_RW_PTG2;
 				ptgram_adrb <= hash & 16'hFFFF;
+				hash_r <= hash;
 			end
 			else if (clock_r) begin
 				clock_r <= 1'b0;
 				ptg_state <= IPT_CLOCK1;
-				ptgram_adrb <= clock_count;
+				pmtram_adrb <= clock_count;
 				clock_count <= clock_count + 2'd1;
 			end
 		end
@@ -905,28 +953,33 @@ begin
 	IPT_FETCH1:
 		begin
 			// Open addressing with quadratic probing
-			ptgram_adrb <= ((hash + square_table[ipt_miss_count]) & 16'hFFFF);
+			ptgram_adrb <= ((hash_r + square_table[ipt_miss_count]) & 16'hFFFF);
 	    if (ipt_miss_count==6'd12)
 	    	ptg_fault <= 1'b1;
 	    else
 	    	ptg_state <= IPT_RW_PTG2;
 		end
-
 	IPT_RW_PTG2:
 		begin
 			ipt_miss_count <= ipt_miss_count + 2'd1;
-  		ptg_state <= IPT_RW_PTG3;
+ 			ptg_state <= IPT_RW_PTG3;
 		end
 	IPT_RW_PTG3:
-		ptg_state <= IPT_RW_PTG4;
-	IPT_RW_PTG4:
 		begin
-	    ptgram_web <= 1'b1;
-  		ptgram_datib <= ptg;
-			ptgram_datib.ptes[0].a <= 1'b1;
-			ptgram_datib.ptes[0].access_count <= ptg.ptes[0].access_count + 2'd1;
-  		ptg_state <= pte_found ? IPT_IDLE : IPT_FETCH1;
+			pmtram_adrb <= tmptlbe2.ppn[13:0];
+			ptg_state <= IPT_RW_PTG4;
 		end
+	IPT_RW_PTG4:
+		ptg_state <= IPT_RW_PTG5;
+	IPT_RW_PTG5:
+		ptg_state <= IPT_RW_PTG6;
+	IPT_RW_PTG6:
+		begin
+	    pmtram_web <= 1'b1;
+  		pmtram_dinb <= pmtram_doutb;
+			pmtram_dinb.access_count <= pmtram_doutb.access_count + 2'd1;
+  		ptg_state <= pte_found ? IPT_IDLE : IPT_FETCH1;
+		end	
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Age access counts
@@ -938,9 +991,9 @@ begin
 		ptg_state <= IPT_CLOCK3;
 	IPT_CLOCK3:
 		begin
-	    ptgram_web <= 1'b1;
-  		ptgram_datib <= ptg;
- 			ptgram_datib.ptes[0].access_count <= {1'b0,ptg.ptes[0].access_count[31:1]};
+	    pmtram_web <= 1'b1;
+  		pmtram_dinb <= pmtram_doutb;
+ 			pmtram_dinb.access_count <= {1'b0,pmtram_dinb.access_count[31:1]};
   		ptg_state <= IPT_IDLE;
 		end
 	
@@ -1007,6 +1060,8 @@ if (rst) begin
 	ptgram_en <= 1'b0;
 	rgn_en <= 1'b0;
 	tlb_access <= 1'b0;
+	pmtram_ena <= 1'b0;
+	pmtram_wea <= 1'b0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -1016,6 +1071,7 @@ else begin
 	tlbwr <= FALSE;
 	tlb_ack <= FALSE;
 	ptgram_wr <= FALSE;
+	pmtram_wea <= FALSE;
 	clr_ptg_fault <= 1'b0;
 	if (clr_ipage_fault)
 		ipage_fault <= 1'b0;
@@ -1035,7 +1091,7 @@ else begin
 
 	MEMORY1:
 		if (fifoToCtrl_v) begin
-			memreq_rd <= TRUE;
+			memreq_rd <= FALSE;
 			memreq <= imemreq;
 			case(imemreq.sz)
 			byt:	memreq_sel <= 32'h00000001;
@@ -1051,13 +1107,20 @@ else begin
 
 	MEMORY_DISPATCH:
 		begin
-			memreq_rd <= FALSE;
+//			memreq_rd <= FALSE;
 			tMemoryDispatch();
 		end
 
 	// The following two states for MR_TLB translation lookup
+	// Must check for two PTG states since that machine is clocked at twice
+	// the rate.
 	MEMORY3:
+`ifdef SUPPORT_HASHPT
+		if (ptg_state==IPT_RW_PTG5 || ptg_state==IPT_RW_PTG6 || !ptg_en)
+			goto (MEMORY4);
+`else
 		goto (MEMORY4);
+`endif
 `ifdef SUPPORT_KEYCHK
 	MEMORY4:
 		goto (MEMORY_KEYCHK1);
@@ -1113,6 +1176,9 @@ else begin
 	// Wait a couple of clocks for MR_TLB lookup
 	MEMORY9:
 		begin
+`ifdef SUPPORT_HASHPT
+			if (ptg_state==IPT_RW_PTG5 || ptg_state==IPT_RW_PTG6 || !ptg_en)
+`endif			
 	  	goto (MEMORY10);
 		end
 `ifdef SUPPORT_KEYCHK
@@ -1779,15 +1845,6 @@ else begin
 			tmptlbe.pl <= arti.pl;
 			tmptlbe.key <= arti.key;
 			tmptlbe.access_count <= arti.access_count;
-			tmptlbe.c <= arti.c;
-			tmptlbe.r <= arti.r;
-			tmptlbe.w <= arti.w;
-			tmptlbe.x <= arti.x;
-			tmptlbe.sc <= arti.sc;
-			tmptlbe.sr <= arti.sr;
-			tmptlbe.sw <= arti.sw;
-			tmptlbe.sx <= arti.sx;
-			tmptlbe.av <= 1'b1;
 			goto (PMT_FETCH5);
 		end
 	PMT_FETCH5:
@@ -1818,6 +1875,7 @@ begin
 	tlb_access <= 1'b0;
 	rgn_en <= 1'b0;
 	ptgram_en <= 1'b0;
+	pmtram_ena <= 1'b0;
 //	ipt_miss_count <= 'd0;
 	if (tlbrdy) begin
 		iaccess <= FALSE;
@@ -1839,7 +1897,7 @@ begin
 			gosub (IFETCH0);
 		end
 		else if (!fifoToCtrl_empty) begin
-//			memreq_rd <= TRUE;
+			memreq_rd <= TRUE;
 			gosub (MEMORY1);
 		end
 	end
@@ -1860,13 +1918,6 @@ begin
 			tlb_ib <= {memreq.dat[127:32],memreq.dat[255:128]};
 			tlbwr <= TRUE;
 			goto (TLB1);
-		end
-	MR_RGN:
-		begin
-			rgn_wr <= memreq.adr[6];
-			rgn_adr <= memreq.adr[5:0];
-			rgn_dat <= memreq.dat;
-			goto (RGN1);
 		end
 	MR_LOAD,MR_LOADZ,MR_MOVLD:
 		case(memreq.func2)
@@ -1966,47 +2017,30 @@ begin
 		begin
 			rgn_en <= 1'b1;
 			rgn_wr <= memreq.func==MR_STORE;
-			if (memreq.func==MR_STORE) begin
-  			memresp.step <= memreq.step;
-	    	memresp.cmt <= TRUE;
-  			memresp.tid <= memreq.tid;
-  			memresp.wr <= TRUE;
-				memresp.res <= {127'd0,rb_i};
-				ret();
-			end
 		end
 	32'hFFA?????:
 		begin
 			ptgram_en <= 1'b1;
 			ptgram_wr <= memreq.func==MR_STORE;
-			if (memreq.func==MR_STORE) begin
-  			memresp.step <= memreq.step;
-	    	memresp.cmt <= TRUE;
-  			memresp.tid <= memreq.tid;
-  			memresp.wr <= TRUE;
-				memresp.res <= {127'd0,rb_i};
-				ret();
-			end
+		end
+	32'hFFD?????:
+		begin
+			pmtram_ena <= 1'b1;
+			pmtram_wea <= memreq.func==MR_STORE;
 		end
 	32'hFFE?????:
 		begin
 			tlbwr <= memreq.func==MR_STORE;
 			tlb_access <= 1'b1;
-			if (memreq.func==MR_STORE) begin
-  			memresp.step <= memreq.step;
-	    	memresp.cmt <= TRUE;
-  			memresp.tid <= memreq.tid;
-  			memresp.wr <= TRUE;
-				memresp.res <= {127'd0,rb_i};
-				ret();
-			end
 		end
 	default:	;
 	endcase
 	rgn_adr <= memreq.adr[9:4];
 	rgn_dat <= memreq.dat;
+	pmtram_adra <= memreq.adr[18:5];
+	pmtram_dina <= memreq.dat;
 `ifdef SUPPORT_HASHPT
-	ptgram_adr <= memreq.adr[19:5];
+	ptgram_adr <= memreq.adr[18:4];
 	ptgram_dati <= memreq.dat;
 `endif
 	tlb_ia <= memreq.adr[15:0];
@@ -2032,7 +2066,7 @@ begin
 `else 		
   else if (memreq.func != MR_CACHE) begin
 `endif
-		if (!(rgn_en|ptgram_en|tlb_access)) begin
+		if (!(rgn_en|ptgram_en|pmtram_ena|tlb_access)) begin
 	  	vda_o <= HIGH;
 	    cyc_o <= HIGH;
 	    stb_o <= HIGH;
@@ -2066,7 +2100,46 @@ begin
 					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
 						ptc[n4].v <= 1'b0;
 `endif						
-  			cr_o <= memreq.func2==MR_STOC;
+  			case(1'b1)
+  			rgn_en:
+  				begin
+		  			memresp.step <= memreq.step;
+			    	memresp.cmt <= TRUE;
+		  			memresp.tid <= memreq.tid;
+		  			memresp.wr <= TRUE;
+						memresp.res <= {127'd0,rb_i};
+						ret();
+  				end
+  			ptgram_en:
+  				begin
+		  			memresp.step <= memreq.step;
+			    	memresp.cmt <= TRUE;
+		  			memresp.tid <= memreq.tid;
+		  			memresp.wr <= TRUE;
+						memresp.res <= {127'd0,rb_i};
+						ret();
+  				end
+  			pmtram_ena:
+  				begin
+		  			memresp.step <= memreq.step;
+			    	memresp.cmt <= TRUE;
+		  			memresp.tid <= memreq.tid;
+		  			memresp.wr <= TRUE;
+						memresp.res <= {127'd0,rb_i};
+						ret();
+					end
+				tlb_access:
+					begin
+		  			memresp.step <= memreq.step;
+			    	memresp.cmt <= TRUE;
+		  			memresp.tid <= memreq.tid;
+		  			memresp.wr <= TRUE;
+						memresp.res <= {127'd0,rb_i};
+						ret();
+					end
+				default:
+	  			cr_o <= memreq.func2==MR_STOC;
+  			endcase
     	end
     default:
     	tDeactivateBus();
@@ -2089,6 +2162,7 @@ begin
 	  	tlb_access:	begin dati <= tlbdato; goto (DATA_ALIGN); end
 	  	ptgram_en:	begin dati <= ptgram_dato; goto (DATA_ALIGN); end
 	  	rgn_en:			begin dati <= rgn_dat_o; goto (DATA_ALIGN); end
+	  	pmtram_ena:	begin dati <= pmtram_douta; goto (DATA_ALIGN); end
 	  	default:
 	  		if (memreq.func==MR_STORE || memreq.func==MR_MOVST || memreq.func==M_CALL) begin
 	  			if (ack_i || !stb_o) begin
@@ -2114,6 +2188,7 @@ begin
   	tlb_access:	begin dati <= tlbdato; goto (DATA_ALIGN); end
   	ptgram_en:	begin dati <= ptgram_dato; goto (DATA_ALIGN); end
   	rgn_en:			begin dati <= rgn_dat_o; goto (DATA_ALIGN); end
+  	pmtram_ena:	begin dati <= pmtram_douta; goto (DATA_ALIGN); end
   	default:
 	    if (ack_i || !stb_o) begin
 	      goto (MEMORY_NACKLO);
@@ -2319,7 +2394,7 @@ task tDataAlign;
 begin
 	tDeactivateBus();
 	if ((memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==M_JALI || memreq.func==MR_MOVLD/*|| memreq.func==RTS2*/) & ~dhit & dcachable & tlbacr[3] & dce &
-	 	~ptgram_en & ~rgn_en & ~tlb_access)
+	 	~ptgram_en & ~rgn_en & ~tlb_access & ~pmtram_ena)
 		goto (DFETCH2);
 	else if (memreq.func==MR_MOVLD) begin
 		memreq.func <= MR_MOVST;
@@ -2507,7 +2582,8 @@ begin
 //	else
 */
 		dadr <= iea;
-		ptgram_adr <= iea[19:5];
+		ptgram_adr <= iea[18:4];
+		pmtram_adra <= iea[18:5];
 		rgn_adr <= iea[9:4];
 //	dcachable <= ea_acr.c;
 end

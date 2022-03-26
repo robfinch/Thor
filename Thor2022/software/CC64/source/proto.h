@@ -100,7 +100,7 @@ extern void initRegStack();
 extern Operand* GenerateFunctionCall(ENODE* node, int flags);
 
 // Utility
-extern int64_t round8(int64_t);
+extern int64_t roundWord(int64_t);
 extern int countLeadingBits(int64_t val);
 extern int countLeadingZeros(int64_t val);
 

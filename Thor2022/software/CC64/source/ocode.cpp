@@ -1457,7 +1457,7 @@ void OCODE::OptLea()
 	}
 }
 
-// Converts two separate register pushes into one operation.
+// Converts up to four separate register pushes into one operation.
 void OCODE::OptPush()
 {
 	OCODE *ip;
@@ -1473,7 +1473,41 @@ void OCODE::OptPush()
 					oper2 = makereg(ip->oper1->preg);
 				else if (oper3==nullptr)
 					oper3 = makereg(ip->oper1->preg);
+				else if (oper4 == nullptr)
+					oper4 = makereg(ip->oper1->preg);
 				ip->MarkRemove();
+				if (ip) {
+					ip = ip->fwd;
+					if (ip) {
+						if (ip->opcode == op_push) {
+							if (ip->oper1->mode == am_reg) {
+								if (oper2 == nullptr)
+									oper2 = makereg(ip->oper1->preg);
+								else if (oper3 == nullptr)
+									oper3 = makereg(ip->oper1->preg);
+								else if (oper4 == nullptr)
+									oper4 = makereg(ip->oper1->preg);
+								ip->MarkRemove();
+								if (ip) {
+									ip = ip->fwd;
+									if (ip) {
+										if (ip->opcode == op_push) {
+											if (ip->oper1->mode == am_reg) {
+												if (oper2 == nullptr)
+													oper2 = makereg(ip->oper1->preg);
+												else if (oper3 == nullptr)
+													oper3 = makereg(ip->oper1->preg);
+												else if (oper4 == nullptr)
+													oper4 = makereg(ip->oper1->preg);
+												ip->MarkRemove();
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}

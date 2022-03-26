@@ -45,9 +45,9 @@ input Value c;
 output Value o;
 
 reg [127:0] o1, o2, o3;
-wire [6:0] mw = c[6:0];
-wire [6:0] mb = b[6:0];
-wire [6:0] me = c[6:0];
+wire [6:0] mw = ir[36] ? {ir[35:34],ir[29:25]} : c[6:0];
+wire [6:0] mb = ir[33] ? {ir[32:31],ir[23:19]} : b[6:0];
+wire [6:0] me = ir[36] ? {ir[35:34],ir[29:25]} : c[6:0];
 wire [6:0] func = ir[47:41];
 Value imm = ir[28:21];
 Value mask;
@@ -100,9 +100,9 @@ begin
 					o1[n] = mask[n] ? a[n] : 1'b0;
 				o2 = (ffoo==8'd255) ? -64'd1 : ffoo - mb;	// ffoo returns -1 if no one was found
 			end
-		default:	o2 = 64'd0;
+		default:	o2 = 'd0;
 		endcase
-	default:	o2 = 64'd0;
+	default:	o2 = 'd0;
 	endcase
 end
 

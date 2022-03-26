@@ -36,8 +36,8 @@ int CSE::OptimizationDesireability()
 {
 	if (exp==nullptr)
 		return (0);
-	if( voidf || (exp->nodetype == en_icon &&
-                       exp->i < 32768 && exp->i >= -32768))
+	if( voidf || (exp->nodetype == en_icon))// &&
+                       //exp->i < 32768 && exp->i >= -32768))
         return (0);
  /* added this line to disable register optimization of global variables.
     The compiler would assign a register to a global variable ignoring

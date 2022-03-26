@@ -1618,10 +1618,44 @@ Operand *ENODE::GenerateUnary(int flags, int size, int op)
 		ap2 = GetTempRegister();
 		ap = cg.GenerateExpression(p[0], am_reg, size, 0);
 		ip = currentFn->pl.tail;
+		// Invert Set Operation inline code
 		if (ip->insn->IsSetInsn()) {
 			ReleaseTempReg(ap2);
-			ip->insn = Instruction::Get(ip->insn->InvertSet());
-			ip->opcode = ip->insn->opcode;
+			switch(ip->opcode) {
+			case op_seq:
+				ip->opcode = op_sne;
+				break;
+			case op_sne:
+				ip->opcode = op_seq;
+				break;
+			case op_slt:
+				ip->opcode = op_sge;
+				break;
+			case op_sle:
+				ip->opcode = op_sgt;
+				break;
+			case op_sge:
+				ip->opcode = op_slt;
+				break;
+			case op_sgt:
+				ip->opcode = op_sle;
+				break;
+			case op_sltu:
+				ip->opcode = op_sgeu;
+				break;
+			case op_sleu:
+				ip->opcode = op_sgtu;
+				break;
+			case op_sgeu:
+				ip->opcode = op_sltu;
+				break;
+			case op_sgtu:
+				ip->opcode = op_sleu;
+				break;
+			}
+			//ip->insn = Instruction::Get(ip->insn->InvertSet());
+			ip->insn = Instruction::Get(ip->opcode);
+			//ip->opcode = ip->insn->opcode;
 			//ap->MakeLegal(flags, size);
 			return (ap);
 		}

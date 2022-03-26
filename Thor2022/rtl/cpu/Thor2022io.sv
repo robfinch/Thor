@@ -1319,7 +1319,7 @@ begin
 	xIsDF <= 1'b0;
 	clr_ipage_fault <= 1'b1;
 	xCa <= 'd0;
-	wackr <= 1'd0;
+	wackr <= 1'd1;
 end
 endtask
 
@@ -1383,7 +1383,7 @@ WAIT_MEM1:
 	end
 WAIT_MEM2:
 	begin
-		wackr <= 1'b0;
+		//wackr <= 1'b0;
 		if (memresp_fifo_v)
 		begin
 			memresp_fifo_rd <= FALSE;

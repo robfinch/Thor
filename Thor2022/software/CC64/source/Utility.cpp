@@ -37,9 +37,9 @@ int64_t round10(int64_t n)
 	return (n);
 }
 
-int64_t round8(int64_t n)
+int64_t roundWord(int64_t n)
 {
-	while (n % 8LL) n++;
+	while (n % sizeOfWord) n++;
 	return (n);
 }
 
