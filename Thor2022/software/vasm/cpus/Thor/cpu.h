@@ -160,7 +160,7 @@ typedef struct {
 #define RC(x)		(((x) & 0x3fLL) << 25LL)
 #define TC(x)		(((x) & 1LL) << 30LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
-#define CAB(x)		(((x) & 7LL) << 25LL)
+#define CAB(x)		(((x) & 7LL) << 24LL)
 
 /* special data operand types: */
 #define OP_D8  0x40001001

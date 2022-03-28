@@ -79,7 +79,6 @@ JEQZ:		o = 4'd4;
 JNEZ:		o = 4'd4;
 JMP:	 	o = 4'd6;
 DJMP:		o = 4'd6;
-JBC:		o = 4'd6;
 JBS:		o = 4'd6;
 JBSI:		o = 4'd6;
 JEQ:		o = 4'd6;

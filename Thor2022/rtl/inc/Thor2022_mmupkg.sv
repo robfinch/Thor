@@ -52,7 +52,8 @@ typedef struct packed
 {
 	logic v;
 	logic n;
-	logic [13:0] rfu;
+	logic m;
+	logic [12:0] rfu;
 	logic [15:0] pci;
 	logic [7:0] pl;
 	logic [23:0] key;

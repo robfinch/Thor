@@ -125,7 +125,6 @@ parameter SGTUI		= 8'h1F;
 parameter JMP			= 8'h20;
 parameter DJMP		= 8'h21;
 parameter JBSI		= 8'h22;
-parameter JBC			= 8'h24;
 parameter JOR			= 8'h24;
 parameter JBS			= 8'h25;
 parameter JUN			= 8'h25;
@@ -289,7 +288,7 @@ parameter SYNC		= 8'hF7;
 parameter MEMSB		= 8'hF8;
 parameter MEMDB		= 8'hF9;
 parameter WFI			= 8'hFA;
-parameter SEI			= 8'hFB;
+parameter PFI			= 8'hFB;
 parameter MJNEZ	  = 8'hFC;
 
 parameter NOP_INSN	= NOP;
@@ -305,6 +304,8 @@ parameter SQRT		= 7'h08;
 parameter V2BITS	= 7'h18;
 parameter BITS2V	= 7'h19;
 parameter PTGHASH	= 7'h2F;
+parameter SEI			= 7'h40;
+parameter DI			= 7'h41;
 
 // R2
 parameter NAND		= 7'h00;
@@ -720,9 +721,8 @@ typedef struct packed
 typedef struct packed
 {
 	logic [15:0] pad;
-	logic [19:0] Tgthi;
+	logic [20:0] Tgthi;
 	logic [2:0] Ca;
-	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [2:0] cm;
@@ -1087,6 +1087,7 @@ typedef struct packed
 	logic mulfi;
 	logic csr;
 	logic rti;
+	logic sei;
 	logic rex;
 	logic sync;
 	logic mtlc;
@@ -1214,6 +1215,7 @@ casez(isn.any.opcode)
 BRK:	Source1Valid = `TRUE;
 R1:
 	case(isn.r1.func)
+	SEI:	Source1Valid = isn.r2.Ra==6'd0;
 	endcase
 R2:
 	case(isn.r2.func)
@@ -1229,7 +1231,6 @@ ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
 OSR2:
 	case(isn.r2.func)
 	RTI:	Source1Valid = isn.r2.Ra==6'd0;
-	SEI:	Source1Valid = isn.r2.Ra==6'd0;
 	REX:	Source1Valid = isn.r2.Ra==6'd0;
 	default: Source1Valid = `TRUE;
 	endcase
@@ -1289,7 +1290,6 @@ NOP:	Source1Valid = `TRUE;
 RTS:	Source1Valid = isn.rts.lk==2'd0;
 BCD:	Source1Valid = isn.r1.Ra==6'd0;
 SYNC,MEMSB,MEMDB,WFI:	Source1Valid = `TRUE;
-SEI:	Source1Valid = isn.r1.Ra==2'd0;
 default:
 	Source1Valid = `TRUE;
 endcase
@@ -1302,6 +1302,7 @@ casez(isn.any.opcode)
 BRK:	Source2Valid = `TRUE;
 R1:
 	case(isn.r1.func)
+	SEI:	Source2Valid = `TRUE;
 	endcase
 R2:
 	case(isn.r2.func)
@@ -1317,7 +1318,6 @@ ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
 OSR2:
 	case(isn.r2.func)
 	RTI:	Source2Valid = `TRUE;
-	SEI:	Source2Valid = `TRUE;
 	REX:	Source2Valid = `TRUE;
 	default: Source2Valid = `TRUE;
 	endcase
@@ -1381,7 +1381,6 @@ NOP:	Source2Valid = `TRUE;
 RTS:	Source2Valid = `TRUE;
 BCD:	Source2Valid = isn.r2.Rb==6'd0;
 SYNC,MEMSB,MEMDB,WFI:	Source2Valid = `TRUE;
-SEI:	Source2Valid = `TRUE;
 default:
 	Source2Valid = `TRUE;
 endcase

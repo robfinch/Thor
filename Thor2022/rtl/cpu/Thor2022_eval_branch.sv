@@ -57,9 +57,8 @@ case(inst.jxx.cm)
 	JGE:	takb = $signed(a) >= $signed(b);
 	JLE:	takb = $signed(a) <= $signed(b);
 	JGT:	takb = $signed(a) > $signed(b);
-	JBC:	takb = ~a[b[6:0]];
-	JBS:	takb =  a[b[6:0]];
-	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
+	JBS:	takb =  a[b[6:0]]==inst[11];
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
@@ -80,6 +79,8 @@ case(inst.jxx.cm)
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
 	MJNEZ:	takb = a != 64'd0;
+	JBS:	takb =  a[b[6:0]]==inst[11];
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	default:  takb = 1'b0;
 	endcase
 3'd2:
@@ -96,6 +97,8 @@ case(inst.jxx.cm)
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
 	MJNEZ:	takb = a != 64'd0;
+	JBS:	takb =  a[b[6:0]]==inst[11];
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	default:  takb = 1'b0;
 	endcase
 3'd3:
@@ -106,13 +109,12 @@ case(inst.jxx.cm)
 	JGE:	takb = $signed(a) >= $signed(b);
 	JLE:	takb = $signed(a) <= $signed(b);
 	JGT:	takb = $signed(a) > $signed(b);
-	JBC:	takb = ~a[b[6:0]];
-	JBS:	takb =  a[b[6:0]];
-	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
+	JBS:	takb =  a[b[6:0]]==inst[11];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
 	MJNEZ:	takb = a != 64'd0;
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	default:  takb = 1'b0;
 	endcase
 3'd4:
@@ -123,13 +125,12 @@ case(inst.jxx.cm)
 	JGE: 	takb = a >= b;
 	JLE:	takb = a <= b;
 	JGT:	takb = a > b;
-	JBC:	takb = ~a[b[6:0]];
-	JBS:	takb =  a[b[6:0]];
-	JBSI:	takb =  a[{inst.jxx.Tb,inst.jxx.Rb}];
+	JBS:	takb =  a[b[6:0]]==inst[11];
 	JEQZ:	takb = a == 64'd0;
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
 	MJNEZ:	takb = a != 64'd0;
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	default:  takb = 1'b0;
 	endcase
 default:
@@ -139,6 +140,8 @@ default:
 	JNEZ:	takb = a != 64'd0;
 	DJMP:	takb = a != 64'd0;
 	MJNEZ:	takb = a != 64'd0;
+	JBS:	takb =  a[b[6:0]]==inst[11];
+	JBSI:	takb =  a[{inst.jxx.Rb,inst[13:12]}]==inst[11];
 	default:	takb = 1'b0;
 	endcase
 	end

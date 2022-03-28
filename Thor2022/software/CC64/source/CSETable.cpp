@@ -450,9 +450,11 @@ int CSETable::AllocateRegisterVars()
 	Dump();
 
 	// Push temporaries on the stack.
-	cg.GenerateHint(begin_save_regvars);
-	SaveRegisterVars(rmask);
-	cg.GenerateHint(end_save_regvars);
+	if (!currentFn->prolog) {
+		cg.GenerateHint(begin_save_regvars);
+		SaveRegisterVars(rmask);
+		cg.GenerateHint(end_save_regvars);
+	}
 	//SaveFPRegisterVars(fprmask);
 	//SavePositRegisterVars(prmask);
 

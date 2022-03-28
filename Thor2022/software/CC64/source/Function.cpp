@@ -516,9 +516,11 @@ void Function::SavePositRegisterVars()
 
 void Function::SaveRegisterVars()
 {
-	SaveGPRegisterVars();
-	SaveFPRegisterVars();
-	SavePositRegisterVars();
+	if (!prolog) {
+		SaveGPRegisterVars();
+		SaveFPRegisterVars();
+		SavePositRegisterVars();
+	}
 }
 
 
@@ -677,11 +679,13 @@ int Function::RestorePositRegisterVars()
 
 void Function::RestoreRegisterVars()
 {
-	RestorePositRegisterVars();
-	RestoreFPRegisterVars();
-	cg.GenerateHint(begin_restore_regvars);
-	RestoreGPRegisterVars();
-	cg.GenerateHint(end_restore_regvars);
+	if (!prolog) {
+		RestorePositRegisterVars();
+		RestoreFPRegisterVars();
+		cg.GenerateHint(begin_restore_regvars);
+		RestoreGPRegisterVars();
+		cg.GenerateHint(end_restore_regvars);
+	}
 }
 
 void Function::SaveTemporaries(int *sp, int *fsp, int* psp)
@@ -1250,10 +1254,10 @@ void Function::GenerateCoroutineEntry()
 void Function::Generate()
 {
 	int defcatch;
-	Statement *stmt = this->sym->stmt;
+	Statement* stmt = this->sym->stmt;
 	int lab0;
 	int o_throwlab, o_retlab, o_contlab, o_breaklab;
-	OCODE *ip;
+	OCODE* ip;
 	bool doCatch = true;
 	int n;
 	int sp, bp, gp, gp1;
@@ -1305,7 +1309,7 @@ void Function::Generate()
 		//		StackGPRs();
 	}
 	// Setup the return block.
-	if (!IsNocall)
+	if (!IsNocall && !prolog)
 		SetupReturnBlock();
 	stmt->CheckReferences(&sp, &bp, &gp, &gp1);
 	if (gp != 0) {
@@ -1331,9 +1335,16 @@ void Function::Generate()
 			currentFn->csetbl = new CSETable;
 		currentFn->csetbl->Optimize(stmt);
 	}
-	fpsave_mask = ::fpsave_mask;// CSet::MakeNew();
-	save_mask = ::save_mask;// CSet::MakeNew();
-	psave_mask = ::psave_mask;// CSet::MakeNew();
+	if (prolog) {
+		fpsave_mask = 0;
+		save_mask = 0;
+		psave_mask = 0;
+	}
+	else {
+		fpsave_mask = ::fpsave_mask;// CSet::MakeNew();
+		save_mask = ::save_mask;// CSet::MakeNew();
+		psave_mask = ::psave_mask;// CSet::MakeNew();
+	}
 	stmt->Generate();
 /*
 	if (exceptions) {

@@ -87,7 +87,7 @@ output reg cr_o;
 input rb_i;
 
 output reg dce;							// data cache enable
-input [19:0] keys [0:7];
+input [23:0] keys [0:7];
 input [2:0] arange;
 input Address ptbr;
 output reg ipage_fault;
@@ -115,6 +115,7 @@ reg [6:0] state;
 // PT_FETCH <on a tlbmiss>
 // READ_PDE/PTE
 // 
+Address next_adr_o;
 reg [6:0] stk_state1, stk_state2, stk_state3, stk_state4, stk_state5;
 
 reg xlaten_stk;
@@ -209,7 +210,7 @@ Thor2022_active_region uargn
 	.rwa(rgn_adr),
 	.i(rgn_dat),
 	.o(rgn_dat_o),
-	.adr(adr_o),
+	.adr(next_adr_o),
 	.region_num(),
 	.region(region),
 	.err()
@@ -754,6 +755,7 @@ PMT_RAM pmtram1 (
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 reg [6:0] ptg_state = IPT_IDLE;
+reg pmt_store;
 reg [7:0] fault_code;
 reg ptg_fault;
 reg clr_ptg_fault;
@@ -862,21 +864,30 @@ Thor2022_ptg_search uptgs
 	.entry_num(entry_num)
 );
 
+always_comb
+begin
+	next_adr_o <= adr_o;
+	if (ptg_en) begin
+		if (pte_found)
+			next_adr_o <= {tmptlbe2.ppn,idadr[15:12]+tmptlbe2.mb,idadr[11:0]};
+	end
+	else
+		next_adr_o <= idadr;
+end
+
 always @(posedge tlbclk)
 begin
+	adr_o <= next_adr_o;
 	if (ptg_en) begin
 		if (pte_found) begin
-			adr_o <= {tmptlbe2.ppn,idadr[15:12]+tmptlbe2.mb,idadr[11:0]};
 			if (idadr[15:12] + tmptlbe2.mb <= tmptlbe2.me)
 				ptgacr <= tmptlbe2.rwx;
 			else
 				ptgacr <= 4'd0;
 		end
 	end
-	else begin
-		adr_o <= idadr;
+	else
 		ptgacr <= 4'd15;
-	end
 end
 
 assign tlbacr = ptgacr;
@@ -911,6 +922,10 @@ reg cd_idadr_r;
 edge_det uclked1 (.rst(rst), .clk(tlbclk), .ce(1'b1), .i(clock), .pe(pe_clock), .ne(), .ee());
 change_det uchgdt1 (.rst(rst), .clk(tlbclk), .ce(1'b1), .i(idadr), .cd(cd_idadr));
 
+reg special_ram;
+always_comb
+	special_ram = ptgram_en || pmtram_ena || rgn_en || tlb_access;
+
 reg [15:0] hash_r;
 `ifdef SUPPORT_HASHPT
 integer n6;
@@ -932,7 +947,7 @@ else begin
 	IPT_IDLE:
 		begin
 			ipt_miss_count <= 'd0;
-			if ((!pte_found || cd_idadr_r) && ptg_en && (iaccess||daccess)) begin
+			if ((!pte_found || cd_idadr_r) && ptg_en && (iaccess||daccess) && !special_ram) begin
 				cd_idadr_r <= FALSE;
 				ptg_state <= IPT_RW_PTG2;
 				ptgram_adrb <= hash & 16'hFFFF;
@@ -964,13 +979,16 @@ else begin
 			ipt_miss_count <= ipt_miss_count + 2'd1;
  			ptg_state <= IPT_RW_PTG3;
 		end
+	// Region is not valid until after next_adr_o is set
 	IPT_RW_PTG3:
 		begin
-			pmtram_adrb <= tmptlbe2.ppn[13:0];
+			pmtram_adrb <= {region.pmt[31:4],4'h0} + tmptlbe2.ppn[13:0];
 			ptg_state <= IPT_RW_PTG4;
 		end
 	IPT_RW_PTG4:
-		ptg_state <= IPT_RW_PTG5;
+		begin
+			ptg_state <= IPT_RW_PTG5;
+		end
 	IPT_RW_PTG5:
 		ptg_state <= IPT_RW_PTG6;
 	IPT_RW_PTG6:
@@ -978,6 +996,8 @@ else begin
 	    pmtram_web <= 1'b1;
   		pmtram_dinb <= pmtram_doutb;
 			pmtram_dinb.access_count <= pmtram_doutb.access_count + 2'd1;
+			if (pmt_store)
+				pmtram_dinb.m <= 1'b1;
   		ptg_state <= pte_found ? IPT_IDLE : IPT_FETCH1;
 		end	
 
@@ -1062,6 +1082,7 @@ if (rst) begin
 	tlb_access <= 1'b0;
 	pmtram_ena <= 1'b0;
 	pmtram_wea <= 1'b0;
+	pmt_store <= 1'b0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -1116,7 +1137,7 @@ else begin
 	// the rate.
 	MEMORY3:
 `ifdef SUPPORT_HASHPT
-		if (ptg_state==IPT_RW_PTG5 || ptg_state==IPT_RW_PTG6 || !ptg_en)
+		if (ptg_state==IPT_RW_PTG5 || ptg_state==IPT_RW_PTG6 || !ptg_en || special_ram)
 			goto (MEMORY4);
 `else
 		goto (MEMORY4);
@@ -1876,6 +1897,7 @@ begin
 	rgn_en <= 1'b0;
 	ptgram_en <= 1'b0;
 	pmtram_ena <= 1'b0;
+	pmt_store <= 1'b0;
 //	ipt_miss_count <= 'd0;
 	if (tlbrdy) begin
 		iaccess <= FALSE;
@@ -2035,6 +2057,7 @@ begin
 		end
 	default:	;
 	endcase
+	pmt_store <= memreq.func==MR_STORE;
 	rgn_adr <= memreq.adr[9:4];
 	rgn_dat <= memreq.dat;
 	pmtram_adra <= memreq.adr[18:5];
@@ -2061,12 +2084,12 @@ begin
 		clr_ptg_fault <= 1'b1;
 		tPageFault(FLT_DPF,dadr);
 	end
-  if (memreq.func != MR_CACHE && (pte_found || !ptg_en)) begin
+  if (memreq.func != MR_CACHE && (pte_found || !ptg_en || special_ram)) begin
   	goto (MEMORY_ACKLO);
 `else 		
   else if (memreq.func != MR_CACHE) begin
 `endif
-		if (!(rgn_en|ptgram_en|pmtram_ena|tlb_access)) begin
+		if (!special_ram) begin
 	  	vda_o <= HIGH;
 	    cyc_o <= HIGH;
 	    stb_o <= HIGH;

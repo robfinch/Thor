@@ -560,8 +560,10 @@ void Statement::GenerateLinearSwitch()
 		if (stmt->s1 != NULL && stmt->next != NULL)
 			curlab = nextlabel++;
 	}
-	GenerateLabel((int)stmt->label);
-	stmt->GenerateCase();
+	if (stmt) {
+		GenerateLabel((int)stmt->label);
+		stmt->GenerateCase();
+	}
 	if (defcase == NULL)
 		GenerateMonadic(op_bra, 0, MakeCodeLabel(breaklab));
 	else
