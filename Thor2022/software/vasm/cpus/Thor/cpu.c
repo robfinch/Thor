@@ -175,6 +175,13 @@ mnemonic mnemonics[]={
 	"exi56", {OP_IMM,0,0,0,0}, {EXI56F,CPU_ALL,0,0x4CLL,8},
 	"exim", {OP_IMM,0,0,0,0}, {EXI56F,CPU_ALL,0,0x50LL,8},
 
+	"ext",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0A00000000AALL,6},
+	"ext",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {BFR3IR,CPU_ALL,0,0x0A00200000AALL,6},
+	"ext",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {BFR3RI,CPU_ALL,0,0x0A01000000AALL,6},
+	"ext",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0A01200000AALL,6},
+	"extu",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0800000000AALL,6},
+	"extu",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0801200000AALL,6},
+
 	"int",	{OP_IMM,OP_IMM,0,0,0}, {INT,CPU_ALL,0,0xA6LL,4},
 
 	"jeq",	{OP_LK,OP_REG,OP_REG|OP_IMM,OP_CAREGIND,0}, {JL,CPU_ALL,0,0x000000000026LL,6},
@@ -480,7 +487,7 @@ mnemonic mnemonics[]={
 
 	"sxb",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A120E0000AALL,6},	
 	"sxc",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A121E0000AALL,6},	/* alternate mnemonic for sxw */
-	"sxo",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A133E0000AALL,6},
+	"sxo",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A123E0000AALL,6},
 	"sxw",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A121E0000AALL,6},
 	"sxt",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A123E0000AALL,6},
 
@@ -1489,7 +1496,16 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 {
 	if (insn) {
 		switch(mnemo->ext.format) {
+		case BFR3IR:
+			if (i==0)
+				*insn = *insn| (RT(op->basereg & 0x1f));
+			else if (i==1)
+				*insn = *insn| (RA(op->basereg & regmask));
+			if (i==3)			
+				*insn = *insn| (RC(op->basereg & regmask)) | (TC(0));
+			break;
 		case R1:
+		case BFR3II:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & 0x1f));
 			else if (i==1)
@@ -1499,6 +1515,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 		case CSR:
 		case R2:
 		case R3RI:
+		case BFR3RI:
 		case SHIFTI:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & 0x1f));

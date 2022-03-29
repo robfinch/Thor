@@ -97,7 +97,12 @@ endcase
 
 deco.Ravec = ir.any.v;
 deco.Rtvec = ir.any.v;
-deco.Rbvec = ir.r3.Tb==2'b01;
+case(ir.any.opcode)
+JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
+	deco.Rbvec = 1'b0;
+default:
+	deco.Rbvec = ir.r3.Tb==1'b1;
+endcase
 case(ir.any.opcode)
 R2,R3:	deco.Rcvec = ir.r3.Tc==2'b01;
 BTFLD:	deco.Rcvec = ir.r3.Tc==2'b01;

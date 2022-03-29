@@ -263,7 +263,7 @@ reg [4:0] tRt;
 reg [2:0] xistk_depth;
 reg [2:0] xcioreg;
 reg [1:0] xcio;
-Value xa,xb,xc0,xc1,pn;
+Value xa='d0,xb='d0,xc0='d0,xc1='d0,pn='d0;
 Value imm;
 CodeAddress xca;
 CodeAddress xcares;
@@ -433,9 +433,9 @@ else if (deco.Ravec)
 	rfoa = vroa;
 else if (Ra==xd.Rt && xd.rfwr && xval)
   rfoa = res;
-else if (Ra==md.Rt && md.rfwr && mval)
+else if (Ra==md.Rt && mrfwr && mval)
 	rfoa = mres;
-else if (Ra==wd.Rt && wd.rfwr && wval)
+else if (Ra==wd.Rt && wrfwr && wval)
 	rfoa = wres;
 else
 	rfoa = regfile[Ra[4:2]] >> {Ra[1:0],7'd0};
@@ -452,9 +452,9 @@ else if (deco.Rbvec)
 	rfob = vrob;
 else if (Rb==xd.Rt && xd.rfwr && xval)
   rfob = res;
-else if (Rb==md.Rt && md.rfwr && mval)
+else if (Rb==md.Rt && mrfwr && mval)
 	rfob = mres;
-else if (Rb==wd.Rt && wd.rfwr && wval)
+else if (Rb==wd.Rt && wrfwr && wval)
 	rfob = wres;
 else
 	rfob = regfile[Rb[4:2]] >> {Rb[1:0],7'd0};
@@ -471,9 +471,9 @@ else if (deco.Rcvec)
 	rfoc0 = vroc;
 else if (Rc==xd.Rt && xd.rfwr && xval)
   rfoc0 = res;
-else if (Rc==md.Rt && md.rfwr && mval)
+else if (Rc==md.Rt && mrfwr && mval)
 	rfoc0 = mres;
-else if (Rc==wd.Rt && wd.rfwr && wval)
+else if (Rc==wd.Rt && wrfwr && wval)
 	rfoc0 = wres;
 else
 	rfoc0 = regfile[Rc[4:2]] >> {Rc[1:0],7'd0};
@@ -483,9 +483,9 @@ always_comb
 always_comb
 if (Rc1==xd.Rt && xd.rfwr && xval)
   rfoc1 = res;
-else if (Rc1==md.Rt && md.rfwr && mval)
+else if (Rc1==md.Rt && mrfwr && mval)
 	rfoc1 = mres;
-else if (Rc1==wd.Rt && wd.rfwr && wval)
+else if (Rc1==wd.Rt && wrfwr && wval)
 	rfoc1 = wres;
 else
 	rfoc1 = regfile[Rc1[4:2]] >> {Rc1[1:0],7'd0};
@@ -627,8 +627,8 @@ wire [255:0] sraro = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
 wire [255:0] mul_prod1;
 reg [255:0] mul_prod;
 wire [255:0] mul_prod2561;
-reg [255:0] mul_prod256;
-reg [39:0] mulf_prod;
+reg [255:0] mul_prod256='d0;
+reg [39:0] mulf_prod='d0;
 reg mul_sign;
 Value aa, bb;
 
