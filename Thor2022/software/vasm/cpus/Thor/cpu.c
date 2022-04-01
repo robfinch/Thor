@@ -100,10 +100,10 @@ mnemonic mnemonics[]={
 //	"bnez",	{OP_LK,OP_REG,OP_IMM,0,0}, {BL3,CPU_ALL,0,0xE0000012LL,4},
 	"bnez",	{OP_REG,OP_IMM,0,0,0}, {B3,CPU_ALL,0,0xE0000012LL,4},
 
-	"bra",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,0x00001C000020LL,6},
+	"bra",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,0x0000E0000020LL,6,0xE0000023LL,4},
 	"brk",	{0,0,0,0,0}, {R1,CPU_ALL,0,0x00,2},
-	"bsr",	{OP_LK,OP_IMM,0,0,0}, {BL2,CPU_ALL,0,0x00000E000020LL,6},
-	"bsr",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,0x00000E000220LL,6},
+	"bsr",	{OP_LK,OP_IMM,0,0,0}, {BL2,CPU_ALL,0,0x0000E0000020LL,6,0xE0000023LL,4},
+	"bsr",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,0x0000E0000220LL,6,0xE0000223LL,4},
 
 	"bytndx", 	{OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0xAA0000000002LL,6},	
 	"bytndx", 	{OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,0x00000055LL,4},
@@ -310,7 +310,7 @@ mnemonic mnemonics[]={
 	"nand", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x000000000102LL,6},	
 	"nand", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x000000000002LL,6},	
 
-	"neg", {OP_REG,OP_NEXTREG,OP_REG,0,0}, {R3,CPU_ALL,0,0x0A0000000002LL,6},	
+	"neg",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A000001LL,4},
 
 	"nop",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF1,2},
 
@@ -427,7 +427,8 @@ mnemonic mnemonics[]={
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
 	"sll",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R2,CPU_ALL,0,0x58,4},
-	"sll",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x800000000002LL,6},
+//	"sll",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x800000000002LL,6},
+	"sll",	{OP_REG,OP_REG,OP_IMM,0,0}, {RI6,CPU_ALL,0,0x6C,4},
 	"sll",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x58,4},
 
 	"sllp",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x800000000002LL,6},	
@@ -440,13 +441,15 @@ mnemonic mnemonics[]={
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x840000000002LL,6},	
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	
 	"sra",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x840000000002LL,6},	
-	"sra",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x840000000002LL,6},
+//	"sra",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x840000000002LL,6},
+	"sra",	{OP_REG,OP_REG,OP_IMM,0,0}, {RI6,CPU_ALL,0,0x6E,4},
 	"sra",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5A,4},
 
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x820000000002LL,6},	
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	
 	"srl",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x820000000002LL,6},	
-	"srl",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x820000000002LL,6},
+//	"srl",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x820000000002LL,6},
+	"srl",	{OP_REG,OP_REG,OP_IMM,0,0}, {RI6,CPU_ALL,0,0x6D,4},
 	"srl",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x59,4},
 
 	"statq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x160000000007LL,6},	
@@ -1506,6 +1509,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			break;
 		case R1:
 		case BFR3II:
+		case RI6:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & 0x1f));
 			else if (i==1)
@@ -1697,6 +1701,11 @@ static size_t encode_immed(uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, 
 			if (insn)
 				*insn = *insn | ((val & 0x7fLL) << 29);
 		}
+		else if (mnemo->ext.format==RI6) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((val & 0x3fLL) << 19);
+		}
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
 			if (insn)
@@ -1804,6 +1813,11 @@ j1:
 			isize = 6;
 			if (insn)
 				*insn = *insn | ((val & 0x7fLL) << 29);
+		}
+		else if (mnemo->ext.format==RI6) {
+			isize = 4;
+			if (insn)
+				*insn = *insn | ((val & 0x3fLL) << 19);
 		}
 		else if (mnemo->ext.format==J2) {
 			isize = 6;
@@ -2012,7 +2026,14 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  	if (insn) {
 	  		uint64_t tgt;
 	  		*insn |= CA(mnemo->ext.format==B2 ? 0x7 : 0x0);
-	  		tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
+	  		if (is_nbit(val,18)) {
+	  			*isize = 4;
+	  			tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL);
+	  			*insn &= -256LL;
+	  			*insn |= mnemo->ext.short_opcode;
+	  		}
+	  		else
+	  			tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
 	  		*insn |= tgt;
 	  	}
 	  	return (1);
@@ -2045,7 +2066,14 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  	if (insn) {
     		uint64_t tgt;
     		*insn |= CA(mnemo->ext.format==BL2 ? 0x7 : 0x0);
-    		tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
+	  		if (is_nbit(val,18)) {
+	  			*isize = 4;
+	  			tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL);
+	  			*insn &= -256LL;
+	  			*insn |= mnemo->ext.short_opcode;
+	  		}
+	  		else
+	    		tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
     		*insn |= tgt;
 	  	}
 	  	return (1);

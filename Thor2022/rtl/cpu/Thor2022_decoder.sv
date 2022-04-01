@@ -98,6 +98,7 @@ endcase
 deco.Ravec = ir.any.v;
 deco.Rtvec = ir.any.v;
 case(ir.any.opcode)
+SLLI,SRLI,SRAI,
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Rbvec = 1'b0;
 default:
@@ -114,7 +115,7 @@ case(ir.any.opcode)
 CSR:
 	deco.lk = ir.csr.regno[3:0];
 // Cannot update ca[0] with a branch
-JMP,DJMP:
+JMP,DJMP,BRA:
 	deco.lk = {2'b0,ir.jxx.lk};
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.lk = {2'b0,ir.jxx.lk};
@@ -135,7 +136,7 @@ CSR:
 	default:	deco.carfwr = `FALSE;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP:
+JMP,DJMP,BRA:
 	deco.carfwr = ir.jxx.lk != 2'd0;
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.carfwr = ir.jxx.lk != 2'd0;
@@ -153,7 +154,7 @@ CSR:
 			deco.Cat = 4'd0;
 	default:	deco.Cat = 4'd0;
 	endcase
-JMP,DJMP:
+JMP,DJMP,BRA:
 	deco.Cat = {2'b0,ir.jxx.lk};
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Cat = {2'b0,ir.jxx.lk};
@@ -210,6 +211,8 @@ ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
 	rfwr = `TRUE;
 SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
 	rfwr = `TRUE;
+SLLI,SRLI,SRAI:
+	rfwr = `TRUE;
 DJMP,BSET:
 	rfwr = `TRUE;
 default:	rfwr = `FALSE;
@@ -217,6 +220,11 @@ endcase
 
 // Computing immediate constant
 case(ir.any.opcode)
+R2:
+	case(ir.r3.func)
+	SLL,SRL,SRA,ROL,ROR: imm = {120'd0,ir[35:29]};
+	default:	imm = 'd0;
+	endcase
 ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SLEI,SGTI,SGEI,MULI,DIVI:
 	imm = {{115{ir.ri.imm[12]}},ir.ri.imm};
 ANDI:	// Pad with ones to the left
@@ -240,6 +248,7 @@ STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
 	imm = 'd0;
 LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
 STHS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
+SLLI,SRLI,SRAI:	imm = {122'd0,ir[24:19]};
 default:
 	imm = 'd0;
 endcase
@@ -282,6 +291,7 @@ ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
 	deco.Tb = ir[24];
 SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
 	deco.Tb = ir[24];
+SLLI,SRLI,SRAI,
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Tb = 1'b0;
 JMP,DJMP:	deco.Tb = 1'b0;
@@ -492,7 +502,10 @@ deco.divalli = deco.divi|deco.divui|deco.divsui;
 
 deco.is_cbranch = ir.jxx.Ca==3'd7 && (ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3);
 deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ;
-if (deco.jxx)
+deco.bra = ir.any.opcode==BRA;
+if (deco.bra)
+	deco.jmptgt = {{109{ir[28]}},ir[28:11],1'b0};
+else if (deco.jxx)
 	deco.jmptgt = {{107{ir.jxx.Tgthi[20]}},ir.jxx.Tgthi,1'b0};
 else if (deco.jxz)
 	deco.jmptgt = {{112{ir[28]}},ir[28:19],ir[13:9],1'b0};
@@ -568,7 +581,7 @@ if (deco.mflk)
 	deco.Ca = {2'd0,ir[15:14]};
 else if (deco.jxx)
 	deco.Ca = {1'd0,ir.jxx.Ca};
-else if (deco.jxz)
+else if (deco.jxz|deco.bra)
 	deco.Ca = {1'd0,ir[31:29]};
 else if (deco.rts)
 	deco.Ca = {2'd0,ir.rts.lk};
@@ -586,7 +599,7 @@ CSR:
 	default:	deco.Ct = 4'h8 + distk_depth;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP:
+JMP,DJMP,BRA:
 	deco.Ct = {2'd0,ir.jxx.lk};
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Ct = {2'd0,ir.jxx.lk};

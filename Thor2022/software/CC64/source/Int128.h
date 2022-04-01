@@ -137,4 +137,5 @@ public:
 	bool IsNBit(int bitno);
 	void insert(int64_t i, int64_t offset, int64_t width);
 	int64_t extract(int64_t offset, int64_t width);
+	Int128 pwrof2();
 };

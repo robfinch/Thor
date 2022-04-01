@@ -1309,10 +1309,10 @@ void cseg()
 void dseg()
 {    
 	nl();
-	if( curseg != dataseg) {
+	if (curseg != dataseg) {
 		ofs.printf("\t.data\n");
 		curseg = dataseg;
-    }
+  }
 	ofs.printf("\t.align\t8\n");
 }
 

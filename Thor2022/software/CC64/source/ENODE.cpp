@@ -647,8 +647,12 @@ void ENODE::repexpr()
 	case en_uminus:
 	case en_abs:
 	case en_sxb: case en_sxh: case en_sxc:
-	case en_not:    case en_compl:
+	case en_compl:
 	case en_chk:
+		p[0]->repexpr();
+		p[1]->repexpr();
+		break;
+	case en_not:    
 		p[0]->repexpr();
 		p[1]->repexpr();
 		break;
@@ -1438,10 +1442,7 @@ Operand *ENODE::GenerateShift(int flags, int size, int op)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
 	ap2 = cg.GenerateExpression(p[1], am_reg | am_ui6, sizeOfWord, 1);
-	if (op==op_sllp)
-		Generate4adic(op, size, ap3, makereg(regZero), ap1, ap2);
-	else
-		GenerateTriadic(op, size, ap3, ap1, ap2);
+	GenerateTriadic(op, size, ap3, ap1, ap2);
 	// Rotates automatically sign extend
 	if ((op == op_rol || op == op_ror) && ap2->isUnsigned)
 		switch (size) {
@@ -1466,10 +1467,7 @@ Operand *ENODE::GenerateAssignShift(int flags, int size, int op)
 	ap3 = cg.GenerateExpression(p[0], am_all & ~am_imm, size, 0);
 	ap2 = cg.GenerateExpression(p[1], am_reg | am_ui6, size, 1);
 	if (ap3->mode == am_reg) {
-		if (op==op_sllp)
-			Generate4adic(op, size, ap3, makereg(regZero), ap3, ap2);
-		else
-			GenerateTriadic(op, size, ap3, ap3, ap2);
+		GenerateTriadic(op, size, ap3, ap3, ap2);
 		mr = &regs[ap3->preg];
 		if (mr->assigned)
 			mr->modified = true;
@@ -1481,10 +1479,7 @@ Operand *ENODE::GenerateAssignShift(int flags, int size, int op)
 	}
 	ap1 = GetTempRegister();
 	GenerateLoad(ap1, ap3, size, size);
-	if (op==op_sllp)
-		Generate4adic(op, size, ap1, makereg(regZero), ap1, ap2);
-	else
-		GenerateTriadic(op, size, ap1, ap1, ap2);
+	GenerateTriadic(op, size, ap1, ap1, ap2);
 	GenStore(ap1, ap3, size);
 	ReleaseTempRegister(ap1);
 	ReleaseTempRegister(ap2);
@@ -1617,8 +1612,11 @@ Operand *ENODE::GenerateUnary(int flags, int size, int op)
 	else {
 		ap2 = GetTempRegister();
 		ap = cg.GenerateExpression(p[0], am_reg, size, 0);
+		/*
 		ip = currentFn->pl.tail;
 		// Invert Set Operation inline code
+		// The following code may be incorrect because the unary op should
+		// apply to the next statements not the previous one.
 		if (ip->insn->IsSetInsn()) {
 			ReleaseTempReg(ap2);
 			switch(ip->opcode) {
@@ -1659,7 +1657,9 @@ Operand *ENODE::GenerateUnary(int flags, int size, int op)
 			//ap->MakeLegal(flags, size);
 			return (ap);
 		}
-		else {
+		else
+		*/
+		{
 			GenerateHint(3);
 			GenerateDiadic(op, 0, ap2, ap);
 		}
@@ -2619,6 +2619,9 @@ std::string ENODE::nodetypeStr()
 	case en_icon: return "en_icon";
 	case en_assign: return "en_assign";
 	case en_eq: return "en_eq";
+	case en_land: return "en_land";
+	case en_not: return "en_not";
+	case en_cwl: return "en_cwl";
 	default:
 		if (IsRefType()) {
 			return "en_ref";

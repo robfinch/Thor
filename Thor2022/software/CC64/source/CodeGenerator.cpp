@@ -2198,7 +2198,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 			ap1 = node->GenerateUnary(flags,size,op_com);
 			goto retpt;
 	case en_not:	
-		ap1 = (node->GenerateUnary(flags, 8, op_not));
+		ap1 = (node->GenerateUnary(flags, sizeOfWord, op_not));
 		goto retpt;
 	case en_add:    ap1 = node->GenerateBinary(flags, size, op_add); goto retpt;
 	case en_sub:  ap1 = node->GenerateBinary(flags, size, op_sub); goto retpt;
@@ -2526,7 +2526,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		GenerateDiadic(op_sxt,0,ap1,ap1);
 		goto retpt;
 	case en_cwl:
-		ap1 = GenerateExpression(node->p[0], am_reg, 4, rhs);
+		ap1 = GenerateExpression(node->p[0], am_reg, 8, rhs);
 		GenerateDiadic(op_sxo, 0, ap1, ap1);
 		goto retpt;
 	case en_list:

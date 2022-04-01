@@ -291,3 +291,21 @@ int64_t Int128::extract(int64_t offset, int64_t width)
 	return (k.low);
 }
 
+Int128 Int128::pwrof2()
+{
+	Int128 p;
+	Int128 q;
+
+	q = *Int128::One();
+	p = *Int128::Zero();
+	while (Int128::IsGT(&q, Int128::Zero()))
+	{
+		if (Int128::IsEQ(&q, this))
+			return (p);
+		Int128::Shl(&q, &q, 1LL);
+		Int128::Add(&p, &p, Int128::One());
+	}
+	p.low = -1;
+	p.high = -1;
+	return (p);
+}

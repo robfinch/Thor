@@ -504,6 +504,147 @@ static void Opt0_addsub(ENODE** node)
 	return;
 }
 
+static void Opt0_multiply(ENODE** node)
+{
+	ENODE* ep;
+	Int128 val;
+	Int128 sc;
+
+	ep = *node;
+	if (ep == (ENODE*)NULL)
+		return;
+	opt0(&(ep->p[0]));
+	opt0(&(ep->p[1]));
+	if (ep->p[0]->nodetype == en_icon) {
+		if (ep->p[1]->nodetype == en_icon) {
+			dooper(*node);
+			return;
+		}
+		if (ep->p[1]->nodetype == en_fcon) {
+			ep->nodetype = en_icon;
+			ep->i = ep->p[0]->i * ep->p[1]->f;
+			//Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+			return;
+		}
+		val = ep->p[0]->i128;
+		if (Int128::IsEQ(&val, Int128::Zero())) {
+			*node = ep->p[0];
+			return;
+		}
+		if (Int128::IsEQ(&val, Int128::One())) {
+			*node = ep->p[1];
+			ooptimized++;
+			return;
+		}
+		sc = val.pwrof2();
+		if (!(sc.high == -1 && sc.low == -1))
+		{
+			swap_nodes(ep);
+			ep->p[1]->i = sc.low;
+			ep->p[1]->i128 = sc;
+			ep->nodetype = en_shl;
+			ooptimized++;
+			return;
+		}
+		// Place constant as oper2
+		swap_nodes(ep);
+	}
+	else if (ep->p[1]->nodetype == en_icon) {
+		val = ep->p[1]->i128;
+		if (Int128::IsEQ(&val, Int128::Zero())) {
+			*node = ep->p[1];
+			ooptimized++;
+			return;
+		}
+		if (Int128::IsEQ(&val, Int128::One())) {
+			*node = ep->p[0];
+			ooptimized++;
+			return;
+		}
+		sc = val.pwrof2();
+		if (!(sc.high == -1 && sc.low == -1))
+		{
+			ep->p[1]->i = sc.low;
+			ep->p[1]->i128 = sc;
+			ep->nodetype = en_shl;
+			ooptimized++;
+			return;
+		}
+	}
+}
+
+static void Opt0_logic(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	if (ep == (ENODE*)NULL)
+		return;
+	opt0(&(ep->p[0]));
+	opt0(&(ep->p[1]));
+	if (ep->p[0]->nodetype == en_icon &&
+		ep->p[1]->nodetype == en_icon)
+		dooper(*node);
+	else if (ep->p[0]->nodetype == en_icon) {
+		swap_nodes(ep);
+		ooptimized++;
+	}
+}
+
+static void Opt0_shift(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	if (ep == (ENODE*)NULL)
+		return;
+	opt0(&(ep->p[0]));
+	opt0(&(ep->p[1]));
+	if (ep->p[0]->nodetype == en_icon &&
+		ep->p[1]->nodetype == en_icon)
+		dooper(*node);
+	// Shift by zero....
+	else if (ep->p[1]->nodetype == en_icon) {
+		if (Int128::IsEQ(&ep->p[1]->i128, Int128::Zero())) {
+			*node = ep->p[0];
+			ooptimized++;
+			return;
+		}
+	}
+}
+
+static void Opt0_releq(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	if (ep == (ENODE*)NULL)
+		return;
+	opt0(&(ep->p[0]));
+	opt0(&(ep->p[1]));
+	if (ep->p[0]->nodetype == en_icon &&
+		ep->p[1]->nodetype == en_icon)
+		dooper(*node);
+	else if (ep->p[0]->nodetype == en_icon) {
+		swap_nodes(ep);
+		ooptimized++;
+	}
+}
+
+static void Opt0_relop(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	if (ep == (ENODE*)NULL)
+		return;
+	opt0(&(ep->p[0]));
+	opt0(&(ep->p[1]));
+	if (ep->p[0]->nodetype == en_icon &&
+		ep->p[1]->nodetype == en_icon)
+		dooper(*node);
+}
+
 /*
  *      opt0 - delete useless expressions and combine constants.
  *
@@ -575,26 +716,26 @@ static void opt0(ENODE **node)
 			ooptimized++;
 		}
     return;
-			case en_not:
-                    opt0( &(ep->p[0]));
-                    if( ep->p[0]->nodetype == en_icon )
-                    {
-                        ep->nodetype = en_icon;
-                        ep->i = !ep->p[0]->i;
-												ep->i128 = Int128::IsEQ(&ep->p[0]->i128, Int128::Zero()) ? Int128(1) : Int128(0);
-												ooptimized++;
-										}
-                    return;
-            case en_uminus:
-                    opt0( &(ep->p[0]));
-                    if( ep->p[0]->nodetype == en_icon )
-                    {
-                        ep->nodetype = en_icon;
-                        ep->i = -ep->p[0]->i;
-												Int128::Sub(&ep->i128, Int128::Zero(), &ep->p[0]->i128);
-												ooptimized++;
-										}
-                    return;
+	case en_not:
+    opt0( &(ep->p[0]));
+    if( ep->p[0]->nodetype == en_icon )
+    {
+      ep->nodetype = en_icon;
+      ep->i = !ep->p[0]->i;
+			ep->i128 = Int128::IsEQ(&ep->p[0]->i128, Int128::Zero()) ? Int128(1) : Int128(0);
+			ooptimized++;
+		}
+    return;
+  case en_uminus:
+    opt0( &(ep->p[0]));
+    if( ep->p[0]->nodetype == en_icon )
+    {
+      ep->nodetype = en_icon;
+      ep->i = -ep->p[0]->i;
+			Int128::Sub(&ep->i128, Int128::Zero(), &ep->p[0]->i128);
+			ooptimized++;
+		}
+    return;
             case en_tempref:
                     opt0( &(ep->p[0]));
                     if( ep->p[0] && ep->p[0]->nodetype == en_icon )
@@ -792,77 +933,11 @@ static void opt0(ENODE **node)
 				opt0(&(ep->p[0]));
 				opt0(&(ep->p[1]));
 				return;
-			case en_mulf:
-				opt0(&(ep->p[0]));
-				opt0(&(ep->p[1]));
-				if (ep->p[0]->nodetype == en_icon && ep->p[1]->nodetype == en_icon)
-					dooper(*node);
-				return;
-			case en_vmul:
-			case en_vmuls:
-      case en_mul:
-			case en_mulu:
-        opt0(&(ep->p[0]));
-        opt0(&(ep->p[1]));
-        if( ep->p[0]->nodetype == en_icon ) {
-            if( ep->p[1]->nodetype == en_icon ) {
-                dooper(*node);
-                return;
-            }
-						if (ep->p[1]->nodetype == en_fcon) {
-							ep->nodetype = en_icon;
-							ep->i = ep->p[0]->i * ep->p[1]->f;
-							//Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
-							return;
-						}
-            val = ep->p[0]->i;
-						if( val == 0 ) {
-                *node = ep->p[0];
-                return;
-            }
-            if( val == 1 ) {
-                *node = ep->p[1];
-								ooptimized++;
-								return;
-            }
-            sc = pwrof2(val);
-            if( sc != -1 )
-            {
-                swap_nodes(ep);
-                ep->p[1]->i = sc;
-								ep->p[1]->i128.low = sc;
-								ep->p[1]->i128.high = 0;
-								ep->nodetype = en_shl;
-								ooptimized++;
-								return;
-            }
-						// Place constant as oper2
-						swap_nodes(ep);
-          }
-          else if( ep->p[1]->nodetype == en_icon ) {
-            val = ep->p[1]->i;
-            if( val == 0 ) {
-              *node = ep->p[1];
-							ooptimized++;
-							return;
-            }
-            if( val == 1 ) {
-              *node = ep->p[0];
-							ooptimized++;
-							return;
-            }
-            sc = pwrof2(val);
-            if( sc != -1 )
-            {
-							ep->p[1]->i = sc;
-							ep->p[1]->i128.low = sc;
-							ep->p[1]->i128.high = 0;
-							ep->nodetype = en_shl;
-							ooptimized++;
-							return;
-            }
-          }
-          break;
+			case en_mulf:		Opt0_multiply(node); break;
+			case en_vmul:		Opt0_multiply(node); break;
+			case en_vmuls:	Opt0_multiply(node); break;
+      case en_mul:		Opt0_multiply(node); break;
+			case en_mulu:		Opt0_multiply(node); break;
       case en_div:
 			case en_udiv:
         opt0(&(ep->p[0]));
@@ -932,72 +1007,34 @@ static void opt0(ENODE **node)
 		opt0(&(ep->p[2]));
 		break;
 
-	case en_and: 
-	case en_xor:    
-    opt0(&(ep->p[0]));
-    opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype == en_icon &&
-			ep->p[1]->nodetype == en_icon)
-			dooper(*node);
-		else if (ep->p[0]->nodetype == en_icon) {
-			swap_nodes(ep);
-			ooptimized++;
-		}
-		break;
-	case en_or:
-		opt0(&(ep->p[0]));
-		opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype == en_icon &&
-			ep->p[1]->nodetype == en_icon)
-			dooper(*node);
-		else if (ep->p[0]->nodetype == en_icon) {
-			swap_nodes(ep);
-			ooptimized++;
-		}
-		break;
+	case en_and:	Opt0_logic(node); break;
+	case en_xor:	Opt0_logic(node); break;
+	case en_or:		Opt0_logic(node); break;
 
-	case en_shr:	case en_shru:	case en_asr:
-	case en_asl:	case en_shl:	case en_shlu:
-    opt0(&(ep->p[0]));
-    opt0(&(ep->p[1]));
-    if( ep->p[0]->nodetype == en_icon &&
-      ep->p[1]->nodetype == en_icon )
-      dooper(*node);
-// Shift by zero....
-    else if( ep->p[1]->nodetype == en_icon ) {
-      if( ep->p[1]->i == 0 ) {
-        *node = ep->p[0];
-				ooptimized++;
-				return;
-      }
-    }
-    break;
+	case en_shr:	Opt0_shift(node); break;
+	case en_shru:	Opt0_shift(node); break;
+	case en_asr:	Opt0_shift(node); break;
+	case en_asl:	Opt0_shift(node); break;
+	case en_shl:	Opt0_shift(node); break;
+	case en_shlu:	Opt0_shift(node); break;
+	case en_rol:	Opt0_shift(node); break;
+	case en_ror:	Opt0_shift(node); break;
 
-	case en_land_safe:
-  case en_land:   
-    opt0(&(ep->p[0]));
-    opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype==en_icon && ep->p[1]->nodetype==en_icon)
-			dooper(*node);
-    break;
-	case en_lor_safe:
-  case en_lor:
-    opt0(&(ep->p[0]));
-    opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype==en_icon && ep->p[1]->nodetype==en_icon)
-			dooper(*node);
-    break;
+	case en_land_safe:	Opt0_logic(node); break;
+  case en_land:				Opt0_logic(node); break;
+	case en_lor_safe:		Opt0_logic(node); break;
+  case en_lor:				Opt0_logic(node); break;
 
-	case en_ult:	case en_ule:
-	case en_ugt:	case en_uge:
-	case en_lt:		case en_le:
-	case en_gt:		case en_ge:
-	case en_eq:		case en_ne:
-    opt0(&(ep->p[0]));
-    opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype==en_icon && ep->p[1]->nodetype==en_icon)
-			dooper(*node);
-    break;
+	case en_ult:	Opt0_relop(node); break;
+	case en_ule:	Opt0_relop(node); break;
+	case en_ugt:	Opt0_relop(node); break;
+	case en_uge:	Opt0_relop(node); break;
+	case en_lt:		Opt0_relop(node); break;
+	case en_le:		Opt0_relop(node); break;
+	case en_gt:		Opt0_relop(node); break;
+	case en_ge:		Opt0_relop(node); break;
+	case en_eq:		Opt0_releq(node); break;
+	case en_ne:		Opt0_releq(node); break;
 
 	case en_feq:
 	case en_fne:
@@ -1031,37 +1068,37 @@ static void opt0(ENODE **node)
 					opt0(&(ep->p[1]));
 					opt0(&(ep->p[2]));
 					break;
-            case en_asand:  case en_asor:
-            case en_asadd:  case en_assub:
-            case en_asmul:  case en_asdiv:
-            case en_asmod:  case en_asrsh:
-            case en_aslsh:  
-            case en_fcall:
-                    opt0(&(ep->p[0]));
-                    opt0(&(ep->p[1]));
-                    break;
-            case en_assign:
-                    opt0(&(ep->p[0]));
-                    opt0(&(ep->p[1]));
-                    break;
-						case en_void:
-							opt0(&(ep->p[0]));
-							opt0(&(ep->p[1]));
-							break;
-						// en_tempref comes from typecasting
-						// The value for a cast is really ep->p[1]
-						// The type of the cast is from ep->p[0]
-						case en_cast:
-							opt0(&(ep->p[0]));
-							opt0(&(ep->p[1]));
-							if (ep->p[0]->nodetype == en_tempref) {
-								//(*node)->nodetype = ep->p[1]->nodetype;
-								*node = ep->p[1];
-								(*node)->tp = ep->p[0]->tp;
-								(*node)->nodetype = ep->p[0]->nodetype;
-								ooptimized++;
-							}
-							break;
+  case en_asand:  case en_asor:
+  case en_asadd:  case en_assub:
+  case en_asmul:  case en_asdiv:
+  case en_asmod:  case en_asrsh:
+  case en_aslsh:  
+  case en_fcall:
+    opt0(&(ep->p[0]));
+    opt0(&(ep->p[1]));
+    break;
+  case en_assign:
+    opt0(&(ep->p[0]));
+    opt0(&(ep->p[1]));
+    break;
+	case en_void:
+		opt0(&(ep->p[0]));
+		opt0(&(ep->p[1]));
+		break;
+	// en_tempref comes from typecasting
+	// The value for a cast is really ep->p[1]
+	// The type of the cast is from ep->p[0]
+	case en_cast:
+		opt0(&(ep->p[0]));
+		opt0(&(ep->p[1]));
+		if (ep->p[0]->nodetype == en_tempref) {
+			//(*node)->nodetype = ep->p[1]->nodetype;
+			*node = ep->p[1];
+			(*node)->tp = ep->p[0]->tp;
+			(*node)->nodetype = ep->p[0]->nodetype;
+			ooptimized++;
+		}
+		break;
 	case en_addrof:
 		opt0(&(ep->p[0]));
 		break;
@@ -1339,7 +1376,7 @@ void opt_const(ENODE **node)
 	dfs.printf("<OptConst>");
     if (opt_noexpr==FALSE) {
     	opt0(node);
-    	fold_const(node);
+//    	fold_const(node);
 			do {
 				ooptimized = false;
 				opt0(node);

@@ -795,6 +795,7 @@ void PeepList::OptInstructions()
 			case op_sllp:	ip->OptSll(); break;
 			case op_zxb:	ip->OptZxb();	break;
 			case op_zxw:	ip->OptZxw();	break;
+			case op_not:	break;
 			}
 		}
 	}

@@ -75,6 +75,7 @@ ADD2R:	o = 4'd4;
 AND2R:	o = 4'd4;
 OR2R:		o = 4'd4;
 XOR2R:	o = 4'd4;
+BRA:		o = 4'd4;
 JEQZ:		o = 4'd4;
 JNEZ:		o = 4'd4;
 JMP:	 	o = 4'd6;
@@ -197,6 +198,9 @@ SRLR2:	o = 4'h4;
 SRAR2:	o = 4'h4;
 ROLR2:	o = 4'h4;
 RORR2:	o = 4'h4;
+SLLI:		o = 4'h4;
+SRLI:		o = 4'h4;
+SRAI:		o = 4'h4;
 //ADDIXL:	o = 4'd12;
 default:	o = 4'h2;
 endcase

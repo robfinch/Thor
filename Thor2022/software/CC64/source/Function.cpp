@@ -42,7 +42,7 @@ Statement *Function::ParseBody()
 {
 	std::string lbl;
 	char *p;
-	OCODE *ip;
+	OCODE *ip, *ip2;
 	int oc;
 	int label, lab1;
 
@@ -70,7 +70,7 @@ Statement *Function::ParseBody()
 		if (sym->tp->type == bt_pointer)
 			lbl += "_func";
 		else
-			lbl += "\n\t.align 4\n";
+			lbl = "\n\t.align 4\n" + lbl;
 		//			gen_strlab((char *)lbl.c_str());
 		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char *)lbl.c_str(), codeseg));
 	}
@@ -1258,6 +1258,7 @@ void Function::Generate()
 	int lab0;
 	int o_throwlab, o_retlab, o_contlab, o_breaklab;
 	OCODE* ip;
+	OCODE* ip2;
 	bool doCatch = true;
 	int n;
 	int sp, bp, gp, gp1;
@@ -1346,7 +1347,10 @@ void Function::Generate()
 		psave_mask = ::psave_mask;// CSet::MakeNew();
 	}
 	stmt->Generate();
-/*
+	//for (ip2 = pl.head; ip2; ip2 = ip2->fwd)
+	//	if (ip2->opcode == op_not)
+	//		printf("hi");
+	/*
 	if (exceptions) {
 		ip = pl.tail;
 		GenerateMonadic(op_bra, 0, MakeDataLabel(lab0, regZero));

@@ -57,9 +57,9 @@ package Thor2022_pkg;
 // software must load the TLB on a miss.
 //`define SUPPORT_HWWALK	1
 
-`define SUPPORT_HASHPT	1
+//`define SUPPORT_HASHPT	1
 //`define SUPPORT_HASHPT2	1
-//`define SUPPORT_HIERPT	1
+`define SUPPORT_HIERPT	1
 
 // The following adds caching of PDEs and PTGs to improve performance at the
 // cost of additional logic.
@@ -125,6 +125,7 @@ parameter SGTUI		= 8'h1F;
 parameter JMP			= 8'h20;
 parameter DJMP		= 8'h21;
 parameter JBSI		= 8'h22;
+parameter BRA			= 8'h23;
 parameter JOR			= 8'h24;
 parameter JBS			= 8'h25;
 parameter JUN			= 8'h25;
@@ -175,7 +176,10 @@ parameter SLEI		= 8'h68;
 parameter P1			= 8'h69;
 parameter P2			= 8'h6A;
 parameter P3			= 8'h6B;
-parameter EXI41		= 8'b011011??;
+parameter SLLI		= 8'h6C;
+parameter SRLI		= 8'h6D;
+parameter SRAI		= 8'h6E;
+//parameter EXI41		= 8'b011011??;
 
 parameter LDB			= 8'h80;
 parameter LDBU		= 8'h81;
@@ -215,14 +219,15 @@ parameter MOV			= 8'hA7;
 parameter STPTR		= 8'hA8;
 parameter STPTRX	= 8'hA9;
 parameter BTFLD		= 8'hAA;
-parameter BFALIGN		= 4'h0;
-parameter BFFFO			= 4'h1;
-parameter BFEXTU		= 4'h4;
-parameter BFEXT			= 4'h5;
-parameter ANDM			= 4'h8;
-parameter BFSET			= 4'h9;
-parameter BFCHG			= 4'hA;
-parameter BFCLR			= 4'hB;
+parameter BFALIGN		= 7'h00;
+parameter BFFFO			= 7'h01;
+parameter BFEXTU		= 7'h04;
+parameter BFEXT			= 7'h05;
+parameter ANDM			= 7'h08;
+parameter BFSET			= 7'h09;
+parameter BFCHG			= 7'h0A;
+parameter BFCLR			= 7'h0B;
+parameter CMOVNZ		= 7'h10;
 parameter PUSH		= 8'hAC;
 parameter PUSH2R	= 8'hAD;
 parameter PUSH4R	= 8'hAE;
@@ -298,6 +303,7 @@ parameter CNTLZ		= 7'h00;
 parameter CNTLO		= 7'h01;
 parameter CNTPOP	= 7'h02;
 parameter NOT			= 7'h04;
+parameter NEG			= 7'h05;
 parameter ABS			= 7'h06;
 parameter NABS		= 7'h07;
 parameter SQRT		= 7'h08;
@@ -343,7 +349,6 @@ parameter MIN			= 7'h28;
 parameter MAX			= 7'h29;
 parameter CMP			= 7'h2A;
 parameter CMPU		= 7'h2B;
-parameter CMOVNZ	= 7'h2D;
 parameter CLMUL		= 7'h2E;
 parameter CLMULH	= 7'h2F;
 parameter BMM			= 7'h30;
@@ -1039,6 +1044,7 @@ typedef struct packed
 	logic addi;
 	logic ld;
 	logic st;
+	logic bra;
 	logic jmp;
 	logic jxx;
 	logic jxz;

@@ -152,6 +152,7 @@ typedef struct {
 #define BFR3IR	45
 #define BFR3RI	46
 #define BFR3II	47
+#define RI6			48
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)

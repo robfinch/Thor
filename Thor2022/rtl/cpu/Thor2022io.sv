@@ -617,9 +617,9 @@ cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 //wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
 //wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
 //wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
-wire [255:0] sllio = {128'd0,xa[127:0]|pn[127:0]} << xir[35:29];
-wire [255:0] srlio = {pn[127:0]|xa[127:0],128'd0} >> xir[35:29];
-wire [255:0] sraio = {{128{xa[127]}},xa[127:0],128'd0} >> xir[35:29];
+wire [255:0] sllio = {128'd0,xa[127:0]|pn[127:0]} << imm[6:0];
+wire [255:0] srlio = {pn[127:0]|xa[127:0],128'd0} >> imm[6:0];
+wire [255:0] sraio = {{128{xa[127]}},xa[127:0],128'd0} >> imm[6:0];
 wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[6:0];
 wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[6:0];
 wire [255:0] sraro = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
@@ -757,6 +757,7 @@ R1:
 	CNTLO:	res2 = {121'd0,cntlz_out};
 	PTGHASH:	res2 = hash;
 	NOT:		res2 = |xa ? 'd0 : 128'd1;
+	NEG:		res2 = -xa;
 	SEI:		res2 = ilvl;
 	default:	res2 = 'd0;
 	endcase
@@ -835,6 +836,9 @@ SRLR2:				res2 = srlro[255:128];
 SRAR2:				res2 = sraro[255:128];
 ROLR2:				res2 = sllro[127:0]|sllro[255:128];
 RORR2:				res2 = srlro[127:0]|srlro[255:128];
+SLLI:					res2 = sllio[127:0];
+SRLI:					res2 = srlio[255:128];
+SRAI:					res2 = sraio[255:128];
 //SLLHR2:				res2 = sllrho[127:0];// + xc0;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
@@ -1157,6 +1161,7 @@ begin
   mval <= INV;
 	mir <= {7'd0,1'b0,NOP};
 	md <= 'd0;
+	mrfwr <= 'd0;
   mcause <= 16'h0;
 end
 endtask
@@ -1166,6 +1171,7 @@ begin
   wval <= INV;
 	wir <= {7'd0,1'b0,NOP};
 	wd <= 'd0;
+	wrfwr <= 'd0;
   wcause <= 16'h0;
 end
 endtask
@@ -1619,6 +1625,11 @@ begin
 			LDCTX:	begin micro_ip <= 7'd96; ip <= ip; end
 			STCTX:	begin micro_ip <= 7'd64; ip <= ip; end
 			BSET:		begin micro_ip <= 7'd55; ip <= ip; end
+			BRA:
+				if (insn[31:29]==3'd0)
+					ip.offs <= {{109{insn[28]}},insn[28:11],1'b0};
+				else if (insn[31:29]==3'd7)
+					ip.offs <= ip.offs + {{109{insn[28]}},insn[28:11],1'b0};
 			JMP:
 				if (insn.jmp.Ca==3'd0)
 					ip.offs <= {{94{insn.jmp.Tgthi[15]}},insn.jmp.Tgthi,insn.jmp.Tgtlo,1'b0};
@@ -1974,6 +1985,19 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+task tBra;
+begin
+  if (xd.bra) begin
+  	mExBranch <= TRUE;
+  	if (xd.Ca != 3'd0 && xd.Ca != 3'd7)	// ==0,7 was already done at ifetch
+  		tBranch(4'd6);
+	end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tRts;
 begin
 	if (xd.rts) begin
@@ -2024,6 +2048,7 @@ begin
 		mtakb <= takb;
 		mExBranch <= FALSE;
 		if (xval) begin
+			tBra();
 			tJxx();
 	    tJmp();
 	  	tRts();

@@ -169,6 +169,8 @@ int main(int argc, char **argv)
 	cpu.SupportsLeave = true;
 	cpu.SupportsIndexed = true;
 	cpu.Addsi = false;
+	cpu.ext_op = op_ext;
+	cpu.extu_op = op_extu;
 	cpu.mov_op = op_mov;
 	cpu.lea_op = op_lea;
 	cpu.ldi_op = op_ldi;

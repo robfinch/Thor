@@ -86,7 +86,7 @@ Operand* ENODE::GenerateBitfieldDereference(int flags, int size, int opt)
 		ap4 = cg.GenerateBitfieldExtract(ap3, tmpo, makereg(regZero));
 	else
 		ap4 = cg.GenerateBitfieldExtract(ap3, bit_offset, bit_width);
-	ReleaseTempReg(ap3);
+	ap4->toRelease = ap3;
 	ap4->MakeLegal(flags, esize);
 	ap4->next = ap;
 	ap4->offset = this;

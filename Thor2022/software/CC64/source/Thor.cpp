@@ -205,23 +205,34 @@ Operand* ThorCodeGenerator::GenerateBitfieldExtract(Operand* ap, Operand* offset
 	Operand* ap1;
 
 	ap1 = GetTempRegister();
-	if (cpu.SupportsBitfield) {
-		if (isSigned)
+	if (isSigned) {
+		if (cpu.ext_op >= 0)
 			Generate4adic(op_ext, 0, ap1, ap, offset, width);
-		else
-			Generate4adic(op_extu, 0, ap1, ap, offset, width);
+		else {
+			uint64_t mask;
+			int bit_offset = offset->offset->i;
+
+			mask = 0;
+			while (width-- >= 0)	mask = mask + mask + 1;
+			if (bit_offset > 0)
+				GenerateTriadic(op_srl, 0, ap1, ap, offset);
+			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
+			SignExtendBitfield(ap1, mask);
+		}
 	}
 	else {
-		uint64_t mask;
-		int bit_offset = offset->offset->i;
+		if (cpu.extu_op >= 0)
+			Generate4adic(op_extu, 0, ap1, ap, offset, width);
+		else {
+			uint64_t mask;
+			int bit_offset = offset->offset->i;
 
-		mask = 0;
-		while (width-- >= 0)	mask = mask + mask + 1;
-		if (bit_offset > 0)
-			GenerateTriadic(op_srl, 0, ap1, ap, offset);
-		GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-		if (isSigned)
-			SignExtendBitfield(ap1, mask);
+			mask = 0;
+			while (width-- >= 0)	mask = mask + mask + 1;
+			if (bit_offset > 0)
+				GenerateTriadic(op_srl, 0, ap1, ap, offset);
+			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
+		}
 	}
 	return (ap1);
 }
@@ -238,34 +249,44 @@ Operand* ThorCodeGenerator::GenerateBitfieldExtract(Operand* ap, ENODE* offset, 
 	ip = currentFn->pl.tail;
 	ap2 = GenerateExpression(offset, am_reg | am_imm | am_imm0, sizeOfWord, 1);
 	ap3 = GenerateExpression(width, am_reg | am_imm | am_imm0, sizeOfWord, 1);
-	if (ap2->mode != ap3->mode) {
-		currentFn->pl.tail = ip;
-		ReleaseTempReg(ap3);
-		ReleaseTempReg(ap2);
-		ap2 = GenerateExpression(offset, am_reg, sizeOfWord, 1);
-		ap3 = GenerateExpression(width, am_reg, sizeOfWord, 1);
-	}
-	if (cpu.SupportsBitfield) {
-		if (isSigned)
-			Generate4adic(op_ext, 0, ap1, ap, ap2, ap3);
-		else
-			Generate4adic(op_extu, 0, ap1, ap, ap2, ap3);
+	//if (ap2->mode != ap3->mode) {
+	//	currentFn->pl.tail = ip;
+	//	ReleaseTempReg(ap3);
+	//	ReleaseTempReg(ap2);
+	//	ap2 = GenerateExpression(offset, am_reg, sizeOfWord, 1);
+	//	ap3 = GenerateExpression(width, am_reg, sizeOfWord, 1);
+	//}
+
+	if (isSigned) {
+		if (cpu.ext_op >= 0)
+			Generate4adic(cpu.ext_op, 0, ap1, ap, ap2, ap3);
+		else {
+			uint64_t mask;
+
+			mask = 0;
+			wd = ap3->offset->i;
+			while (wd-- >= 0)	mask = mask + mask + 1;
+			if (ap2->offset > 0)
+				GenerateTriadic(op_srl, 0, ap1, ap, ap2);
+			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
+			SignExtendBitfield(ap1, mask);
+		}
 	}
 	else {
-		
-		uint64_t mask;
+		if (cpu.extu_op >= 0)
+			Generate4adic(cpu.extu_op, 0, ap1, ap, ap2, ap3);
+		else {
+			uint64_t mask;
 
-		mask = 0;
-		wd = ap3->offset->i;
-		while (wd-- >= 0)	mask = mask + mask + 1;
-		if (ap2->offset)
-			if (ap2->offset->i > 0)
+			mask = 0;
+			wd = ap3->offset->i;
+			while (wd-- >= 0)	mask = mask + mask + 1;
+			if (ap2->offset > 0)
 				GenerateTriadic(op_srl, 0, ap1, ap, ap2);
-		GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-		if (isSigned)
-			SignExtendBitfield(ap1, mask);
-		
+			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
+		}
 	}
+
 	ReleaseTempReg(ap3);
 	ReleaseTempReg(ap2);
 	return (ap1);
@@ -770,10 +791,14 @@ void ThorCodeGenerator::GenerateBne(Operand* ap1, Operand* ap2, int label)
 	Operand* ap3;
 
 	if (ap2->mode == am_imm) {
-		ap3 = GetTempRegister();
-		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-		GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(8), MakeCodeLabel(label));
-		ReleaseTempReg(ap3);
+		if (Int128::IsEQ(&ap2->offset->i128, Int128::Zero()))
+			GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
+		else {
+			ap3 = GetTempRegister();
+			GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+			GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(8), MakeCodeLabel(label));
+			ReleaseTempReg(ap3);
+		}
 	}
 	else
 		GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
@@ -984,8 +1009,8 @@ bool ThorCodeGenerator::GenerateBranch(ENODE *node, int op, int label, int predr
 	  ap2 = cg.GenerateExpression(node->p[1],am_reg,size,1);
   }
   else {
-		ap1 = cg.GenerateExpression(node->p[0], am_reg, size,1);
-		ap2 = cg.GenerateExpression(node->p[1], isRiscv ? am_reg : am_reg | am_imm, size,1);
+		ap1 = cg.GenerateExpression(node->p[0], am_reg, size,0);
+		ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm0, size,0);
   }
 	if (limit && currentFn->pl.Count(ip) > 10) {
 		currentFn->pl.tail = ip;
@@ -1658,9 +1683,16 @@ Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab
 			if (sym && sym->IsLeaf) {
 				sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
 				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
+					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
 				else
-					GenerateMonadic(op_jsr, 0, MakeDirect(node->p[0]));
+					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
+				currentFn->doesJAL = true;
+			}
+			else if (sym) {
+				if (flags & am_jmp)
+					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
+				else
+					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
 				currentFn->doesJAL = true;
 			}
 			else {

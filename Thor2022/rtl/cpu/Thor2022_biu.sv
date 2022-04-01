@@ -148,6 +148,14 @@ MemoryResponse memresp;
 reg zero_data = 0;
 Value movdat;
 
+// 0: PTE
+// 1: PMT
+// 2: PTE address
+// 3: PMT address
+// 4: TLB update address + way
+// 7: trigger read / write
+reg [127:0] tlb_bucket [0:7];
+
 Address cta;		// card table address
 Address ea;
 Address afilt;
@@ -684,14 +692,28 @@ TLBE tlbdato;
 reg [31:0] tlb_ia;
 TLBE tlb_ib;
 wire tlb_cyc;
-TLBE tlb_dat;
+wire [127:0] tlb_dat;
+Address tlb_adr;
 reg tlb_ack;
 reg inext;
 VirtualAddress tlbmiss_adr;
 VirtualAddress miss_adr;
 reg wr_ptg;
+always_comb
+begin
+	tlb_ib[127:  0] <= tlb_bucket[0];
+	tlb_ib[255:128] <= tlb_bucket[1];
+	tlb_ib.adr 			<= tlb_bucket[2];
+	tlb_ib.pmtadr 	<= tlb_bucket[3];
+	tlb_ia <= tlb_bucket[4];
+end
 
 `ifndef SUPPORT_HASHPT
+PMTE pmtram_dinb;
+PMTE pmtram_doutb;
+wire pmtram_web;
+wire [13:0] pmtram_adrb;
+
 Thor2022_tlb utlb (
   .rst_i(rst),
   .clk_i(tlbclk),
@@ -717,8 +739,13 @@ Thor2022_tlb utlb (
   .tlbmiss_o(tlbmiss),
   .tlbmiss_adr_o(tlbmiss_adr),
   .m_cyc_o(tlb_cyc),
+  .m_ack_i(tlb_ack),
+  .m_adr_o(tlb_adr),
   .m_dat_o(tlb_dat),
-  .m_ack_i(tlb_ack)
+  .pmt_we(pmtram_web),
+  .pmt_adr(pmtram_adrb),
+  .pmt_din(pmtram_doutb),
+  .pmt_dout(pmtram_dinb)
 );
 `endif
 
@@ -730,10 +757,12 @@ reg pmtram_wea;
 reg [13:0] pmtram_adra;
 reg [159:0] pmtram_dina;
 wire [159:0] pmtram_douta;
+`ifdef SUPPORT_HASHPT
 reg pmtram_web;
 reg [13:0] pmtram_adrb;
 PMTE pmtram_dinb;
 PMTE pmtram_doutb;
+`endif
 
 PMT_RAM pmtram1 (
   .clka(clk),    // input wire clka
@@ -1030,10 +1059,10 @@ end
 // Page table vars
 reg [2:0] dep;
 reg [12:0] adr_slice;
-HIER_PTE hier_pte;
+PTE pte;
 PDE pde;
 reg wr_pte;
-PTCE [11:0] ptc;
+PDCE [11:0] ptc;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
@@ -1529,11 +1558,11 @@ else begin
 	  	case(ptbr[10:8])
 	  	3'd1:
 	  		begin
-	  			hier_pte <= ptbr[31:16];
-	  			hier_pte.lvl <= 3'd1;
-	  			hier_pte.d <= 1'b0;
-	  			hier_pte.a <= 1'b1;
-	  			hier_pte.v <= 1'b1;
+	  			pte <= ptbr[31:16];
+	  			pte.lvl <= 3'd1;
+	  			pte.m <= 1'b0;
+	  			pte.a <= 1'b1;
+	  			pte.v <= 1'b1;
 	  			adr_slice <= {miss_adr[27:16],1'b0};
 	  			if (miss_adr[AWID-1:28] != 'd0 && miss_adr[AWID-1:28] != {AWID-28{1'b1}})
 	  				tPageFault(0,miss_adr);
@@ -1613,7 +1642,7 @@ else begin
 		  	case(dep)
 		  	3'd1:
 		  		begin
-		  			hier_pte[15:0] <= pde[15:0];
+		  			pte[15:0] <= pde[15:0];
 		  			adr_slice <= {miss_adr[27:16],1'b0};
 		  			call (PT_RW_PTE1, PT_FETCH3);
 		  		end
@@ -1667,32 +1696,32 @@ else begin
 			tlb_ia[15:14] <= 2'b10;	// write a random way
 			tlb_ia[13:10] <= 4'h0;
 			tlb_ia[9:0] <= miss_adr[25:16];
-			tlb_ib.ppn <= hier_pte.ppn;
-			tlb_ib.d <= hier_pte.d;
-			tlb_ib.u <= hier_pte.u;
-			tlb_ib.s <= hier_pte.s;
-			tlb_ib.a <= hier_pte.a;
-			tlb_ib.c <= hier_pte.c;
-			tlb_ib.r <= hier_pte.r;
-			tlb_ib.w <= hier_pte.w;
-			tlb_ib.x <= hier_pte.x;
-			tlb_ib.sc <= hier_pte.sc;
-			tlb_ib.sr <= hier_pte.sr;
-			tlb_ib.sw <= hier_pte.sw;
-			tlb_ib.sx <= hier_pte.sx;
-			tlb_ib.v <= hier_pte.v;
-			tlb_ib.g <= hier_pte.g;
-			tlb_ib.bc <= hier_pte.lvl;
-			tlb_ib.n <= hier_pte.n;
-			tlb_ib.av <= hier_pte.av;
-			tlb_ib.mb <= hier_pte.mb;
-			tlb_ib.me <= hier_pte.me;
+			tlb_ib.ppn <= pte.ppn;
+			tlb_ib.d <= pte.d;
+			tlb_ib.u <= pte.u;
+			tlb_ib.s <= pte.s;
+			tlb_ib.a <= pte.a;
+			tlb_ib.c <= pte.c;
+			tlb_ib.r <= pte.r;
+			tlb_ib.w <= pte.w;
+			tlb_ib.x <= pte.x;
+			tlb_ib.sc <= pte.sc;
+			tlb_ib.sr <= pte.sr;
+			tlb_ib.sw <= pte.sw;
+			tlb_ib.sx <= pte.sx;
+			tlb_ib.v <= pte.v;
+			tlb_ib.g <= pte.g;
+			tlb_ib.bc <= pte.lvl;
+			tlb_ib.n <= pte.n;
+			tlb_ib.av <= pte.av;
+			tlb_ib.mb <= pte.mb;
+			tlb_ib.me <= pte.me;
 			tlb_ib.adr <= dadr;
-			hier_pte.a <= 1'b1;
+			pte.a <= 1'b1;
 //			tlb_ib <= tmptlbe;
 			tlb_ib.a <= 1'b1;
 			wr_pte <= 1'b1;
-			if (hier_pte.av)
+			if (pte.av)
 				goto (PT_FETCH4);
 			else
 				gosub(PMT_FETCH1);
@@ -1733,9 +1762,10 @@ else begin
 	 		xlaten <= FALSE;
 			daccess <= TRUE;
 			iaccess <= FALSE;
-			dadr <= {hier_pte[15:0],adr_slice[12:1],4'h0};
+			dadr <= {pte[15:0],adr_slice[12:1],4'h0};
 			goto (PT_RW_PTE3);
 		end
+`endif
 	PT_RW_PTE2:
 		goto (PT_RW_PTE3);
 	PT_RW_PTE3:
@@ -1748,7 +1778,7 @@ else begin
 				stb_o <= HIGH;
 				we_o <= wr_pte;
 		    sel_o <= 16'hFFFF;
-		    dat_o <= hier_pte[255:128];
+		    dat_o <= pte;
 		    goto (PT_RW_PTE4);
 			end
 		end
@@ -1756,12 +1786,12 @@ else begin
 		if (ack_i) begin
 			tDeactivateBus();
 			if (!wr_pte)
-				hier_pte <= dat_i;
+				pte <= dat_i;
 			goto (PT_RW_PTE5);
 		end
 	PT_RW_PTE5:
 		begin
-			if (hier_pte.v)
+			if (pte.v)
 				ret();
 			else
 				tPageFault(fault_code,miss_adr);
@@ -1773,11 +1803,11 @@ else begin
 			daccess <= TRUE;
 			iaccess <= FALSE;
 			wr_pte <= TRUE;
-			hier_pte <= tlb_dat;
-			dadr <= {tlb_dat.adr[AWID-1:5],5'h0} + 5'd16;
+			pte <= tlb_dat;
+			dadr <= {tlb_adr[AWID-1:5],5'h0} + 5'd16;
+			miss_adr <= {tlb_adr[AWID-1:5],5'h0} + 5'd16;
 			goto (PT_RW_PTE2);
 		end
-`endif
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Hardware subroutine to read or write a PDE.
@@ -1934,13 +1964,6 @@ begin
 	ealow <= ea[7:0];
 	// Detect cache controller commands
 	case(memreq.func)
-	MR_TLB:
-		begin
-    	tlb_ia <= memreq.dat[31:0];
-			tlb_ib <= {memreq.dat[127:32],memreq.dat[255:128]};
-			tlbwr <= TRUE;
-			goto (TLB1);
-		end
 	MR_LOAD,MR_LOADZ,MR_MOVLD:
 		case(memreq.func2)
 		MR_LDOO:
@@ -2052,8 +2075,16 @@ begin
 		end
 	32'hFFE?????:
 		begin
-			tlbwr <= memreq.func==MR_STORE;
+			tlbwr <= memreq.func==MR_STORE && memreq.adr[6:4]==3'd7;
 			tlb_access <= 1'b1;
+			if (memreq.func==MR_STORE)
+				tlb_bucket[memreq.adr[6:4]] <= memreq.dat[127:0];
+			else begin
+				tlb_bucket[0] <= tlbdato[127:  0];
+				tlb_bucket[1] <= tlbdato[255:128];
+				tlb_bucket[2] <= tlbdato[287:256];
+				tlb_bucket[3] <= tlbdato[319:288];
+			end
 		end
 	default:	;
 	endcase
@@ -2066,8 +2097,8 @@ begin
 	ptgram_adr <= memreq.adr[18:4];
 	ptgram_dati <= memreq.dat;
 `endif
-	tlb_ia <= memreq.adr[15:0];
-	tlb_ib <= memreq.dat;
+	//tlb_ia <= memreq.adr[15:0];
+	//tlb_ib <= memreq.dat;
 end
 endtask
 

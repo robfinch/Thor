@@ -1040,6 +1040,8 @@ void ReleaseTempReg(Operand *ap)
 		ReleaseTempPositRegister(ap);
 	else
 		ReleaseTempRegister(ap);
+	if (ap->toRelease)
+		ReleaseTempReg(ap->toRelease);
 }
 
 int GetTempMemSpace()

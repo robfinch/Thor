@@ -1348,9 +1348,9 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 				break;
 			}
 		}
-		if (tp1->type == bt_pointer) {
+		if (tp1->type == bt_pointer && !tp1->val_flag) {
 			sa[numdimen + 1] = tp1->btpp->size;
-			sa[numdimen + 1] = ep1->esize;
+			//sa[numdimen + 1] = ep1->esize;
 		}
 		else
 			sa[numdimen + 1] = tp1->size;
@@ -1445,14 +1445,14 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	}
 	qnode = makeinode(en_icon, sz1);
 	qnode->etype = bt_ushort;
-	qnode->esize = 8;
+	qnode->esize = sizeOfWord;
 	qnode->constflag = TRUE;
 	qnode->isUnsigned = TRUE;
 	cf = qnode->constflag;
 
 	qnode = makenode(en_mulu, qnode, rnode);
 	qnode->etype = bt_short;
-	qnode->esize = 8;
+	qnode->esize = sizeOfWord;
 	qnode->constflag = cf & rnode->constflag;
 	qnode->isUnsigned = rnode->isUnsigned;
 	if (rnode->sym)

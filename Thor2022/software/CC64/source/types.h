@@ -962,6 +962,7 @@ public:
 	int8_t scale;
 	Operand *next;			// For extended sizes (long)
 	Operand* memop;
+	Operand* toRelease;
 	int display_opt;
 public:
 	Operand *Clone();
@@ -1983,6 +1984,8 @@ public:
 	void SetRealRegisters();
 	void SetVirtualRegisters();
 	bool Addsi;
+	int ext_op;
+	int extu_op;
 	int mov_op;
 	int lea_op;
 	int ldi_op;

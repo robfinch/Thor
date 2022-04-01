@@ -50,10 +50,12 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic v;
+	logic vm;
 	logic n;
-	logic m;
-	logic [12:0] rfu;
+	logic pm;
+	logic [9:0] pad10b;
+	logic e;
+	logic [1:0] al;
 	logic [15:0] pci;
 	logic [7:0] pl;
 	logic [23:0] key;
@@ -65,97 +67,140 @@ typedef struct packed
 typedef struct packed
 {
 	Thor2022_pkg::Address adr;
-	logic [15:0] rfu;
-	logic [15:0] pci;
-	logic [31:0] access_count;
-	logic [31:0] key;
-	logic [11:0] asid;
-	logic sc;
-	logic sw;
-	logic sr;
-	logic sx;
-	logic v;
-	logic g;
-	logic av;
-	logic pad1;
-	logic [3:0] bc;
-	logic d;
-	logic u;
-	logic s;
-	logic a;
-	logic c;
-	logic w;
-	logic r;
-	logic x;
-	logic [3:0] mb;
-	logic [3:0] me;
-	logic [15:0] vpn;
+	Thor2022_pkg::Address pmtadr;
+	// PMT info
+	logic vm;
 	logic n;
+	logic pm;
+	logic [9:0] pad10b;
+	logic e;
+	logic [1:0] al;
+	logic [15:0] pci;
 	logic [7:0] pl;
+	logic [23:0] key;
+	logic [31:0] access_count;
+	logic [15:0] acl;
+	logic [15:0] share_count;
+	
+	logic [31:0] vpnphi;
+	logic [31:0] ppnhi;
+	logic [9:0] asid;
+	logic g;
+	logic [3:0] bc;
+	logic pad1b;
+	logic [15:0] vpn;
+//	logic [9:0] pad10a;	
+	logic v;
+	logic [2:0] lvl;
+	logic [2:0] mb;
+	logic [2:0] me;
+	logic m;
+	logic [2:0] rwx;
+	logic a;
+	logic pad1a;
 	logic [15:0] ppn;
 } TLBE;	// 288 bits
 
+// Small Page Table Entry
+typedef struct packed
+{
+	logic v;
+	logic [2:0] lvl;
+	logic [2:0] mb;
+	logic [2:0] me;
+	logic m;
+	logic [2:0] rwx;
+	logic pad1a;
+	logic [15:0] ppn;
+} SPTE;	// 32 bits
+
+// Page Table Entry
+typedef struct packed
+{
+	logic [31:0] ppnhi;
+	logic v;
+	logic [2:0] lvl;
+	logic [2:0] mb;
+	logic [2:0] me;
+	logic m;
+	logic [2:0] rwx;
+	logic pad1a;
+	logic [15:0] ppn;
+} PTE;	// 32 bits
+
+// Small Hash Page Table Entry
 typedef struct packed
 {
 	logic [9:0] asid;
+	logic g;
 	logic [3:0] bc;
-	logic [1:0] pad2;
+	logic pad1b;
 	logic [15:0] vpn;
 	logic v;
-	logic g;
+	logic [2:0] lvl;
+	logic [2:0] mb;
+	logic [2:0] me;
+	logic m;
 	logic [2:0] rwx;
-	logic [2:0] wh;
-	logic [3:0] mb;
-	logic [3:0] me;
+	logic a;
+	logic pad1a;
 	logic [15:0] ppn;
-} PTE;	// 64 bits
+} SHPTE;	// 64 bits
 
+// Hash Page Table Entry
 typedef struct packed
 {
-	Thor2022_pkg::Address padr;	// physical address of the PDE
-	logic [2:0] lvl;
-	logic v;
-	logic d;
-	logic u;
-	logic a;
-	logic [24:0] pad25;
-	logic [5:0] mb;
-	logic [5:0] me;
-	logic sc;
-	logic sw;
-	logic sr;
-	logic sx;
-	logic [7:0] pl;
-	logic n;
+	logic [31:0] vpnhi;
+	logic [31:0] ppnhi;
+	logic [9:0] asid;
 	logic g;
-	logic av;
-	logic s;
-	logic c;
-	logic w;
-	logic r;
-	logic x;
-	logic [15:0] pad16;
-	logic [47:0] ppn;
-} HIER_PTE;	// 128 bits + address
+	logic [3:0] bc;
+	logic pad1b;
+	logic [15:0] vpn;
+	logic v;
+	logic [2:0] lvl;
+	logic [2:0] mb;
+	logic [2:0] me;
+	logic m;
+	logic [2:0] rwx;
+	logic a;
+	logic pad1a;
+	logic [15:0] ppn;
+} HPTE;	// 64 bits
+
+// Small Page Table Entry
+typedef struct packed
+{
+	logic v;
+	logic [2:0] lvl;
+	logic [9:0] pad10a;
+	logic pad1a;
+	logic [15:0] ppn;
+} SPDE;	// 32 bits + address
 
 typedef struct packed
 {
-	Thor2022_pkg::Address padr;	// physical address of the PDE
-	logic [2:0] lvl;
+	logic [31:0] ppnhi;
 	logic v;
-	logic d;
-	logic u;
-	logic a;
-	logic [8:0] pad9;
-	logic [111:0] vpn;
-} PDE;	// 128 bits + address
+	logic [2:0] lvl;
+	logic [9:0] pad10a;
+	logic pad1a;
+	logic [15:0] ppn;
+} PDE;	// 64 bits + address
+
+typedef struct packed
+{
+	logic v;
+	Thor2022_pkg::Address adr;
+	SPDE pde;
+} SPDCE;
 
 typedef struct packed
 {
 	logic v;
 	Thor2022_pkg::Address adr;
 	PDE pde;
-} PTCE;
+} PDCE;
 
 `define PtePerPtg 8
 `define PtgSize 2048
@@ -166,8 +211,13 @@ integer PtgSize = `PtgSize;
 
 typedef struct packed
 {
-	PTE [`PtePerPtg-1:0] ptes;
-} PTG;	// 1280 bits
+	HPTE [`PtePerPtg-1:0] ptes;
+} PTG;	// 1024 bits
+
+typedef struct packed
+{
+	SHPTE [`PtePerPtg-1:0] ptes;
+} SPTG;	// 512 bits
 
 typedef struct packed
 {
