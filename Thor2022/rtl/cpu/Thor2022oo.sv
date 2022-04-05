@@ -130,6 +130,18 @@ reg clr_ipage_fault = 1'b0;
 wire itlbmiss;
 reg clr_itlbmiss = 1'b0;
 reg wackr;
+reg [31:0] livetarget;
+reg [15:0] livetarget2;
+reg [31:0] reb_cumulative [0:7];
+reg [15:0] reb_cumulative2 [0:7];
+reg [31:0] reb_livetarget [0:7];
+reg [15:0] reb_livetarget2 [0:7];
+reg [31:0] reb_latestID [0:7];
+reg [15:0] reb_latestID2 [0:7];
+reg [31:0] reb_livetarget [0:7];
+reg [15:0] reb_livetarget2 [0:7];
+reg [31:0] reb_out [0:7];
+reg [15:0] reb_out2 [0:7];
 
 integer n1;
 initial begin
@@ -622,6 +634,89 @@ always_comb
 	zbit = deco.Rz;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Branch miss logic
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+integer n,j,k;
+reg [2:0] missid;
+reg [7:0] stomp;
+always_comb
+	missid = exec;
+
+wire branchmiss = 
+	((reb[missid].dec.jxx|reb[missid].dec.jxz|reb[missid].dec.mjnez) & takb) | //reb[exec].dec.jmp | reb[exec].dec.bra |
+		(reb[missid].dec.rts & reb[missid].dec.Ca != 2'b00);
+
+always @*
+begin
+	for (n = 0; n < 8; n = n + 1)
+		stomp[n] = 1'b0;
+	if (branchmiss) begin
+		for (n = 0; n < 8; n = n + 1) begin
+			if (reb[n].sn > reb[missid].sn)
+				stomp[n] = 1'b1;
+		end
+	end
+end
+
+always @*
+	for (n = 0; n < 8; n = n + 1)
+		reb_livetarget[n] = {32{reb[n].v}} & {32{~stomp[n]}} & reb_out[n];
+always @*
+	for (n = 0; n < 8; n = n + 1)
+		reb_livetarget2[n] = {16{reb[n].v}} & {16{~stomp[n]}} & reb_out2[n];
+always @*
+for (j = 1; j < 32; j = j + 1) begin
+	livetarget[j] = 1'b0;
+	for (n = 0; n < 8; n = n + 1)
+		livetarget[j] = livetarget[j] | reb_livetarget[n][j];
+end
+always @*
+for (j = 1; j < 16; j = j + 1) begin
+	livetarget2[j] = 1'b0;
+	for (n = 0; n < 8; n = n + 1)
+		livetarget2[j] = livetarget2[j] | reb_livetarget2[n][j];
+end
+
+always @*
+	for (n = 0; n < 8; n = n + 1) begin
+		reb_cumulative[n] = 1'b0;
+		for (j = n; j < n + 8; j = j + 1) begin
+			if (missid==(j % 8))
+				for (k = n; k <= j; k = k + 1)
+					reb_cumulative[n] = reb_cumulative[n] | reb_livetarget[k % 8];
+		end
+	end
+always @*
+	for (n = 0; n < 8; n = n + 1) begin
+		reb_cumulative2[n] = 1'b0;
+		for (j = n; j < n + 8; j = j + 1) begin
+			if (missid==(j % 8))
+				for (k = n; k <= j; k = k + 1)
+					reb_cumulative2[n] = reb_cumulative2[n] | reb_livetarget2[k % 8];
+		end
+	end
+
+always @*
+	for (n = 0; n < 8; n = n + 1)
+    reb_latestID[n] = (missid == n || ((reb_livetarget[n] & reb_cumulative[(n+1)%8]) == {32{1'b0}}))
+				    ? reb_livetarget[n]
+				    : {32{1'b0}};
+always @*
+	for (n = 0; n < 8; n = n + 1)
+    reb_latestID2[n] = (missid == n || ((reb_livetarget2[n] & reb_cumulative2[(n+1)%8]) == {16{1'b0}}))
+				    ? reb_livetarget2[n]
+				    : {16{1'b0}};
+
+always @*
+for (n = 0; n < 8; n = n + 1)
+	reb_out[n] <= 32'h1 << reb[n].dec.Rt;
+always @*
+for (n = 0; n < 8; n = n + 1)
+	reb_out2[n] <= 16'h1 << reb[n].dec.Ct;
+
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -727,7 +822,7 @@ always_comb
 always_comb
 	xir = reb[exec].ir;
 always_comb
-	imm = reb[exec].imm;
+	imm = reb[exec].dec.imm;
 always_comb
 	pn = reb[exec].pn;
 
@@ -1609,48 +1704,48 @@ begin
 		else if (micro_ip != 7'd0) begin
 			case(micro_ip)
 			// POP Ra
-			7'd1:		begin micro_ip <= 7'd2; ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
-			7'd2:		begin micro_ip <= 7'd0; ir <= {13'h010,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
+			7'd1:		begin micro_ip <= 7'd2; reb[tail].ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,LDH}; dlen <= 4'd2; end	// LDOS $Ra,[$SP]
+			7'd2:		begin micro_ip <= 7'd0; reb[tail].ir <= {13'h010,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd2; end							// ADD $SP,$SP,#8
 			// POP Ra,Rb,Rc,Rd
-			7'd5:		begin micro_ip <= 7'd6; ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,(micro_ir[31:29]>=3'd1)?LDH:NOP}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
-			7'd6:		begin micro_ip <= 7'd7; ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?LDH:NOP}; end	// LDOS $Rb,[$SP]
-			7'd7:		begin micro_ip <= 7'd8; ir <= {29'h20,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?LDH:NOP}; end	// LDOS $Rc,[$SP]
-			7'd8:		begin micro_ip <= 7'd9; ir <= {29'h30,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]>=3'd4)?LDH:NOP}; end	// LDOS $Rc,[$SP]
-			7'd9:		begin micro_ip <= 7'd0; ir <= {6'h0,micro_ir[31:29],4'h0,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
+			7'd5:		begin micro_ip <= 7'd6; reb[tail].ir <= {29'h00,5'd31,micro_ir[13: 9],1'b0,(micro_ir[31:29]>=3'd1)?LDH:NOP}; dlen <= 4'd4; end	// LDOS $Ra,[$SP]
+			7'd6:		begin micro_ip <= 7'd7; reb[tail].ir <= {29'h10,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?LDH:NOP}; end	// LDOS $Rb,[$SP]
+			7'd7:		begin micro_ip <= 7'd8; reb[tail].ir <= {29'h20,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?LDH:NOP}; end	// LDOS $Rc,[$SP]
+			7'd8:		begin micro_ip <= 7'd9; reb[tail].ir <= {29'h30,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]>=3'd4)?LDH:NOP}; end	// LDOS $Rc,[$SP]
+			7'd9:		begin micro_ip <= 7'd0; reb[tail].ir <= {6'h0,micro_ir[31:29],4'h0,5'd31,5'd31,1'b0,ADDI}; ip.offs <= ip.offs + 4'd4; end							// ADD $SP,$SP,#24
 			// PUSH Ra
-			7'd10:	begin micro_ip <= 7'd11; ir <= {13'h1FF0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-16
-			7'd11:	begin micro_ip <= 7'd0;  ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
+			7'd10:	begin micro_ip <= 7'd11; reb[tail].ir <= {13'h1FF0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd2; end							// ADD $SP,$SP,#-16
+			7'd11:	begin micro_ip <= 7'd0;  reb[tail].ir <= {29'h00,5'd31,micro_ir[13:9],1'b0,STH}; ip.offs <= ip.offs + 4'd2; end	// STOS $Ra,[$SP]
 			// PUSH Ra,Rb,Rc,Rd
-			7'd15:	begin micro_ip <= 7'd16; ir <= {{5'h1F,4'h0-micro_ir[31:29],4'h0},5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
-			7'd16:	begin micro_ip <= 7'd17; ir <= {29'h00,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]==3'd4)?STH:NOP}; end	// STOS $Rc,[$SP]
-			7'd17:	begin micro_ip <= 7'd18; ir <= {22'd0,micro_ir[31:29]-2'd3,4'h0,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?STH:NOP}; end	// STOS $Rb,8[$SP]
-			7'd18:	begin micro_ip <= 7'd19; ir <= {22'd0,micro_ir[31:29]-2'd2,4'h0,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?STH:NOP}; end	// STOS $Rb,8[$SP]
-			7'd19:	begin micro_ip <= 7'd0;  ir <= {22'd0,micro_ir[31:29]-2'd1,4'h0,5'd31,micro_ir[13:9],1'b0,(micro_ir[31:29]>=3'd1)?STH:NOP}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
+			7'd15:	begin micro_ip <= 7'd16; reb[tail].ir <= {{5'h1F,4'h0-micro_ir[31:29],4'h0},5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end								// ADD $SP,$SP,#-24
+			7'd16:	begin micro_ip <= 7'd17; reb[tail].ir <= {29'h00,5'd31,micro_ir[28:24],1'b0,(micro_ir[31:29]==3'd4)?STH:NOP}; end	// STOS $Rc,[$SP]
+			7'd17:	begin micro_ip <= 7'd18; reb[tail].ir <= {22'd0,micro_ir[31:29]-2'd3,4'h0,5'd31,micro_ir[23:19],1'b0,(micro_ir[31:29]>=3'd3)?STH:NOP}; end	// STOS $Rb,8[$SP]
+			7'd18:	begin micro_ip <= 7'd19; reb[tail].ir <= {22'd0,micro_ir[31:29]-2'd2,4'h0,5'd31,micro_ir[18:14],1'b0,(micro_ir[31:29]>=3'd2)?STH:NOP}; end	// STOS $Rb,8[$SP]
+			7'd19:	begin micro_ip <= 7'd0;  reb[tail].ir <= {22'd0,micro_ir[31:29]-2'd1,4'h0,5'd31,micro_ir[13:9],1'b0,(micro_ir[31:29]>=3'd1)?STH:NOP}; ip.offs <= ip.offs + 4'd4; end		// STOS $Ra,16[$SP]
 			// LEAVE
-			7'd20:	begin micro_ip <= 7'd21; ir <= {13'h000,5'd30,5'd31,1'b0,ADDI};	end						// ADD $SP,$FP,#0
-			7'd21:	begin micro_ip <= 7'd22; ir <= {29'h00,5'd31,5'd30,1'b0,LDH}; end				// LDO $FP,[$SP]
-			7'd22:	begin micro_ip <= 7'd23; ir <= {29'h10,5'd31,5'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
-			7'd23:	begin micro_ip <= 7'd26; ir <= {2'd1,5'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
+			7'd20:	begin micro_ip <= 7'd21; reb[tail].ir <= {13'h000,5'd30,5'd31,1'b0,ADDI};	end						// ADD $SP,$FP,#0
+			7'd21:	begin micro_ip <= 7'd22; reb[tail].ir <= {29'h00,5'd31,5'd30,1'b0,LDH}; end				// LDO $FP,[$SP]
+			7'd22:	begin micro_ip <= 7'd23; reb[tail].ir <= {29'h10,5'd31,5'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
+			7'd23:	begin micro_ip <= 7'd26; reb[tail].ir <= {2'd1,5'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
 //			7'd24:	begin micro_ip <= 7'd25; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,24[$SP]
 //			7'd25:	begin micro_ip <= 7'd26; ir <= {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
-			7'd26: 	begin micro_ip <= 7'd27; ir <= {{6'h0,micro_ir[31:13]}+8'd4,4'b0,5'd31,5'd31,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
-			7'd27:	begin micro_ip <= 7'd0;  ir <= {1'd0,micro_ir[12:9],2'd1,1'b0,RTS}; ip.offs <= 32'hFFFD0000; end
+			7'd26: 	begin micro_ip <= 7'd27; reb[tail].ir <= {{6'h0,micro_ir[31:13]}+8'd4,4'b0,5'd31,5'd31,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
+			7'd27:	begin micro_ip <= 7'd0;  reb[tail].ir <= {1'd0,micro_ir[12:9],2'd1,1'b0,RTS}; ip.offs <= 32'hFFFD0000; end
 			// STOO
 			7'd28:	begin micro_ip <= 7'd29; ir <= {micro_ir[47:12],3'd0,1'b0,STOO}; dlen <= 4'd6; end
 			7'd29:	begin micro_ip <= 7'd30; ir <= {micro_ir[47:12],3'd2,1'b0,STOO}; end
 			7'd30:	begin micro_ip <= 7'd31; ir <= {micro_ir[47:12],3'd4,1'b0,STOO}; end
 			7'd31:	begin micro_ip <= 7'd0;  ir <= {micro_ir[47:12],3'd6,1'b0,STOO}; ip.offs <= ip.offs + 4'd6; end
 			// ENTER
-			7'd32: 	begin micro_ip <= 7'd33; ir <= {13'h1FC0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end						// ADD $SP,$SP,#-64
-			7'd33:	begin micro_ip <= 7'd34; ir <= {29'h00,5'd31,5'd30,1'b0,STH}; end				// STO $FP,[$SP]
-			7'd34:	begin micro_ip <= 7'd35; ir <= {2'd1,5'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
-			7'd35:	begin micro_ip <= 7'd38; ir <= {29'h10,5'd31,5'd03,1'b0,STH}; end				// STO $T0,16[$SP]
+			7'd32: 	begin micro_ip <= 7'd33; reb[tail].ir <= {13'h1FC0,5'd31,5'd31,1'b0,ADDI}; dlen <= 4'd4; end						// ADD $SP,$SP,#-64
+			7'd33:	begin micro_ip <= 7'd34; reb[tail].ir <= {29'h00,5'd31,5'd30,1'b0,STH}; end				// STO $FP,[$SP]
+			7'd34:	begin micro_ip <= 7'd35; reb[tail].ir <= {2'd1,5'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
+			7'd35:	begin micro_ip <= 7'd38; reb[tail].ir <= {29'h10,5'd31,5'd03,1'b0,STH}; end				// STO $T0,16[$SP]
 //			7'd36:	begin micro_ip <= 7'd37; ir <= {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
 //			7'd37:	begin micro_ip <= 7'd38; ir <= {3'd6,8'h18,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,24[$SP]
-			7'd38:	begin micro_ip <= 7'd39; ir <= {29'h20,5'd31,5'd00,1'b0,STH}; end				// STH $R0,32[$SP]
-			7'd39:	begin micro_ip <= 7'd40; ir <= {29'h30,5'd31,5'd00,1'b0,STH}; end				// STH $R0,48[$SP]
-			7'd40: 	begin micro_ip <= 7'd41; ir <= {13'h000,5'd31,5'd30,1'b0,ADDI}; end						// ADD $FP,$SP,#0
-			7'd41: 	begin micro_ip <= 7'd0;  ir <= {{9{micro_ir[31]}},micro_ir[31:12],3'b0,5'd31,5'd31,1'b0,ADDIL}; ip.offs <= ip.offs + 4'd4; end // SUB $SP,$SP,#Amt
+			7'd38:	begin micro_ip <= 7'd39; reb[tail].ir <= {29'h20,5'd31,5'd00,1'b0,STH}; end				// STH $R0,32[$SP]
+			7'd39:	begin micro_ip <= 7'd40; reb[tail].ir <= {29'h30,5'd31,5'd00,1'b0,STH}; end				// STH $R0,48[$SP]
+			7'd40: 	begin micro_ip <= 7'd41; reb[tail].ir <= {13'h000,5'd31,5'd30,1'b0,ADDI}; end						// ADD $FP,$SP,#0
+			7'd41: 	begin micro_ip <= 7'd0;  reb[tail].ir <= {{9{micro_ir[31]}},micro_ir[31:12],3'b0,5'd31,5'd31,1'b0,ADDIL}; ip.offs <= ip.offs + 4'd4; end // SUB $SP,$SP,#Amt
 			// DEFCAT
 			7'd44:	begin micro_ip <= 7'd45; ir <= {3'd6,8'h00,6'd62,6'd3,1'b0,LDH}; dlen <= 4'd2; end					// LDO $Tn,[$FP]
 			7'd45:	begin micro_ip <= 7'd46; ir <= {3'd6,8'h20,6'd3,6'd4,1'b0,LDHS}; end					// LDO $Tn+1,32[$Tn]
@@ -1813,12 +1908,11 @@ begin
 		reb[dec].state <= 3'd2;
 		reb[dec].dec <= deco;
 		reb[dec].istk_depth <= distk_depth;
-		reb[dec].ia <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Ra];
-		reb[dec].ib <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rb];
-		reb[dec].ic0 <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc];
-		reb[dec].ic1 <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc+1];
-		reb[dec].ic2 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[{deco.Rc[4:2],2'b10}];
-		reb[dec].ic3 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[{deco.Rc[4:2],2'b11}];
+		reb[dec].ia <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Ra==5'd0 ?  'd0 : regfile[deco.Ra[4:2]] >> {deco.Ra[1:0],7'b0};
+		reb[dec].ib <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Rb==5'd0 ?  'd0 : regfile[deco.Rb[4:2]] >> {deco.Rb[1:0],7'b0};
+		reb[dec].ic1 <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Rc+1==5'd0 ?  'd0 : regfile[deco.Rc[4:2]] >> {deco.Rc[1:0]+1,7'b0};
+		reb[dec].ic2 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc[4:2]] >> {2'b10,7'b0};
+		reb[dec].ic3 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc[4:2]] >> {2'b11,7'b0};
 		reb[dec].pn <= rfop;
 		reb[dec].ca <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) ? reb[head].cares : caregfile[deco.Ca];
 		reb[dec].iav <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
@@ -2187,8 +2281,8 @@ begin
 			end
 		end
 		*/
-		if (reb[exec].iav && reb[exec].ibv &&
-			reb[exec].ic0v && reb[exec].ic1v && reb[exec].ic2v && reb[exec].ic3v && reb[exec].lkv) begin
+		if (reb[exec].iav & reb[exec].ibv &
+			reb[exec].ic0v & reb[exec].ic1v & reb[exec].ic2v & reb[exec].ic3v & reb[exec].lkv) begin
 			if (state==RUN) begin
 				reb[exec].state <= 3'd3;
 				reb[exec].w256 <= 1'b0;
@@ -2204,6 +2298,7 @@ begin
 						exec <= next_exec;
 					end
 					else if (reb[exec].state==3'd4) begin
+						tArgUpdate(exec);
 						reb[exec].state <= 3'd4;
 						exec <= next_exec;
 					end
@@ -2235,8 +2330,12 @@ begin
 			end
 			*/
 			//if (reb[head].dec.Rt==reb[n].dec.Ra && reb[head].state==3'd4 && reb[head].v) begin
-			if (reb[n].ias==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ia <= reb[head].res;
+			if (reb[n].ias==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ia <= reb[m].res;
+				reb[n].iav <= 1'b1;
+			end
+			else if (reb[reb[n].ias].v && reb[reb[n].ias].state==3'd4) begin
+				reb[n].ia <= reb[reb[n].ias].res;
 				reb[n].iav <= 1'b1;
 			end
 		end
@@ -2248,8 +2347,8 @@ begin
 			end
 			*/
 			//if (reb[head].dec.Rt==reb[n].dec.Rb && reb[head].state==3'd4 && reb[head].v) begin
-			if (reb[n].ibs==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ib <= reb[head].res;
+			if (reb[n].ibs==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ib <= reb[m].res;
 				reb[n].ibv <= 1'b1;
 			end
 		end
@@ -2259,10 +2358,10 @@ begin
 				reb[n].ic0 <= reb[m].res;
 				reb[n].ic0v <= 1'b1;
 			end
-			if (reb[head].dec.Rt==reb[n].dec.Rc && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[m].dec.Rt==reb[n].dec.Rc && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic0s==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ic0 <= reb[head].res;
+			if (reb[n].ic0s==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ic0 <= reb[m].res;
 				reb[n].ic0v <= 1'b1;
 			end
 		end
@@ -2272,10 +2371,10 @@ begin
 				reb[n].ic1 <= reb[m].res;
 				reb[n].ic1v <= 1'b1;
 			end
-			if (reb[head].dec.Rt==reb[n].dec.Rc+1 && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[m].dec.Rt==reb[n].dec.Rc+1 && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic1s==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ic1 <= reb[head].res;
+			if (reb[n].ic1s==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ic1 <= reb[m].res;
 				reb[n].ic1v <= 1'b1;
 			end
 		end
@@ -2285,10 +2384,10 @@ begin
 				reb[n].ic2 <= reb[m].res;
 				reb[n].ic2v <= 1'b1;
 			end
-			if (reb[head].dec.Rt=={reb[n].dec.Rc[4:2],2'b10} && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b10} && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic2s==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ic2 <= reb[head].res;
+			if (reb[n].ic2s==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ic2 <= reb[m].res;
 				reb[n].ic2v <= 1'b1;
 			end
 		end
@@ -2298,10 +2397,10 @@ begin
 				reb[n].ic3 <= reb[m].res;
 				reb[n].ic3v <= 1'b1;
 			end
-			if (reb[head].dec.Rt=={reb[n].dec.Rc[4:2],2'b11} && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b11} && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic3s==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].ic3 <= reb[head].res;
+			if (reb[n].ic3s==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].ic3 <= reb[m].res;
 				reb[n].ic3v <= 1'b1;
 			end
 		end
@@ -2311,10 +2410,10 @@ begin
 				reb[n].lk <= reb[m].cares;
 				reb[n].lkv <= 1'b1;
 			end
-			if (reb[head].dec.Ct==reb[n].dec.lk && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[m].dec.Ct==reb[n].dec.lk && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].lks==head && reb[head].v && reb[head].state==3'd4) begin
-				reb[n].lk <= reb[head].cares;
+			if (reb[n].lks==m && reb[m].v && reb[m].state==3'd4) begin
+				reb[n].lk <= reb[m].cares;
 				reb[n].lkv <= 1'b1;
 			end
 		end
@@ -2489,7 +2588,18 @@ endtask
 integer n9;
 task tBranch;
 input [3:0] yy;
+integer n;
 begin
+	for (n = 0; n < 8; n = n + 1) begin
+  	if (|reb_latestID[n])
+  		regfile_src[reb[n].dec.Rt] <= n;
+  	if (|reb_latestID2[n])
+  		ca_src[reb[n].dec.Ct] <= n;
+  	if (~livetarget[n])
+  		regfile_src[reb[n].dec.Rt] <= 5'd31;
+  	if (~livetarget2[n])
+  		ca_src[reb[n].dec.Ct] <= 5'd31;
+  end
 	for (n9 = 0; n9 < 8; n9 = n9 + 1)
 		if (reb[n9].sn > reb[exec].sn)
 			reb[n9] <= 'd0;
