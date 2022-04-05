@@ -1252,6 +1252,7 @@ static taddr make_reloc(int reloctype,operand *op,section *sec,
       	/* Unconditional jump */
         case J2:
         case JL2:
+        	printf("val=%08llx\n", val);
 		      add_extnreloc_masked(reloclist,base,val,reloctype,
                            11,18,0,0x7fffeLL);
 		      add_extnreloc_masked(reloclist,base,val,reloctype,
@@ -2036,6 +2037,10 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  			tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
 	  		*insn |= tgt;
 	  	}
+	  	else {
+	  		if (is_nbit(val,18))
+	  			*isize = 4;
+	  	}
 	  	return (1);
 	  }
 	  break;
@@ -2075,6 +2080,10 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  		else
 	    		tgt = (((val >> 1LL) & 0x3ffffLL) << 11LL) | (((val >> 19LL) & 0xffffLL) << 32LL);
     		*insn |= tgt;
+	  	}
+	  	else {
+	  		if (is_nbit(val,18))
+	  			*isize = 4;
 	  	}
 	  	return (1);
 	  }
@@ -2207,7 +2216,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
    prefix is in byte 1. The total size may be calculated using a simple
    shift and sum.
 */
-size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
+size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
                      uint64_t *prefix, uint64_t *prefix2, uint64_t *insn, dblock *db)
 {
   mnemonic *mnemo = &mnemonics[ip->code];
@@ -2217,6 +2226,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
 	int constexpr;
 	int reg = 0;
 	char vector_insn = 0;
+	int64_t op1val;
 
 	TRACE("Eto:");
 	isize = mnemo->ext.len;
@@ -2280,6 +2290,10 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
           cpu_error(2);  */ /* constant integer expression required */
         }
     }
+
+		if (i==1) {
+			op1val = val;
+		}
 
 		TRACE("Ethof:");
     if (db!=NULL && op.type==OP_REGIND && op.attr==REL_NONE) {
@@ -2475,6 +2489,85 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
   		}
     }
 	}
+	
+	if (mnemo->ext.opcode==0x88LL || mnemo->ext.opcode==0x89LL ||
+		mnemo->ext.opcode==0x94LL || mnemo->ext.opcode==0x95LL) {	// LDH Rt,n[SP] or STH Rs,n[SP]
+		if (ip->op[1]->type==OP_REGIND && ip->op[0]->type==OP_REG) {
+			if (ip->op[1]->basereg==31LL) {
+				if (mnemo->ext.opcode==0x88LL || mnemo->ext.opcode==0x89LL) {
+					switch(op1val & 0x1fffLL) {
+					case 0:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC8LL |	// opcode
+							(*insn & (0x1fLL << 9LL)); // Rt
+						}
+						break;
+					case 16:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC8LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(1LL << 14LL);
+						}
+						break;
+					case 32:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC8LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(2LL << 14LL);
+						}	
+						break;
+					case 48:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC8LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(3LL << 14LL);
+						}
+						break;
+					}
+				}		
+				else {
+					switch(op1val & 0x1fffLL) {
+					case 0:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC9LL |	// opcode
+							(*insn & (0x1fLL << 9LL)); // Rt
+						}
+						break;
+					case 16:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC9LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(1LL << 14LL);
+						}
+						break;
+					case 32:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC9LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(2LL << 14LL);
+						}
+						break;
+					case 48:
+						isize = 2;
+						if (insn) {
+							*insn = 0xC9LL |	// opcode
+							(*insn & (0x1fLL << 9LL)) | // Rt
+							(3LL << 14LL);
+						}
+						break;
+					}
+				}		
+			}
+		}
+	}
+	
 	TRACE("G");
 	return (isize);
 }
@@ -2483,7 +2576,7 @@ size_t eval_thor_operands(instruction *ip,section *sec,taddr pc,
    to the data created by eval_instruction. */
 size_t instruction_size(instruction *ip,section *sec,taddr pc)
 {
-	size_t sz = eval_thor_operands(ip,sec,pc,NULL,NULL,NULL,NULL);
+	size_t sz = encode_thor_operands(ip,sec,pc,NULL,NULL,NULL,NULL);
 	sz = (sz & 0xff) + ((sz >> 8) & 0xff) + (sz >> 16);
 /*	insn_sizes1[sz1ndx++] = sz; */
 	TRACE2("isize=%d ", sz);
@@ -2502,7 +2595,7 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 
 	prefix = 0;
 	prefix2 = 0;
-	sz = eval_thor_operands(ip,sec,pc,&prefix,&prefix2,&insn,db);
+	sz = encode_thor_operands(ip,sec,pc,&prefix,&prefix2,&insn,db);
 	db->size = (sz & 0xff) + ((sz >> 8) & 0xff) + (sz >> 16);
 /*	insn_sizes2[sz2ndx++] = db->size; */
   if (db->size) {

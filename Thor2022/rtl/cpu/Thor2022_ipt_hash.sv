@@ -38,11 +38,26 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_ipt_hash(asid, adr, hash);
+module Thor2022_ipt_hash(clk, asid, adr, mask, hash);
+input clk;
 input [9:0] asid;
-input Address adr;
-output [15:0] hash;
+input [63:0] adr;
+input [31:0] mask;
+output reg [15:0] hash;
 
-assign hash = adr[29:19] ^ {asid[9:0],1'b0};
+reg [63:0] asid_r;
+reg [63:0] mask_r;
+wire [5:0] sz;
+reg [4:0] sz_r;
+
+ffo48 uffo1({16'h0,mask},sz);
+always_ff @(posedge clk)
+	sz_r = sz==6'd63 ? 5'd0 : sz[4:0];
+always_ff @(posedge clk)
+	asid_r = asid << sz_r;
+always_ff @(posedge clk)
+	mask_r = {mask,10'h3FF};
+always_comb
+	hash = (adr ^ asid_r) & mask_r;
 
 endmodule

@@ -74,6 +74,11 @@ begin
 	  	if (daeo)
 	  		wr <= 1'b1;
 	  end
+	IPT_RW_PTG4:
+		if (!inv && (dce & hit) && func==MR_STORE && ack) begin
+			if (daeo)
+				wr <= 1'b1;
+		end
 	default:	;
 	endcase
 end

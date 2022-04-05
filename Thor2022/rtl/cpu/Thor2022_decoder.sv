@@ -58,6 +58,7 @@ always_comb
 begin
 case(ir.any.opcode)
 DJMP:	Ra = 5'd26;
+LDSP,STSP:	Ra = 5'd31;
 default:	Ra = ir.r3.Ra;
 endcase
 Rb = ir.r3.Rb;
@@ -71,6 +72,7 @@ JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 JMP:	Rt = 'd0;
 DJMP,BSET:
 	Rt = 5'd26;
+STSP,
 STB,STW,STT,STO,STHC,STHS,STH,STHP,STPTR:
 	Rt = 'd0;
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
@@ -83,6 +85,7 @@ default:	Rt = ir[13:9];
 endcase
 // Rc
 case(ir.any.opcode)
+STSP,
 STB,STW,STT,STO,STHC,STH,STHP,STHS,STPTR:
 	Rc = ir.st.Rs;
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
@@ -202,12 +205,13 @@ ADDIL,SUBFIL,CMPIL,MULIL,DIVIL,MULUIL:
 	rfwr = `TRUE;
 ANDIL,ORIL,XORIL:	rfwr = `TRUE;
 SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL:		rfwr = `TRUE;
+LDSP,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 	rfwr = `TRUE;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	rfwr = `TRUE;
-LDHP,LDHPX:	rfwr = `TRUE;
-ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
+LDHP,LDHPX,LDHQ,LDHQX:	rfwr = `TRUE;
+ADD2R,SUB2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SGEU2R,SLTU2R,SEQ2R,SNE2R:
 	rfwr = `TRUE;
 SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
 	rfwr = `TRUE;
@@ -238,9 +242,9 @@ SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULUIL:
 	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
 ANDIL:	imm = ir.any.v ? {{103{1'b1}},ir.rilv.imm} : {{99{1'b1}},ir.ril.imm};
 ORIL,XORIL:	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHP:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHP,LDHQ:
 	imm = ir.any.v ? {{104{ir.ld.disp[23]}},ir.ld.disp} : {{99{ir.ld.disp[28]}},ir.ld.disp};
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX,LDHPX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX,LDHPX,LDHQX:
 	imm = 'd0;
 STB,STW,STT,STO,STH,STHP,STHC,STPTR:
 	imm = ir.any.v ? {{104{ir.st.disp[23]}},ir.st.disp} : {{99{ir.st.disp[28]}},ir.st.disp};
@@ -248,6 +252,7 @@ STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
 	imm = 'd0;
 LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
 STHS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
+LDSP,STSP:	imm = {{122{1'b0}},ir[15:14],4'h0};
 SLLI,SRLI,SRAI:	imm = {122'd0,ir[24:19]};
 default:
 	imm = 'd0;
@@ -287,7 +292,7 @@ deco.imm = imm;
 
 case(ir.any.opcode)
 R2,R3,BTFLD:	deco.Tb = ir.r3.Tb;
-ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
+ADD2R,SUB2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R,SGE2R,SLTU2R,SGEU2R,SEQ2R,SNE2R:
 	deco.Tb = ir[24];
 SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
 	deco.Tb = ir[24];
@@ -295,7 +300,7 @@ SLLI,SRLI,SRAI,
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	deco.Tb = 1'b0;
 JMP,DJMP:	deco.Tb = 1'b0;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDHPX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDHPX,LDOUX,LDHX,LDHQX:
 	deco.Tb = ir.r3.Tb;
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
 	deco.Tb = ir.r3.Tb;
@@ -340,6 +345,7 @@ default:	deco.addi = `FALSE;
 endcase
 
 case(ir.any.opcode)
+LDSP,
 CACHE,CACHEX,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,
 LDOU,LDOUX,LDH,LDHX,
@@ -356,7 +362,7 @@ default:	deco.ldz = `FALSE;
 endcase
 
 case(ir.any.opcode)
-CACHE,
+CACHE,LDSP,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 	deco.loadr = `TRUE;
 default:	deco.loadr = `FALSE;
@@ -371,6 +377,7 @@ endcase
 
 
 case(ir.any.opcode)
+STSP,
 STB,STW,STT,STO,STHS,STHC,STH,STHP,STPTR,
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
 	deco.st = `TRUE;
@@ -378,6 +385,7 @@ default:	deco.st = `FALSE;
 endcase
 
 case(ir.any.opcode)
+STSP,
 STB,STW,STT,STO,STHC,STHS,STH,STHP,STPTR:
 	deco.storer = `TRUE;
 default:	deco.storer = `FALSE;
@@ -399,8 +407,8 @@ LDT,LDTU,STT:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
-LDHS,LDOO,LDOOX,LDH,LDHX:	deco.memsz = hexi;
-STHS,STOOX,STH,STHC,STHX,STHCX:	deco.memsz = hexi;
+LDHS,LDOO,LDOOX,LDH,LDHX,LDSP:	deco.memsz = hexi;
+STHS,STOOX,STH,STHC,STHX,STHCX,STSP:	deco.memsz = hexi;
 LDHP,LDHPX,STHP,STHPX: deco.memsz = hexipair;
 STPTR,STPTRX:	deco.memsz = ptr;
 default:	deco.memsz = octa;
@@ -527,7 +535,7 @@ deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
 case(ir.any.opcode)
 R2,R3:
 	deco.Rvm = ir.r3.m;
-ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
+ADD2R,SUB2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
 	deco.Rvm = ir.any[31:29];
 default:
 	if (deco.ril & ir.any.v)
@@ -543,7 +551,7 @@ endcase
 case(ir.any.opcode)
 R2,R3:
 	deco.Rz = ir.r3.z;
-ADD2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
+ADD2R,SUB2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
 	deco.Rz = ir.any[28];
 default:
 	if (deco.ril & ir.any.v)
@@ -574,7 +582,7 @@ deco.stcmp = ir.any.opcode==STCMP;
 deco.mflk = ir.any.opcode==MFLK;
 deco.mtlk = ir.any.opcode==MTLK;
 deco.enter = ir.any.opcode==ENTER;
-deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH2R || ir.any.opcode==PUSH4R;
+deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH4R;
 deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.jxx || deco.jxz || deco.rts;
 
 if (deco.mflk)
@@ -595,7 +603,7 @@ BRK:	deco.Ct = 4'h8 + distk_depth;
 MTLK:	deco.Ct = {2'd0,ir[15:14]};
 CSR:
 	case (ir.csr.op)
-	CSRRW:	deco.Ct = ir.csr.regno[4:1];
+	CSRRW:	deco.Ct = ir.csr.regno[3:0];
 	default:	deco.Ct = 4'h8 + distk_depth;
 	endcase
 // Cannot update ca[0] with a branch

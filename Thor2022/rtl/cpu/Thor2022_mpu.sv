@@ -257,7 +257,7 @@ endcase
 always @(posedge clk_i)
 	ack <= ack_i|pic_ack|pit_ack;
 
-Thor2022io ucpu1
+Thor2022oo ucpu1
 (
   .hartid_i(hartid_i),
   .rst_i(rst_i),

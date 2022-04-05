@@ -39,7 +39,7 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022io(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, clock,
+module Thor2022oo(hartid_i, rst_i, clk_i, clk2x_i, clk2d_i, wc_clk_i, clock,
 		nmi_i, irq_i, icause_i,
 		vpa_o, vda_o, bte_o, cti_o, bok_i, cyc_o, stb_o, lock_o, ack_i,
     err_i, we_o, sel_o, adr_o, dat_i, dat_o, cr_o, sr_o, rb_i, state_o, trigger_o);
@@ -114,12 +114,14 @@ wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
 wire MUserMode;
 reg gie;
 reg [511:0] regfile [0:31];
+SrcId [31:0] regfile_src;
 Value r58;
 reg [127:0] preg [0:7];
 reg [15:0] cio;
 reg [7:0] delay_cnt;
 Value sp, t0;
 Address caregfile [0:15];
+SrcId [15:0] ca_src;
 (* ram_style="block" *)
 Value vregfile [0:31][0:63];
 reg [63:0] vm_regfile [0:7];
@@ -143,6 +145,13 @@ Value vroa, vrob, vroc;
 Value wres2;
 wire wrvrf;
 reg first_flag, done_flag;
+
+sReorderEntry [7:0] reb;
+reg [2:0] head;
+reg [2:0] exec;
+reg [2:0] dec;
+reg [2:0] tail;
+reg [47:0] sn;
 
 // Instruction fetch stage vars
 reg ival;
@@ -418,11 +427,11 @@ Value bf_out;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 Thor2022_decoder udec (
-	.ir(ir),
-	.xir(xir),
-	.xval(xval),
-	.mir(mir),
-	.mval(mval),
+	.ir(reb[dec].ir),
+	.xir(reb[dec-1].ir),
+	.xval(reb[dec-1].v),
+	.mir(reb[dec-2].ir),
+	.mval(reb[dec-2].v),
 	.deco(deco),
 	.distk_depth(distk_depth),
 	.rm(rm),
@@ -435,7 +444,7 @@ if (Ra=='d0)
   rfoa = {VALUE_SIZE{1'b0}};
 else if (deco.Ravec)
 	rfoa = vroa;
-else if (Ra==xd.Rt && xd.rfwr && xval)
+else if (Ra==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfoa = res;
 else if (Ra==md.Rt && mrfwr && mval)
 	rfoa = mres;
@@ -454,7 +463,7 @@ if (Rb=='d0)
 	rfob = {VALUE_SIZE{1'b0}};
 else if (deco.Rbvec)
 	rfob = vrob;
-else if (Rb==xd.Rt && xd.rfwr && xval)
+else if (Rb==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfob = res;
 else if (Rb==md.Rt && mrfwr && mval)
 	rfob = mres;
@@ -473,7 +482,7 @@ if (Rc=='d0)
 	rfoc0 = {VALUE_SIZE{1'b0}};
 else if (deco.Rcvec)
 	rfoc0 = vroc;
-else if (Rc==xd.Rt && xd.rfwr && xval)
+else if (Rc==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfoc0 = res;
 else if (Rc==md.Rt && mrfwr && mval)
 	rfoc0 = mres;
@@ -485,7 +494,7 @@ else
 always_comb
 	Rc1 = Rc + 2'd1;
 always_comb
-if (Rc1==xd.Rt && xd.rfwr && xval)
+if (Rc1==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfoc1 = res;
 else if (Rc1==md.Rt && mrfwr && mval)
 	rfoc1 = mres;
@@ -498,7 +507,7 @@ reg [4:0] Rc2;
 always_comb
 	Rc2 = Rc + 2'd2;
 always_comb
-if (Rc2==xd.Rt && xd.rfwr && xval)
+if (Rc2==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfoc2 = res;
 else if (Rc2==md.Rt && mrfwr && mval)
 	rfoc2 = mres;
@@ -511,7 +520,7 @@ reg [4:0] Rc3;
 always_comb
 	Rc3 = Rc + 2'd3;
 always_comb
-if (Rc3==xd.Rt && xd.rfwr && xval)
+if (Rc3==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
   rfoc3 = res;
 else if (Rc3==md.Rt && mrfwr && mval)
 	rfoc3 = mres;
@@ -539,7 +548,7 @@ always_comb
 		rfop = preg[cioreg];
 
 always_comb
-	if (Ca == xd.Ct && xd.carfwr && xval)
+	if (Ca == reb[exec].dec.Ct && reb[exec].dec.carfwr && xval)
 		rfoca = xcares;
 	else if (Ca == md.Ct && md.carfwr && mval)
 		rfoca = mcares;
@@ -691,7 +700,7 @@ mult128x128 umul1
 	.b(bb),
 	.o(mul_prod2561)
 );
-wire multovf = ((xd.mulu|xd.mului) ? mul_prod256[255:128] != 'd0 : mul_prod256[255:128] != {128{mul_prod256[127]}});
+wire multovf = ((reb[exec].dec.mulu|reb[exec].dec.mului) ? mul_prod256[255:128] != 'd0 : mul_prod256[255:128] != {128{mul_prod256[127]}});
 /*
 Thor2021_multiplier umul
 (
@@ -702,6 +711,25 @@ Thor2021_multiplier umul
 );
 wire multovf = ((xMulu|xMului) ? mul_prod[127:64] != 64'd0 : mul_prod[127:64] != {64{mul_prod[63]}});
 */
+
+always_comb
+	xa = reb[exec].ia;
+always_comb
+	xb = reb[exec].ib;
+always_comb
+	xc0 = reb[exec].ic0;
+always_comb
+	xc1 = reb[exec].ic1;
+always_comb
+	xc2 = reb[exec].ic3;
+always_comb
+	xc3 = reb[exec].ic3;
+always_comb
+	xir = reb[exec].ir;
+always_comb
+	imm = reb[exec].imm;
+always_comb
+	pn = reb[exec].pn;
 
 // 3 stage pipeline
 mult24x16 umulf
@@ -723,9 +751,9 @@ Thor2022_divider #(.WID(128)) udiv
   .clk(clk2x_i),
   .ld(state==DIV1),
   .abort(1'b0),
-  .ss(xd.div),
-  .su(xd.divsu),
-  .isDivi(xd.divi),
+  .ss(reb[exec].dec.div),
+  .su(reb[exec].dec.divsu),
+  .isDivi(reb[exec].dec.divi),
   .a(xa),
   .b(xb),
   .imm(imm),
@@ -942,6 +970,13 @@ always_comb
 
 always_comb
 case(xir.any.opcode)
+MTLK:	cares <= xa;
+JMP,DJMP,BRA:	cares <= reb[exec].ip + reb[exec].ilen;
+default:	cares <= caregfile[1];
+endcase
+
+always_comb
+case(xir.any.opcode)
 R2:
 	case(xir.r3.func)
 	ADD:			carry_res = res2[128];
@@ -994,7 +1029,7 @@ Thor2022_gselectPredictor ubp
 	.rst(rst_i),
 	.clk(clk_g),
 	.en(bpe),
-	.xisBranch(xd.jxx),
+	.xisBranch(reb[exec].dec.jxx),
 	.xip(xip.offs),
 	.takb(takb),
 	.ip(ip.offs),
@@ -1131,14 +1166,14 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 `ifdef OVERLAPPED_PIPELINE
 wire stall_i = !ihit;
 wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) &&
-								(((|xcause || xd.flowchg || xd.load) && xval) ||
+								(((|xcause || reb[exec].dec.flowchg || reb[exec].dec.load) && xval) ||
 								 ((|mcause || md.flowchg) && mval) ||
 								 ((|wcause || wd.flowchg) && wval))) ||
-								 ((xd.mulall||xd.divall) && xval) ||
-								(xd.load && (Ra==xd.Rt || {Tb,Rb}=={1'b0,xd.Rt} || {Tc,Rc}=={1'b0,xd.Rt} || Rc1==xd.Rt || Rc2==xd.Rt || Rc3==xd.Rt) && xval && xd.Rt!='d0) ||
+								 ((reb[exec].dec.mulall||reb[exec].dec.divall) && xval) ||
+								(reb[exec].dec.load && (Ra==reb[exec].dec.Rt || {Tb,Rb}=={1'b0,reb[exec].dec.Rt} || {Tc,Rc}=={1'b0,reb[exec].dec.Rt} || Rc1==reb[exec].dec.Rt || Rc2==reb[exec].dec.Rt || Rc3==reb[exec].dec.Rt) && xval && reb[exec].dec.Rt!='d0) ||
 //								(md.load && (Ra==md.Rt || {Tb,Rb}=={2'b00,md.Rt} || {Tc,Rc}=={2'b00,md.Rt} || Rc1==md.Rt) && mval && md.Rt!='d0) ||
 //								(wd.load && (Ra==wd.Rt || {Tb,Rb}=={2'b00,wd.Rt} || {Tc,Rc}=={2'b00,wd.Rt} || Rc1==wd.Rt) && wval && wd.Rt!=6'd0) ||
-								(xd.sync && xval) || (md.sync && mval) || (wd.sync && wval) || tSync || uSync || vSync;
+								(reb[exec].dec.sync && xval) || (md.sync && mval) || (wd.sync && wval) || tSync || uSync || vSync;
 
 assign run = ihit;
 always_comb advance_t = !stall_i && (state==RUN);
@@ -1170,14 +1205,11 @@ if (rst_i) begin
 end
 else begin
 	tOnce();
-`ifdef OVERLAPPED_PIPELINE
 	tInsnFetch();
 	tDecode();
 	tExecute();
-	tMemory();
 	tWriteback();
 	tSyncTrailer();
-`endif
 	tStateMachine();
 
 end
@@ -1233,6 +1265,21 @@ endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+integer kk;
+reg [2:0] next_exec;
+always_comb
+begin
+next_exec = exec;
+for (kk = 0; kk < 8; kk = kk + 1)
+	if (reb[kk].state==3'd2 || reb[kk].state==3'd3)
+		if (reb[kk].iav && reb[kk].ibv &&
+			reb[kk].ic0v && reb[kk].ic1v && reb[kk].ic2v && reb[kk].ic3v && reb[kk].lkv)
+			next_exec = kk;
+end
+			
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+integer n6;
 
 task tReset;
 begin
@@ -1299,6 +1346,19 @@ begin
 	xd <= 'd0;
 	md <= 'd0;
 	wd <= 'd0;
+	for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
+		reb[n6] <= 'd0;
+		reb[n6].state <= 3'd7;
+	end
+	for (n6 = 0; n6 < 32; n6 = n6 + 1)
+		regfile_src[n6] <= 5'd31;
+	for (n6 = 0; n6 < 16; n6 = n6 + 1)
+		ca_src[n6] <= 5'd31;
+	sn <= 'd0;
+	head <= 'd0;
+	tail <= 'd0;
+	exec <= 'd0;
+	dec <= 'd0;
 end
 endtask
 
@@ -1329,20 +1389,8 @@ RESTART1:
 RESTART2:
 	begin
 		rst_cnt <= 6'd0;
-`ifdef OVERLAPPED_PIPELINE
 		goto(RUN);
-`else
-		goto (IFETCH);
-`endif
 	end
-`ifndef OVERLAPPED_PIPELINE
-IFETCH:	tInsnFetch();
-DECODE: tDecode();
-EXECUTE:	tExecute();
-MEMORY:	tMemory();
-WRITEBACK:	tWriteback();
-SYNC:	tSyncTrailer();
-`endif
 RUN:
 	begin
 	end	// RUN
@@ -1366,31 +1414,31 @@ WAIT_MEM2:
 		if (memresp_fifo_v)
 		begin
 			memresp_fifo_rd <= FALSE;
-			mres <= memresp.res;
-			mres512 <= memresp.res;
+			reb[exec].res <= memresp.res;
 			if (mStset|mStmov)
-				mrfwr <= TRUE;
-			m512 <= FALSE;
-			m256 <= FALSE;
+				reb[exec].dec.rfwr <= TRUE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MFSEL) begin
-					mrfwr <= FALSE;
+					reb[exec].dec.rfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
-						mrfwr <= TRUE;
+						reb[exec].dec.rfwr <= TRUE;
 					end
 					if (memreq.func2==MR_LDOO)
-						m512 <= TRUE;
+						reb[exec].w512 <= TRUE;
 				end
 				else if (memreq.sz==3'd5) begin
-					m256 <= TRUE;
+					reb[exec].w256 <= TRUE;
 				end
 				if (|memresp.cause) begin
-					if (~|mcause)
-						mistk_depth <= mistk_depth + 2'd1;
-					wcause <= memresp.cause;
-					wbadAddr <= memresp.badAddr;
+					if (~|reb[exec].cause)
+						reb[exec].istk_depth <= reb[exec].istk_depth + 2'd1;
+					reb[exec].cause <= memresp.cause;
+					reb[exec].badAddr <= memresp.badAddr;
 				end
-				goto (INVnRUN);
+				reb[exec].state <= 3'd4;
+				exec <= next_exec;
+			 	tArgUpdate(exec);
+				goto (RUN);
 			end
 		end
 	end
@@ -1401,21 +1449,18 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-`ifdef OVERLAPPED_PIPELINE
+  	reb[exec].state <= 3'd4;
+		exec <= next_exec;
+  	reb[exec].res <= res;
+  	reb[exec].carry_res <= carry_res;
+  	tArgUpdate(exec);
     goto(RUN);
-`else
-		goto(IFETCH);
-`endif
   end
 INVnRUN2:
   begin
     //inv_x();
 		xx <= 4'd7;
-`ifdef OVERLAPPED_PIPELINE
     goto(RUN);
-`else
-		goto(IFETCH);
-`endif
   end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1423,23 +1468,23 @@ INVnRUN2:
 // Step1: setup operands and capture sign
 MUL1:
   begin
-    if (xd.mul) mul_sign <= xa[$bits(Value)-1] ^ xb[$bits(Value)-1];
-    else if (xd.muli) mul_sign <= xa[$bits(Value)-1] ^ imm[$bits(Value)-1];
-    else if (xd.mulsu) mul_sign <= xa[$bits(Value)-1];
-    else if (xd.mulsui) mul_sign <= xa[$bits(Value)-1];
+    if (reb[exec].dec.mul) mul_sign <= xa[$bits(Value)-1] ^ xb[$bits(Value)-1];
+    else if (reb[exec].dec.muli) mul_sign <= xa[$bits(Value)-1] ^ imm[$bits(Value)-1];
+    else if (reb[exec].dec.mulsu) mul_sign <= xa[$bits(Value)-1];
+    else if (reb[exec].dec.mulsui) mul_sign <= xa[$bits(Value)-1];
     else mul_sign <= 1'b0;  // MULU, MULUI
-    if (xd.mul) aa <= fnAbs(xa);
-    else if (xd.muli) aa <= fnAbs(xa);
-    else if (xd.mulsu) aa <= fnAbs(xa);
-    else if (xd.mulsui) aa <= fnAbs(xa);
+    if (reb[exec].dec.mul) aa <= fnAbs(xa);
+    else if (reb[exec].dec.muli) aa <= fnAbs(xa);
+    else if (reb[exec].dec.mulsu) aa <= fnAbs(xa);
+    else if (reb[exec].dec.mulsui) aa <= fnAbs(xa);
     else aa <= xa;
-    if (xd.mul) bb <= fnAbs(xb);
-    else if (xd.muli) bb <= fnAbs(imm);
-    else if (xd.mulsu) bb <= xb;
-    else if (xd.mulsui) bb <= imm;
-    else if (xd.mulu|xd.mulf) bb <= xb;
+    if (reb[exec].dec.mul) bb <= fnAbs(xb);
+    else if (reb[exec].dec.muli) bb <= fnAbs(imm);
+    else if (reb[exec].dec.mulsu) bb <= xb;
+    else if (reb[exec].dec.mulsui) bb <= imm;
+    else if (reb[exec].dec.mulu|reb[exec].dec.mulf) bb <= xb;
     else bb <= imm; // MULUI
-    delay_cnt <= (xd.mulf|xd.mulfi) ? 8'd3 : 8'd18;	// Multiplier has 18 stages
+    delay_cnt <= (reb[exec].dec.mulf|reb[exec].dec.mulfi) ? 8'd3 : 8'd18;	// Multiplier has 18 stages
 	// Now wait for the six stage pipeline to finish
     goto (MUL2);
   end
@@ -1448,7 +1493,7 @@ MUL2:
 MUL9:
   begin
 //    mul_prod <= (xMulf|xMulfi) ? mulf_prod : mul_sign ? -mul_prod1 : mul_prod1;
-    mul_prod256 <= (xd.mulf|xd.mulfi) ? mulf_prod : mul_sign ? -mul_prod2561 : mul_prod2561;
+    mul_prod256 <= (reb[exec].dec.mulf|reb[exec].dec.mulfi) ? mulf_prod : mul_sign ? -mul_prod2561 : mul_prod2561;
     //upd_rf <= `TRUE;
     goto(INVnRUN);
     if (multovf & mexrout[5]) begin
@@ -1545,10 +1590,12 @@ endfunction
 
 task tInsnFetch;
 begin
-	if (advance_i) begin
-`ifndef OVERLAPPED_PIPELINE
-		goto (DECODE);
-`endif
+	if (ihit && (reb[tail].state==3'd0 || reb[tail].state==3'd7)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
+		reb[tail].state <= 3'd1;
+		reb[tail].sn <= sn;
+		reb[tail].v <= 1'b1;
+		sn <= sn + 2'd1;
+		tail <= tail + 2'd1;
 		ival <= VAL;
 		dval <= ival;
 		dlen <= ilen;
@@ -1693,15 +1740,15 @@ begin
 			CARRY:	begin cio <= insn[30:15]; cioreg <= insn[11:9]; end
 			default:	;
 			endcase
-		dip <= ip;
-		dip.micro_ip <= micro_ip;
+		reb[tail].ip <= ip;
+		reb[tail].ip.micro_ip <= micro_ip;
+		reb[tail].ilen <= ilen;
 		if (micro_ip==7'd0) begin
-			ir <= insn;
+			reb[tail].ir <= insn;
 			micro_ir <= insn;
 		end
-		dstep <= istep;
-		dpredict_taken <= ipredict_taken;
-		dcause <= icause;
+		reb[tail].step <= istep;
+		reb[tail].predict_taken <= ipredict_taken;
 		dpfx <= is_prefix(insn.any.opcode);
 		distk_depth <= istk_depth;
 		if (is_prefix(insn.any.opcode))
@@ -1713,30 +1760,30 @@ begin
 		// Interrupts disabled while running micro-code.
 		if (micro_ip==7'd0 && cio==16'h0000) begin
 			if (irq_i > pmStack[3:1] && gie && !dpfx && !di) begin
-				icause <= 16'h8000|icause_i|(irq_i << 4'd8);
+				reb[tail].cause <= 16'h8000|icause_i|(irq_i << 4'd8);
 				istk_depth <= istk_depth + 2'd1;
 			end
 			else if (wc_time_irq && gie && !dpfx && !di) begin
-				icause <= 16'h8000|FLT_TMR;
+				reb[tail].cause <= 16'h8000|FLT_TMR;
 				istk_depth <= istk_depth + 2'd1;
 			end
 			else if (insn.any.opcode==BRK) begin
-				icause <= FLT_BRK;
+				reb[tail].cause <= FLT_BRK;
 				istk_depth <= istk_depth + 2'd1;
 			end
 			// Triple prefix fault.
 			else if (pfx_cnt > 3'd2) begin
-				icause <= 16'h8000|FLT_PFX;
+				reb[tail].cause <= 16'h8000|FLT_PFX;
 				istk_depth <= istk_depth + 2'd1;
 			end
 		end
 		if (ipage_fault) begin
-			icause <= 16'h8000|FLT_CPF;
+			reb[tail].cause <= 16'h8000|FLT_CPF;
 			istk_depth <= istk_depth + 2'd1;
 			ir <= NOP_INSN;
 		end
 		if (itlbmiss) begin
-			icause <= 16'h8000|FLT_TLBMISS;
+			reb[tail].cause <= 16'h8000|FLT_TLBMISS;
 			istk_depth <= istk_depth + 2'd1;
 			ir <= NOP_INSN;
 		end
@@ -1747,8 +1794,6 @@ begin
 	else begin
 `ifdef OVERLAPPED_PIPELINE
 		ip <= ip;
-		if (advance_d)
-			inv_d();
 `endif
 	end	
 end
@@ -1760,67 +1805,71 @@ endtask
 // Much of the decode is done above by combinational logic outside of the
 // clock domain.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+integer n7;
 
 task tDecode;
 begin
-	if (advance_d) begin
-`ifndef OVERLAPPED_PIPELINE
-		goto (EXECUTE);
-`endif
-		xistk_depth <= distk_depth;
+	if (reb[dec].state==3'd1) begin
+		reb[dec].state <= 3'd2;
+		reb[dec].dec <= deco;
+		reb[dec].istk_depth <= distk_depth;
+		reb[dec].ia <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Ra];
+		reb[dec].ib <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rb];
+		reb[dec].ic0 <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc];
+		reb[dec].ic1 <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc+1];
+		reb[dec].ic2 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[{deco.Rc[4:2],2'b10}];
+		reb[dec].ic3 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[{deco.Rc[4:2],2'b11}];
+		reb[dec].pn <= rfop;
+		reb[dec].ca <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) ? reb[head].cares : caregfile[deco.Ca];
+		reb[dec].iav <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
+		reb[dec].ibv <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rb]==5'd31 || Source2Valid(reb[dec].ir);
+		reb[dec].ic0v <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || Source3Valid(reb[dec].ir);
+		reb[dec].ic1v <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[(deco.Rc+1)%32]==5'd31 || Source3Valid(reb[dec].ir);
+		reb[dec].ic2v <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b10}]==5'd31 || Source3Valid(reb[dec].ir);
+		reb[dec].ic3v <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b11}]==5'd31 || Source3Valid(reb[dec].ir);
+		reb[dec].lkv <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) || ca_src[deco.Ca]==5'd31 || LkValid(reb[dec].ir);
+		reb[dec].ias <= Source1Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Ra];
+		reb[dec].ibs <= Source2Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rb];
+		reb[dec].ic0s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rc];
+		reb[dec].ic1s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rc+1];
+		reb[dec].ic2s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:3],2'b10}];
+		reb[dec].ic3s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:3],2'b11}];
+		reb[dec].lks <= LkValid(reb[dec].ir) ? 5'd31 : ca_src[deco.Ca];
+		reb[dec].cioreg <= cioreg;
+		reb[dec].cio <= cio[1:0];
+		reb[dec].predict_taken <= dpredict_taken;
+		reb[dec].cause <= dcause;
+		reb[dec].step <= dstep;
+		reb[dec].mask_bit <= mask[dstep];
+		reb[dec].zbit <= zbit;
+		reb[dec].predictable_branch <= (ir.jxx.Ca==3'd0 || ir.jxx.Ca==3'd7);
+		regfile_src[deco.Rt] <= dec;
+		regfile_src[5'd0] <= 5'd31;
+		ca_src[deco.Ct] <= dec;
+		dec <= dec + 2'd1;
+		
 		xval <= dval;
-		xip <= dip;
-		xir <= ir;
-		xlen <= dlen;
-		xd <= deco;
-		xa <= rfoa;
-		xb <= rfob;
-		xc0 <= rfoc0;
-		xc1 <= rfoc1;
-		xc2 <= rfoc2;
-		xc3 <= rfoc3;
-		xca <= rfoca;
-		pn <= rfop;
-		imm <= deco.imm;
-		xcioreg <= cioreg;
-		xcio <= cio[1:0];
-//		xFloat <= deco.float;
-		xpredict_taken <= dpredict_taken;
-		xcause <= dcause;
-		xstep <= dstep;
-		xrm <= deco.rm;
-		xdfrm <= deco.dfrm;
-		xmaskbit <= mask[dstep];
-		xzbit <= zbit;
-		xpredict_taken <= dpredict_taken;
-		// The BTB might have predicted the correct address following the branch, so
-		// do not invalidate unless flow is changing.
-		xPredictableBranch <= (ir.jxx.Ca==3'd0 || ir.jxx.Ca==3'd7);
 		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
-				inv_i();
-				inv_d();
-				ip.offs <= deco.jmptgt;
+				for (n7 = 0; n7 < 8; n7 = n7 + 1)
+					if (reb[n7].sn > reb[dec].sn)
+						reb[n7] <= 'd0;
+				reb[dec].ip.offs <= deco.jmptgt;
 			end
 		end
 		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
-			if (ip.offs != dip.offs + deco.jmptgt) begin
-				inv_i();
-				inv_d();
-				ip.offs <= dip.offs + deco.jmptgt;
+			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
+				for (n7 = 0; n7 < 8; n7 = n7 + 1)
+					if (reb[n7].sn > reb[dec].sn)
+						reb[n7] <= 'd0;
+				reb[dec].ip.offs <= reb[dec].ip.offs + deco.jmptgt;
 			end
 		end
 		if (deco.jmp|deco.bra|deco.jxx)
-  		xcares.offs <= dip.offs + dlen;
+  		reb[dec].cares.offs <= reb[dec].ip.offs + reb[dec].ilen;
   	else if (deco.mtlk)
-  		xcares.offs <= rfoc0;
+  		reb[dec].cares.offs <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc];
 	end
-`ifdef OVERLAPPED_PIPELINE
-	else if (advance_x) begin
-		inv_x();
-		xx <= 4'd1;
-	end
-`endif
 end
 endtask
 
@@ -1829,19 +1878,19 @@ endtask
 
 task tExMem;
 begin
-  if (xd.mulall)
+  if (reb[exec].dec.mulall)
     goto(MUL1);
-  if (xd.divall)
+  if (reb[exec].dec.divall)
     goto(DIV1);
-  if (xd.isDF)
+  if (reb[exec].dec.isDF)
   	goto (DF1);
 //    if (xFloat)
 //      goto(FLOAT1);
-  if (xd.loadr) begin
+  if (reb[exec].dec.loadr) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
-  	memreq.func <= xd.ldz ? MR_LOADZ : MR_LOAD;
-  	case(xd.memsz)
+  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
+  	case(reb[exec].dec.memsz)
   	byt:		begin memreq.func2 <= MR_LDB; end
   	wyde:		begin memreq.func2 <= MR_LDW; end
   	tetra:	begin memreq.func2 <= MR_LDT; end
@@ -1849,18 +1898,18 @@ begin
   	hexi:		begin memreq.func2 <= MR_LDH; end
   	default:	begin memreq.func2 <= MR_LDO; end
   	endcase
-  	memreq.sz <= xd.memsz;
-  	memreq.adr.offs <= xa + imm;
+  	memreq.sz <= reb[exec].dec.memsz;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
-  else if (xd.ldoo) begin
+  else if (reb[exec].dec.ldoo) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_LOAD;
   	memreq.func2 <= MR_LDOO;
   	memreq.sz <= hexiquad;
-  	memreq.adr.offs <= xa + imm;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
   	memreq.adr.offs[5:0] <= 6'h00;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
@@ -1869,18 +1918,18 @@ begin
   else if (xLear) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
-  	memreq.func <= xd.ldz ? MR_LOADZ : MR_LOAD;
+  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
   	memreq.func2 <= MR_LEA;
   	memreq.adr.offs <= xa + imm;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
 */
-  else if (xd.loadn) begin
+  else if (reb[exec].dec.loadn) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
-  	memreq.func <= xd.ldz ? MR_LOADZ : MR_LOAD;
-  	case(xd.memsz)
+  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
+  	case(reb[exec].dec.memsz)
   	byt:		begin memreq.func2 <= MR_LDB; end
   	wyde:		begin memreq.func2 <= MR_LDW; end
   	tetra:	begin memreq.func2 <= MR_LDT; end
@@ -1888,8 +1937,8 @@ begin
   	hexi:		begin memreq.func2 <= MR_LDH; end
   	default:	begin memreq.func2 <= MR_LDO; end
   	endcase
-  	memreq.sz <= xd.memsz;
-  	memreq.adr.offs <= siea;
+  	memreq.sz <= reb[exec].dec.memsz;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].ib;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
@@ -1897,86 +1946,86 @@ begin
   else if (xLean) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
-  	memreq.func <= xd.ldz ? MR_LOADZ : MR_LOAD;
+  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
   	memreq.func2 <= MR_LEA;
   	memreq.adr.offs <= siea;
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
 */
-  else if (xd.storer) begin
+  else if (reb[exec].dec.storer) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
-  	case(xd.memsz)
+  	case(reb[exec].dec.memsz)
   	byt:		begin memreq.func2 <= MR_STB; end
   	wyde:		begin memreq.func2 <= MR_STW; end
   	tetra:	begin memreq.func2 <= MR_STT; end
   	hexi:		begin memreq.func2 <= MR_STH; end
   	default:	begin memreq.func2 <= MR_STO; end
   	endcase
-  	memreq.sz <= xd.memsz;
-  	memreq.adr.offs <= xa + imm;
+  	memreq.sz <= reb[exec].dec.memsz;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
   	memreq.dat <= {xc1,xc0};
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
-  else if (xd.storen) begin
+  else if (reb[exec].dec.storen) begin
   	memreq.tid <= tid;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
-  	case(xd.memsz)
+  	case(reb[exec].dec.memsz)
   	byt:		begin memreq.func2 <= MR_STB; end
   	wyde:		begin memreq.func2 <= MR_STW; end
   	tetra:	begin memreq.func2 <= MR_STT; end
   	hexi:		begin memreq.func2 <= MR_STH; end
   	default:	begin memreq.func2 <= MR_STO; end
   	endcase
-  	memreq.sz <= xd.memsz;
-  	memreq.adr.offs <= siea;
-  	memreq.dat <= {xc1,xc0};
+  	memreq.sz <= reb[exec].dec.memsz;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].ib;
+  	memreq.dat <= {reb[exec].ic1,reb[exec].ic0};
   	memreq.wr <= TRUE;
   	goto (WAIT_MEM1);
   end
-	else if (xd.stset) begin
-		if (xc0 != 64'd0) begin
+	else if (reb[exec].dec.stset) begin
+		if (reb[exec].ic0 != 64'd0) begin
 	  	memreq.tid <= tid;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_STORE;
-	  	case(xir[30:29])
+	  	case(reb[exec].ir[30:29])
 	  	2'd0:	begin memreq.func2 <= MR_STB; end
 	  	2'd1:	begin memreq.func2 <= MR_STW; end
 	  	2'd2:	begin memreq.func2 <= MR_STT; end
 	  	default:	begin memreq.func2 <= MR_STO; end
 	  	endcase
-	  	memreq.sz <= {1'b0,xir[30:29]};
-	  	memreq.adr.offs <= xa;
-	  	memreq.dat <= xb;
+	  	memreq.sz <= {1'b0,reb[exec].ir[30:29]};
+	  	memreq.adr.offs <= reb[exec].ia;
+	  	memreq.dat <= reb[exec].ib;
 	  	memreq.wr <= TRUE;
 	  	goto (WAIT_MEM1);
   	end
   	else
-  		xd.stset <= FALSE;
+  		reb[exec].dec.stset <= FALSE;
 	end
-	else if (xd.stmov) begin
-		if (xc0 != 64'd0) begin
+	else if (reb[exec].dec.stmov) begin
+		if (reb[exec].ic0 != 64'd0) begin
 	  	memreq.tid <= tid;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_MOVLD;
-	  	case(xir[43:41])
+	  	case(reb[exec].ir[43:41])
 	  	2'd0:	begin memreq.func2 <= MR_STB; end
 	  	2'd1:	begin memreq.func2 <= MR_STW; end
 	  	2'd2:	begin memreq.func2 <= MR_STT; end
 	  	default:	begin memreq.func2 <= MR_STO; end
 	  	endcase
-	  	memreq.sz <= {1'b0,xir[42:41]};
-	  	memreq.adr.offs <= xa + xc0;
-	  	memreq.dat <= xb + xc0;
+	  	memreq.sz <= {1'b0,reb[exec].ir[42:41]};
+	  	memreq.adr.offs <= reb[exec].ia + reb[exec].ic0;
+	  	memreq.dat <= reb[exec].ib + reb[exec].ic0;
 	  	memreq.wr <= TRUE;
 	  	goto (WAIT_MEM1);
   	end
   	else
-  		xd.stmov <= FALSE;
+  		reb[exec].dec.stmov <= FALSE;
 	end
 end
 endtask
@@ -1985,20 +2034,20 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tJxx;
+integer n;
 begin
-  if (xd.jxx|xd.jxz) begin
+  if (reb[exec].dec.jxx|reb[exec].dec.jxz) begin
   	mExBranch <= TRUE;
   	if (!takb)
   		md.carfwr <= FALSE;
     if (bpe) begin
-      if (xpredict_taken && !takb && xPredictableBranch) begin
-		    inv_i();
-		    inv_d();
-		    inv_x();
-				xx <= 4'd2;
+      if (reb[exec].predict_taken && !takb && reb[exec].predictable_branch) begin
+			for (n = 0; n < 8; n = n + 1)
+				if (reb[n].sn > reb[exec].sn)
+					reb[n] <= 'd0;
         ip.offs <= xip.offs + xlen;
       end
-      else if ((!xpredict_taken && takb) || !xPredictableBranch)
+      else if ((!reb[exec].predict_taken && takb) || !reb[exec].predictable_branch)
       	tBranch(4'd3);
     end
     else if (takb)
@@ -2012,7 +2061,7 @@ endtask
 
 task tMjnez;
 begin
-	if (xd.mjnez) begin
+	if (reb[exec].dec.mjnez) begin
 		if (!takb)
 			micro_ip <= xir[28:21];
 	end
@@ -2024,9 +2073,9 @@ endtask
 
 task tJmp;
 begin
-  if (xd.jmp) begin
+  if (reb[exec].dec.jmp) begin
   	mExBranch <= TRUE;
-  	if (xd.dj ? (xa != 64'd0) : (xd.Ca != 3'd0 && xd.Ca != 3'd7))	// ==0,7 was already done at ifetch
+  	if (reb[exec].dec.dj ? (xa != 64'd0) : (reb[exec].dec.Ca != 3'd0 && reb[exec].dec.Ca != 3'd7))	// ==0,7 was already done at ifetch
   		tBranch(4'd5);
 	end
 end
@@ -2037,9 +2086,9 @@ endtask
 
 task tBra;
 begin
-  if (xd.bra) begin
+  if (reb[exec].dec.bra) begin
   	mExBranch <= TRUE;
-  	if (xd.Ca != 3'd0 && xd.Ca != 3'd7)	// ==0,7 was already done at ifetch
+  	if (reb[exec].dec.Ca != 3'd0 && reb[exec].dec.Ca != 3'd7)	// ==0,7 was already done at ifetch
   		tBranch(4'd6);
 	end
 end
@@ -2049,14 +2098,14 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tRts;
+integer n;
 begin
-	if (xd.rts) begin
+	if (reb[exec].dec.rts) begin
 		if (xir.rts.lk != 2'd0) begin
-	    inv_i();
-	    inv_d();
-	    inv_x();
-			xx <= 4'd6;
-  		ip.offs <= xca.offs + {xir.rts.cnst,1'b0};
+			for (n = 0; n < 8; n = n + 1)
+				if (reb[n].sn > reb[exec].sn)
+					reb[n] <= 'd0;
+  		ip.offs <= reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0};
 		end
 	end
 end
@@ -2067,180 +2116,305 @@ endtask
 // If the execute stage has been invalidated it doesn't do anything. 
 // Must be after INVnRUN state code.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 task tExecute;
+integer n;
+integer nn;
 begin
-	if (advance_x) begin
-`ifndef OVERLAPPED_PIPELINE
-		goto (MEMORY);
-`endif
-		m256 <= FALSE;
-		m512 <= FALSE;
-		mistk_depth <= xistk_depth;
-		mval <= xval;
-		mir <= xir;
-		mrfwr <= xd.rfwr;
-		md <= xd;
-		mip <= xip;
-		mcares <= xcares;
-		mcioreg <= xcioreg;
-		mcio <= xcio;
-		// For loads the memory result will be set by the state machine. Do
-		// not override the state machine's setting.
-		if (!xd.load)
-			mres <= res;
-		mcarry_res <= carry_res;
-		ma <= xa;
-		mca <= xca;
-		mstep <= xstep;
-		mmaskbit <= xmaskbit;
-		mzbit <= xzbit;
-		mtakb <= takb;
-		mExBranch <= FALSE;
-		if (xval) begin
-			tBra();
-			tJxx();
-	    tJmp();
-	  	tRts();
-			tExMem();
-
-		end	// xval
-	end	// advance_x
-`ifdef OVERLAPPED_PIPELINE
-	else if (advance_m)
-		inv_m();
-`endif
-end
-endtask
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Memory stage
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task tMemory;
-begin
-	if (advance_m) begin
-`ifndef OVERLAPPED_PIPELINE
-		goto (WRITEBACK);
-`endif
-		wistk_depth <= mistk_depth;
-		wval <= mval;
-		wir <= mir;
-		wd <= md;
-		wip <= mip;
-		wcioreg <= mcioreg;
-		wcio <= mcio;
-		wcarry_res <= mcarry_res;
-		wrfwr <= mrfwr;
-		w512 <= m512;
-		w256 <= m256;
-		wvmrfwr <= mvmrfwr;
-		wStset <= mStset;
-		wStmov <= mStmov;
-		wres <= mres;
-		wcares <= mcares;
-		wres512 <= mres512;
-		wa <= ma;
-		wca <= mca;
-		wstep <= mstep;
-		wmaskbit <= mmaskbit;
-		wzbit <= mzbit;
-		wtakb <= mtakb;
-		wJmptgt <= mJmptgt;
-		wExBranch <= mExBranch;
+	// Is there anything to execute?
+	if (exec == next_exec) begin
+		/*
+		for (nn = 0; nn < 8; nn = nn + 1) begin
+			if (reb[nn].iav==1'b0 && regfile_src[reb[nn].dec.Ra]==5'd31) begin
+				reb[nn].ia <= regfile[reb[nn].dec.Ra];
+				reb[nn].iav <= 1'b1;
+			end
+			if (reb[nn].ibv==1'b0 && regfile_src[reb[nn].dec.Rb]==5'd31) begin
+				reb[nn].ib <= regfile[reb[nn].dec.Rb];
+				reb[nn].ibv <= 1'b1;
+			end
+			if (reb[nn].ic0v==1'b0 && regfile_src[reb[nn].dec.Rc]==5'd31) begin
+				reb[nn].ic0 <= regfile[reb[nn].dec.Rc];
+				reb[nn].ic0v <= 1'b1;
+			end
+			if (reb[nn].ic1v==1'b0 && regfile_src[reb[nn].dec.Rc+1]==5'd31) begin
+				reb[nn].ic1 <= regfile[reb[nn].dec.Rc+1];
+				reb[nn].ic1v <= 1'b1;
+			end
+			if (reb[nn].ic2v==1'b0 && regfile_src[{reb[nn].dec.Rc[4:2],2'b10}]==5'd31) begin
+				reb[nn].ic2 <= regfile[{reb[nn].dec.Rc[4:2],2'b10}];
+				reb[nn].ic2v <= 1'b1;
+			end
+			if (reb[nn].ic3v==1'b0 && regfile_src[{reb[nn].dec.Rc[4:2],2'b11}]==5'd31) begin
+				reb[nn].ic3 <= regfile[{reb[nn].dec.Rc[4:2],2'b11}];
+				reb[nn].ic3v <= 1'b1;
+			end
+		end
+		*/
 	end
-`ifdef OVERLAPPED_PIPELINE
-	else if (advance_w)
-		inv_w();
-`endif
+	if (reb[exec].state==3'd0 || reb[exec].state==3'd7 || reb[exec].state==3'd4)
+		exec <= next_exec;
+	if (reb[exec].state==3'd2 || reb[exec].state==3'd3) begin
+		// Search for and fill in register file updates.
+		/*
+		if (reb[exec].state==3'd2) begin
+			if (regfile_src[reb[exec].dec.Ra]==5'd31) begin
+				reb[exec].ia <= regfile[reb[exec].dec.Ra];
+				reb[exec].iav <= 1'b1;
+			end
+			if (regfile_src[reb[exec].dec.Rb]==5'd31) begin
+				reb[exec].ib <= regfile[reb[exec].dec.Rb];
+				reb[exec].ibv <= 1'b1;
+			end
+			if (regfile_src[reb[exec].dec.Rc]==5'd31) begin
+				reb[exec].ic0 <= regfile[reb[exec].dec.Rc];
+				reb[exec].ic0v <= 1'b1;
+			end
+			if (regfile_src[reb[exec].dec.Rc+1]==5'd31) begin
+				reb[exec].ic1 <= regfile[reb[exec].dec.Rc+1];
+				reb[exec].ic1v <= 1'b1;
+			end
+			if (regfile_src[reb[exec].dec.Rc+2]==5'd31) begin
+				reb[exec].ic2 <= regfile[reb[exec].dec.Rc+2];
+				reb[exec].ic2v <= 1'b1;
+			end
+			if (regfile_src[reb[exec].dec.Rc+3]==5'd31) begin
+				reb[exec].ic3 <= regfile[reb[exec].dec.Rc+3];
+				reb[exec].ic3v <= 1'b1;
+			end
+			if (ca_src[{2'b0,reb[exec].dec.lk}]==5'd31) begin
+				reb[exec].lk <= caregfile[{2'b0,reb[exec].dec.lk}];
+				reb[exec].lkv <= 1'b1;
+			end
+		end
+		*/
+		if (reb[exec].iav && reb[exec].ibv &&
+			reb[exec].ic0v && reb[exec].ic1v && reb[exec].ic2v && reb[exec].ic3v && reb[exec].lkv) begin
+			if (state==RUN) begin
+				reb[exec].state <= 3'd3;
+				reb[exec].w256 <= 1'b0;
+				reb[exec].w512 <= 1'b0;
+				reb[exec].res <= res;
+				reb[exec].carry_res <= carry_res;
+				reb[exec].cares <= cares;
+				mExBranch <= FALSE;
+				if (reb[exec].v) begin
+					if (!reb[exec].dec.multi_cycle) begin
+						tArgUpdate(exec);
+						reb[exec].state <= 3'd4;
+						exec <= next_exec;
+					end
+					else if (reb[exec].state==3'd4) begin
+						reb[exec].state <= 3'd4;
+						exec <= next_exec;
+					end
+					if (reb[exec].state==3'd2) begin
+						tBra();
+						tJxx();
+				    tJmp();
+				  	tRts();
+						tExMem();
+					end
+				end	// xval
+			end	// advance_x
+		end
+		
+	end
 end
 endtask
 
+task tArgUpdate;
+input [2:0] m;
+integer n;
+begin
+	for (n = 0; n < 8; n = n + 1) begin
+		if (!reb[n].iav) begin
+			/*
+			if (reb[m].dec.Rt==reb[n].dec.Ra && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ia <= reb[m].res;
+				reb[n].iav <= 1'b1;
+			end
+			*/
+			//if (reb[head].dec.Rt==reb[n].dec.Ra && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[n].ias==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ia <= reb[head].res;
+				reb[n].iav <= 1'b1;
+			end
+		end
+		if (!reb[n].ibv) begin
+			/*
+			if (reb[m].dec.Rt==reb[n].dec.Rb && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ib <= reb[m].res;
+				reb[n].ibv <= 1'b1;
+			end
+			*/
+			//if (reb[head].dec.Rt==reb[n].dec.Rb && reb[head].state==3'd4 && reb[head].v) begin
+			if (reb[n].ibs==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ib <= reb[head].res;
+				reb[n].ibv <= 1'b1;
+			end
+		end
+		if (!reb[n].ic0v) begin
+			/*
+			if (reb[m].dec.Rt==reb[n].dec.Rc && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ic0 <= reb[m].res;
+				reb[n].ic0v <= 1'b1;
+			end
+			if (reb[head].dec.Rt==reb[n].dec.Rc && reb[head].state==3'd4 && reb[head].v) begin
+			*/
+			if (reb[n].ic0s==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ic0 <= reb[head].res;
+				reb[n].ic0v <= 1'b1;
+			end
+		end
+		if (!reb[n].ic1v) begin
+			/*
+			if (reb[m].dec.Rt==reb[n].dec.Rc+1 && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ic1 <= reb[m].res;
+				reb[n].ic1v <= 1'b1;
+			end
+			if (reb[head].dec.Rt==reb[n].dec.Rc+1 && reb[head].state==3'd4 && reb[head].v) begin
+			*/
+			if (reb[n].ic1s==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ic1 <= reb[head].res;
+				reb[n].ic1v <= 1'b1;
+			end
+		end
+		if (!reb[n].ic2v) begin
+			/*
+			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b10} && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ic2 <= reb[m].res;
+				reb[n].ic2v <= 1'b1;
+			end
+			if (reb[head].dec.Rt=={reb[n].dec.Rc[4:2],2'b10} && reb[head].state==3'd4 && reb[head].v) begin
+			*/
+			if (reb[n].ic2s==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ic2 <= reb[head].res;
+				reb[n].ic2v <= 1'b1;
+			end
+		end
+		if (!reb[n].ic3v) begin
+			/*
+			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b11} && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].ic3 <= reb[m].res;
+				reb[n].ic3v <= 1'b1;
+			end
+			if (reb[head].dec.Rt=={reb[n].dec.Rc[4:2],2'b11} && reb[head].state==3'd4 && reb[head].v) begin
+			*/
+			if (reb[n].ic3s==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].ic3 <= reb[head].res;
+				reb[n].ic3v <= 1'b1;
+			end
+		end
+		if (!reb[n].lkv) begin
+			/*
+			if (reb[m].dec.Ct==reb[n].dec.lk && reb[m].state == 3'd4 && reb[m].v) begin
+				reb[n].lk <= reb[m].cares;
+				reb[n].lkv <= 1'b1;
+			end
+			if (reb[head].dec.Ct==reb[n].dec.lk && reb[head].state==3'd4 && reb[head].v) begin
+			*/
+			if (reb[n].lks==head && reb[head].v && reb[head].state==3'd4) begin
+				reb[n].lk <= reb[head].cares;
+				reb[n].lkv <= 1'b1;
+			end
+		end
+	end
+end
+endtask
+
+integer n8;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Writeback stage
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task tWriteback;
 begin
-  if (advance_w) begin
-`ifndef OVERLAPPED_PIPELINE
-		goto (SYNC);
-`endif
-		if (wval) begin
-			if (wd.sei)
-				pmStack[3:1] <= wa[2:0]|wir[24:22];
-			if (wcio[0])
-				preg[wcioreg] <= wcarry_res;
-			if (|wcause) begin
-				if ((wcause & 8'hff)==FLT_CPF)
+	/*
+	if ((reb[0].state==3'd0 || reb[0].state==3'd7) &&
+	(reb[1].state==3'd0 || reb[1].state==3'd7) &&
+	(reb[2].state==3'd0 || reb[2].state==3'd7) &&
+	(reb[3].state==3'd0 || reb[3].state==3'd7) &&
+	(reb[4].state==3'd0 || reb[4].state==3'd7) &&
+	(reb[5].state==3'd0 || reb[5].state==3'd7) &&
+	(reb[6].state==3'd0 || reb[6].state==3'd7) &&
+	(reb[7].state==3'd0 || reb[7].state==3'd7)) begin
+		head <= (tail - 2'd1) & 3'd7;
+	end
+	*/
+	if (reb[head].state==3'd0 || reb[head].state==3'd7)// && ((head + 2'd1) & 3'd7) != tail)
+		head <= head + 2'd1;
+  if (reb[head].state==3'd4) begin
+		if (reb[head].v) begin
+			tArgUpdate(head);
+			if (reb[head].dec.sei)
+				pmStack[3:1] <= reb[head].ia[2:0]|reb[head].ir[24:22];
+			if (reb[head].cio[0])
+				preg[reb[head].cioreg] <= reb[head].carry_res;
+			if (|reb[head].cause) begin
+				if ((reb[head].cause & 8'hff)==FLT_CPF)
 					clr_ipage_fault <= 1'b1;
-				if ((wcause & 8'hff)==FLT_TLBMISS)
+				if ((reb[head].cause & 8'hff)==FLT_TLBMISS)
 					clr_itlbmiss <= 1'b1;
-		  	if (wcause[15])
+		  	if (reb[head].cause[15])
 					// IRQ level remains the same unless external IRQ present
-					pmStack <= {pmStack[55:0],2'b0,2'b11,wcause[10:8],1'b0};
+					pmStack <= {pmStack[55:0],2'b0,2'b11,reb[head].cause[10:8],1'b0};
 				else
 					pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 				plStack <= {plStack[55:0],8'hFF};
-				cause[2'd3] <= wcause & 16'h80FF;
-				badaddr[2'd3] <= wbadAddr;
-				caregfile[4'd8+wistk_depth] <= wip;
+				cause[2'd3] <= reb[head].cause & 16'h80FF;
+				badaddr[2'd3] <= reb[head].badAddr;
+				caregfile[4'd8+reb[head].istk_depth] <= reb[head].ip;
+	    	ca_src[4'd8+reb[head].istk_depth] <= 5'd31;
 				ip.offs <= tvec[3'd3] + {omode,6'h00};
-				inv_i();
-				inv_d();
-				inv_x();
-				inv_m();
-				inv_w();
-				xx <= 4'd8;
+				for (n8 = 0; n8 < 8; n8 = n8 + 1)
+					if (reb[n8].sn > reb[head].sn)
+						reb[n8] <= 'd0;
 			end
 			else begin
-		  	if (wd.carfwr)
-		    	caregfile[wd.Ct] <= wcares;
-				if (wd.rti) begin
+		  	if (reb[head].dec.carfwr) begin
+		    	caregfile[reb[head].dec.Ct] <= reb[head].cares;
+		    	ca_src[reb[head].dec.Ct] <= 5'd31;
+		    end
+				if (reb[head].dec.rti) begin
 					if (|istk_depth) begin
 						pmStack <= {8'h3E,pmStack[63:8]};
 						plStack <= {8'hFF,plStack[63:8]};
-						ip.offs <= wca.offs;	// 8-1
-						ip.micro_ip <= wca.micro_ip;
+						ip.offs <= reb[head].ca.offs;	// 8-1
+						ip.micro_ip <= reb[head].ca.micro_ip;
 						istk_depth <= istk_depth - 2'd1;
-						inv_i();
-						inv_d();
-						inv_x();
-						inv_m();
-						inv_w();
-						xx <= 4'd9;
+						for (n8 = 0; n8 < 8; n8 = n8 + 1)
+							if (reb[n8].sn > reb[head].sn)
+								reb[n8] <= 'd0;
 					end
 				end
-		    else if (wd.csr)
-		      case(wir.csr.op)
-		      3'd1:   tWriteCSR(wa,wir.csr.regno);
-		      3'd2:   tSetbitCSR(wa,wir.csr.regno);
-		      3'd3:   tClrbitCSR(wa,wir.csr.regno);
+		    else if (reb[head].dec.csr)
+		      case(reb[head].ir.csr.op)
+		      3'd1:   tWriteCSR(reb[head].ia,wir.csr.regno);
+		      3'd2:   tSetbitCSR(reb[head].ia,wir.csr.regno);
+		      3'd3:   tClrbitCSR(reb[head].ia,wir.csr.regno);
 		      default:	;
 		      endcase
-				else if (wd.rex) begin
-					if (omode <= wir[10:9]) begin
+				else if (reb[head].dec.rex) begin
+					if (omode <= reb[head].ir[10:9]) begin
 						pmStack <= {pmStack[55:0],2'b0,2'b11,pmStack[3:1],1'b0};
 						plStack <= {plStack[55:0],8'hFF};
 						cause[2'd3] <= FLT_PRIV;
-						caregfile[wd.Ct] <= wip;
+						caregfile[reb[head].dec.Ct] <= reb[head].ip;
 						ip.offs <= tvec[3'd3] + {omode,6'h00};
-						inv_i();
-						inv_d();
-						inv_x();
-						inv_m();
-						inv_w();
-						xx <= 4'd10;
+						for (n8 = 0; n8 < 8; n8 = n8 + 1)
+							if (reb[n8].sn > reb[head].sn)
+								reb[n8] <= 'd0;
 					end
 					else begin
-						pmStack[2:1] <= wir[10:9];	// omode
+						pmStack[2:1] <= reb[head].ir[10:9];	// omode
 					end
 				end
 				// Register file update
-			  if (wrfwr) begin
-			  	if (wd.Rtvec) begin
-			  		if (wmaskbit)
-			  			vregfile[wd.Rt][wstep] <= wres;
-			  		else if (wzbit)
-			  			vregfile[wd.Rt][wstep] <= 64'd0;
+			  if (reb[head].dec.rfwr) begin
+			  	if (reb[head].dec.Rtvec) begin
+			  		if (reb[head].mask_bit)
+			  			vregfile[reb[head].dec.Rt][reb[head].step] <= reb[head].res;
+			  		else if (reb[head].zbit)
+			  			vregfile[reb[head].dec.Rt][reb[head].step] <= 64'd0;
 			  	end
 			  	else begin
 			  		/*
@@ -2248,38 +2422,50 @@ begin
 				    6'd63:  sp[{omode,ilvl}] <= {wres[63:3],3'h0};
 				    endcase
 				    */
-				    if (w512)
-				    	regfile[wd.Rt[4:2]] <= wres512;
-				    else if (w256) begin
-				    	if (wd.Rt!=5'd0)
-					    	case(wd.Rt[1])
-					    	1'd0:	regfile[wd.Rt[4:2]][255:  0] <= wres512[255:0];
-					    	1'd1:	regfile[wd.Rt[4:2]][511:256] <= wres512[255:0];
-					    	endcase
+				    if (reb[head].w512) begin
+				    	regfile[reb[head].dec.Rt[4:2]] <= reb[head].res;
+				    	regfile_src[reb[head].dec.Rt+2'd0] <= 5'd31;
+				    	regfile_src[reb[head].dec.Rt+2'd1] <= 5'd31;
+				    	regfile_src[reb[head].dec.Rt+2'd2] <= 5'd31;
+				    	regfile_src[reb[head].dec.Rt+2'd3] <= 5'd31;
 				    end
-				    else
-					    case(wd.Rt[1:0])
-					    2'd0:	regfile[wd.Rt[4:2]][127:  0] <= wres;
-					    2'd1:	regfile[wd.Rt[4:2]][255:128] <= wres;
-					    2'd2:	regfile[wd.Rt[4:2]][383:256] <= wres;
-					    2'd3:	regfile[wd.Rt[4:2]][511:384] <= wres;
+				    else if (reb[head].w256) begin
+				    	if (reb[head].dec.Rt!=5'd0) begin
+					    	case(reb[head].dec.Rt[1])
+					    	1'd0:	regfile[reb[head].dec.Rt[4:2]][255:  0] <= reb[head].res[255:0];
+					    	1'd1:	regfile[reb[head].dec.Rt[4:2]][511:256] <= reb[head].res[255:0];
+					    	endcase
+					    	regfile_src[reb[head].dec.Rt+2'd0] <= 5'd31;
+					    	regfile_src[reb[head].dec.Rt+2'd1] <= 5'd31;
+					    end
+				    end
+				    else begin
+					    case(reb[head].dec.Rt[1:0])
+					    2'd0:	regfile[reb[head].dec.Rt[4:2]][127:  0] <= reb[head].res[127:0];
+					    2'd1:	regfile[reb[head].dec.Rt[4:2]][255:128] <= reb[head].res[127:0];
+					    2'd2:	regfile[reb[head].dec.Rt[4:2]][383:256] <= reb[head].res[127:0];
+					    2'd3:	regfile[reb[head].dec.Rt[4:2]][511:384] <= reb[head].res[127:0];
 					  	endcase
-				    $display("regfile[%d] <= %h", wd.Rt, wres);
+				    	regfile_src[reb[head].dec.Rt] <= 5'd31;
+					  end
+				    $display("regfile[%d] <= %h", reb[head].dec.Rt, reb[head].res);
 				    // Globally enable interrupts after first update of stack pointer.
-				    if (wd.Rt==5'd31) begin
-				    	sp <= wres;	// debug
+				    if (reb[head].dec.Rt==5'd31) begin
+				    	sp <= reb[head].res[127:0];	// debug
 				      gie <= TRUE;
 				    end
-				    if (wd.Rt==5'd26)
-				    	r58 <= wres;
-				    if (wd.Rt==5'd11)
-				    	t0 <= wres;
+				    if (reb[head].dec.Rt==5'd26)
+				    	r58 <= reb[head].res[127:0];
+				    if (reb[head].dec.Rt==5'd11)
+				    	t0 <= reb[head].res[127:0];
 				  end
 			  end
-			  if (wvmrfwr)
-			  	vm_regfile[wd.Rt[2:0]] <= wres;
+			  if (reb[head].dec.vmrfwr)
+			  	vm_regfile[reb[head].dec.Rt[2:0]] <= reb[head].res[127:0];
 			end	// wcause
 		end		// wval
+		head <= head + 2'd1;
+		reb[head].state <= 3'd7;
   end			// advance_w
 end
 endtask
@@ -2292,9 +2478,6 @@ endtask
 
 task tSyncTrailer;
 begin
-`ifndef OVERLAPPED_PIPELINE
-	goto (IFETCH);
-`endif
 	if (advance_t) begin
 		tSync <= wd.sync & wval;
 		uSync <= tSync;
@@ -2303,37 +2486,38 @@ begin
 end
 endtask
 
+integer n9;
 task tBranch;
 input [3:0] yy;
 begin
-  inv_i();
-  inv_d();
-  inv_x();
-	xx <= yy;
-  if (xd.Ca == 4'd0) begin
-  	ip.offs <= xd.jmptgt;
-  	mJmptgt.offs <= xd.jmptgt;
+	for (n9 = 0; n9 < 8; n9 = n9 + 1)
+		if (reb[n9].sn > reb[exec].sn)
+			reb[n9] <= 'd0;
+  if (reb[exec].dec.Ca == 4'd0) begin
+  	ip.offs <= reb[exec].dec.jmptgt;
+  	mJmptgt.offs <= reb[exec].dec.jmptgt;
   end
-  else if (xd.Ca == 4'd7) begin
-  	ip.offs <= xip.offs + xd.jmptgt;
-  	mJmptgt.offs <= xip.offs + xd.jmptgt;
+  else if (reb[exec].dec.Ca == 4'd7) begin
+  	ip.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
+  	mJmptgt.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
   end
   else begin
-		ip.offs <= xca.offs + xd.jmptgt;
-  	mJmptgt.offs <= xca.offs + xd.jmptgt;
+		ip.offs <= reb[exec].ca.offs + reb[exec].dec.jmptgt;
+  	mJmptgt.offs <= reb[exec].ca.offs + reb[exec].dec.jmptgt;
   end
 end
 endtask
 
+integer n10;
 task tWait;
 begin
 	if (first_flag || !done_flag) begin
 		first_flag <= 1'b0;
-	  inv_i();
-	  inv_d();
-	  inv_x();
-  	ip.offs <= xip.offs;
-  	mJmptgt.offs <= xip.offs;
+		for (n10 = 0; n10 < 8; n10 = n10 + 1)
+			if (reb[n10].sn > reb[exec].sn)
+				reb[n10] <= 'd0;
+  	ip.offs <= reb[exec].ip.offs;
+  	mJmptgt.offs <= reb[exec].ip.offs;
 	end
 	else
 		first_flag <= 1'b1;
@@ -2344,7 +2528,7 @@ task ex_fault;
 input [15:0] c;
 begin
 	if (xcause==16'h0)
-		xcause <= c;
+		reb[exec].cause <= c;
 	goto (RUN);
 end
 endtask

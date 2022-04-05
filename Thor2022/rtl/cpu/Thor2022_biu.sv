@@ -89,7 +89,7 @@ input rb_i;
 output reg dce;							// data cache enable
 input [23:0] keys [0:7];
 input [2:0] arange;
-input Address ptbr;
+input [127:0] ptbr;
 output reg ipage_fault;
 input clr_ipage_fault;
 output reg itlbmiss;
@@ -844,8 +844,10 @@ PTG_RAM uptgram (
 `ifdef SUPPORT_HASHPT2
 Thor2022_ipt_hash uhash
 (
+	.clk(clk),
 	.asid(ASID),
-	.adr(miss_Adr),
+	.adr(miss_adr),
+	.mask(ptbr[127:96]),
 	.hash(hash)
 );
 
@@ -878,8 +880,10 @@ always_ff @(posedge clk)
 
 Thor2022_ipt_hash uhash
 (
+	.clk(clk),
 	.asid(ASID),
 	.adr(idadr),
+	.mask(ptbr[127:96]),
 	.hash(hash)
 );
 
@@ -1545,7 +1549,213 @@ else begin
 			ret();
 		end
 
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Hardware subroutine to read / write a page table group.
+	//
+	// Writes only as much as it needs to. For writes just the PTE needs
+	// to be updated.
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+`ifdef SOMETHING
+	IPT_RW_PTG2:
+		begin
+			ipt_miss_count <= ipt_miss_count + 2'd1;
+	 		xlaten <= FALSE;
+			daccess <= TRUE;
+			iaccess <= FALSE;
+			dcnt <= 'd0;
+	  	vpa_o <= HIGH;
+	  	bte_o <= 2'b00;
+	  	cti_o <= 3'b001;	// constant address burst cycle
+	    cyc_o <= HIGH;
+			stb_o <= HIGH;
+`ifdef SUPPORT_SHPTE
+			sel_o <= dadr[3] ? 16'hFF00 : 16'h00FF;
+`else
+	    sel_o <= 16'hFFFF;
+`endif	    
+	    we_o <= wr_ptg;
+	    // We need only to write the access bit which is in the upper half of
+	    // the pte.
+  		case(span_lo)
+`ifdef SUPPPORT_SHPTE
+  		4'd0:	dat_o <= {2{ptg[63:0]}};
+  		4'd1: dat_o <= {2{ptg[127:64]}};
+  		4'd2:	dat_o <= {2{ptg[191:128]};
+  		4'd3:	dat_o <= {2{ptg[255:192]};
+  		4'd3:	dat_o <= {2{ptg[319:256]};
+  		4'd3:	dat_o <= {2{ptg[383:320]};
+  		4'd3:	dat_o <= {2{ptg[447:384]};
+  		4'd3:	dat_o <= {2{ptg[511:448]};
+`else
+  		4'd0:	dat_o <= ptg[255:128];
+  		4'd1: dat_o <= ptg[383:256];
+  		4'd2:	dat_o <= ptg[511:384];
+  		4'd3:	dat_o <= ptg[639:512];
+  		4'd4:	dat_o <= ptg[767:640];
+  		4'd5: dat_o <= ptg[895:768];
+  		4'd6: dat_o <= ptg[1023:895];
+  		4'd7: dat_o <= ptg[1151:1024];
+  		4'd8:	dat_o <= ptg[1279:1152];
+//  		4'd9:	dat_o <= ptg[1407:1280];
+//  		4'd10:	dat_o <= ptg[1535:1408];
 `endif
+  		default:	;
+  		endcase
+  		if (dce & dhit & ~wr_ptg) begin
+  			tDeactivateBus();
+  		end
+  		goto (IPT_RW_PTG4);
+`ifdef SUPPORT_MMU_CACHE  		
+			if (!wr_ptg) begin
+				for (n4 = 0; n4 < PTGC_DEP; n4 = n4 + 1) begin
+					if (ptgc[n4].dadr == dadr && ptgc[n4].v) begin
+						tDeactivateBus();
+						ptg <= ptgc[n4];
+						ret();
+					end
+				end
+			end
+`endif			
+		end
+	IPT_RW_PTG4:
+		begin
+			if (dce & dhit & ~wr_ptg) begin
+				ptg <= dc_line;
+  			tDeactivateBus();
+      	daccess <= FALSE;
+`ifdef SUPPORT_MMU_CACHE		      	
+      	for (n4 = 1; n4 < PTGC_DEP; n4 = n4 + 1)
+      		ptgc[n4] <= ptgc[n4-1];
+      	ptgc[0].dadr <= dadr;
+`ifdef SUPPORT_SHPTE
+    		ptgc[0].ptg <= {dat_i,ptg[383:0]};
+`else		      	
+    		ptgc[0].ptg <= {dat_i,ptg[1151:0]};
+`endif	      		
+    		ptgc[0].v <= 1'b1;
+`endif	      		
+      	ret();
+			end
+			else begin
+				if (dce & dhit)
+					dci <= dc_line;
+				if (wr_ptg) begin
+					memreq.func <= MR_STORE;
+					case({dadr[4:3],sel_o})
+					18'h000FF:	dci[63:0] <= ptg[63:0];
+					18'h0FF00:	dci[127:64] <= ptg[127:64];
+					18'h100FF:	dci[191:128] <= ptg[191:128];
+					18'h1FF00:	dci[255:192] <= ptg[255:192];
+					18'h200FF:	dci[319:256] <= ptg[319:256];
+					18'h2FF00:	dci[383:320] <= ptg[383:320];
+					18'h300FF:	dci[447:384] <= ptg[447:384];
+					18'h3FF00:	dci[511:448] <= ptg[511:448];
+					default:		dci <= dc_line;
+					endcase
+				end
+	  		stb_o <= HIGH;
+		    if (ack_i) begin
+		    	if (wr_ptg) begin
+		      	tDeactivateBus();
+		      	daccess <= FALSE;
+		      	goto(IPT_RW_PTG6);
+		    	end
+		    	else begin
+			    	case(dcnt[3:0])
+			    	4'd0:	ptg[127:  0] <= dat_i;
+			    	4'd1: ptg[255:128] <= dat_i;
+			    	4'd2:	ptg[383:256] <= dat_i;
+			    	4'd3: ptg[511:384] <= dat_i;
+`ifndef SUPPORT_SHPTE		    	
+			    	4'd4:	ptg[639:512] <= dat_i;
+			    	4'd5: ptg[767:640] <= dat_i;
+			    	4'd6: ptg[895:768] <= dat_i;
+			    	4'd7: ptg[1023:896] <= dat_i;
+`endif		    	
+	//		    	4'd8: ptg[1151:1024] <= dat_i;
+	//		    	4'd9: ptg[1279:1152] <= dat_i;
+	//		    	4'd10: 	ptg[1407:1280] <= dat_i;
+	//		    	4'd11: 	ptg[1535:1408] <= dat_i;
+			    	default:	;
+			    	endcase
+`ifdef SUPPORT_SHPTE
+			      if (dcnt[3:0]==4'd3) begin		// Are we done?
+`else		    	
+				    if (dcnt[3:0]==Thor2022_mmupkg::PtgSize/128-1) begin		// Are we done?
+`endif		      	
+`ifdef SUPPORT_MMU_CACHE		      	
+			      	for (n4 = 1; n4 < PTGC_DEP; n4 = n4 + 1)
+			      		ptgc[n4] <= ptgc[n4-1];
+			      	ptgc[0].dadr <= dadr;
+`ifdef SUPPORT_SHPTE
+		      		ptgc[0].ptg <= {dat_i,ptg[383:0]};
+`else		      	
+		      		ptgc[0].ptg <= {dat_i,ptg[1151:0]};
+`endif	      		
+		      		ptgc[0].v <= 1'b1;
+`endif	      		
+			      	tDeactivateBus();
+			      	daccess <= FALSE;
+			      	ret();
+			    	end
+			    	else if (!bok_i) begin				// burst mode supported?
+			    		cti_o <= 3'b000;						// no, use normal cycles
+			    		goto (IPT_RW_PTG5);
+			    	end
+				  end
+		      dcnt <= dcnt + 2'd1;					// increment word count
+		    end
+	  	end
+  	end
+  // Increment address and bounce back for another read.
+  IPT_RW_PTG5:
+		begin
+			stb_o <= LOW;
+			if (!ack_i)	begin							// wait till consumer ready
+				inext <= TRUE;
+				goto (IPT_RW_PTG4);
+			end
+		end
+	IPT_RW_PTG6:
+		ret();
+
+	IPT_WRITE_PTE:
+		begin
+			ptg <= 'd0;
+`ifdef SUPPORT_SHPTE
+			ptg <= tlb_dat[63:0] << (tlb_dat.en * $bits(SHPTE));	// will cause entry_num to be zero.
+`else
+			ptg <= tlb_dat[159:0] << (tlb_dat.en * $bits(PTE));	// will cause entry_num to be zero.
+`endif
+			case(tlb_dat.en)
+`ifdef SUPPORT_SHPTE
+			3'd0:	dadr <= tlb_dat.adr;
+			3'd1:	dadr <= tlb_dat.adr + 12'd8;
+			3'd2:	dadr <= tlb_dat.adr + 12'd16;
+			3'd3:	dadr <= tlb_dat.adr + 12'd24;
+			3'd4:	dadr <= tlb_dat.adr + 12'd32;
+			3'd5:	dadr <= tlb_dat.adr + 12'd40;
+			3'd6:	dadr <= tlb_dat.adr + 12'd48;
+			3'd7:	dadr <= tlb_dat.adr + 12'd56;
+`else				
+			3'd0:	dadr <= tlb_dat.adr;
+			3'd1:	dadr <= tlb_dat.adr + 12'd16;
+			3'd2:	dadr <= tlb_dat.adr + 12'd48;
+			3'd3:	dadr <= tlb_dat.adr + 12'd64;
+			3'd4:	dadr <= tlb_dat.adr + 12'd96;
+			3'd5:	dadr <= tlb_dat.adr + 12'd112;
+			3'd6:	dadr <= tlb_dat.adr + 12'd144;
+			3'd7:	dadr <= tlb_dat.adr + 12'd160;
+`endif			
+			endcase
+			tInvalidatePtgc(tlb_dat.adr,tlb_dat.adr + 12'd160);
+			miss_adr <= {tlb_dat.vpn,16'd0};
+			wr_ptg <= 1'b1;
+			goto (IPT_RW_PTG2);
+		end
+
+`endif
+`endif	// SOMETHING
 
 `ifdef SUPPORT_HIERPT
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
