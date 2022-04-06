@@ -105,6 +105,14 @@ parameter DIV2 = 6'd27;
 parameter DF1 = 6'd28;
 parameter DFMUL2 = 6'd29;
 
+// REB states
+parameter EMPTY = 3'd0;
+parameter FETCHED = 3'd1;
+parameter DECODED = 3'd2;
+parameter OUT = 3'd3;
+parameter EXECUTED = 3'd4;
+parameter RETIRED = 3'd7;
+
 reg [5:0] rst_cnt;
 reg [4:0] dicnt;
 wire di = |dicnt;
@@ -225,6 +233,8 @@ wire dAddi = deco.addi;
 wire dld = deco.ld;
 wire dst = deco.st;
 Value rfoa, rfob, rfoc0, rfoc1, rfoc2, rfoc3, rfop;
+reg rfoa_v, rfob_v, rfoc0_v, rfoc1_v, rfoc2_v, rfoc3_v;
+
 Address rfoca;
 reg [63:0] mask;
 reg [7:0] wstep;
@@ -375,6 +385,7 @@ wire pe = cr0[0];				// protected mode enable
 wire dce;     					// data cache enable
 wire bpe = cr0[32];     // branch prediction enable
 wire btbe	= cr0[33];		// branch target buffer enable
+wire [2:0] cr0_mo = cr0[38:36];	// memory ordering
 Value scratch [0:3];
 reg [127:0] ptbr;
 Address artbr;
@@ -438,195 +449,108 @@ Value bf_out;
 // Decode stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+Instruction dxir, dmir;
+reg dxval, dmval;
+integer k2;
+always_comb
+begin
+	dxir = NOP;
+	dmir = NOP;
+	dxval = FALSE;
+	dmval = FALSE;
+	for (k2 = 0; k2 < 8; k2 = k2 + 1) begin
+		if (reb[k2].sn == reb[dec].sn - 1) begin
+			dxir = reb[k2].ir;
+			dxval = reb[k2].v;
+		end
+		if (reb[k2].sn == reb[dec].sn - 2) begin
+			dmir = reb[k2].ir;
+			dmval = reb[k2].v;
+		end
+	end
+end
+
 Thor2022_decoder udec (
 	.ir(reb[dec].ir),
-	.xir(reb[dec-1].ir),
-	.xval(reb[dec-1].v),
-	.mir(reb[dec-2].ir),
-	.mval(reb[dec-2].v),
+	.xir(dxir),
+	.xval(dxval),
+	.mir(dmir),
+	.mval(dmval),
 	.deco(deco),
 	.distk_depth(distk_depth),
 	.rm(rm),
 	.dfrm(dfrm)
 );
 
-`ifdef OVERLAPPED_PIPELINE
 always_comb
-if (Ra=='d0)
-  rfoa = {VALUE_SIZE{1'b0}};
-else if (deco.Ravec)
-	rfoa = vroa;
-else if (Ra==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfoa = res;
-else if (Ra==md.Rt && mrfwr && mval)
-	rfoa = mres;
-else if (Ra==wd.Rt && wrfwr && wval)
-	rfoa = wres;
+if (deco.Ra=='d0)
+	rfoa = 'd0;
+else if (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfoa = reb[head].res;
 else
-	rfoa = regfile[Ra[4:2]] >> {Ra[1:0],7'd0};
-/*
-  case(Ra)
-  6'd63:  rfoa = sp [{omode,ilvl}];
-  default:    rfoa = regfile[Ra];
-  endcase
-*/
-always_comb
-if (Rb=='d0)
-	rfob = {VALUE_SIZE{1'b0}};
-else if (deco.Rbvec)
-	rfob = vrob;
-else if (Rb==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfob = res;
-else if (Rb==md.Rt && mrfwr && mval)
-	rfob = mres;
-else if (Rb==wd.Rt && wrfwr && wval)
-	rfob = wres;
-else
-	rfob = regfile[Rb[4:2]] >> {Rb[1:0],7'd0};
-/*	
-  case(Rb)
-  6'd63:  rfob = sp [{omode,ilvl}];
-  default:    rfob = regfile[Rb];
-  endcase
-*/
-always_comb
-if (Rc=='d0)
-	rfoc0 = {VALUE_SIZE{1'b0}};
-else if (deco.Rcvec)
-	rfoc0 = vroc;
-else if (Rc==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfoc0 = res;
-else if (Rc==md.Rt && mrfwr && mval)
-	rfoc0 = mres;
-else if (Rc==wd.Rt && wrfwr && wval)
-	rfoc0 = wres;
-else
-	rfoc0 = regfile[Rc[4:2]] >> {Rc[1:0],7'd0};
+	rfoa = regfile[deco.Ra[4:2]] >> {deco.Ra[1:0],7'b0};
 
 always_comb
-	Rc1 = Rc + 2'd1;
-always_comb
-if (Rc1==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfoc1 = res;
-else if (Rc1==md.Rt && mrfwr && mval)
-	rfoc1 = mres;
-else if (Rc1==wd.Rt && wrfwr && wval)
-	rfoc1 = wres;
+if (deco.Rb=='d0)
+	rfob = 'd0;
+else if (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfob = reb[head].res;
 else
-	rfoc1 = regfile[Rc1[4:2]] >> {Rc1[1:0],7'd0};
+	rfob = regfile[deco.Rb[4:2]] >> {deco.Rb[1:0],7'b0};
 
-reg [4:0] Rc2;
 always_comb
-	Rc2 = Rc + 2'd2;
-always_comb
-if (Rc2==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfoc2 = res;
-else if (Rc2==md.Rt && mrfwr && mval)
-	rfoc2 = mres;
-else if (Rc2==wd.Rt && wrfwr && wval)
-	rfoc2 = wres;
+if (deco.Rc=='d0)
+	rfoc0 = 'd0;
+else if (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfoc0 = reb[head].res;
 else
-	rfoc2 = regfile[Rc[4:2]] >> {2'b10,7'd0};
+	rfoc0 = regfile[deco.Rc[4:2]] >> {deco.Rc[1:0],7'b0};
 
-reg [4:0] Rc3;
 always_comb
-	Rc3 = Rc + 2'd3;
-always_comb
-if (Rc3==reb[exec].dec.Rt && reb[exec].dec.rfwr && xval)
-  rfoc3 = res;
-else if (Rc3==md.Rt && mrfwr && mval)
-	rfoc3 = mres;
-else if (Rc3==wd.Rt && wrfwr && wval)
-	rfoc3 = wres;
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfoc1 = reb[head].res;
 else
-	rfoc3 = regfile[Rc[4:2]] >> {2'b11,7'd0};
-/*
-  case(Rc)
-  6'd63:  rfoc = sp [{omode,ilvl}];
-  default:    rfoc = regfile[Rc];
-  endcase
-*/
+	rfoc1 = regfile[deco.Rc[4:2]] >> {2'b01,7'b0};
+
+always_comb
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfoc2 = reb[head].res;
+else
+	rfoc2 = regfile[deco.Rc[4:2]] >> {2'b10,7'b0};
+
+always_comb
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+	rfoc3 = reb[head].res;
+else
+	rfoc3 = regfile[deco.Rc[4:2]] >> {2'b11,7'b0};
 
 always_comb
 	if (cioreg==3'd0 || ~cio[1])
 		rfop = 'd0;
-	else if (xval && xcioreg==cioreg && xcio[0])
-		rfop = carry_res;
-	else if (mval && mcioreg==cioreg && mcio[0])
-		rfop = mcarry_res;
-	else if (wval && wcioreg==cioreg && wcio[0])
-		rfop = wcarry_res;
+	else if (reb[head].v && reb[head].cioreg==cioreg && reb[head].state==3'd4 && reb[head].cio[0])
+		rfop = reb[head].carry_res;
 	else
 		rfop = preg[cioreg];
 
 always_comb
-	if (Ca == reb[exec].dec.Ct && reb[exec].dec.carfwr && xval)
-		rfoca = xcares;
-	else if (Ca == md.Ct && md.carfwr && mval)
-		rfoca = mcares;
-	else if (Ca == wd.Ct && wd.carfwr && wval)
-		rfoca = wcares;
+	if (deco.Ca == reb[head].dec.Ct && reb[head].state==3'd4 && reb[head].dec.carfwr && reb[head].v)
+		rfoca = reb[head].cares;
 	else
-		rfoca = caregfile[Ca];
-
-`else
-always_comb
-if (Ra=='d0)
-  rfoa = {VALUE_SIZE{1'b0}};
-else if (deco.Ravec)
-	rfoa = vroa;
-else
-	rfoa = regfile[Ra[4:2]] >> {Ra[1:0],7'd0};
-/*
-  case(Ra)
-  6'd63:  rfoa = sp [{omode,ilvl}];
-  default:    rfoa = regfile[Ra];
-  endcase
-*/
-always_comb
-if (Rb=='d0)
-	rfob = {VALUE_SIZE{1'b0}};
-else if (deco.Rbvec)
-	rfob = vrob;
-else
-	rfob = regfile[Rb[4:2]] >> {Rb[1:0],7'd0};
-/*	
-  case(Rb)
-  6'd63:  rfob = sp [{omode,ilvl}];
-  default:    rfob = regfile[Rb];
-  endcase
-*/
-always_comb
-if (Rc=='d0)
-	rfoc0 = {VALUE_SIZE{1'b0}};
-else if (deco.Rcvec)
-	rfoc0 = vroc;
-else
-	rfoc0 = regfile[Rc[4:2]] >> {Rc[1:0],7'd0};
-
-reg [5:0] Rc1;
-always_comb
-	Rc1 = Rc + 2'd1;
-always_comb
-	rfoc1 = regfile[Rc1[4:2]] >> {Rc1[1:0],7'd0};
-/*
-  case(Rc)
-  6'd63:  rfoc = sp [{omode,ilvl}];
-  default:    rfoc = regfile[Rc];
-  endcase
-*/
+		rfoca = caregfile[deco.Ca];
 
 always_comb
-	if (cioreg==3'd0 || ~cio[1])
-		rfop = 64'd0;
-	else
-		rfop = preg[cioreg];
-
+	rfoa_v = (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
 always_comb
-	rfoca = caregfile[Ca];
-
-`endif
-
+	rfob_v = (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rb]==5'd31 || Source2Valid(reb[dec].ir);
+always_comb
+	rfoc0_v = (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || Source3Valid(reb[dec].ir);
+always_comb
+	rfoc1_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b01}]==5'd31 || Source3Valid(reb[dec].ir);
+always_comb
+	rfoc2_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b10}]==5'd31 || Source3Valid(reb[dec].ir);
+always_comb
+	rfoc3_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b11}]==5'd31 || Source3Valid(reb[dec].ir);
+	
 always_comb
 	mask = vm_regfile[deco.Rvm];
 
@@ -1258,14 +1182,13 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 // A synchronizing instruction causes a stall until the sync clears.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-`ifdef OVERLAPPED_PIPELINE
 wire stall_i = !ihit;
 wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) &&
 								(((|xcause || reb[exec].dec.flowchg || reb[exec].dec.load) && xval) ||
 								 ((|mcause || md.flowchg) && mval) ||
 								 ((|wcause || wd.flowchg) && wval))) ||
 								 ((reb[exec].dec.mulall||reb[exec].dec.divall) && xval) ||
-								(reb[exec].dec.load && (Ra==reb[exec].dec.Rt || {Tb,Rb}=={1'b0,reb[exec].dec.Rt} || {Tc,Rc}=={1'b0,reb[exec].dec.Rt} || Rc1==reb[exec].dec.Rt || Rc2==reb[exec].dec.Rt || Rc3==reb[exec].dec.Rt) && xval && reb[exec].dec.Rt!='d0) ||
+//								(reb[exec].dec.load && (Ra==reb[exec].dec.Rt || {Tb,Rb}=={1'b0,reb[exec].dec.Rt} || {Tc,Rc}=={1'b0,reb[exec].dec.Rt} || Rc1==reb[exec].dec.Rt || Rc2==reb[exec].dec.Rt || Rc3==reb[exec].dec.Rt) && xval && reb[exec].dec.Rt!='d0) ||
 //								(md.load && (Ra==md.Rt || {Tb,Rb}=={2'b00,md.Rt} || {Tc,Rc}=={2'b00,md.Rt} || Rc1==md.Rt) && mval && md.Rt!='d0) ||
 //								(wd.load && (Ra==wd.Rt || {Tb,Rb}=={2'b00,wd.Rt} || {Tc,Rc}=={2'b00,wd.Rt} || Rc1==wd.Rt) && wval && wd.Rt!=6'd0) ||
 								(reb[exec].dec.sync && xval) || (md.sync && mval) || (wd.sync && wval) || tSync || uSync || vSync;
@@ -1277,15 +1200,6 @@ always_comb advance_m = advance_w;
 always_comb advance_x = advance_m;
 always_comb advance_d = advance_x && !stall_d;
 always_comb advance_i = advance_d;
-`else
-assign run = ihit;
-always_comb advance_t = TRUE;
-always_comb	advance_w = TRUE;
-always_comb advance_m = TRUE;
-always_comb advance_x = TRUE;
-always_comb advance_d = TRUE;
-always_comb advance_i = ihit;
-`endif
 
 reg [3:0] xx;	// debug marker
 
@@ -1310,68 +1224,46 @@ else begin
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Support tasks
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-task inv_i;
-begin
-	micro_ip <= 'd0;
-//  ival <= INV;
-  icause <= 16'h0;
-end
-endtask
+function fnArgsValid;
+input [2:0] kk;
+fnArgsValid = (reb[kk].iav && reb[kk].ibv &&
+				reb[kk].ic0v && reb[kk].ic1v && reb[kk].ic2v && reb[kk].ic3v && reb[kk].lkv);
+endfunction
 
-task inv_d;
-begin
-  dval <= INV;
-  dcause <= 16'h0;
-	ir <= {7'd0,1'b0,NOP};
-end
-endtask
-
-task inv_x;
-begin
-  xval <= INV;
-	xir <= {7'd0,1'b0,NOP};
-	xd <= 'd0;
-	xcause <= 16'h0;
-end
-endtask
-
-task inv_m;
-begin
-  mval <= INV;
-	mir <= {7'd0,1'b0,NOP};
-	md <= 'd0;
-	mrfwr <= 'd0;
-  mcause <= 16'h0;
-end
-endtask
-
-task inv_w;
-begin
-  wval <= INV;
-	wir <= {7'd0,1'b0,NOP};
-	wd <= 'd0;
-	wrfwr <= 'd0;
-  wcause <= 16'h0;
-end
-endtask
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 integer kk;
 reg [2:0] next_exec;
+reg mc_busy;
 always_comb
 begin
 next_exec = exec;
-for (kk = 0; kk < 8; kk = kk + 1)
-	if (reb[kk].state==3'd2 || reb[kk].state==3'd3)
-		if (reb[kk].iav && reb[kk].ibv &&
-			reb[kk].ic0v && reb[kk].ic1v && reb[kk].ic2v && reb[kk].ic3v && reb[kk].lkv)
-			next_exec = kk;
+for (kk = 7; kk >= 0; kk = kk - 1)
+	if (kk != exec) begin
+		if ((reb[kk].state==3'd2 || reb[kk].state==3'd3) && reb[kk].v && !stomp[kk])
+			if (fnArgsValid(kk)) begin
+				if (!mc_busy || !reb[kk].dec.multi_cycle) begin
+					if (reb[kk].dec.mem) begin
+						if (reb[next_exec].dec.mem && reb[next_exec].state < 3'd4) begin
+							if (reb[kk].sn < reb[next_exec].sn)
+								next_exec = kk;
+						end
+						else
+							next_exec = kk;
+					end
+					else begin
+						if (!(reb[next_exec].dec.mem && reb[next_exec].state < 3'd4))
+							next_exec = kk;
+					end
+				end
+			end
+	end
 end
-			
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Support tasks
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 integer n6;
@@ -1454,6 +1346,7 @@ begin
 	tail <= 'd0;
 	exec <= 'd0;
 	dec <= 'd0;
+	mc_busy <= 'd0;
 end
 endtask
 
@@ -1530,9 +1423,10 @@ WAIT_MEM2:
 					reb[exec].cause <= memresp.cause;
 					reb[exec].badAddr <= memresp.badAddr;
 				end
-				reb[exec].state <= 3'd4;
+				reb[exec].state <= EXECUTED;
 				exec <= next_exec;
 			 	tArgUpdate(exec);
+			 	mc_busy <= FALSE;
 				goto (RUN);
 			end
 		end
@@ -1544,11 +1438,12 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-  	reb[exec].state <= 3'd4;
+  	reb[exec].state <= EXECUTED;
 		exec <= next_exec;
   	reb[exec].res <= res;
   	reb[exec].carry_res <= carry_res;
   	tArgUpdate(exec);
+  	mc_busy <= FALSE;
     goto(RUN);
   end
 INVnRUN2:
@@ -1684,9 +1579,14 @@ endfunction
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tInsnFetch;
+integer n17;
 begin
-	if (ihit && (reb[tail].state==3'd0 || reb[tail].state==3'd7)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
-		reb[tail].state <= 3'd1;
+	// Choose the next fetch bucket.
+	for (n17 = 0; n17 < 8; n17 = n17 + 1)
+		if (n17 != tail && (reb[n17].state==RETIRED || reb[n17].state==EMPTY))
+			tail <= n17;
+	if (ihit && (reb[tail].state==3'd0 || reb[tail].state==RETIRED)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
+		reb[tail].state <= FETCHED;
 		reb[tail].sn <= sn;
 		reb[tail].v <= 1'b1;
 		sn <= sn + 2'd1;
@@ -1839,6 +1739,7 @@ begin
 		reb[tail].ip.micro_ip <= micro_ip;
 		reb[tail].ilen <= ilen;
 		if (micro_ip==7'd0) begin
+			ir <= insn;
 			reb[tail].ir <= insn;
 			micro_ir <= insn;
 		end
@@ -1875,11 +1776,13 @@ begin
 		if (ipage_fault) begin
 			reb[tail].cause <= 16'h8000|FLT_CPF;
 			istk_depth <= istk_depth + 2'd1;
+			reb[tail].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
 		if (itlbmiss) begin
 			reb[tail].cause <= 16'h8000|FLT_TLBMISS;
 			istk_depth <= istk_depth + 2'd1;
+			reb[tail].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
 		if (insn.any.opcode==R1 && insn.r3.func==DI)
@@ -1900,34 +1803,39 @@ endtask
 // Much of the decode is done above by combinational logic outside of the
 // clock domain.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-integer n7;
 
 task tDecode;
+integer n7;
 begin
-	if (reb[dec].state==3'd1) begin
-		reb[dec].state <= 3'd2;
+	// Choose the next decode bucket.
+	for (n7 = 0; n7 < 8; n7 = n7 + 1)
+		if (n7 != dec && reb[n7].state==FETCHED)
+			dec <= n7;
+	if (reb[dec].state==FETCHED) begin
+		reb[dec].state <= DECODED;
 		reb[dec].dec <= deco;
 		reb[dec].istk_depth <= distk_depth;
-		reb[dec].ia <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Ra==5'd0 ?  'd0 : regfile[deco.Ra[4:2]] >> {deco.Ra[1:0],7'b0};
-		reb[dec].ib <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Rb==5'd0 ?  'd0 : regfile[deco.Rb[4:2]] >> {deco.Rb[1:0],7'b0};
-		reb[dec].ic1 <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : deco.Rc+1==5'd0 ?  'd0 : regfile[deco.Rc[4:2]] >> {deco.Rc[1:0]+1,7'b0};
-		reb[dec].ic2 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc[4:2]] >> {2'b10,7'b0};
-		reb[dec].ic3 <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc[4:2]] >> {2'b11,7'b0};
+		reb[dec].ia <= rfoa;
+		reb[dec].ib <= rfob;
+		reb[dec].ic0 <= rfoc0;
+		reb[dec].ic1 <= rfoc1;
+		reb[dec].ic2 <= rfoc2;
+		reb[dec].ic3 <= rfoc3;
 		reb[dec].pn <= rfop;
-		reb[dec].ca <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) ? reb[head].cares : caregfile[deco.Ca];
-		reb[dec].iav <= (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
-		reb[dec].ibv <= (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rb]==5'd31 || Source2Valid(reb[dec].ir);
-		reb[dec].ic0v <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || Source3Valid(reb[dec].ir);
-		reb[dec].ic1v <= (reb[head].dec.Rt==deco.Rc+1 && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[(deco.Rc+1)%32]==5'd31 || Source3Valid(reb[dec].ir);
-		reb[dec].ic2v <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b10}]==5'd31 || Source3Valid(reb[dec].ir);
-		reb[dec].ic3v <= (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b11}]==5'd31 || Source3Valid(reb[dec].ir);
+		reb[dec].ca <= rfoca;
+		reb[dec].iav <= rfoa_v;
+		reb[dec].ibv <= rfob_v;
+		reb[dec].ic0v <= rfoc0_v;
+		reb[dec].ic1v <= rfoc1_v;
+		reb[dec].ic2v <= rfoc2_v;
+		reb[dec].ic3v <= rfoc3_v;
 		reb[dec].lkv <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) || ca_src[deco.Ca]==5'd31 || LkValid(reb[dec].ir);
-		reb[dec].ias <= Source1Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Ra];
-		reb[dec].ibs <= Source2Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rb];
-		reb[dec].ic0s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rc];
-		reb[dec].ic1s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rc+1];
-		reb[dec].ic2s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:3],2'b10}];
-		reb[dec].ic3s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:3],2'b11}];
+		reb[dec].ias <= Source1Valid(reb[dec].ir)||deco.Ra=='d0 ? 5'd31 : regfile_src[deco.Ra];
+		reb[dec].ibs <= Source2Valid(reb[dec].ir)||deco.Rb=='d0 ? 5'd31 : regfile_src[deco.Rb];
+		reb[dec].ic0s <= Source3Valid(reb[dec].ir)||deco.Rc=='d0 ? 5'd31 : regfile_src[deco.Rc];
+		reb[dec].ic1s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:2],2'b01}];
+		reb[dec].ic2s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:2],2'b10}];
+		reb[dec].ic3s <= Source3Valid(reb[dec].ir) ? 5'd31 : regfile_src[{deco.Rc[4:2],2'b11}];
 		reb[dec].lks <= LkValid(reb[dec].ir) ? 5'd31 : ca_src[deco.Ca];
 		reb[dec].cioreg <= cioreg;
 		reb[dec].cio <= cio[1:0];
@@ -1940,7 +1848,6 @@ begin
 		regfile_src[deco.Rt] <= dec;
 		regfile_src[5'd0] <= 5'd31;
 		ca_src[deco.Ct] <= dec;
-		dec <= dec + 2'd1;
 		
 		xval <= dval;
 		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
@@ -2215,105 +2122,39 @@ integer n;
 integer nn;
 begin
 	// Is there anything to execute?
-	if (exec == next_exec) begin
-		/*
-		for (nn = 0; nn < 8; nn = nn + 1) begin
-			if (reb[nn].iav==1'b0 && regfile_src[reb[nn].dec.Ra]==5'd31) begin
-				reb[nn].ia <= regfile[reb[nn].dec.Ra];
-				reb[nn].iav <= 1'b1;
-			end
-			if (reb[nn].ibv==1'b0 && regfile_src[reb[nn].dec.Rb]==5'd31) begin
-				reb[nn].ib <= regfile[reb[nn].dec.Rb];
-				reb[nn].ibv <= 1'b1;
-			end
-			if (reb[nn].ic0v==1'b0 && regfile_src[reb[nn].dec.Rc]==5'd31) begin
-				reb[nn].ic0 <= regfile[reb[nn].dec.Rc];
-				reb[nn].ic0v <= 1'b1;
-			end
-			if (reb[nn].ic1v==1'b0 && regfile_src[reb[nn].dec.Rc+1]==5'd31) begin
-				reb[nn].ic1 <= regfile[reb[nn].dec.Rc+1];
-				reb[nn].ic1v <= 1'b1;
-			end
-			if (reb[nn].ic2v==1'b0 && regfile_src[{reb[nn].dec.Rc[4:2],2'b10}]==5'd31) begin
-				reb[nn].ic2 <= regfile[{reb[nn].dec.Rc[4:2],2'b10}];
-				reb[nn].ic2v <= 1'b1;
-			end
-			if (reb[nn].ic3v==1'b0 && regfile_src[{reb[nn].dec.Rc[4:2],2'b11}]==5'd31) begin
-				reb[nn].ic3 <= regfile[{reb[nn].dec.Rc[4:2],2'b11}];
-				reb[nn].ic3v <= 1'b1;
-			end
+//	if (reb[exec].state==EMPTY || reb[exec].state==RETIRED || reb[exec].state==EXECUTED)
+	exec <= next_exec;
+	if (reb[exec].state==DECODED) begin
+		if (fnArgsValid(exec)) begin
+			reb[exec].state <= OUT;
+			reb[exec].w256 <= 1'b0;
+			reb[exec].w512 <= 1'b0;
+			reb[exec].res <= res;
+			reb[exec].carry_res <= carry_res;
+			reb[exec].cares <= cares;
+			mExBranch <= FALSE;
+			if (reb[exec].v) begin
+				if (!reb[exec].dec.multi_cycle) begin
+					tArgUpdate(exec);
+					reb[exec].state <= EXECUTED;
+					tBra();
+					tJxx();
+			    tJmp();
+			  	tRts();
+				end
+				else if (!mc_busy) begin
+					mc_busy <= TRUE;
+					tArgUpdate(exec);
+					tExMem();
+				end
+			end	// xval
+			exec <= next_exec;
 		end
-		*/
 	end
-	if (reb[exec].state==3'd0 || reb[exec].state==3'd7 || reb[exec].state==3'd4)
-		exec <= next_exec;
-	if (reb[exec].state==3'd2 || reb[exec].state==3'd3) begin
-		// Search for and fill in register file updates.
-		/*
-		if (reb[exec].state==3'd2) begin
-			if (regfile_src[reb[exec].dec.Ra]==5'd31) begin
-				reb[exec].ia <= regfile[reb[exec].dec.Ra];
-				reb[exec].iav <= 1'b1;
-			end
-			if (regfile_src[reb[exec].dec.Rb]==5'd31) begin
-				reb[exec].ib <= regfile[reb[exec].dec.Rb];
-				reb[exec].ibv <= 1'b1;
-			end
-			if (regfile_src[reb[exec].dec.Rc]==5'd31) begin
-				reb[exec].ic0 <= regfile[reb[exec].dec.Rc];
-				reb[exec].ic0v <= 1'b1;
-			end
-			if (regfile_src[reb[exec].dec.Rc+1]==5'd31) begin
-				reb[exec].ic1 <= regfile[reb[exec].dec.Rc+1];
-				reb[exec].ic1v <= 1'b1;
-			end
-			if (regfile_src[reb[exec].dec.Rc+2]==5'd31) begin
-				reb[exec].ic2 <= regfile[reb[exec].dec.Rc+2];
-				reb[exec].ic2v <= 1'b1;
-			end
-			if (regfile_src[reb[exec].dec.Rc+3]==5'd31) begin
-				reb[exec].ic3 <= regfile[reb[exec].dec.Rc+3];
-				reb[exec].ic3v <= 1'b1;
-			end
-			if (ca_src[{2'b0,reb[exec].dec.lk}]==5'd31) begin
-				reb[exec].lk <= caregfile[{2'b0,reb[exec].dec.lk}];
-				reb[exec].lkv <= 1'b1;
-			end
-		end
-		*/
-		if (reb[exec].iav & reb[exec].ibv &
-			reb[exec].ic0v & reb[exec].ic1v & reb[exec].ic2v & reb[exec].ic3v & reb[exec].lkv) begin
-			if (state==RUN) begin
-				reb[exec].state <= 3'd3;
-				reb[exec].w256 <= 1'b0;
-				reb[exec].w512 <= 1'b0;
-				reb[exec].res <= res;
-				reb[exec].carry_res <= carry_res;
-				reb[exec].cares <= cares;
-				mExBranch <= FALSE;
-				if (reb[exec].v) begin
-					if (!reb[exec].dec.multi_cycle) begin
-						tArgUpdate(exec);
-						reb[exec].state <= 3'd4;
-						exec <= next_exec;
-					end
-					else if (reb[exec].state==3'd4) begin
-						tArgUpdate(exec);
-						reb[exec].state <= 3'd4;
-						exec <= next_exec;
-					end
-					if (reb[exec].state==3'd2) begin
-						tBra();
-						tJxx();
-				    tJmp();
-				  	tRts();
-						tExMem();
-					end
-				end	// xval
-			end	// advance_x
-		end
-		
-	end
+	
+	for (n = 0; n < 8; n = n + 1)
+		if (reb[n].state==EXECUTED)
+			tArgUpdate(n);
 end
 endtask
 
@@ -2421,11 +2262,22 @@ begin
 end
 endtask
 
+// Wait for the next instruction to become executed or empty before retiring it.
 integer n8;
+reg [2:0] next_head;
+always_comb
+begin
+	next_head = head;
+	for (n8 = 0; n8 < 8; n8 = n8 + 1)
+		if (reb[n8].sn == reb[head].sn + 1)
+			next_head = n8;
+end
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Writeback stage
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task tWriteback;
+integer n8;
 begin
 	/*
 	if ((reb[0].state==3'd0 || reb[0].state==3'd7) &&
@@ -2439,9 +2291,10 @@ begin
 		head <= (tail - 2'd1) & 3'd7;
 	end
 	*/
-	if (reb[head].state==3'd0 || reb[head].state==3'd7)// && ((head + 2'd1) & 3'd7) != tail)
-		head <= head + 2'd1;
-  if (reb[head].state==3'd4) begin
+//	if (reb[head].state==EMPTY || reb[head].state==RETIRED)// && ((head + 2'd1) & 3'd7) != tail)
+//		head <= head + 2'd1;
+  if (reb[head].state==EXECUTED) begin
+		head <= next_head;
 		if (reb[head].v) begin
 			tArgUpdate(head);
 			if (reb[head].dec.sei)
@@ -2563,8 +2416,14 @@ begin
 			  	vm_regfile[reb[head].dec.Rt[2:0]] <= reb[head].res[127:0];
 			end	// wcause
 		end		// wval
-		head <= head + 2'd1;
-		reb[head].state <= 3'd7;
+		// Retire prefixes once the instruction is retired.
+		for (n8 = 0; n8 < 8; n8 = n8 + 1) begin
+			if (reb[n8].dec.isExi && reb[n8].sn==reb[head].sn-1)
+				reb[n8].state <= RETIRED;
+			if (reb[n8].sn==reb[head].sn-2 && reb[n8].ir.any.opcode==EXIM)
+				reb[n8].state <= RETIRED;
+		end
+		reb[head].state <= RETIRED;
   end			// advance_w
 end
 endtask
@@ -2639,6 +2498,7 @@ input [15:0] c;
 begin
 	if (xcause==16'h0)
 		reb[exec].cause <= c;
+	mc_busy <= FALSE;
 	goto (RUN);
 end
 endtask

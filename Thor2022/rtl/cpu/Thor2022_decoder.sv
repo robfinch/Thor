@@ -282,6 +282,19 @@ ANDIL,ORIL,XORIL:
 default:	deco.ril = `FALSE;
 endcase
 
+case(ir.any.opcode)
+EXI8:		deco.isExi = `TRUE;
+EXI8+1:	deco.isExi = `TRUE;
+EXI24:	deco.isExi = `TRUE;
+EXI24+1:deco.isExi = `TRUE;
+EXI40:	deco.isExi = `TRUE;
+EXI40+1:deco.isExi = `TRUE;
+EXI56:	deco.isExi = `TRUE;
+EXI56+1:deco.isExi = `TRUE;
+EXIM:		deco.isExi = `TRUE;
+default:	deco.isExi = `FALSE;
+endcase
+
 deco.rfwr = rfwr;
 deco.Ra = Ra;
 deco.Rb = Rb;
@@ -584,6 +597,7 @@ deco.mtlk = ir.any.opcode==MTLK;
 deco.enter = ir.any.opcode==ENTER;
 deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH4R;
 deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.jxx || deco.jxz || deco.rts;
+deco.store = deco.storer|deco.storen|deco.stset|deco.stmov|deco.stfnd|deco.stcmp;
 
 if (deco.mflk)
 	deco.Ca = {2'd0,ir[15:14]};

@@ -1068,6 +1068,7 @@ typedef struct packed
 	logic ldz;
 	logic mem;
 	logic load;
+	logic store;
 	logic [2:0] memsz;
 	logic lear;
 	logic lean;
@@ -1117,6 +1118,7 @@ typedef struct packed
 	logic [2:0] rm;
 	logic [2:0] dfrm;
 	logic isDF;
+	logic isExi;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -1126,6 +1128,7 @@ typedef struct packed
 	logic [2:0] state;
 	logic [5:0] rid;
 	logic v;
+	logic stomp;
 	logic cmt;						// commit, clears as soon as committed
 	logic cmt2;						// sticky commit, clears when entry reassigned
 	logic vcmt;						// entire vector is committed.
