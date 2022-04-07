@@ -568,11 +568,12 @@ reg [7:0] stomp;
 reg dec_miss;
 reg exec_miss;
 always_comb
-	dec_miss = ((ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) && (ip.offs != deco.jmptgt)) ||
-						((ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt));
+	dec_miss = (((reb[dec].ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) && (ip.offs != deco.jmptgt)) ||
+						((reb[dec].ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt)));// &&
+						//(reb[dec].state == DECODED);
 always_comb
-	exec_miss = ((reb[exec].dec.jxx|reb[exec].dec.jxz|reb[exec].dec.mjnez) & takb & reb[exec].v) || //reb[exec].dec.jmp | reb[exec].dec.bra |
-							(reb[exec].dec.rts && reb[exec].dec.Ca != 2'b00);
+	exec_miss = (((reb[exec].dec.jxx|reb[exec].dec.jxz|reb[exec].dec.mjnez) & takb & reb[exec].v) || //reb[exec].dec.jmp | reb[exec].dec.bra |
+							(reb[exec].dec.rts && reb[exec].dec.Ca != 2'b00)) && reb[exec].state < EXECUTED;
 always_comb
 	missid = exec_miss ? exec : dec;	// exec miss takes precedence
 wire branchmiss = dec_miss || exec_miss;
@@ -1330,9 +1331,6 @@ begin
 	dval <= INV;
 	ival <= INV;
 	ir <= NOP_INSN;
-	xir <= NOP_INSN;
-	mir <= NOP_INSN;
-	wir <= NOP_INSN;
 	xSc <= 3'd0;
 	xPredictableBranch <= FALSE;
 	tid <= 8'h00;
@@ -1642,7 +1640,7 @@ endfunction
 task tInsnFetch;
 begin
 	tail <= next_tail;
-	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
+	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED) && !branchmiss) begin// && ((tail + 2'd1) & 3'd7) != head) begin
 		reb[tail].state <= FETCHED;
 		sns[tail] <= sn;
 		reb[tail].v <= 1'b1;
@@ -1847,9 +1845,7 @@ begin
 	end
 	// Wait for cache load
 	else begin
-`ifdef OVERLAPPED_PIPELINE
 		ip <= ip;
-`endif
 	end	
 end
 endtask
@@ -1883,7 +1879,7 @@ begin
 		reb[dec].ic1v <= rfoc1_v;
 		reb[dec].ic2v <= rfoc2_v;
 		reb[dec].ic3v <= rfoc3_v;
-		reb[dec].lkv <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==3'd4 && reb[head].dec.carfwr) || ca_src[deco.Ca]==5'd31 || LkValid(reb[dec].ir);
+		reb[dec].lkv <= (reb[head].dec.Ct==deco.Ca && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.carfwr) || ca_src[deco.Ca]==5'd31 || LkValid(reb[dec].ir);
 		reb[dec].ias <= Source1Valid(reb[dec].ir)||deco.Ra=='d0 ? 5'd31 : regfile_src[deco.Ra];
 		reb[dec].ibs <= Source2Valid(reb[dec].ir)||deco.Rb=='d0 ? 5'd31 : regfile_src[deco.Rb];
 		reb[dec].ic0s <= Source3Valid(reb[dec].ir)||deco.Rc=='d0 ? 5'd31 : regfile_src[deco.Rc];
@@ -2164,10 +2160,8 @@ task tRts;
 integer n;
 begin
 	if (reb[exec].dec.rts) begin
-		if (xir.rts.lk != 2'd0) begin
-			for (n = 0; n < REB_ENTRIES; n = n + 1)
-				if (sns[n] > sns[exec])
-					reb[n] <= 'd0;
+		if (reb[exec].ir.rts.lk != 2'd0) begin
+			tNullReb(exec);
   		ip.offs <= reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0};
   		tResetRegfileSrc();
 		end
@@ -2215,12 +2209,6 @@ begin
 			exec <= next_exec;
 		end
 	end
-	
-	/*
-	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (reb[n].state==EXECUTED)
-			tArgUpdate(n);
-	*/
 end
 endtask
 
@@ -2375,9 +2363,7 @@ begin
 				caregfile[4'd8+reb[head].istk_depth] <= reb[head].ip;
 	    	ca_src[4'd8+reb[head].istk_depth] <= 5'd31;
 				ip.offs <= tvec[3'd3] + {omode,6'h00};
-				for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-					if (sns[n8] > sns[head])
-						reb[n8] <= 'd0;
+				tNullReb(head);
 			end
 			else begin
 		  	if (reb[head].dec.carfwr) begin
@@ -2392,9 +2378,7 @@ begin
 						ip.offs <= reb[head].ca.offs;	// 8-1
 						ip.micro_ip <= reb[head].ca.micro_ip;
 						istk_depth <= istk_depth - 2'd1;
-						for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-							if (sns[n8] > sns[head])
-								reb[n8] <= 'd0;
+						tNullReb(head);
 					end
 				end
 		    else if (reb[head].dec.csr)
@@ -2411,9 +2395,7 @@ begin
 						cause[2'd3] <= FLT_PRIV;
 						caregfile[reb[head].dec.Ct] <= reb[head].ip;
 						ip.offs <= tvec[3'd3] + {omode,6'h00};
-						for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-							if (sns[n8] > sns[head])
-								reb[n8] <= 'd0;
+						tNullReb(head);
 					end
 					else begin
 						pmStack[2:1] <= reb[head].ir[10:9];	// omode
@@ -2532,15 +2514,25 @@ begin
 end
 endtask
 
+task tNullReb;
+input [2:0] kk;
+integer n9;
+begin
+	for (n9 = 0; n9 < REB_ENTRIES; n9 = n9 + 1)
+		if (sns[n9] > sns[kk]) begin
+			reb[n9] <= 'd0;
+			sns[n9] <= 48'hFFFFFFFFFFFF;
+		end
+end
+endtask
+
 integer n9;
 task tBranch;
 input [3:0] yy;
 integer n;
 begin
 	tResetRegfileSrc();
-	for (n9 = 0; n9 < REB_ENTRIES; n9 = n9 + 1)
-		if (sns[n9] > sns[exec])
-			reb[n9] <= 'd0;
+	tNullReb(exec);
   if (reb[exec].dec.Ca == 4'd0) begin
   	ip.offs <= reb[exec].dec.jmptgt;
   	mJmptgt.offs <= reb[exec].dec.jmptgt;

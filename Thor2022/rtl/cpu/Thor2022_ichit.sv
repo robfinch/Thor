@@ -53,6 +53,7 @@ output reg [AWID-7:0] vtag;	// victim tag
 reg [AWID-7:0] prev_vtag = 'd0;
 reg [1:0] prev_rway = 'd0;
 reg [WAYS-1:0] ihit1;
+reg ihit2;
 
 integer k;
 always_comb
@@ -83,7 +84,9 @@ always_ff @(posedge clk)
 	prev_rway <= rway;
 
 always_ff @(posedge clk)
-	ihit = |ihit1;
+	ihit2 = |ihit1;
+always_ff @(posedge clk)
+	ihit = ihit2 & |ihit1;
 
 always_ff @(posedge clk)
 	prev_vtag <= vtag;

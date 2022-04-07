@@ -1444,6 +1444,7 @@ STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
 STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
 	Source3Valid = isn.stx.Rs=='d0;
 LEAVE: Source3Valid = `TRUE;
+MTLK:	 Source3Valid = isn[13:9]=='d0;
 default:
 	Source3Valid = `TRUE;
 endcase
