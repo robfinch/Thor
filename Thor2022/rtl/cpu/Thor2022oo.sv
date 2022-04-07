@@ -76,6 +76,8 @@ output reg trigger_o;
 
 wire clk_g;
 
+parameter REB_ENTRIES = 8;
+
 reg [5:0] state, state1, state2;
 parameter RUN = 6'd1;
 parameter RESTART1 = 6'd2;
@@ -167,8 +169,9 @@ wire wrvrf;
 reg first_flag, done_flag;
 
 sReorderEntry [7:0] reb;
+reg [47:0] sns [0:7];
 reg [2:0] head;
-reg [2:0] exec;
+reg [2:0] exec, exec2, mc_exec, mc_exec2;
 reg [2:0] dec;
 reg [2:0] tail;
 reg [47:0] sn;
@@ -178,7 +181,6 @@ reg ival;
 reg [15:0] icause;
 Instruction insn;
 Instruction micro_ir,micro_ir1;
-reg advance_i;
 CodeAddress ip;
 reg [6:0] micro_ip;
 wire ipredict_taken;
@@ -200,7 +202,6 @@ Instruction ir;
 CodeAddress dip;
 reg [2:0] cioreg;
 reg dpfx;
-reg advance_d;
 reg [3:0] dlen;
 DecodeOut deco, xd, md, wd;
 reg dpredict_taken;
@@ -289,7 +290,6 @@ Address xbadAddr;
 Instruction xir;
 CodeAddress xip;
 reg [3:0] xlen;
-reg advance_x;
 reg [4:0] tRt;
 reg [2:0] xistk_depth;
 reg [2:0] xcioreg;
@@ -329,7 +329,6 @@ reg [2:0] xrm,xdfrm;
 reg mval;
 Instruction mir;
 CodeAddress mip;
-reg advance_m;
 reg [15:0] mcause;
 Address mbadAddr;
 CodeAddress mca;
@@ -458,12 +457,12 @@ begin
 	dmir = NOP;
 	dxval = FALSE;
 	dmval = FALSE;
-	for (k2 = 0; k2 < 8; k2 = k2 + 1) begin
-		if (reb[k2].sn == reb[dec].sn - 1) begin
+	for (k2 = 0; k2 < REB_ENTRIES; k2 = k2 + 1) begin
+		if (sns[k2] == sns[dec] - 1) begin
 			dxir = reb[k2].ir;
 			dxval = reb[k2].v;
 		end
-		if (reb[k2].sn == reb[dec].sn - 2) begin
+		if (sns[k2] == sns[dec] - 2) begin
 			dmir = reb[k2].ir;
 			dmval = reb[k2].v;
 		end
@@ -485,7 +484,9 @@ Thor2022_decoder udec (
 always_comb
 if (deco.Ra=='d0)
 	rfoa = 'd0;
-else if (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+//else if (reb[exec].dec.Rt==deco.Ra && reb[exec].v && regfile_src[deco.Ra]==exec && reb[exec].dec.rfwr)
+//	rfoa = res;
+else if (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfoa = reb[head].res;
 else
 	rfoa = regfile[deco.Ra[4:2]] >> {deco.Ra[1:0],7'b0};
@@ -493,7 +494,7 @@ else
 always_comb
 if (deco.Rb=='d0)
 	rfob = 'd0;
-else if (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+else if (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfob = reb[head].res;
 else
 	rfob = regfile[deco.Rb[4:2]] >> {deco.Rb[1:0],7'b0};
@@ -501,25 +502,25 @@ else
 always_comb
 if (deco.Rc=='d0)
 	rfoc0 = 'd0;
-else if (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+else if (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfoc0 = reb[head].res;
 else
 	rfoc0 = regfile[deco.Rc[4:2]] >> {deco.Rc[1:0],7'b0};
 
 always_comb
-if (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfoc1 = reb[head].res;
 else
 	rfoc1 = regfile[deco.Rc[4:2]] >> {2'b01,7'b0};
 
 always_comb
-if (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfoc2 = reb[head].res;
 else
 	rfoc2 = regfile[deco.Rc[4:2]] >> {2'b10,7'b0};
 
 always_comb
-if (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr)
+if (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr)
 	rfoc3 = reb[head].res;
 else
 	rfoc3 = regfile[deco.Rc[4:2]] >> {2'b11,7'b0};
@@ -527,29 +528,29 @@ else
 always_comb
 	if (cioreg==3'd0 || ~cio[1])
 		rfop = 'd0;
-	else if (reb[head].v && reb[head].cioreg==cioreg && reb[head].state==3'd4 && reb[head].cio[0])
+	else if (reb[head].v && reb[head].cioreg==cioreg && reb[head].state==EXECUTED && reb[head].cio[0])
 		rfop = reb[head].carry_res;
 	else
 		rfop = preg[cioreg];
 
 always_comb
-	if (deco.Ca == reb[head].dec.Ct && reb[head].state==3'd4 && reb[head].dec.carfwr && reb[head].v)
+	if (deco.Ca == reb[head].dec.Ct && reb[head].state==EXECUTED && reb[head].dec.carfwr && reb[head].v)
 		rfoca = reb[head].cares;
 	else
 		rfoca = caregfile[deco.Ca];
 
 always_comb
-	rfoa_v = (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
+	rfoa_v = (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[deco.Ra]==5'd31 || Source1Valid(reb[dec].ir);
 always_comb
-	rfob_v = (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rb]==5'd31 || Source2Valid(reb[dec].ir);
+	rfob_v = (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[deco.Rb]==5'd31 || Source2Valid(reb[dec].ir);
 always_comb
-	rfoc0_v = (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || Source3Valid(reb[dec].ir);
+	rfoc0_v = (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || Source3Valid(reb[dec].ir);
 always_comb
-	rfoc1_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b01}]==5'd31 || Source3Valid(reb[dec].ir);
+	rfoc1_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b01}]==5'd31 || Source31Valid(reb[dec].ir);
 always_comb
-	rfoc2_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b10}]==5'd31 || Source3Valid(reb[dec].ir);
+	rfoc2_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b10}]==5'd31 || Source32Valid(reb[dec].ir);
 always_comb
-	rfoc3_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b11}]==5'd31 || Source3Valid(reb[dec].ir);
+	rfoc3_v = (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) || regfile_src[{deco.Rc[4:2],2'b11}]==5'd31 || Source33Valid(reb[dec].ir);
 	
 always_comb
 	mask = vm_regfile[deco.Rvm];
@@ -564,80 +565,88 @@ always_comb
 integer n,j,k;
 reg [2:0] missid;
 reg [7:0] stomp;
+reg dec_miss;
+reg exec_miss;
 always_comb
-	missid = exec;
+	dec_miss = ((ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) && (ip.offs != deco.jmptgt)) ||
+						((ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt));
+always_comb
+	exec_miss = ((reb[exec].dec.jxx|reb[exec].dec.jxz|reb[exec].dec.mjnez) & takb & reb[exec].v) || //reb[exec].dec.jmp | reb[exec].dec.bra |
+							(reb[exec].dec.rts && reb[exec].dec.Ca != 2'b00);
+always_comb
+	missid = exec_miss ? exec : dec;	// exec miss takes precedence
+wire branchmiss = dec_miss || exec_miss;
 
-wire branchmiss = 
-	((reb[missid].dec.jxx|reb[missid].dec.jxz|reb[missid].dec.mjnez) & takb) | //reb[exec].dec.jmp | reb[exec].dec.bra |
-		(reb[missid].dec.rts & reb[missid].dec.Ca != 2'b00);
-
-always @*
+integer n30;
+always_comb
 begin
-	for (n = 0; n < 8; n = n + 1)
-		stomp[n] = 1'b0;
+	for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1)
+		stomp[n30] = 1'b0;
 	if (branchmiss) begin
-		for (n = 0; n < 8; n = n + 1) begin
-			if (reb[n].sn > reb[missid].sn)
-				stomp[n] = 1'b1;
+		for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1) begin
+			if (sns[n30] > sns[missid])
+				stomp[n30] = 1'b1;
 		end
 	end
 end
 
-always @*
-	for (n = 0; n < 8; n = n + 1)
-		reb_livetarget[n] = {32{reb[n].v}} & {32{~stomp[n]}} & reb_out[n];
-always @*
-	for (n = 0; n < 8; n = n + 1)
-		reb_livetarget2[n] = {16{reb[n].v}} & {16{~stomp[n]}} & reb_out2[n];
-always @*
-for (j = 1; j < 32; j = j + 1) begin
-	livetarget[j] = 1'b0;
-	for (n = 0; n < 8; n = n + 1)
-		livetarget[j] = livetarget[j] | reb_livetarget[n][j];
+integer n31;
+always_comb
+	for (n31 = 0; n31 < REB_ENTRIES; n31 = n31 + 1) begin
+		reb_livetarget[n31] = {32{reb[n31].v}} & {32{~stomp[n31]}} & reb_out[n31] & {32{reb[n31].state < OUT}};
+		reb_livetarget2[n31] = {16{reb[n31].v}} & {16{~stomp[n31]}} & reb_out2[n31] & {16{reb[n31].state < OUT}};
+	end
+integer n32,j32;
+always_comb
+for (j32 = 1; j32 < 32; j32 = j32 + 1) begin
+	livetarget[j32] = 1'b0;
+	for (n32 = 0; n32 < REB_ENTRIES; n32 = n32 + 1)
+		livetarget[j32] = livetarget[j32] | reb_livetarget[n32][j32];
 end
-always @*
-for (j = 1; j < 16; j = j + 1) begin
-	livetarget2[j] = 1'b0;
-	for (n = 0; n < 8; n = n + 1)
-		livetarget2[j] = livetarget2[j] | reb_livetarget2[n][j];
+integer n33,j33;
+always_comb
+for (j33 = 1; j33 < 16; j33 = j33 + 1) begin
+	livetarget2[j33] = 1'b0;
+	for (n33 = 0; n33 < REB_ENTRIES; n33 = n33 + 1)
+		livetarget2[j33] = livetarget2[j33] | reb_livetarget2[n33][j33];
 end
 
-always @*
-	for (n = 0; n < 8; n = n + 1) begin
-		reb_cumulative[n] = 1'b0;
-		for (j = n; j < n + 8; j = j + 1) begin
-			if (missid==(j % 8))
-				for (k = n; k <= j; k = k + 1)
-					reb_cumulative[n] = reb_cumulative[n] | reb_livetarget[k % 8];
-		end
+integer n34,j34,k34;
+always_comb
+	for (n34 = 0; n34 < REB_ENTRIES; n34 = n34 + 1) begin
+		reb_cumulative[n34] = 1'b0;
+		for (k34 = 0; k34 <= REB_ENTRIES; k34 = k34 + 1)
+			if (sns[k34] <= sns[missid] && sns[k34] >= sns[n34])
+				reb_cumulative[n34] = reb_cumulative[n34] | reb_livetarget[k34];
 	end
-always @*
-	for (n = 0; n < 8; n = n + 1) begin
-		reb_cumulative2[n] = 1'b0;
-		for (j = n; j < n + 8; j = j + 1) begin
-			if (missid==(j % 8))
-				for (k = n; k <= j; k = k + 1)
-					reb_cumulative2[n] = reb_cumulative2[n] | reb_livetarget2[k % 8];
-		end
+integer n35,j35,k35;
+always_comb
+	for (n35 = 0; n35 < REB_ENTRIES; n35 = n35 + 1) begin
+		reb_cumulative2[n35] = 'd0;
+		for (k35 = 0; k35 < REB_ENTRIES; k35 = k35 + 1)
+			if (sns[k35] <= sns[missid] && sns[k35] >= sns[n35])
+				reb_cumulative2[n35] = reb_cumulative2[n35] | reb_livetarget2[k35];
 	end
 
-always @*
-	for (n = 0; n < 8; n = n + 1)
-    reb_latestID[n] = (missid == n || ((reb_livetarget[n] & reb_cumulative[(n+1)%8]) == {32{1'b0}}))
-				    ? reb_livetarget[n]
+integer n36;
+always_comb
+	for (n36 = 0; n36 < REB_ENTRIES; n36 = n36 + 1)
+    reb_latestID[n36] = (missid == n36 || ((reb_livetarget[n36] & reb_cumulative[(n36+1)%REB_ENTRIES]) == {32{1'b0}}))
+				    ? reb_livetarget[n36]
 				    : {32{1'b0}};
-always @*
-	for (n = 0; n < 8; n = n + 1)
-    reb_latestID2[n] = (missid == n || ((reb_livetarget2[n] & reb_cumulative2[(n+1)%8]) == {16{1'b0}}))
-				    ? reb_livetarget2[n]
+integer n37;
+always_comb
+	for (n37 = 0; n37 < REB_ENTRIES; n37 = n37 + 1)
+    reb_latestID2[n37] = (missid == n37 || ((reb_livetarget2[n37] & reb_cumulative2[(n37+1)%REB_ENTRIES]) == {16{1'b0}}))
+				    ? reb_livetarget2[n37]
 				    : {16{1'b0}};
 
 always @*
-for (n = 0; n < 8; n = n + 1)
-	reb_out[n] <= 32'h1 << reb[n].dec.Rt;
+for (n = 0; n < REB_ENTRIES; n = n + 1)
+	reb_out[n] <= (32'h1 << reb[n].dec.Rt) & 32'hFFFFFFFE;
 always @*
-for (n = 0; n < 8; n = n + 1)
-	reb_out2[n] <= 16'h1 << reb[n].dec.Ct;
+for (n = 0; n < REB_ENTRIES; n = n + 1)
+	reb_out2[n] <= (16'h1 << reb[n].dec.Ct) & 16'hFFFE;
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -910,7 +919,7 @@ OSR2:
 	default:	res2 = 'd0;
 	endcase
 CSR:		res2 = csr_res;
-MFLK:		res2 = xca.offs;
+MFLK:		begin res2 = reb[exec].ca.offs; $display("%d MFLK: %h", $time, reb[exec].ca.offs); end
 BTFLD:	res2 = bf_out;
 ADD2R:				res2 = xa + xb + pn;
 SUB2R:				res2 = xa - xb - pn;
@@ -989,7 +998,7 @@ always_comb
 
 always_comb
 case(xir.any.opcode)
-MTLK:	cares <= xa;
+MTLK:	cares <= xc0;
 JMP,DJMP,BRA:	cares <= reb[exec].ip + reb[exec].ilen;
 default:	cares <= caregfile[1];
 endcase
@@ -1172,58 +1181,59 @@ BUFGCE u11 (.CE(!wfi), .I(clk_i), .O(clk_g));
 //assign clk_g = clk_i;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Pipeline control
-//
-// Stores are delayed until it can be guarenteed that they will complete
-// without an intervening flow control change.
-// If the target of a load operation is used by the next instruction, then
-// execution of that instruction needs to be delayed until the load is
-// complete.
-// A synchronizing instruction causes a stall until the sync clears.
+// Left over from in-order core, to be removed.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 wire stall_i = !ihit;
-wire stall_d = ((deco.storer|deco.storen|deco.stset|deco.stcmp|deco.stfnd|deco.stmov) &&
-								(((|xcause || reb[exec].dec.flowchg || reb[exec].dec.load) && xval) ||
-								 ((|mcause || md.flowchg) && mval) ||
-								 ((|wcause || wd.flowchg) && wval))) ||
-								 ((reb[exec].dec.mulall||reb[exec].dec.divall) && xval) ||
-//								(reb[exec].dec.load && (Ra==reb[exec].dec.Rt || {Tb,Rb}=={1'b0,reb[exec].dec.Rt} || {Tc,Rc}=={1'b0,reb[exec].dec.Rt} || Rc1==reb[exec].dec.Rt || Rc2==reb[exec].dec.Rt || Rc3==reb[exec].dec.Rt) && xval && reb[exec].dec.Rt!='d0) ||
-//								(md.load && (Ra==md.Rt || {Tb,Rb}=={2'b00,md.Rt} || {Tc,Rc}=={2'b00,md.Rt} || Rc1==md.Rt) && mval && md.Rt!='d0) ||
-//								(wd.load && (Ra==wd.Rt || {Tb,Rb}=={2'b00,wd.Rt} || {Tc,Rc}=={2'b00,wd.Rt} || Rc1==wd.Rt) && wval && wd.Rt!=6'd0) ||
-								(reb[exec].dec.sync && xval) || (md.sync && mval) || (wd.sync && wval) || tSync || uSync || vSync;
-
 assign run = ihit;
 always_comb advance_t = !stall_i && (state==RUN);
 always_comb	advance_w = advance_t;
-always_comb advance_m = advance_w;
-always_comb advance_x = advance_m;
-always_comb advance_d = advance_x && !stall_d;
-always_comb advance_i = advance_d;
 
 reg [3:0] xx;	// debug marker
 
+// =============================================================================
+// Scheduling Logic
+// =============================================================================
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Pipeline
+// Instruction fetch scheduler
+//
+// Chooses the next bucket to queue an instruction in any order.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-always_ff @(posedge clk_g)
-if (rst_i) begin
-	tReset();
-	goto (RESTART1);
+reg [2:0] next_tail;
+integer n17;
+always_comb
+begin
+	next_tail <= tail;
+	// Choose the next fetch bucket.
+	for (n17 = 0; n17 < REB_ENTRIES; n17 = n17 + 1)
+		if (n17 != tail && (reb[n17].state==RETIRED || reb[n17].state==EMPTY))
+			next_tail <= n17;
 end
-else begin
-	tOnce();
-	tInsnFetch();
-	tDecode();
-	tExecute();
-	tWriteback();
-	tSyncTrailer();
-	tStateMachine();
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Decode scheduler
+//
+// Chooses the next bucket to decode, essentially in any order.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+integer n7;
+reg [2:0] next_dec;
+always_comb
+begin
+	next_dec = dec;
+	for (n7 = 0; n7 < REB_ENTRIES; n7 = n7 + 1)
+		if (n7 != dec && reb[n7].state==FETCHED)
+			next_dec <= n7;
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Execute scheduler
+//
+// Picks instructions in any order except:
+// a) memory instructions are executed in strict order
+// b) preference is given to executing earlier instructions over later ones
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 function fnArgsValid;
@@ -1240,24 +1250,67 @@ begin
 next_exec = exec;
 for (kk = 7; kk >= 0; kk = kk - 1)
 	if (kk != exec) begin
-		if ((reb[kk].state==3'd2 || reb[kk].state==3'd3) && reb[kk].v && !stomp[kk])
+		if ((reb[kk].state==DECODED || reb[kk].state==OUT) && reb[kk].v && !stomp[kk]) begin
 			if (fnArgsValid(kk)) begin
 				if (!mc_busy || !reb[kk].dec.multi_cycle) begin
 					if (reb[kk].dec.mem) begin
-						if (reb[next_exec].dec.mem && reb[next_exec].state < 3'd4) begin
-							if (reb[kk].sn < reb[next_exec].sn)
+						if (reb[next_exec].dec.mem && reb[next_exec].state < EXECUTED) begin
+							if (sns[kk] <= sns[next_exec] || next_exec==exec)
 								next_exec = kk;
 						end
-						else
+						else if (sns[kk] <= sns[next_exec] || next_exec==exec)
 							next_exec = kk;
 					end
 					else begin
-						if (!(reb[next_exec].dec.mem && reb[next_exec].state < 3'd4))
+						// Prefer executing earlier instructions over later ones.
+						if (!(reb[next_exec].dec.mem && reb[next_exec].state < EXECUTED && fnArgsValid(next_exec)) && (sns[kk] <= sns[next_exec] || next_exec==exec))
 							next_exec = kk;
 					end
 				end
 			end
+		end
 	end
+end
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Writeback scheduler
+//
+// Wait for the next instruction to become executed or empty before retiring it.
+// Choose the instruction with the lowest sequence number as the head.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+integer n8;
+reg [2:0] next_head;
+always_comb
+begin
+	next_head = 0;
+	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
+		if (sns[n8] < sns[next_head] && reb[n8].v && reb[n8].state!=RETIRED)
+			next_head = n8;
+end
+
+// =============================================================================
+// =============================================================================
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Pipeline
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+always_ff @(posedge clk_g)
+if (rst_i) begin
+	tReset();
+	goto (RESTART1);
+end
+else begin
+	tOnce();
+	tInsnFetch();
+	tDecode();
+	tExecute();
+	tExecute2();
+	tWriteback();
+	tSyncTrailer();
+	tStateMachine();
+
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1333,9 +1386,10 @@ begin
 	xd <= 'd0;
 	md <= 'd0;
 	wd <= 'd0;
-	for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
+	for (n6 = 0; n6 < REB_ENTRIES; n6 = n6 + 1) begin
 		reb[n6] <= 'd0;
 		reb[n6].state <= 3'd7;
+		sns[n6] <= 'd0;
 	end
 	for (n6 = 0; n6 < 32; n6 = n6 + 1)
 		regfile_src[n6] <= 5'd31;
@@ -1347,6 +1401,8 @@ begin
 	exec <= 'd0;
 	dec <= 'd0;
 	mc_busy <= 'd0;
+	mc_exec <= 'd0;
+	mc_exec2 <= 'd0;
 end
 endtask
 
@@ -1381,6 +1437,13 @@ RESTART2:
 	end
 RUN:
 	begin
+		if (memreq_wack|wackr) begin
+			wackr <= 1'b1;
+			if (!memresp_fifo_empty) begin
+				memresp_fifo_rd <= TRUE;
+				goto (WAIT_MEM2);
+			end
+		end
 	end	// RUN
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1402,30 +1465,29 @@ WAIT_MEM2:
 		if (memresp_fifo_v)
 		begin
 			memresp_fifo_rd <= FALSE;
-			reb[exec].res <= memresp.res;
+			reb[memresp.tid].res <= memresp.res;
 			if (mStset|mStmov)
-				reb[exec].dec.rfwr <= TRUE;
+				reb[memresp.tid].dec.rfwr <= TRUE;
 			if (memresp.tid == memreq.tid) begin
 				if (memreq.func==MR_LOAD || memreq.func==MR_LOADZ || memreq.func==MR_MFSEL) begin
-					reb[exec].dec.rfwr <= FALSE;
+					reb[memresp.tid].dec.rfwr <= FALSE;
 					if (memreq.func2!=MR_LDDESC) begin
-						reb[exec].dec.rfwr <= TRUE;
+						reb[memresp.tid].dec.rfwr <= TRUE;
 					end
 					if (memreq.func2==MR_LDOO)
-						reb[exec].w512 <= TRUE;
+						reb[memresp.tid].w512 <= TRUE;
 				end
 				else if (memreq.sz==3'd5) begin
-					reb[exec].w256 <= TRUE;
+					reb[memresp.tid].w256 <= TRUE;
 				end
 				if (|memresp.cause) begin
-					if (~|reb[exec].cause)
-						reb[exec].istk_depth <= reb[exec].istk_depth + 2'd1;
-					reb[exec].cause <= memresp.cause;
-					reb[exec].badAddr <= memresp.badAddr;
+					if (~|reb[memresp.tid].cause)
+						reb[memresp.tid].istk_depth <= reb[memresp.tid].istk_depth + 2'd1;
+					reb[memresp.tid].cause <= memresp.cause;
+					reb[memresp.tid].badAddr <= memresp.badAddr;
 				end
-				reb[exec].state <= EXECUTED;
-				exec <= next_exec;
-			 	tArgUpdate(exec);
+				reb[memresp.tid].state <= EXECUTED;
+				mc_exec2 <= memresp.tid;
 			 	mc_busy <= FALSE;
 				goto (RUN);
 			end
@@ -1438,11 +1500,10 @@ WAIT_MEM2:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-  	reb[exec].state <= EXECUTED;
-		exec <= next_exec;
-  	reb[exec].res <= res;
-  	reb[exec].carry_res <= carry_res;
-  	tArgUpdate(exec);
+  	reb[mc_exec].state <= EXECUTED;
+  	reb[mc_exec].res <= res;
+  	reb[mc_exec].carry_res <= carry_res;
+		mc_exec2 <= mc_exec;
   	mc_busy <= FALSE;
     goto(RUN);
   end
@@ -1579,15 +1640,11 @@ endfunction
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tInsnFetch;
-integer n17;
 begin
-	// Choose the next fetch bucket.
-	for (n17 = 0; n17 < 8; n17 = n17 + 1)
-		if (n17 != tail && (reb[n17].state==RETIRED || reb[n17].state==EMPTY))
-			tail <= n17;
-	if (ihit && (reb[tail].state==3'd0 || reb[tail].state==RETIRED)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
+	tail <= next_tail;
+	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED)) begin// && ((tail + 2'd1) & 3'd7) != head) begin
 		reb[tail].state <= FETCHED;
-		reb[tail].sn <= sn;
+		sns[tail] <= sn;
 		reb[tail].v <= 1'b1;
 		sn <= sn + 2'd1;
 		tail <= tail + 2'd1;
@@ -1807,10 +1864,7 @@ endtask
 task tDecode;
 integer n7;
 begin
-	// Choose the next decode bucket.
-	for (n7 = 0; n7 < 8; n7 = n7 + 1)
-		if (n7 != dec && reb[n7].state==FETCHED)
-			dec <= n7;
+	dec <= next_dec;
 	if (reb[dec].state==FETCHED) begin
 		reb[dec].state <= DECODED;
 		reb[dec].dec <= deco;
@@ -1845,31 +1899,39 @@ begin
 		reb[dec].mask_bit <= mask[dstep];
 		reb[dec].zbit <= zbit;
 		reb[dec].predictable_branch <= (ir.jxx.Ca==3'd0 || ir.jxx.Ca==3'd7);
+		for (n7 = 0; n7 < 32; n7 = n7 + 1)
+			if (regfile_src[n7]==dec && n7 != deco.Rt && n7 != head) begin
+				$display("%d Register %d source not reset.", $time, n7);
+				regfile_src[n7] <= 5'd31;
+			end
 		regfile_src[deco.Rt] <= dec;
+		$display("%d Register %d source set to %d", $time, deco.Rt, dec);
 		regfile_src[5'd0] <= 5'd31;
 		ca_src[deco.Ct] <= dec;
 		
 		xval <= dval;
 		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
-				for (n7 = 0; n7 < 8; n7 = n7 + 1)
-					if (reb[n7].sn > reb[dec].sn)
+				for (n7 = 0; n7 < REB_ENTRIES; n7 = n7 + 1)
+					if (sns[n7] > sns[dec])
 						reb[n7] <= 'd0;
 				reb[dec].ip.offs <= deco.jmptgt;
+				tResetRegfileSrc();
 			end
 		end
 		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				for (n7 = 0; n7 < 8; n7 = n7 + 1)
-					if (reb[n7].sn > reb[dec].sn)
+				for (n7 = 0; n7 < REB_ENTRIES; n7 = n7 + 1)
+					if (sns[n7] > sns[dec])
 						reb[n7] <= 'd0;
 				reb[dec].ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				tResetRegfileSrc();
 			end
 		end
 		if (deco.jmp|deco.bra|deco.jxx)
   		reb[dec].cares.offs <= reb[dec].ip.offs + reb[dec].ilen;
-  	else if (deco.mtlk)
-  		reb[dec].cares.offs <= (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==3'd4 && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc];
+//  	else if (deco.mtlk)
+//  		reb[dec].cares.offs <= rfoc0;//(reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].state==EXECUTED && reb[head].dec.rfwr) ? reb[head].res : regfile[deco.Rc];
 	end
 end
 endtask
@@ -1888,7 +1950,7 @@ begin
 //    if (xFloat)
 //      goto(FLOAT1);
   if (reb[exec].dec.loadr) begin
-  	memreq.tid <= tid;
+  	memreq.tid <= exec;
   	tid <= tid + 2'd1;
   	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
   	case(reb[exec].dec.memsz)
@@ -1900,20 +1962,20 @@ begin
   	default:	begin memreq.func2 <= MR_LDO; end
   	endcase
   	memreq.sz <= reb[exec].dec.memsz;
-  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].dec.imm;
   	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
+  	//goto (WAIT_MEM1);
   end
   else if (reb[exec].dec.ldoo) begin
-  	memreq.tid <= tid;
+  	memreq.tid <= exec;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_LOAD;
   	memreq.func2 <= MR_LDOO;
   	memreq.sz <= hexiquad;
-  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].dec.imm;
   	memreq.adr.offs[5:0] <= 6'h00;
   	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
+  	//goto (WAIT_MEM1);
   end
 /* should be LLA
   else if (xLear) begin
@@ -1927,7 +1989,7 @@ begin
   end
 */
   else if (reb[exec].dec.loadn) begin
-  	memreq.tid <= tid;
+  	memreq.tid <= exec;
   	tid <= tid + 2'd1;
   	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
   	case(reb[exec].dec.memsz)
@@ -1941,7 +2003,7 @@ begin
   	memreq.sz <= reb[exec].dec.memsz;
   	memreq.adr.offs <= reb[exec].ia + reb[exec].ib;
   	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
+  	//goto (WAIT_MEM1);
   end
 /*
   else if (xLean) begin
@@ -1955,7 +2017,7 @@ begin
   end
 */
   else if (reb[exec].dec.storer) begin
-  	memreq.tid <= tid;
+  	memreq.tid <= exec;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
   	case(reb[exec].dec.memsz)
@@ -1966,13 +2028,13 @@ begin
   	default:	begin memreq.func2 <= MR_STO; end
   	endcase
   	memreq.sz <= reb[exec].dec.memsz;
-  	memreq.adr.offs <= reb[exec].ia + reb[exec].imm;
+  	memreq.adr.offs <= reb[exec].ia + reb[exec].dec.imm;
   	memreq.dat <= {xc1,xc0};
   	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
+  	//goto (WAIT_MEM1);
   end
   else if (reb[exec].dec.storen) begin
-  	memreq.tid <= tid;
+  	memreq.tid <= exec;
   	tid <= tid + 2'd1;
   	memreq.func <= MR_STORE;
   	case(reb[exec].dec.memsz)
@@ -1986,11 +2048,11 @@ begin
   	memreq.adr.offs <= reb[exec].ia + reb[exec].ib;
   	memreq.dat <= {reb[exec].ic1,reb[exec].ic0};
   	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
+  	//goto (WAIT_MEM1);
   end
 	else if (reb[exec].dec.stset) begin
 		if (reb[exec].ic0 != 64'd0) begin
-	  	memreq.tid <= tid;
+	  	memreq.tid <= exec;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_STORE;
 	  	case(reb[exec].ir[30:29])
@@ -2003,14 +2065,14 @@ begin
 	  	memreq.adr.offs <= reb[exec].ia;
 	  	memreq.dat <= reb[exec].ib;
 	  	memreq.wr <= TRUE;
-	  	goto (WAIT_MEM1);
+	  	//goto (WAIT_MEM1);
   	end
   	else
   		reb[exec].dec.stset <= FALSE;
 	end
 	else if (reb[exec].dec.stmov) begin
 		if (reb[exec].ic0 != 64'd0) begin
-	  	memreq.tid <= tid;
+	  	memreq.tid <= exec;
 	  	tid <= tid + 2'd1;
 	  	memreq.func <= MR_MOVLD;
 	  	case(reb[exec].ir[43:41])
@@ -2023,7 +2085,7 @@ begin
 	  	memreq.adr.offs <= reb[exec].ia + reb[exec].ic0;
 	  	memreq.dat <= reb[exec].ib + reb[exec].ic0;
 	  	memreq.wr <= TRUE;
-	  	goto (WAIT_MEM1);
+	  	//goto (WAIT_MEM1);
   	end
   	else
   		reb[exec].dec.stmov <= FALSE;
@@ -2043,8 +2105,8 @@ begin
   		md.carfwr <= FALSE;
     if (bpe) begin
       if (reb[exec].predict_taken && !takb && reb[exec].predictable_branch) begin
-			for (n = 0; n < 8; n = n + 1)
-				if (reb[n].sn > reb[exec].sn)
+			for (n = 0; n < REB_ENTRIES; n = n + 1)
+				if (sns[n] > sns[exec])
 					reb[n] <= 'd0;
         ip.offs <= xip.offs + xlen;
       end
@@ -2103,10 +2165,11 @@ integer n;
 begin
 	if (reb[exec].dec.rts) begin
 		if (xir.rts.lk != 2'd0) begin
-			for (n = 0; n < 8; n = n + 1)
-				if (reb[n].sn > reb[exec].sn)
+			for (n = 0; n < REB_ENTRIES; n = n + 1)
+				if (sns[n] > sns[exec])
 					reb[n] <= 'd0;
   		ip.offs <= reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0};
+  		tResetRegfileSrc();
 		end
 	end
 end
@@ -2124,7 +2187,7 @@ begin
 	// Is there anything to execute?
 //	if (reb[exec].state==EMPTY || reb[exec].state==RETIRED || reb[exec].state==EXECUTED)
 	exec <= next_exec;
-	if (reb[exec].state==DECODED) begin
+	if (reb[exec].state==DECODED || reb[exec].state==OUT) begin
 		if (fnArgsValid(exec)) begin
 			reb[exec].state <= OUT;
 			reb[exec].w256 <= 1'b0;
@@ -2135,8 +2198,8 @@ begin
 			mExBranch <= FALSE;
 			if (reb[exec].v) begin
 				if (!reb[exec].dec.multi_cycle) begin
-					tArgUpdate(exec);
 					reb[exec].state <= EXECUTED;
+					exec2 <= exec;
 					tBra();
 					tJxx();
 			    tJmp();
@@ -2144,17 +2207,28 @@ begin
 				end
 				else if (!mc_busy) begin
 					mc_busy <= TRUE;
-					tArgUpdate(exec);
+					mc_exec <= exec;
 					tExMem();
 				end
 			end	// xval
+			exec2 <= exec;
 			exec <= next_exec;
 		end
 	end
 	
-	for (n = 0; n < 8; n = n + 1)
+	/*
+	for (n = 0; n < REB_ENTRIES; n = n + 1)
 		if (reb[n].state==EXECUTED)
 			tArgUpdate(n);
+	*/
+end
+endtask
+
+task tExecute2;
+integer n;
+begin
+	tArgUpdate(exec2);
+	tArgUpdate(mc_exec2);
 end
 endtask
 
@@ -2162,7 +2236,7 @@ task tArgUpdate;
 input [2:0] m;
 integer n;
 begin
-	for (n = 0; n < 8; n = n + 1) begin
+	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
 		if (!reb[n].iav) begin
 			/*
 			if (reb[m].dec.Rt==reb[n].dec.Ra && reb[m].state == 3'd4 && reb[m].v) begin
@@ -2171,12 +2245,8 @@ begin
 			end
 			*/
 			//if (reb[head].dec.Rt==reb[n].dec.Ra && reb[head].state==3'd4 && reb[head].v) begin
-			if (reb[n].ias==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ias==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ia <= reb[m].res;
-				reb[n].iav <= 1'b1;
-			end
-			else if (reb[reb[n].ias].v && reb[reb[n].ias].state==3'd4) begin
-				reb[n].ia <= reb[reb[n].ias].res;
 				reb[n].iav <= 1'b1;
 			end
 		end
@@ -2188,7 +2258,7 @@ begin
 			end
 			*/
 			//if (reb[head].dec.Rt==reb[n].dec.Rb && reb[head].state==3'd4 && reb[head].v) begin
-			if (reb[n].ibs==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ibs==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ib <= reb[m].res;
 				reb[n].ibv <= 1'b1;
 			end
@@ -2201,7 +2271,7 @@ begin
 			end
 			if (reb[m].dec.Rt==reb[n].dec.Rc && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic0s==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ic0s==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ic0 <= reb[m].res;
 				reb[n].ic0v <= 1'b1;
 			end
@@ -2214,7 +2284,7 @@ begin
 			end
 			if (reb[m].dec.Rt==reb[n].dec.Rc+1 && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic1s==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ic1s==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ic1 <= reb[m].res;
 				reb[n].ic1v <= 1'b1;
 			end
@@ -2227,7 +2297,7 @@ begin
 			end
 			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b10} && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic2s==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ic2s==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ic2 <= reb[m].res;
 				reb[n].ic2v <= 1'b1;
 			end
@@ -2240,7 +2310,7 @@ begin
 			end
 			if (reb[m].dec.Rt=={reb[n].dec.Rc[4:2],2'b11} && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].ic3s==m && reb[m].v && reb[m].state==3'd4) begin
+			if (reb[n].ic3s==m && reb[m].state==EXECUTED && reb[m].v) begin
 				reb[n].ic3 <= reb[m].res;
 				reb[n].ic3v <= 1'b1;
 			end
@@ -2253,25 +2323,14 @@ begin
 			end
 			if (reb[m].dec.Ct==reb[n].dec.lk && reb[m].state==3'd4 && reb[m].v) begin
 			*/
-			if (reb[n].lks==m && reb[m].v && reb[m].state==3'd4) begin
-				reb[n].lk <= reb[m].cares;
+			if (reb[n].lks==m && reb[m].state==EXECUTED && reb[m].v) begin
+				reb[n].ca <= reb[m].cares;
 				reb[n].lkv <= 1'b1;
 			end
 		end
 	end
 end
 endtask
-
-// Wait for the next instruction to become executed or empty before retiring it.
-integer n8;
-reg [2:0] next_head;
-always_comb
-begin
-	next_head = head;
-	for (n8 = 0; n8 < 8; n8 = n8 + 1)
-		if (reb[n8].sn == reb[head].sn + 1)
-			next_head = n8;
-end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Writeback stage
@@ -2291,10 +2350,9 @@ begin
 		head <= (tail - 2'd1) & 3'd7;
 	end
 	*/
-//	if (reb[head].state==EMPTY || reb[head].state==RETIRED)// && ((head + 2'd1) & 3'd7) != tail)
-//		head <= head + 2'd1;
+	//if (reb[head].state==EMPTY || reb[head].state==RETIRED || reb[head].state==EXECUTED)// && ((head + 2'd1) & 3'd7) != tail)
+	head <= next_head;
   if (reb[head].state==EXECUTED) begin
-		head <= next_head;
 		if (reb[head].v) begin
 			tArgUpdate(head);
 			if (reb[head].dec.sei)
@@ -2317,14 +2375,15 @@ begin
 				caregfile[4'd8+reb[head].istk_depth] <= reb[head].ip;
 	    	ca_src[4'd8+reb[head].istk_depth] <= 5'd31;
 				ip.offs <= tvec[3'd3] + {omode,6'h00};
-				for (n8 = 0; n8 < 8; n8 = n8 + 1)
-					if (reb[n8].sn > reb[head].sn)
+				for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
+					if (sns[n8] > sns[head])
 						reb[n8] <= 'd0;
 			end
 			else begin
 		  	if (reb[head].dec.carfwr) begin
 		    	caregfile[reb[head].dec.Ct] <= reb[head].cares;
 		    	ca_src[reb[head].dec.Ct] <= 5'd31;
+			    $display("caregfile[%d] <= %h", reb[head].dec.Ct, reb[head].cares);
 		    end
 				if (reb[head].dec.rti) begin
 					if (|istk_depth) begin
@@ -2333,8 +2392,8 @@ begin
 						ip.offs <= reb[head].ca.offs;	// 8-1
 						ip.micro_ip <= reb[head].ca.micro_ip;
 						istk_depth <= istk_depth - 2'd1;
-						for (n8 = 0; n8 < 8; n8 = n8 + 1)
-							if (reb[n8].sn > reb[head].sn)
+						for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
+							if (sns[n8] > sns[head])
 								reb[n8] <= 'd0;
 					end
 				end
@@ -2352,8 +2411,8 @@ begin
 						cause[2'd3] <= FLT_PRIV;
 						caregfile[reb[head].dec.Ct] <= reb[head].ip;
 						ip.offs <= tvec[3'd3] + {omode,6'h00};
-						for (n8 = 0; n8 < 8; n8 = n8 + 1)
-							if (reb[n8].sn > reb[head].sn)
+						for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
+							if (sns[n8] > sns[head])
 								reb[n8] <= 'd0;
 					end
 					else begin
@@ -2399,6 +2458,7 @@ begin
 					    2'd3:	regfile[reb[head].dec.Rt[4:2]][511:384] <= reb[head].res[127:0];
 					  	endcase
 				    	regfile_src[reb[head].dec.Rt] <= 5'd31;
+				    	$display("Regfile %d source reset", reb[head].dec.Rt);
 					  end
 				    $display("regfile[%d] <= %h", reb[head].dec.Rt, reb[head].res);
 				    // Globally enable interrupts after first update of stack pointer.
@@ -2417,14 +2477,17 @@ begin
 			end	// wcause
 		end		// wval
 		// Retire prefixes once the instruction is retired.
-		for (n8 = 0; n8 < 8; n8 = n8 + 1) begin
-			if (reb[n8].dec.isExi && reb[n8].sn==reb[head].sn-1)
+		for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
+			if (reb[n8].dec.isExi && sns[n8]==sns[head]-1)
 				reb[n8].state <= RETIRED;
-			if (reb[n8].sn==reb[head].sn-2 && reb[n8].ir.any.opcode==EXIM)
+			if (sns[n8]==sns[head]-2 && reb[n8].ir.any.opcode==EXIM)
 				reb[n8].state <= RETIRED;
 		end
 		reb[head].state <= RETIRED;
-  end			// advance_w
+  end
+  else if (reb[head].state==RETIRED)
+		if (reb[head].v)
+			tArgUpdate(head);
 end
 endtask
 
@@ -2444,23 +2507,39 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tResetRegfileSrc;
+integer n;
+begin
+	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
+  	if (|reb_latestID[n]) begin
+  		regfile_src[reb[n].dec.Rt] <= n;
+  		$display("Reset reg %d source to %d", reb[n].dec.Rt, n);
+  	end
+  	if (|reb_latestID2[n])
+  		ca_src[reb[n].dec.Ct] <= n;
+  end
+  for (n = 0; n < 32; n = n + 1) begin
+  	if (~livetarget[n])
+  		regfile_src[n] <= 5'd31;
+  end
+  for (n = 0; n < 16; n = n + 1) begin
+  	if (~livetarget2[n])
+  		ca_src[n] <= 5'd31;
+  end
+end
+endtask
+
 integer n9;
 task tBranch;
 input [3:0] yy;
 integer n;
 begin
-	for (n = 0; n < 8; n = n + 1) begin
-  	if (|reb_latestID[n])
-  		regfile_src[reb[n].dec.Rt] <= n;
-  	if (|reb_latestID2[n])
-  		ca_src[reb[n].dec.Ct] <= n;
-  	if (~livetarget[n])
-  		regfile_src[reb[n].dec.Rt] <= 5'd31;
-  	if (~livetarget2[n])
-  		ca_src[reb[n].dec.Ct] <= 5'd31;
-  end
-	for (n9 = 0; n9 < 8; n9 = n9 + 1)
-		if (reb[n9].sn > reb[exec].sn)
+	tResetRegfileSrc();
+	for (n9 = 0; n9 < REB_ENTRIES; n9 = n9 + 1)
+		if (sns[n9] > sns[exec])
 			reb[n9] <= 'd0;
   if (reb[exec].dec.Ca == 4'd0) begin
   	ip.offs <= reb[exec].dec.jmptgt;
@@ -2482,8 +2561,8 @@ task tWait;
 begin
 	if (first_flag || !done_flag) begin
 		first_flag <= 1'b0;
-		for (n10 = 0; n10 < 8; n10 = n10 + 1)
-			if (reb[n10].sn > reb[exec].sn)
+		for (n10 = 0; n10 < REB_ENTRIES; n10 = n10 + 1)
+			if (sns[n10] > sns[exec])
 				reb[n10] <= 'd0;
   	ip.offs <= reb[exec].ip.offs;
   	mJmptgt.offs <= reb[exec].ip.offs;

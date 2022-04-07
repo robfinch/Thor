@@ -1319,6 +1319,7 @@ endfunction
 function LkValid;
 input Instruction isn;
 casez(isn.any.opcode)
+MFLK:	LkValid=isn[15:14]==2'd0;
 RTS:	LkValid=isn.rts.lk==2'd0;
 default:	LkValid = `TRUE;
 endcase
@@ -1438,14 +1439,33 @@ F3:	Source3Valid = isn.r3.Rc==5'd0;
 DF3:	Source3Valid = isn.r3.Rc==5'd0;
 P3:	Source3Valid = isn.r3.Rc==5'd0;
 BTFLD:	Source3Valid = isn.r3.Rc==5'd0;
-STBX:	Source3Valid = isn.stx.Rs==5'd0;
-STWX:	Source3Valid = isn.stx.Rs==5'd0;
-STTX:	Source3Valid = isn.stx.Rs==5'd0;
-STOX:	Source3Valid = isn.stx.Rs==5'd0;
+STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+	Source3Valid = isn.st.Rs=='d0;
+STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+	Source3Valid = isn.stx.Rs=='d0;
 LEAVE: Source3Valid = `TRUE;
 default:
 	Source3Valid = `TRUE;
 endcase
+endfunction
+
+function Source31Valid;
+input Instruction isn;
+case(isn.any.opcode)
+STHP,STHPX:	Source31Valid = isn.st.Rs=='d0;
+default:
+	Source31Valid = `TRUE;
+endcase
+endfunction
+
+function Source32Valid;
+input Instruction isn;
+Source32Valid = `TRUE;
+endfunction
+
+function Source33Valid;
+input Instruction isn;
+Source33Valid = `TRUE;
 endfunction
 
 endpackage
