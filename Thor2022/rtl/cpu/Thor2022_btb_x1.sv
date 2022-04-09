@@ -38,18 +38,18 @@
 import Thor2022_pkg::*;
 
 module Thor2022_BTB_x1(rst, clk, wr, wip, wtgt, takb, rclk, ip, tgt, hit, nip);
-parameter RSTIP = 64'hFFC00007FFFC0100;
+parameter RSTIP = 32'hFFFD0000;
 input rst;
 input clk;
 input wr;
-input Address wip;
-input Address wtgt;
+input CodeAddress wip;
+input CodeAddress wtgt;
 input takb;
 input rclk;
-input Address ip;
-output Address tgt;
+input CodeAddress ip;
+output CodeAddress tgt;
 output hit;
-input Address nip;
+input CodeAddress nip;
 
 integer n;
 reg [9:0] radr;
@@ -60,7 +60,7 @@ BTBEntry mem [0:1023];
 initial begin
   for (n = 0; n < 1024; n = n + 1) begin
   	mem[n].v = `INV;
-    mem[n].insadr = RSTIP;
+    mem[n].insadr = {8'h00,RSTIP};
   end
 end
 

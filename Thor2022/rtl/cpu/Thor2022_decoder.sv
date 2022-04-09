@@ -596,7 +596,7 @@ deco.mflk = ir.any.opcode==MFLK;
 deco.mtlk = ir.any.opcode==MTLK;
 deco.enter = ir.any.opcode==ENTER;
 deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH4R;
-deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.jxx || deco.jxz || deco.rts;
+deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.bra || deco.jxx || deco.jxz || deco.rts;
 deco.store = deco.storer|deco.storen|deco.stset|deco.stmov|deco.stfnd|deco.stcmp;
 
 if (deco.mflk)
