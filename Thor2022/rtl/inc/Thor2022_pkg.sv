@@ -1315,6 +1315,7 @@ EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 	Source1Valid = `TRUE;
 LEAVE: Source1Valid = `TRUE;
 MFLK: Source1Valid = `TRUE;
+MTLK: Source1Valid = `TRUE;
 default:
 	Source1Valid = `FALSE;
 endcase
@@ -1424,6 +1425,7 @@ EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 RTS:	Source2Valid = `TRUE;
 LEAVE: Source2Valid = `TRUE;
 MFLK: Source2Valid = `TRUE;
+MTLK: Source2Valid = `TRUE;
 default:
 	Source2Valid = `FALSE;
 endcase
