@@ -1352,12 +1352,13 @@ end
 // Detect if the return address was successfully predicted.
 
 reg ret_match;
+integer n3;
 always_comb
 begin
 	ret_match = 1'b0;
-	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n]==sns[exec]+1)
-			if (reb[n].ip==reb[exec].ca)
+	for (n3 = 0; n3 < REB_ENTRIES; n3 = n3 + 1)
+		if (sns[n3]==sns[exec]+1)
+			if (reb[n3].ip==reb[exec].ca)
 				ret_match = 1'b1;
 end
 
@@ -2081,21 +2082,21 @@ begin
 		end
 		else if (reb[dec].ir.jxx.Ca==3'd7 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				branchmiss_adr.ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				branchmiss_adr.offs <= reb[dec].ip.offs + deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 			end
 			tStackRetadr(dec);
 		end
 		else if (reb[dec].ir[31:29]==3'd0 && deco.jxz && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
-				branchmiss_adr.ip.offs <= deco.jmptgt;
+				branchmiss_adr.offs <= deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 			end
 			tStackRetadr(dec);
 		end
 		else if (reb[dec].ir[31:29]==3'd7 && deco.jxz && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				branchmiss_adr.ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				branchmiss_adr.offs <= reb[dec].ip.offs + deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 			end
 			tStackRetadr(dec);
@@ -2269,7 +2270,7 @@ begin
     end
     else if (takb)
     	tBranch(4'd4);
-    $display("Branch hit=%f", real'(cbranch_count-cbranch_miss)/real'(cbranch_count)*100.0);
+    //$display("Branch hit=%f", real'(cbranch_count-cbranch_miss)/real'(cbranch_count)*100.0);
   end
 end
 endtask
