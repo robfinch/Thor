@@ -182,6 +182,8 @@ Instruction insn;
 Instruction micro_ir,micro_ir1;
 CodeAddress ip;
 reg [6:0] micro_ip;
+CodeAddress rts_stack[0:31];
+reg [4:0] rts_sp;
 wire ipredict_taken;
 wire ihit;
 wire [pL1ICacheLineSize-1:0] ic_line;
@@ -345,8 +347,6 @@ reg [7:0] mstep;
 reg mzbit;
 reg mmaskbit;
 CodeAddress mJmptgt;
-reg mtakb;
-reg mExBranch;
 
 // Writeback stage vars
 reg wval;
@@ -369,8 +369,6 @@ reg [511:0] wres512;
 reg wzbit;
 reg wmaskbit;
 Address wJmptgt;
-reg wtakb;
-reg wExBranch;
 
 // Trailer stage vars
 reg advance_t;
@@ -440,6 +438,11 @@ assign UserMode = omode==2'b00;
 assign memmode = mprv ? pmStack[6:5] : omode;
 wire MMachineMode = memmode==2'b11;
 assign MUserMode = memmode==2'b00;
+reg [39:0] btb_hit_count;
+reg [39:0] cbranch_count;
+reg [39:0] cbranch_miss;
+reg [39:0] rts_pcount;
+reg [39:0] ret_match_count;
 
 Value bf_out;
 
@@ -670,7 +673,9 @@ for (n = 0; n < REB_ENTRIES; n = n + 1)
 	reb_out2[n] <= (16'h1 << reb[n].dec.Ct) & 16'hFFFE;
 
 
-reg [2:0] oldest;
+// Detect oldest instruction. Used during writeback.
+
+SrcId oldest;
 always @*
 begin
 	oldest = 0;
@@ -848,7 +853,8 @@ Thor2022_crypto ucrypto
 wire [$bits(Value)-1:0] dfmulo;
 wire dfmul_done;
 wire [$bits(Value)-1:0] dfaso;
-/*
+
+`ifdef SUPPORT_FLOAT
 // takes about 30 clocks (32 to be safe)
 DFPAddsub128nr udfa1
 (
@@ -876,7 +882,8 @@ DFPMultiply128nr udfmul1
 	.underflow(),
 	.done(dfmul_done)
 );
-*/
+`endif
+
 Value mux_out;
 integer n2;
 always_comb
@@ -1077,10 +1084,10 @@ Thor2022_BTB_x1 ubtb
 (
 	.rst(rst_i),
 	.clk(clk_g),
-	.wr(wExBranch & wval),
-	.wip(wip),
-	.wtgt(wJmptgt),
-	.takb(wtakb),
+	.wr(reb[head].v && reb[head].dec.flowchg),
+	.wip(reb[head].ip),
+	.wtgt(reb[head].jmptgt),
+	.takb(reb[head].takb),
 	.rclk(~clk_g),
 	.ip(ip),
 	.tgt(btb_tgt),
@@ -1093,7 +1100,7 @@ Thor2022_gselectPredictor ubp
 	.rst(rst_i),
 	.clk(clk_g),
 	.en(bpe),
-	.xisBranch(reb[exec].dec.jxx),
+	.xisBranch(reb[exec].dec.jxx|reb[exec].dec.jxz),
 	.xip(xip.offs),
 	.takb(takb),
 	.ip(ip.offs),
@@ -1342,6 +1349,18 @@ for (kk = REB_ENTRIES-1; kk >= 0; kk = kk - 1)
 	end
 end
 
+// Detect if the return address was successfully predicted.
+
+reg ret_match;
+always_comb
+begin
+	ret_match = 1'b0;
+	for (n = 0; n < REB_ENTRIES; n = n + 1)
+		if (sns[n]==sns[exec]+1)
+			if (reb[n].ip==reb[exec].ca)
+				ret_match = 1'b1;
+end
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Writeback scheduler
 //
@@ -1351,7 +1370,7 @@ end
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 integer n8;
-reg [2:0] next_head;
+SrcId next_head;
 always_comb
 begin
 	next_head = 3'd7;
@@ -1377,7 +1396,7 @@ else begin
 	tOnce();
 	tWriteback();
 	tInsnFetch();
-	tDecrypt();
+	tDecompress();
 	tDecode();
 	tExecute();
 	tSyncTrailer();
@@ -1416,7 +1435,7 @@ begin
 	dpfx <= FALSE;
 	pfx_cnt <= 3'd0;
 //	cr0 <= 64'h300000001;
-	cr0 <= 64'h200000001;
+	cr0 <= 64'h300000001;
 	ptbr <= 'd0;
 	rst_cnt <= 6'd0;
 	tSync <= 1'b0;
@@ -1436,8 +1455,6 @@ begin
 	xcause <= 16'h0000;
 	mcause <= 16'h0000;
 	wcause <= 16'h0000;
-	mExBranch <= FALSE;
-	wExBranch <= FALSE;
 	micro_ip <= 6'd0;
 	m512 <= FALSE;
 	m256 <= FALSE;
@@ -1483,6 +1500,12 @@ begin
 	mc_exec <= 'd0;
 	branchmiss_adr.offs <= 32'hFFFD0000;
 	branchmiss_adr.micro_ip <= 8'h00;
+	cbranch_count <= 'd0;
+	cbranch_miss <= 'd0;
+	btb_hit_count <= 'd0;
+	rts_pcount <= 'd0;
+	rts_sp <= 'd0;
+	ret_match_count <= 'd0;
 end
 endtask
 
@@ -1728,6 +1751,7 @@ endfunction
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Instruction Fetch stage
+//
 // We want decodes in the IFETCH stage to be fast so they don't appear
 // on the critical path. Keep the decodes to a minimum.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1861,8 +1885,10 @@ begin
 			istep <= 8'h00;
 			ip <= next_ip;
 		end
-		if (btbe & btb_hit)
+		if (btbe & btb_hit) begin
+			btb_hit_count <= btb_hit_count + 2'd1;
 			ip <= #1 btb_tgt;
+		end
 		if (micro_ip==7'd0)
 			case(insn.any.opcode)
 			POP:		begin micro_ip <= 7'd1; ip <= ip; end
@@ -1895,6 +1921,16 @@ begin
 			ir <= insn;
 			reb[tail].ir <= insn;
 			micro_ir <= insn;
+		end
+		// Pop address from return address stack for prediction.
+		if (micro_ip==7'd0 || micro_ip==7'd27) begin
+			if ((insn.any.opcode==RTS && insn[10:9]==2'b01) || micro_ip==7'd27) begin
+				if (rts_sp > 5'd0) begin
+					ip <= rts_stack[rts_sp-2'd1];
+					rts_sp <= rts_sp - 1'd1;
+					rts_pcount <= rts_pcount + 2'd1;
+				end
+			end
 		end
 		reb[tail].step <= istep;
 		reb[tail].predict_taken <= ipredict_taken;
@@ -1955,10 +1991,13 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Instruction Decrypt/Decompress Stage
+// Instruction Decompress Stage
+//
+// Applicable only for compressed instructions.
+// ToDo: add compressed instructions.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-task tDecrypt;
+task tDecompress;
 begin
 	if (next_decompress != 3'd7)
 		decompress <= #1 next_decompress;
@@ -1972,8 +2011,11 @@ endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Register fetch and decode stage
+//
 // Much of the decode is done above by combinational logic outside of the
 // clock domain.
+// Perform branching in this stage where possible. Relative and absolute
+// branches can be performed here since the target address is known.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tDecode;
@@ -2011,12 +2053,12 @@ begin
 		reb[dec].lks <= LkValid(reb[dec].ir) ? 5'd31 : ca_src[deco.Ca];
 		reb[dec].cioreg <= cioreg;
 		reb[dec].cio <= cio[1:0];
-		reb[dec].predict_taken <= dpredict_taken;
+//		reb[dec].predict_taken <= dpredict_taken;
 		reb[dec].cause <= dcause;
 		reb[dec].step <= dstep;
 		reb[dec].mask_bit <= mask[dstep];
 		reb[dec].zbit <= zbit;
-		reb[dec].predictable_branch <= (ir.jxx.Ca==3'd0 || ir.jxx.Ca==3'd7);
+		reb[dec].predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Ca==3'd0 || reb[dec].ir.jxx.Ca==3'd7)) || (deco.jxz && (reb[dec].ir[31:29]==3'd0 || reb[dec].ir[31:29]==3'd7));
 		for (n7 = 0; n7 < 32; n7 = n7 + 1)
 			if (regfile_src[n7]==dec && n7 != deco.Rt && n7 != head) begin
 				$display("%d Register %d source not reset.", $time, n7);
@@ -2030,15 +2072,33 @@ begin
 			ca_src[deco.Ct] <= dec;
 		
 		xval <= dval;
-		if (ir.jxx.Ca==3'd0 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
+		if (reb[dec].ir.jxx.Ca==3'd0 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
-				reb[dec].ip.offs <= deco.jmptgt;
+				branchmiss_adr.offs <= deco.jmptgt;
+				branchmiss_adr.micro_ip <= 'd0;
 			end
+			tStackRetadr(dec);
 		end
-		else if (ir.jxx.Ca==3'd7 && deco.jxx && dpredict_taken && bpe) begin	// Jxx, DJxx
+		else if (reb[dec].ir.jxx.Ca==3'd7 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				reb[dec].ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				branchmiss_adr.ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				branchmiss_adr.micro_ip <= 'd0;
 			end
+			tStackRetadr(dec);
+		end
+		else if (reb[dec].ir[31:29]==3'd0 && deco.jxz && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
+			if (ip.offs != deco.jmptgt) begin
+				branchmiss_adr.ip.offs <= deco.jmptgt;
+				branchmiss_adr.micro_ip <= 'd0;
+			end
+			tStackRetadr(dec);
+		end
+		else if (reb[dec].ir[31:29]==3'd7 && deco.jxz && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
+			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
+				branchmiss_adr.ip.offs <= reb[dec].ip.offs + deco.jmptgt;
+				branchmiss_adr.micro_ip <= 'd0;
+			end
+			tStackRetadr(dec);
 		end
 		if (deco.jmp|deco.bra|deco.jxx)
   		reb[dec].cares.offs <= reb[dec].ip.offs + reb[dec].ilen;
@@ -2049,6 +2109,7 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Add memory ops to the memory queue.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tExMem;
@@ -2089,17 +2150,6 @@ begin
   	memreq.wr <= TRUE;
   	//goto (WAIT_MEM1);
   end
-/* should be LLA
-  else if (xLear) begin
-  	memreq.tid <= tid;
-  	tid <= tid + 2'd1;
-  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
-  	memreq.func2 <= MR_LEA;
-  	memreq.adr.offs <= xa + imm;
-  	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
-  end
-*/
   else if (reb[exec].dec.loadn) begin
   	memreq.tid <= exec;
   	tid <= tid + 2'd1;
@@ -2117,17 +2167,6 @@ begin
   	memreq.wr <= TRUE;
   	//goto (WAIT_MEM1);
   end
-/*
-  else if (xLean) begin
-  	memreq.tid <= tid;
-  	tid <= tid + 2'd1;
-  	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
-  	memreq.func2 <= MR_LEA;
-  	memreq.adr.offs <= siea;
-  	memreq.wr <= TRUE;
-  	goto (WAIT_MEM1);
-  end
-*/
   else if (reb[exec].dec.storer) begin
   	memreq.tid <= exec;
   	tid <= tid + 2'd1;
@@ -2206,29 +2245,37 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Perform conditional jump or branch operation.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tJxx;
 integer n;
 begin
   if (reb[exec].dec.jxx|reb[exec].dec.jxz) begin
-  	mExBranch <= TRUE;
+  	if (reb[exec].predictable_branch)
+  		cbranch_count <= cbranch_count + 2'd1;
   	if (!takb)
   		md.carfwr <= FALSE;
     if (bpe) begin
       if (reb[exec].predict_taken && !takb && reb[exec].predictable_branch) begin
         branchmiss_adr.offs <= xip.offs + xlen;
+        cbranch_miss <= cbranch_miss + 2'd1;
       end
-      else if ((!reb[exec].predict_taken && takb) || !reb[exec].predictable_branch)
+      else if ((!reb[exec].predict_taken && takb) || !reb[exec].predictable_branch) begin
       	tBranch(4'd3);
+  			if (reb[exec].predictable_branch)
+	        cbranch_miss <= cbranch_miss + 2'd1;
+      end
     end
     else if (takb)
     	tBranch(4'd4);
+    $display("Branch hit=%f", real'(cbranch_count-cbranch_miss)/real'(cbranch_count)*100.0);
   end
 end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Micro-code jump operation. Not currently used.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tMjnez;
@@ -2241,12 +2288,13 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Peform unconditional JMP operation.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tJmp;
 begin
   if (reb[exec].dec.jmp) begin
-  	mExBranch <= TRUE;
+ 		reb[exec].takb = 1'b1;
   	if (reb[exec].dec.dj ? (xa != 64'd0) : (reb[exec].dec.Ca != 3'd0 && reb[exec].dec.Ca != 3'd7))	// ==0,7 was already done at ifetch
   		tBranch(4'd5);
   		$display("%d EXEC: %h JMP", $time, reb[exec].ip);
@@ -2255,12 +2303,13 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Perform BRA operation.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tBra;
 begin
   if (reb[exec].dec.bra) begin
-  	mExBranch <= TRUE;
+ 		reb[exec].takb = 1'b1;
   	if (reb[exec].dec.Ca != 3'd0 && reb[exec].dec.Ca != 3'd7)	// ==0,7 was already done at ifetch
   		tBranch(4'd6);
 	end
@@ -2268,19 +2317,41 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Perform return. If the return address is already correct then do not
+// branch.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tRts;
 integer n;
 begin
-	// The following line did not work in simulation. The .dec field appears
-	// to not be filled in.
 	if (reb[exec].dec.rts) begin
-		if (reb[exec].ir.rts.lk != 2'd0) begin
-			tNullReb(exec);
-  		branchmiss_adr.offs <= reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0};
-  		branchmiss_adr.micro_ip <= 'd0;
-  		$display("%d EXEC: %h RTS to %h", $time, reb[exec].ip, reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0});
+		if (!ret_match) begin
+			if (reb[exec].ir.rts.lk != 2'd0) begin
+				tNullReb(exec);
+	  		branchmiss_adr.offs <= reb[exec].ca.offs;// + {reb[exec].ir.rts.cnst,1'b0};
+	  		branchmiss_adr.micro_ip <= 'd0;
+	  		reb[exec].jmptgt = reb[exec].ca.offs;
+	  		reb[exec].takb = 1'b1;
+	  		$display("%d EXEC: %h RTS to %h", $time, reb[exec].ip, reb[exec].ca.offs + {reb[exec].ir.rts.cnst,1'b0});
+			end
+		end
+		else
+			ret_match_count <= ret_match_count + 2'd1;
+	end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Stack the return address on an internal stack for prediction purposes.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tStackRetadr;
+input SrcId id;
+begin
+	if (reb[id].dec.lk==2'b01) begin
+		if (rts_sp < 5'd31) begin
+			rts_stack[rts_sp] <= reb[id].ip.offs + reb[id].ilen;
+			rts_sp <= rts_sp + 2'd1;
 		end
 	end
 end
@@ -2298,7 +2369,6 @@ integer n;
 integer nn;
 begin
 	// Is there anything to execute?
-//	if (reb[exec].state==EMPTY || reb[exec].state==RETIRED || reb[exec].state==EXECUTED)
 	exec <= next_exec;
 	exflag <= 1'b0;
 	if (reb[exec].decoded || reb[exec].out) begin
@@ -2311,7 +2381,6 @@ begin
 			reb[exec].res <= res;
 			reb[exec].carry_res <= carry_res;
 			reb[exec].cares <= cares;
-			mExBranch <= FALSE;
 			if (reb[exec].v) begin
 				if (!reb[exec].dec.multi_cycle) begin
 					reb[exec].executed <= 1'b1;
@@ -2399,22 +2468,15 @@ endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Writeback stage
+//
+// Update registers and reset the register file sources. Echo the update
+// values to the execution unit arguments. And handle exceptions and
+// special instructions like RTI.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tWriteback;
 integer n8;
 begin
-	/*
-	if ((reb[0].state==3'd0 || reb[0].state==3'd7) &&
-	(reb[1].state==3'd0 || reb[1].state==3'd7) &&
-	(reb[2].state==3'd0 || reb[2].state==3'd7) &&
-	(reb[3].state==3'd0 || reb[3].state==3'd7) &&
-	(reb[4].state==3'd0 || reb[4].state==3'd7) &&
-	(reb[5].state==3'd0 || reb[5].state==3'd7) &&
-	(reb[6].state==3'd0 || reb[6].state==3'd7) &&
-	(reb[7].state==3'd0 || reb[7].state==3'd7)) begin
-		head <= (tail - 2'd1) & 3'd7;
-	end
-	*/
 	//if (reb[head].state==EMPTY || reb[head].state==RETIRED || reb[head].state==EXECUTED)// && ((head + 2'd1) & 3'd7) != tail)
 	head <= next_head;
   if (reb[head].executed) begin
@@ -2573,6 +2635,11 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This task is a debugging aid. It ensures that the about to be retired
+// instruction at least has all arguments valid.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tArgCheck;
 integer n;
 begin
@@ -2584,6 +2651,8 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Reset the register file source. Done on a flow control change. Most of
+// the logic is above.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tResetRegfileSrc;
@@ -2610,6 +2679,12 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Null out the instructions following one that caused a control flow
+// change. It should really only be necessary to clear a valid bit, but
+// clearing the whole entry is safer and less confusing during debug.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tNullReb;
 input [2:0] kk;
 integer n9;
@@ -2622,44 +2697,53 @@ begin
 end
 endtask
 
-integer n9;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Common task for flow control changing operations. Sets the branch miss
+// address appropriately.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tBranch;
-input [3:0] yy;
-integer n;
+input [3:0] yy;	// Debugging: who's the caller?
 begin
   if (reb[exec].dec.Ca == 4'd0) begin
   	branchmiss_adr.offs <= reb[exec].dec.jmptgt;
  		branchmiss_adr.micro_ip <= 'd0;
-  	mJmptgt.offs <= reb[exec].dec.jmptgt;
+  	reb[exec].jmptgt.offs <= reb[exec].dec.jmptgt;
   end
   else if (reb[exec].dec.Ca == 4'd7) begin
   	branchmiss_adr.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
  		branchmiss_adr.micro_ip <= 'd0;
-  	mJmptgt.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
+  	reb[exec].jmptgt.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
   end
   else begin
 		branchmiss_adr.offs <= reb[exec].ca.offs + reb[exec].dec.jmptgt;
  		branchmiss_adr.micro_ip <= 'd0;
-  	mJmptgt.offs <= reb[exec].ca.offs + reb[exec].dec.jmptgt;
+  	reb[exec].jmptgt.offs <= reb[exec].ca.offs + reb[exec].dec.jmptgt;
   end
+  tStackRetadr(exec);
 end
 endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Kludgey logic to perform a wait operation. ToDo: improve this.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 integer n10;
 task tWait;
 begin
 	if (first_flag || !done_flag) begin
 		first_flag <= 1'b0;
-		for (n10 = 0; n10 < REB_ENTRIES; n10 = n10 + 1)
-			if (sns[n10] > sns[exec])
-				reb[n10] <= 'd0;
+		tNullReb(exec);
   	ip.offs <= reb[exec].ip.offs;
-  	mJmptgt.offs <= reb[exec].ip.offs;
+  	reb[exec].jmptgt.offs <= reb[exec].ip.offs;
 	end
 	else
 		first_flag <= 1'b1;
 end
 endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task ex_fault;
 input [15:0] c;
@@ -2671,8 +2755,13 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// CSR Read / Update tasks
+//
 // Important to use the correct assignment type for the following, otherwise
 // The read won't happen until the clock cycle.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tReadCSR;
 output Value res;
 input [15:0] regno;
@@ -2791,6 +2880,10 @@ end
 endtask
 
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// State machine.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task goto;
 input [5:0] st;
 begin
@@ -2814,6 +2907,11 @@ begin
 	state1 <= state2;
 end
 endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Disassembler for debugging. It helps to have some output to allow 
+// visual tracking in the simulation run.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 function [31:0] fnRegName;
 input [4:0] Rn;
