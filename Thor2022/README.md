@@ -48,6 +48,20 @@ The REB does not work in a circular fashion. It does work according to the order
 Branches remove the instructions with a higher sequence number than the branch from the buffer. To improve performance branches are predicted using a branch target buffer, BTB, and a gshare branch predictor. If the branch is corectly predicted then no instructions are removed from the buffer.
 The branch target buffer works at the fetch stage of the core. The gshare predictor works at the decode stage of the core.
 There is also a 32-entry return address stack, RAS, predictor to predict the return address at the fetch stage of the core.
+The BTB and gshare predictors may be turned off by bits in control register zero.
+The core maintains performance counters for the number of branch instructions, number of branch misses, number of BTB hits and number of RAS predictions.
+
+### Loads and Stores
+Load and store operations are queued in a memory queue. Once the operation is queued execution of other instructions continues. The core currently allows only strict ordering of memory operations. Load and store instructions are queued in program order, determined using the sequence number of the instruction.
+Stores are allowed to proceed only if it is known that there are no prior instructions that can cause a change of program flow.
+Loads do not yet bypass stores. There is a component in the works that allows this but it does not work 100% yet.
+There are bits in control register zero assigned for future use to indicate more relaxed memory models.
+
+### Instruction Prefixes
+The ISA uses instruction prefixes to extend constant ranges. In the author's opinion this is one of the better ways to handle large constants because the extension can be applied to a wide range of instructions without needing to add a whole bunch of instructions for larger constants.
+Prefix processing is complicated because the prefix needs to be pulled from a random location in the buffer to be used for the following instruction.
+Prefixes are associated with instructions by having a sequence number one lower than the following instruction. The instruction prefix does not get retired until the following instruction is ready to retire, at which point both the instruction and prefix are retired.
+It is important that the prefix remain present in the buffer until it can be used by the following instruction. Since execution is out-of-order technically a prefix may be ready to be removed before the following instruction has even been fetched. Prefixes are treated as NOP operations.
 
 ## In-Order Version
 ### Status
@@ -55,4 +69,14 @@ The Thor2022io version is not currently being worked on. It was left in a state 
 
 ## Both Versions
 Both versions of the core share the same bus interface unit, BIU. Virtual memory is always active. The TLB is preinitialized at startup to enable access to the system ROM.
-Ooe of the first tasks of the BIOS is to setup access to I/O devices so that something as simple as a LED display may happen.
+One of the first tasks of the BIOS is to setup access to I/O devices so that something as simple as a LED display may happen.
+The TLB is shared between instructions and data. The fifth way of the TLB may only be updated by software in a fixed fashion. The other four ways may be updated according to fixed, LRU or random algorithms.
+
+### Instruction Cache
+The instruction cache is 32kB in size with a 640-bit line size. The 640 bits was chosen to allow instructions that would wrap cache lines to otherwise remain on the same line. Since instructions are variable length they may not fit evenly into a 512-bit cache line.
+They will always fit into a 640-bit line. There is some duplication of instruction data but it is better than dual-porting the cache.
+
+### Data Cache
+The data cache is 64kB in size. The cache uses even, odd pairs of cache lines to allow unaligned data which may overflow a cache line to be fetched from the cache.
+The data cache is currently untested.
+
