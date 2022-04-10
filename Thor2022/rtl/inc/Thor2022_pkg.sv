@@ -73,7 +73,7 @@ parameter RENTRIES	= `RENTRIES;
 parameter BitsQS	= $clog2(`QSLOTS-1);
 parameter BitsRS	= $clog2(`RENTRIES-1) + 1;
 
-parameter VALUE_SIZE = 128;
+parameter VALUE_SIZE = 64;
 
 
 parameter OM_USER		= 2'd0;
@@ -580,7 +580,7 @@ parameter pL1ICacheLines = 512;
 parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
-typedef logic [127:0]	Value;
+typedef logic [63:0] Value;
 typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
 typedef logic [11:0] ASID;
@@ -915,8 +915,8 @@ typedef struct packed
 typedef struct packed
 {
 	logic v;
-	Address insadr;
-	Address	tgtadr;
+	CodeAddress insadr;
+	CodeAddress	tgtadr;
 } BTBEntry;
 
 // No unsigned codes!
@@ -1125,14 +1125,17 @@ parameter RS_INVALID = 3'd0;
 
 typedef struct packed
 {
-	logic [2:0] state;
 	logic [5:0] rid;
 	logic v;
+	logic fetched;
+	logic decompressed;
+	logic decoded;
+	logic out;						// instruction is out being executed
+	logic executed;
 	logic stomp;
 	logic cmt;						// commit, clears as soon as committed
 	logic cmt2;						// sticky commit, clears when entry reassigned
 	logic vcmt;						// entire vector is committed.
-	logic out;						// instruction is out being executed
 	IPAddress ip;
 	Instruction ir;
 	Instruction lsm_mask;
@@ -1311,6 +1314,7 @@ SYNC,MEMSB,MEMDB,WFI:	Source1Valid = `TRUE;
 EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 	Source1Valid = `TRUE;
 LEAVE: Source1Valid = `TRUE;
+MFLK: Source1Valid = `TRUE;
 default:
 	Source1Valid = `FALSE;
 endcase
@@ -1419,6 +1423,7 @@ EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 	Source2Valid = `TRUE;
 RTS:	Source2Valid = `TRUE;
 LEAVE: Source2Valid = `TRUE;
+MFLK: Source2Valid = `TRUE;
 default:
 	Source2Valid = `FALSE;
 endcase

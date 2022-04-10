@@ -269,11 +269,13 @@ if (xval)
 	EXI56+1:imm = {{48{xir[63]}},xir[63:9],xir[0],imm[23:0]};
 	default:	;	
 	endcase
+/*
 if (mval)
 	case(mir.any.opcode)
 	EXIM:		imm = {mir[56:9],imm[79:0]};
 	default:	;	
 	endcase
+*/
 case(ir.any.opcode)
 ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULIL,DIVIL,MULUIL:
 	deco.ril = `TRUE;

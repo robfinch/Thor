@@ -171,7 +171,7 @@ sReorderEntry [7:0] reb;
 reg [47:0] sns [0:7];
 reg [2:0] head;
 reg [2:0] exec, exec2, mc_exec, mc_exec2;
-reg [2:0] dec, decrypt, next_decrypt;
+reg [2:0] dec, decompress, next_decompress;
 reg [2:0] tail;
 reg [47:0] sn;
 
@@ -490,7 +490,7 @@ if (deco.Ra=='d0)
 else if (reb[head].dec.Rt==deco.Ra && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfoa = reb[head].res;
 else
-	rfoa = regfile[deco.Ra[4:2]] >> {deco.Ra[1:0],7'b0};
+	rfoa = regfile[deco.Ra[4:3]] >> {deco.Ra[2:0],6'b0};
 
 always_comb
 if (deco.Rb=='d0)
@@ -498,7 +498,7 @@ if (deco.Rb=='d0)
 else if (reb[head].dec.Rt==deco.Rb && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfob = reb[head].res;
 else
-	rfob = regfile[deco.Rb[4:2]] >> {deco.Rb[1:0],7'b0};
+	rfob = regfile[deco.Rb[4:3]] >> {deco.Rb[2:0],6'b0};
 
 always_comb
 if (deco.Rc=='d0)
@@ -506,25 +506,25 @@ if (deco.Rc=='d0)
 else if (reb[head].dec.Rt==deco.Rc && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfoc0 = reb[head].res;
 else
-	rfoc0 = regfile[deco.Rc[4:2]] >> {deco.Rc[1:0],7'b0};
+	rfoc0 = regfile[deco.Rc[4:3]] >> {deco.Rc[2:0],6'b0};
 
 always_comb
 if (reb[head].dec.Rt=={deco.Rc[4:2],2'b01} && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfoc1 = reb[head].res;
 else
-	rfoc1 = regfile[deco.Rc[4:2]] >> {2'b01,7'b0};
+	rfoc1 = regfile[deco.Rc[4:3]] >> {deco.Rc[2],2'b01,6'b0};
 
 always_comb
 if (reb[head].dec.Rt=={deco.Rc[4:2],2'b10} && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfoc2 = reb[head].res;
 else
-	rfoc2 = regfile[deco.Rc[4:2]] >> {2'b10,7'b0};
+	rfoc2 = regfile[deco.Rc[4:3]] >> {deco.Rc[2],2'b10,6'b0};
 
 always_comb
 if (reb[head].dec.Rt=={deco.Rc[4:2],2'b11} && reb[head].v && reb[head].executed && reb[head].dec.rfwr)
 	rfoc3 = reb[head].res;
 else
-	rfoc3 = regfile[deco.Rc[4:2]] >> {2'b11,7'b0};
+	rfoc3 = regfile[deco.Rc[4:3]] >> {deco.Rc[2],2'b11,6'b0};
 
 always_comb
 	if (cioreg==3'd0 || ~cio[1])
@@ -734,17 +734,18 @@ cntlz128 uclz(xir.r1.func[0] ? ~xa : xa, cntlz_out);
 //wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
 //wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
 //wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
-wire [255:0] sllio = {128'd0,xa[127:0]|pn[127:0]} << imm[6:0];
-wire [255:0] srlio = {pn[127:0]|xa[127:0],128'd0} >> imm[6:0];
-wire [255:0] sraio = {{128{xa[127]}},xa[127:0],128'd0} >> imm[6:0];
-wire [255:0] sllro = {128'd0,xa[127:0]|pn[127:0]} << xb[6:0];
-wire [255:0] srlro = {pn[127:0]|xa[127:0],128'd0} >> xb[6:0];
-wire [255:0] sraro = {{128{xa[127]}},xa[127:0],128'd0} >> xb[6:0];
+reg [$bits(Value)-1:0] zeros = 'd0;
+wire [$bits(Value)*2-1:0] sllio = {'d0,xa[$bits(Value)-1:0]|pn[$bits(Value)-1:0]} << imm[6:0];
+wire [$bits(Value)*2-1:0] srlio = {pn[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> imm[6:0];
+wire [$bits(Value)*2-1:0] sraio = {{$bits(Value){xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> imm[6:0];
+wire [$bits(Value)*2-1:0] sllro = {'d0,xa[$bits(Value)-1:0]|pn[$bits(Value)-1:0]} << xb[6:0];
+wire [$bits(Value)*2-1:0] srlro = {pn[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> xb[6:0];
+wire [$bits(Value)*2-1:0] sraro = {{$bits(Value){xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> xb[6:0];
 
-wire [255:0] mul_prod1;
-reg [255:0] mul_prod;
-wire [255:0] mul_prod2561;
-reg [255:0] mul_prod256='d0;
+wire [$bits(Value)*2-1:0] mul_prod1;
+reg [$bits(Value)*2-1:0] mul_prod;
+wire [$bits(Value)*2-1:0] mul_prod2561;
+reg [$bits(Value)*2-1:0] mul_prod256='d0;
 wire [39:0] mulf_prod;
 reg mul_sign;
 Value aa, bb;
@@ -758,7 +759,7 @@ mult128x128 umul1
 	.b(bb),
 	.o(mul_prod2561)
 );
-wire multovf = ((reb[exec].dec.mulu|reb[exec].dec.mului) ? mul_prod256[255:128] != 'd0 : mul_prod256[255:128] != {128{mul_prod256[127]}});
+wire multovf = ((reb[exec].dec.mulu|reb[exec].dec.mului) ? mul_prod256[$bits(Value)*2-1:$bits(Value)] != 'd0 : mul_prod256[$bits(Value)*2-1:$bits(Value)] != {$bits(Value){mul_prod256[$bits(Value)-1]}});
 /*
 Thor2021_multiplier umul
 (
@@ -803,7 +804,7 @@ wire [127:0] qo, ro;
 wire dvd_done;
 wire dvByZr;
 
-Thor2022_divider #(.WID(128)) udiv
+Thor2022_divider #(.WID($bits(Value))) udiv
 (
   .rst(rst_i),
   .clk(clk2x_i),
@@ -844,7 +845,10 @@ Thor2022_crypto ucrypto
 	.o(crypto_res)
 );
 
-wire [127:0] dfaso;
+wire [$bits(Value)-1:0] dfmulo;
+wire dfmul_done;
+wire [$bits(Value)-1:0] dfaso;
+/*
 // takes about 30 clocks (32 to be safe)
 DFPAddsub128nr udfa1
 (
@@ -857,8 +861,6 @@ DFPAddsub128nr udfa1
 	.o(dfaso)
 );
 
-wire [127:0] dfmulo;
-wire dfmul_done;
 DFPMultiply128nr udfmul1
 (
 	.clk(clk_g),
@@ -874,7 +876,7 @@ DFPMultiply128nr udfmul1
 	.underflow(),
 	.done(dfmul_done)
 );
-
+*/
 Value mux_out;
 integer n2;
 always_comb
@@ -904,22 +906,22 @@ R2:
 	AND:	res2 = xa & xb & xc0;
 	OR:		res2 = xa | xb | xc0;
 	XOR:	res2 = xa ^ xb ^ xc0;
-	SLL:	res2 = sllio[127:0];
-	SRL:	res2 = srlio[255:128];
-	SRA:	res2 = sraio[255:128];
-	ROL:	res2 = sllio[127:0]|sllro[255:128];
-	ROR:	res2 = srlio[255:128]|srlro[127:0];
+	SLL:	res2 = sllio[$bits(Value)-1:0];
+	SRL:	res2 = srlio[$bits(Value)*2-1:$bits(Value)];
+	SRA:	res2 = sraio[$bits(Value)*2-1:$bits(Value)];
+	ROL:	res2 = sllio[$bits(Value)-1:0]|sllro[$bits(Value)*2-1:$bits(Value)];
+	ROR:	res2 = srlio[$bits(Value)*2-1:$bits(Value)]|srlro[$bits(Value)-1:0];
 //	SLLH:	res2 = sllrho[127:0] + xc0;
 //	SRLH:	res2 = srlrho[255:128];
 //	SRAH:	res2 = sraho[255:128];
 //	ROLH:	res2 = sllrho[127:0]|sllrho[255:128];
 //	RORH:	res2 = srlrho[255:128]|srlrho[127:0];
-	MUL:	res2 = mul_prod256[127:0] + xc0 + pn;
-	MULH:	res2 = mul_prod256[255:128];
-	MULU:	res2 = mul_prod256[127:0] + xc0 + pn;
-	MULUH:	res2 = mul_prod256[255:128];
-	MULSU:res2 = mul_prod256[127:0] + xc0 + pn;
-	MULF:	res2 = mul_prod256[127:0] + xc0 + pn;
+	MUL:	res2 = mul_prod256[$bits(Value)-1:0] + xc0 + pn;
+	MULH:	res2 = mul_prod256[$bits(Value)*2-1:$bits(Value)];
+	MULU:	res2 = mul_prod256[$bits(Value)-1:0] + xc0 + pn;
+	MULUH:	res2 = mul_prod256[$bits(Value)*2-1:$bits(Value)];
+	MULSU:res2 = mul_prod256[$bits(Value)-1:0] + xc0 + pn;
+	MULF:	res2 = mul_prod256[$bits(Value)-1:0] + xc0 + pn;
 	DIV:	res2 = qo;
 	DIVU:	res2 = qo;
 	DIVSU:	res2 = qo;
@@ -968,20 +970,20 @@ SUBFI,SUBFIL:	res2 = imm - xa - pn;
 ANDI,ANDIL:		res2 = xa & imm;
 ORI,ORIL:			res2 = xa | imm | pn;
 XORI,XORIL:		res2 = xa ^ imm ^ pn;
-SLLR2:				res2 = sllro[127:0];
-SRLR2:				res2 = srlro[255:128];
-SRAR2:				res2 = sraro[255:128];
-ROLR2:				res2 = sllro[127:0]|sllro[255:128];
-RORR2:				res2 = srlro[127:0]|srlro[255:128];
-SLLI:					res2 = sllio[127:0];
-SRLI:					res2 = srlio[255:128];
-SRAI:					res2 = sraio[255:128];
+SLLR2:				res2 = sllro[$bits(Value)-1:0];
+SRLR2:				res2 = srlro[$bits(Value)*2-1:$bits(Value)];
+SRAR2:				res2 = sraro[$bits(Value)*2-1:$bits(Value)];
+ROLR2:				res2 = sllro[$bits(Value)-1:0]|sllro[$bits(Value)*2-1:$bits(Value)];
+RORR2:				res2 = srlro[$bits(Value)-1:0]|srlro[$bits(Value)*2-1:$bits(Value)];
+SLLI:					res2 = sllio[$bits(Value)-1:0];
+SRLI:					res2 = srlio[$bits(Value)*2-1:$bits(Value)];
+SRAI:					res2 = sraio[$bits(Value)*2-1:$bits(Value)];
 //SLLHR2:				res2 = sllrho[127:0];// + xc0;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
-MULI,MULIL:		res2 = mul_prod256[127:0] + pn;
-MULUI,MULUIL:	res2 = mul_prod256[127:0] + pn;
-MULFI:				res2 = mul_prod256[127:0] + pn;
+MULI,MULIL:		res2 = mul_prod256[$bits(Value)-1:0] + pn;
+MULUI,MULUIL:	res2 = mul_prod256[$bits(Value)-1:0] + pn;
+MULFI:				res2 = mul_prod256[$bits(Value)-1:0] + pn;
 DIVI,DIVIL:		res2 = qo;
 SEQI,SEQIL:		res2 = xa == imm;
 SNEI,SNEIL:		res2 = xa != imm;
@@ -1037,26 +1039,26 @@ always_comb
 case(xir.any.opcode)
 R2:
 	case(xir.r3.func)
-	ADD:			carry_res = res2[128];
-	SUB:			carry_res = res2[128];
-	MUL:			carry_res = mul_prod[255:128];
-	MULU:			carry_res = mul_prod[255:128];
-	MULSU:		carry_res = mul_prod[255:128];
-	SLL:			carry_res = sllio[255:128];
-	SRL:			carry_res = srlio[127:0];
-	SRA:			carry_res = sraio[127:0];
-	default:	carry_res = 128'd0;
+	ADD:			carry_res = res2[$bits(Value)];
+	SUB:			carry_res = res2[$bits(Value)];
+	MUL:			carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MULU:			carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MULSU:		carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	SLL:			carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
+	SRL:			carry_res = srlio[$bits(Value)-1:0];
+	SRA:			carry_res = sraio[$bits(Value)-1:0];
+	default:	carry_res = 'd0;
 	endcase
 // (a&b)|(a&~s)|(b&~s)
-ADD2R:	carry_res = res2[128];
-SUB2R:	carry_res = res2[128];
-SLLR2:	carry_res = sllro[255:128];
-SRLR2:	carry_res = srlro[127:0];
-SRAR2:	carry_res = sraro[127:0];
-SLLI:		carry_res = sllio[255:128];
-SRLI:		carry_res = srlio[127:0];
-SRAI:		carry_res = sraio[127:0];
-default:	carry_res = 128'd0;
+ADD2R:	carry_res = res2[$bits(Value)];
+SUB2R:	carry_res = res2[$bits(Value)];
+SLLR2:	carry_res = sllro[$bits(Value)*2-1:$bits(Value)];
+SRLR2:	carry_res = srlro[$bits(Value)-1:0];
+SRAR2:	carry_res = sraro[$bits(Value)-1:0];
+SLLI:		carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
+SRLI:		carry_res = srlio[$bits(Value)-1:0];
+SRAI:		carry_res = sraio[$bits(Value)-1:0];
+default:	carry_res = 'd0;
 endcase
 
 Thor2022_inslength uil(insn, ilen);
@@ -1255,7 +1257,7 @@ ffz6 uffoq (
 // Chooses the next bucket to decode, essentially in any order.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ffo6 uffodecrypt (
+ffo6 uffodecompress (
 	.i({
 		reb[5].fetched,
 		reb[4].fetched,
@@ -1264,7 +1266,7 @@ ffo6 uffodecrypt (
 		reb[1].fetched,
 		reb[0].fetched
 	}),
-	.o(next_decrypt)
+	.o(next_decompress)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1275,12 +1277,12 @@ ffo6 uffodecrypt (
 
 ffo6 uffodecode (
 	.i({
-		reb[5].decrypted,
-		reb[4].decrypted,
-		reb[3].decrypted,
-		reb[2].decrypted,
-		reb[1].decrypted,
-		reb[0].decrypted
+		reb[5].decompressed,
+		reb[4].decompressed,
+		reb[3].decompressed,
+		reb[2].decompressed,
+		reb[1].decompressed,
+		reb[0].decompressed
 	}),
 	.o(next_dec)
 );
@@ -1953,17 +1955,17 @@ end
 endtask
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Instruction Decrypt Stage
+// Instruction Decrypt/Decompress Stage
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tDecrypt;
 begin
-	if (next_decrypt != 3'd7)
-		decrypt <= #1 next_decrypt;
-	if (reb[decrypt].fetched && !branchmiss) begin
-		reb[decrypt].fetched <= 1'b0;
-		reb[decrypt].decrypted <= 1'b1;
-		reb[decrypt].ir <= reb[decrypt].ir ^ key;
+	if (next_decompress != 3'd7)
+		decompress <= #1 next_decompress;
+	if (reb[decompress].fetched && !branchmiss) begin
+		reb[decompress].fetched <= 1'b0;
+		reb[decompress].decompressed <= 1'b1;
+		reb[decompress].ir <= reb[decompress].ir ^ key;
 	end
 end
 endtask
@@ -1980,8 +1982,8 @@ begin
 	if (next_dec != 3'd7)
 		dec <= #1 next_dec;
 //	if (reb[dec].state==FETCHED) begin
-	if (reb[dec].decrypted && !branchmiss) begin
-		reb[dec].decrypted <= 1'b0;
+	if (reb[dec].decompressed && !branchmiss) begin
+		reb[dec].decompressed <= 1'b0;
 		reb[dec].decoded <= 1'b1;
 		reb[dec].dec <= deco;
 		reb[dec].istk_depth <= distk_depth;
@@ -2300,6 +2302,7 @@ begin
 	exec <= next_exec;
 	exflag <= 1'b0;
 	if (reb[exec].decoded || reb[exec].out) begin
+		disassem(reb[exec].ir);
 		if (fnArgsValid(exec)) begin
 			reb[exec].out <= 1'b1;
 			reb[exec].decoded <= 1'b0;
@@ -2329,10 +2332,10 @@ begin
 				end
 			end	// xval
 			exec <= next_exec;
-			if (exflag)
-				tArgUpdate(exec2,exres2,cares2);
 		end
 	end
+	if (exflag)
+		tArgUpdate(exec2,exres2,cares2);
 end
 endtask
 
@@ -2349,43 +2352,43 @@ integer n;
 begin
 	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
 		if (!reb[n].iav) begin
-			if (reb[n].ias==m && reb[m].v) begin
+			if (reb[n].ias==m) begin
 				reb[n].ia <= bus;
 				reb[n].iav <= 1'b1;
 			end
 		end
 		if (!reb[n].ibv) begin
-			if (reb[n].ibs==m && reb[m].v) begin
+			if (reb[n].ibs==m) begin
 				reb[n].ib <= bus;
 				reb[n].ibv <= 1'b1;
 			end
 		end
 		if (!reb[n].ic0v) begin
-			if (reb[n].ic0s==m && reb[m].v) begin
+			if (reb[n].ic0s==m) begin
 				reb[n].ic0 <= bus;
 				reb[n].ic0v <= 1'b1;
 			end
 		end
 		if (!reb[n].ic1v) begin
-			if (reb[n].ic1s==m && reb[m].v) begin
+			if (reb[n].ic1s==m) begin
 				reb[n].ic1 <= bus;
 				reb[n].ic1v <= 1'b1;
 			end
 		end
 		if (!reb[n].ic2v) begin
-			if (reb[n].ic2s==m && reb[m].v) begin
+			if (reb[n].ic2s==m) begin
 				reb[n].ic2 <= bus;
 				reb[n].ic2v <= 1'b1;
 			end
 		end
 		if (!reb[n].ic3v) begin
-			if (reb[n].ic3s==m && reb[m].v) begin
+			if (reb[n].ic3s==m) begin
 				reb[n].ic3 <= bus;
 				reb[n].ic3v <= 1'b1;
 			end
 		end
 		if (!reb[n].lkv) begin
-			if (reb[n].lks==m && reb[m].v) begin
+			if (reb[n].lks==m) begin
 				reb[n].ca <= cabus;
 				reb[n].lkv <= 1'b1;
 			end
@@ -2490,28 +2493,38 @@ begin
 				    endcase
 				    */
 				    if (reb[head].w512) begin
-				    	regfile[reb[head].dec.Rt[4:2]] <= reb[head].res;
-				    	regfile_src[reb[head].dec.Rt+2'd0] <= 5'd31;
-				    	regfile_src[reb[head].dec.Rt+2'd1] <= 5'd31;
-				    	regfile_src[reb[head].dec.Rt+2'd2] <= 5'd31;
-				    	regfile_src[reb[head].dec.Rt+2'd3] <= 5'd31;
+				    	regfile[reb[head].dec.Rt[4:3]] <= reb[head].res;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd0}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd1}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd2}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd3}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd4}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd5}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd6}] <= 5'd31;
+				    	regfile_src[{reb[head].dec.Rt[4:3],3'd7}] <= 5'd31;
 				    end
 				    else if (reb[head].w256) begin
 				    	if (reb[head].dec.Rt!=5'd0) begin
-					    	case(reb[head].dec.Rt[1])
-					    	1'd0:	regfile[reb[head].dec.Rt[4:2]][255:  0] <= reb[head].res[255:0];
-					    	1'd1:	regfile[reb[head].dec.Rt[4:2]][511:256] <= reb[head].res[255:0];
+					    	case(reb[head].dec.Rt[2])
+					    	1'd0:	regfile[reb[head].dec.Rt[4:3]][255:  0] <= reb[head].res[$bits(Value)*4-1:0];
+					    	1'd1:	regfile[reb[head].dec.Rt[4:3]][511:256] <= reb[head].res[$bits(Value)*4-1:0];
 					    	endcase
-					    	regfile_src[reb[head].dec.Rt+2'd0] <= 5'd31;
-					    	regfile_src[reb[head].dec.Rt+2'd1] <= 5'd31;
+					    	regfile_src[{reb[head].dec.Rt[4:2],2'd0}] <= 5'd31;
+					    	regfile_src[{reb[head].dec.Rt[4:2],2'd1}] <= 5'd31;
+					    	regfile_src[{reb[head].dec.Rt[4:2],2'd2}] <= 5'd31;
+					    	regfile_src[{reb[head].dec.Rt[4:2],2'd3}] <= 5'd31;
 					    end
 				    end
 				    else begin
-					    case(reb[head].dec.Rt[1:0])
-					    2'd0:	regfile[reb[head].dec.Rt[4:2]][127:  0] <= reb[head].res[127:0];
-					    2'd1:	regfile[reb[head].dec.Rt[4:2]][255:128] <= reb[head].res[127:0];
-					    2'd2:	regfile[reb[head].dec.Rt[4:2]][383:256] <= reb[head].res[127:0];
-					    2'd3:	regfile[reb[head].dec.Rt[4:2]][511:384] <= reb[head].res[127:0];
+					    case(reb[head].dec.Rt[2:0])
+					    3'd0:	regfile[reb[head].dec.Rt[4:3]][ 63:  0] <= reb[head].res[$bits(Value)-1:0];
+					    3'd1:	regfile[reb[head].dec.Rt[4:3]][127: 64] <= reb[head].res[$bits(Value)-1:0];
+					    3'd2:	regfile[reb[head].dec.Rt[4:3]][191:128] <= reb[head].res[$bits(Value)-1:0];
+					    3'd3:	regfile[reb[head].dec.Rt[4:3]][255:192] <= reb[head].res[$bits(Value)-1:0];
+					    3'd4:	regfile[reb[head].dec.Rt[4:3]][319:256] <= reb[head].res[$bits(Value)-1:0];
+					    3'd5:	regfile[reb[head].dec.Rt[4:3]][383:320] <= reb[head].res[$bits(Value)-1:0];
+					    3'd6:	regfile[reb[head].dec.Rt[4:3]][447:384] <= reb[head].res[$bits(Value)-1:0];
+					    3'd7:	regfile[reb[head].dec.Rt[4:3]][511:448] <= reb[head].res[$bits(Value)-1:0];
 					  	endcase
 				    	regfile_src[reb[head].dec.Rt] <= 5'd31;
 				    	$display("Regfile %d source reset", reb[head].dec.Rt);
@@ -2523,13 +2536,13 @@ begin
 				      gie <= TRUE;
 				    end
 				    if (reb[head].dec.Rt==5'd26)
-				    	r58 <= reb[head].res[127:0];
+				    	r58 <= reb[head].res[$bits(Value)-1:0];
 				    if (reb[head].dec.Rt==5'd11)
-				    	t0 <= reb[head].res[127:0];
+				    	t0 <= reb[head].res[$bits(Value)-1:0];
 				  end
 			  end
 			  if (reb[head].dec.vmrfwr)
-			  	vm_regfile[reb[head].dec.Rt[2:0]] <= reb[head].res[127:0];
+			  	vm_regfile[reb[head].dec.Rt[2:0]] <= reb[head].res[$bits(Value)-1:0];
 			end	// wcause
 		end		// wval
 		// Retire prefixes once the instruction is retired.
@@ -2802,23 +2815,67 @@ begin
 end
 endtask
 
+function [31:0] fnRegName;
+input [4:0] Rn;
+begin
+	case(Rn)
+	5'd0:	fnRegName = "zero";
+	5'd1:	fnRegName = "a0";
+	5'd2:	fnRegName = "a1";
+	5'd3:	fnRegName = "t0";
+	5'd4:	fnRegName = "t1";
+	5'd5:	fnRegName = "t2";
+	5'd6:	fnRegName = "t3";
+	5'd7:	fnRegName = "t4";
+	5'd8:	fnRegName = "t5";
+	5'd9:	fnRegName = "t6";
+	5'd10:	fnRegName = "t7";
+	5'd11:	fnRegName = "s0";
+	5'd12:	fnRegName = "s1";
+	5'd13:	fnRegName = "s2";
+	5'd14:	fnRegName = "s3";
+	5'd15:	fnRegName = "s4";
+	5'd16:	fnRegName = "s5";
+	5'd17:	fnRegName = "s6";
+	5'd18:	fnRegName = "s7";
+	5'd19:	fnRegName = "a2";
+	5'd20:	fnRegName = "a3";
+	5'd21:	fnRegName = "a4";
+	5'd22:	fnRegName = "a5";
+	5'd23:	fnRegName = "a6";
+	5'd24:	fnRegName = "a7";
+	5'd25:	fnRegName = "r25";
+	5'd26:	fnRegName = "lc";
+	5'd27:	fnRegName = "r27";
+	5'd28:	fnRegName = "r28";
+	5'd29:	fnRegName = "gp";
+	5'd30:	fnRegName = "fp";
+	5'd31:	fnRegName = "sp";
+	endcase
+end
+endfunction
 
 task disassem;
 input Instruction ir;
 begin
   case(ir.any.opcode)
+  R3:
+  	case(ir.r3.func)
+  	ADD:	$display("ADD %s,%s,%s", fnRegName(ir.r3.Rt), fnRegName(ir.r3.Ra), fnRegName(ir.r3.Rb));
+  	default:	$display("????");
+  	endcase
   ADDI:   
-  	if (ir.ri.Ra==6'd0)
-      $display("LDI r%d,%d", ir.ri.Rt, ir.ri.imm);
+  	if (ir.ri.Ra=='d0)
+      $display("LDI %s,%h", fnRegName(ir.ri.Rt), ir.ri.imm);
   	else
-  		$display("ADD r%d,r%d,%d", ir.ri.Rt, ir.ri.Ra, ir.ri.imm);
+  		$display("ADD %s,%s,%h", fnRegName(ir.ri.Rt), fnRegName(ir.ri.Ra), ir.ri.imm);
   ADDIL:   
-  	if (ir.ri.Ra==6'd0)
-      $display("LDI r%d,%d", ir.ril.Rt, ir.ril.imm);
+  	if (ir.ri.Ra=='d0)
+      $display("LDI %s,%h", fnRegName(ir.ril.Rt), ir.ril.imm);
   	else
-  		$display("ADD r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
-  ORI:		$display("OR r%d,r%d,%d", ir.ri.Rt, ir.ri.Ra, ir.ri.imm);
-  ORIL:		$display("OR r%d,r%d,%d", ir.ril.Rt, ir.ril.Ra, ir.ril.imm);
+  		$display("ADD %s,%s,%h", fnRegName(ir.ril.Rt), fnRegName(ir.ril.Ra), ir.ril.imm);
+  ORI:		$display("OR %s,%s,%h", fnRegName(ir.ri.Rt), fnRegName(ir.ri.Ra), ir.ri.imm);
+  ORIL:		$display("OR %s,%s,%h", fnRegName(ir.ril.Rt), fnRegName(ir.ril.Ra), ir.ril.imm);
   LDT:		$display("LDT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
