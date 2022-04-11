@@ -44,8 +44,15 @@ Instruction arguments are made valid by the execution or writeback of prior inst
 The last stage, writeback, reorders instructions into program order by writing back the instruction with the oldest sequence number. Writeback may pull instructipns from any slot as long as it is the oldest instruction.
 The REB does not work in a circular fashion. It does work according to the order determined by a sequence number.
 
+### Sequence Numbers
+Whenever a fetched instruction is assigned a sequence number, the remaining sequence numbers in the buffer are all decremented. This maintains the same relative order to the sequence numbers while allowing the sequence number to occupy only a small number of bits.
+Sequence numbers are currently six bit. Since sequence numbers are compared in numerous places it reduces the hardware footprint when the sequence number is as small as practical. The range of sequence numbers must be greater than the number of buffer entries.
+The sequence number assigned to the fetched instruction is a fixed number which is the maximum sequence number of 63.
+
 ### Branches
-Branches remove the instructions with a higher sequence number than the branch from the buffer. To improve performance branches are predicted using a branch target buffer, BTB, and a gshare branch predictor. If the branch is corectly predicted then no instructions are removed from the buffer.
+Branches remove the instructions with a higher sequence number than the branch from the buffer. This ensures that only the instructions coming after the branch are flushed. Because every buffer entry has an associated sequence number the processor may speculate past any number of branches.
+In some designs a two bit branch tag is used to allow branches to speculate up to four levels deep. The sequence number acts much like a branch tag exceot it has more bits to it.
+To improve performance branches are predicted using a branch target buffer, BTB, and a gshare branch predictor. If the branch is corectly predicted then no instructions are removed from the buffer.
 The branch target buffer works at the fetch stage of the core. The gshare predictor works at the decode stage of the core.
 There is also a 32-entry return address stack, RAS, predictor to predict the return address at the fetch stage of the core.
 The BTB and gshare predictors may be turned off by bits in control register zero.
@@ -71,10 +78,11 @@ The Thor2022io version is not currently being worked on. It was left in a state 
 Both versions of the core share the same bus interface unit, BIU. Virtual memory is always active. The TLB is preinitialized at startup to enable access to the system ROM.
 One of the first tasks of the BIOS is to setup access to I/O devices so that something as simple as a LED display may happen.
 The TLB is shared between instructions and data. The fifth way of the TLB may only be updated by software in a fixed fashion. The other four ways may be updated according to fixed, LRU or random algorithms.
+The TLB may be updated either by software or by hardware. Hardware updates are untested.
 
 ### Instruction Cache
-The instruction cache is 32kB in size with a 640-bit line size. The 640 bits was chosen to allow instructions that would wrap cache lines to otherwise remain on the same line. Since instructions are variable length they may not fit evenly into a 512-bit cache line.
-They will always fit into a 640-bit line. There is some duplication of instruction data but it is better than dual-porting the cache.
+The instruction cache is a four-way set associative cache, 32kB in size with a 640-bit line size. There is only a single level of cache. The 640 bits was chosen to allow instructions that would wrap cache lines to otherwise remain on the same line. Since instructions are variable length they may not fit evenly into a 512-bit cache line.
+They will always fit into a 640-bit line. There is some duplication of instruction data but it is better than dual-porting the cache. In addition to the cache there is a five entry victim buffer. The cache can provide an instruction every clock cycle.
 
 ### Data Cache
 The data cache is 64kB in size. The cache uses even, odd pairs of cache lines to allow unaligned data which may overflow a cache line to be fetched from the cache.
