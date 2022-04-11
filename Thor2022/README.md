@@ -88,3 +88,6 @@ They will always fit into a 640-bit line. There is some duplication of instructi
 The data cache is 64kB in size. The cache uses even, odd pairs of cache lines to allow unaligned data which may overflow a cache line to be fetched from the cache.
 The data cache is currently untested.
 
+# Software
+Thor2022 uses vasm and vlink to assemble and link programs. vlink is used 'out of the box'. A Thor2022 backend was written for vasm. The CC64 compiler may be used for high-level work and compiles to vasm compatible source code.
+
