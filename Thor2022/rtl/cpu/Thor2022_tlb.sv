@@ -516,7 +516,7 @@ else begin
 			  	padr_o[15:10] <= iadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
 					if (iadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
-						acr_o <= tentryo[n].rwx;
+						acr_o <= {tentryo[n].ppn < 16'h0FFF,tentryo[n].rwx};
 					else
 						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;
@@ -546,7 +546,7 @@ else begin
 			  	padr_o[15:10] <= dadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
 					if (dadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
-						acr_o <= tentryo[n].rwx;
+						acr_o <= {tentryo[n].ppn < 16'h0FFF,tentryo[n].rwx};
 					else
 						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;

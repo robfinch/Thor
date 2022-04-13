@@ -51,7 +51,7 @@ package Thor2022_pkg;
 `define QSLOTS	2		// number of simulataneously queueable instructions
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
-
+parameter REB_ENTRIES = 6;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
@@ -61,6 +61,7 @@ package Thor2022_pkg;
 //`define SUPPORT_HASHPT2	1
 `define SUPPORT_SHPTE	1
 `define SUPPORT_HIERPT	1
+//`define SUPPORT_FLOAT 	1
 
 // The following adds caching of PDEs and PTGs to improve performance at the
 // cost of additional logic.
@@ -960,6 +961,8 @@ typedef struct packed
 	logic [7:0] tid;		// tran id
 	logic [5:0] step;
 	logic wr;
+	logic [3:0] func;		// function to perform
+	logic [3:0] func2;	// more resolution to function
 	logic v;
 	logic empty;
 	logic [15:0] cause;
@@ -968,7 +971,7 @@ typedef struct packed
 	logic cmt;
 	logic ldcs;
 	logic mtsel;
-} MemoryResponse;	// 612
+} MemoryResponse;	// 620
 
 typedef struct packed
 {
@@ -1123,6 +1126,18 @@ typedef struct packed
 
 parameter RS_INVALID = 3'd0;
 
+// Arithmetic queue entry
+typedef struct packed
+{
+	logic [4:0] tid;
+	SrcId ndx;
+	Instruction ir;
+	DecodeOut dec;
+	Value a;
+	Value b;
+	Value i;
+} AQE;
+
 typedef struct packed
 {
 	logic [5:0] rid;
@@ -1150,15 +1165,13 @@ typedef struct packed
 	logic takb;
 	logic predict_taken;
 	logic predictable_branch;
+	CodeAddress jmptgt;
 	logic [5:0] step;			// vector step
 	logic step_v;
 	logic [15:0] cause;
 	Value ia;
 	Value ib;
-	Value ic0;
-	Value ic1;
-	Value ic2;
-	Value ic3;
+	Value ic;
 	Value id;
 	Value pn;
 	IPAddress lk;
@@ -1177,26 +1190,21 @@ typedef struct packed
 	logic z;
 	logic iav;
 	logic ibv;
-	logic ic0v;
-	logic ic1v;
-	logic ic2v;
-	logic ic3v;
+	logic icv;
 	logic lkv;
 	logic idv;
 	logic itv;
 	logic vmv;
 	SrcId ias;
 	SrcId ibs;
-	SrcId ic0s;
-	SrcId ic1s;
-	SrcId ic2s;
-	SrcId ic3s;
+	SrcId ics;
 	SrcId lks;
 	SrcId ids;
 	logic idib;					// id comes from ia
 	SrcId its;
 	SrcId vms;
-	logic [511:0] res;
+	//logic [511:0] res;
+	Value res;
 	IPAddress cares;
 	Value carry_res;
 	sFPFlags fp_flags;

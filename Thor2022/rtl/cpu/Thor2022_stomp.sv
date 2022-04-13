@@ -1,12 +1,11 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2021_hiAmt.sv
-//  - head pointers increment amount
+//	Thor2022_stomp.sv
 //
 //
 // BSD 3-Clause License
@@ -37,51 +36,25 @@
 //                                                                          
 // ============================================================================
 
-import Thor2021_pkg::*;
+import const_pkg::*;
+import Thor2022_pkg::*;
 
-module Thor2021_hiAmt(rob, commit0_v, commit1_v, heads, tails, amt_o);
-parameter RENTRIES = `RENTRIES;
-input sReorderEntry rob [0:RENTRIES-1];
-input commit0_v;
-input commit1_v;
-input SrcId heads [0:RENTRIES-1];
-input SrcId tails [0:1];
-output reg [2:0] amt_o;
+module Thor2022_stomp(branchmiss, missid, sns, stomp);
+input branchmiss;
+input [2:0] missid;
+input [5:0] sns [0:7];
+output reg [7:0] stomp;
 
-reg [2:0] amt;
-SrcId nxtrb;
-
-// Determine amount to advance reorder head pointer by. Based on number of
-// consecutive valid commits. Also up to four additional slot that have been
-// marked invalid may be advanced past.
+integer n30;
 always_comb
 begin
-	if (commit0_v & commit1_v)
-		amt = 3'd2;
-	else if (commit0_v)
-		amt = 3'd1;
-	else
-		amt = 3'd0;
-
-	// Now search ahead for invalid entries that can be skipped over.
-	nxtrb = (heads[0] + amt) % RENTRIES;
-	if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
-		amt = amt + 4'd1;
-		nxtrb = (heads[0] + amt) % RENTRIES;
-		if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
-			amt = amt + 4'd1;
-			nxtrb = (heads[0] + amt) % RENTRIES;
-			if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
-				amt = amt + 4'd1;
-				nxtrb = (heads[0] + amt) % RENTRIES;
-				if (rob[nxtrb].state==RS_INVALID && heads[nxtrb]!=tails[0]) begin
-					amt = amt + 4'd1;
-					nxtrb = (heads[0] + amt) % RENTRIES;
-				end
-			end
+	stomp = 'd0;
+	for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1) begin
+		if (branchmiss) begin
+			if (sns[n30] > sns[missid])
+				stomp[n30] = 1'b1;
 		end
 	end
-	amt_o = amt;
 end
 
 endmodule

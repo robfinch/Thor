@@ -523,7 +523,6 @@ endcase
 deco.divall = deco.div|deco.divu|deco.divsu|deco.divi|deco.divui|deco.divsui;
 deco.divalli = deco.divi|deco.divui|deco.divsui;
 
-deco.is_cbranch = ir.jxx.Ca==3'd7 && (ir.any.opcode[7:4]==4'h2 || ir.any.opcode[7:4]==4'h3);
 deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ;
 deco.bra = ir.any.opcode==BRA;
 if (deco.bra)
@@ -535,6 +534,7 @@ else if (deco.jxz)
 else
 	deco.jmptgt = {{94{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	
+deco.is_cbranch = deco.jxx | deco.jxz;
 deco.csr = ir.any.opcode==CSR;
 deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.sei = ir.any.opcode==R1 && ir.r3.func==SEI;

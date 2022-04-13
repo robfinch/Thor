@@ -1,12 +1,12 @@
+`timescale 1ns / 1ps
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2021_tailptrs.sv
-//
+//	Thor2022_fifo.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -35,45 +35,45 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //                                                                          
 // ============================================================================
+//
+module Thor2022_fifo(rst, clk, wr, di, rd, dout, cnt);
+parameter WID=3;
+input rst;
+input clk;
+input wr;
+input [WID-1:0] di;
+input rd;
+output reg [WID-1:0] dout;
+output reg [3:0] cnt;
 
-import Thor2021_pkg::*;
+reg [3:0] wr_ptr;
+reg [3:0] rd_ptr;
+reg [WID-1:0] mem [0:15];
+integer n;
 
-module Thor2021_tailptrs(rst_i, clk_i, branchmiss, stomp, queuedCnt,
-	tails, active_tag, rob);
-parameter QSLOTS = `QSLOTS;
-parameter RENTRIES = `RENTRIES;
-input rst_i;
-input clk_i;
-input branchmiss;
-input [RENTRIES-1:0] stomp;
-input [2:0] queuedCnt;
-output SrcId tails [0:QSLOTS-1];
-output SrcId active_tag;
-input sReorderEntry rob [0:RENTRIES-1];
-
-integer n, j;
-
-always_ff @(posedge clk_i)
-if (rst_i) begin
-	for (n = 0; n < RENTRIES; n = n + 1)
-		tails[n] <= n;
-	active_tag <= 1'd0;
-end
-else begin
-	if (!branchmiss) begin
-		for (n = 0; n < RENTRIES; n = n + 1)
-			tails[n] <= (tails[n] + queuedCnt) % RENTRIES;	
+always_ff @(posedge clk)
+	if (rst) begin
+		wr_ptr <= 'd0;
+		rd_ptr <= 'd0;
+		for (n = 0; n < 16; n = n + 1)
+			mem[n] <= 'd0;		
 	end
 	else begin
-		for (n = RENTRIES-1; n >= 0; n = n - 1)
-			// (QENTRIES-1) is needed to ensure that n increments forwards so that the modulus is
-			// a positive number.
-			if (stomp[n] & ~stomp[(n+(RENTRIES-1))%RENTRIES]) begin
-				for (j = 0; j < QSLOTS; j = j + 1)
-					tails[j] <= (n + j) % RENTRIES;
-				active_tag <= rob[n].br_tag;
-			end
+		if (rd & wr)
+			;
+		else if (wr) begin
+			mem[wr_ptr] <= di;
+			wr_ptr <= wr_ptr + 2'd1;
+		end
+		else if (rd) begin
+			rd_ptr <= rd_ptr + 2'd1;
+		end
+		dout <= mem[rd_ptr[3:0]];
 	end
-end
+always_comb
+	if (wr_ptr >= rd_ptr)
+		cnt = wr_ptr - rd_ptr;
+	else
+		cnt = wr_ptr + (5'd16 - rd_ptr);
 
 endmodule

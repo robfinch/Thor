@@ -41,7 +41,7 @@ import Thor2022_mmupkg::*;
 module Thor2022_mem_req_queue(rst, clk, wr0, wr_ack0, i0, wr1, wr_ack1, i1,
 	rd, o, valid, empty, ldo0, found0, ldo1, found1);
 parameter AWID = 32;
-parameter QDEP = 3;
+parameter QDEP = 7;
 input rst;
 input clk;
 input wr0;
@@ -67,7 +67,7 @@ reg [63:0] qsel [0:QDEP-1];
 reg [255:0] imask0, imask1;
 reg [255:0] dat10, dat11;
 reg sx0, sx1;
-reg [7:0] last_tid0, last_tid1;
+reg [7:0] last_tid;
 
 integer n5;
 initial begin
@@ -100,10 +100,6 @@ always_comb
 	isel0 = i0_sel << i0.adr[3:0];
 always_comb
 	isel1 = i1_sel << i1.adr[3:0];
-integer n1;
-always_comb
-for (n1 = 0; n1 < QDEP; n1 = n1 + 1)
-	qsel[n1] = fnSel(que[n1].sz) << que[n1].adr[3:0];
 
 // Generate a mask for the load data.
 
@@ -173,21 +169,19 @@ begin
 end
 endtask
 
-
 integer n3;
 always_ff @(posedge clk)
 if (rst) begin
 	valid_bits <= 'd0;
 	wr_ack0 <= 1'b0;
 	wr_ack1 <= 1'b0;
-	last_tid0 <= 8'd255;
-	last_tid1 <= 8'd255;
+	last_tid <= 8'd255;
+	qndx <= 'd0;
 end
 else begin
 	wr_ack0 <= 1'b0;
 	wr_ack1 <= 1'b0;
-	o <= que[0];
-	valid <= valid_bits[0];
+//	o <= que[0];
 	if (wr0 && found0)
 		wr_ack0 <= 1'b1;
 	if (wr1 && found1)
@@ -196,12 +190,14 @@ else begin
 	if (rd & wr0 & !found0) begin
 		for (n3 = 1; n3 < QDEP; n3 = n3 + 1) begin
 			que[n3-1] <= que[n3];
+			qsel[n3-1] <= qsel[n3];
 			valid_bits[n3-1] <= valid_bits[n3];
 		end
 		wr_ack0 <= 1'b1;
-		if (last_tid0 != i0.tid) begin
+		if (last_tid != i0.tid) begin
 			que[qndx] <= i0;
-			last_tid0 <= i0.tid;
+			qsel[qndx] <= fnSel(i0.sz) << i0.adr[3:0];
+			last_tid <= i0.tid;
 			valid_bits[qndx] <= 1'b1;
 		end
 		else
@@ -210,40 +206,49 @@ else begin
 	else if (rd & wr1 & !found1) begin
 		for (n3 = 1; n3 < QDEP; n3 = n3 + 1) begin
 			que[n3-1] <= que[n3];
+			qsel[n3-1] <= qsel[n3];
 			valid_bits[n3-1] <= valid_bits[n3];
 		end
 		wr_ack1 <= 1'b1;
-		if (last_tid1 != i1.tid) begin
+		if (last_tid != i1.tid) begin
 			que[qndx] <= i1;
+			qsel[qndx] <= fnSel(i1.sz) << i1.adr[3:0];
 			valid_bits[qndx] <= 1'b1;
+			last_tid <= i1.tid;
 		end
 		else
 			qndx <= qndx - 2'd1;
 	end
 	else if (wr0 & !found0) begin
 		if (qndx < QDEP) begin
-			if (last_tid0 != i0.tid) begin
+			if (last_tid != i0.tid) begin
 				que[qndx] <= i0;
+				qsel[qndx] <= fnSel(i0.sz) << i0.adr[3:0];
 				valid_bits[qndx] <= 1'b1;
 				qndx <= qndx + 2'd1;
+				last_tid <= i0.tid;
 			end
 			wr_ack0 <= 1'b1;
 		end
 	end
 	else if (wr1 & !found1) begin
 		if (qndx < QDEP) begin
-			if (last_tid1 != i1.tid) begin
+			if (last_tid != i1.tid) begin
 				que[qndx] <= i1;
+				qsel[qndx] <= fnSel(i1.sz) << i1.adr[3:0];
 				valid_bits[qndx] <= 1'b1;
 				qndx <= qndx + 2'd1;
+				last_tid <= i1.tid;
 			end
 			wr_ack1 <= 1'b1;
 		end
 	end
 	else if (rd) begin
-		qndx <= qndx - 2'd1;
+		if (|qndx)
+			qndx <= qndx - 2'd1;
 		for (n3 = 1; n3 < QDEP; n3 = n3 + 1) begin
 			que[n3-1] <= que[n3];
+			qsel[n3-1] <= qsel[n3];
 			valid_bits[n3-1] <= valid_bits[n3];
 		end
 		valid_bits[QDEP-1] <= 1'b0;
@@ -252,5 +257,9 @@ end
 
 always_comb
 	empty = ~|valid_bits;
+always_comb
+	o = que[0];
+always_comb
+	valid = valid_bits[0];
 	
 endmodule

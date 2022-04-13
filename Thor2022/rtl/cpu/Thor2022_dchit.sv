@@ -41,7 +41,7 @@ import Thor2022_mmupkg::*;
 module Thor2022_dchit(clk, tags, ndx, adr, valid, hits, hit, rway);
 parameter AWID=32;
 input clk;
-input [AWID-7:0] tags [511:0];
+input [AWID-7:0] tags [3:0];
 input [6:0] ndx;
 input PhysicalAddress adr;
 input [127:0] valid [0:3];
@@ -52,13 +52,13 @@ output reg [1:0] rway;
 reg [1:0] prev_rway;
 
 always_comb	//(posedge clk_g)
-  hits[0] <= tags[{2'd0,ndx}]==adr[AWID-1:6] && valid[0][ndx];
+  hits[0] <= tags[2'd0]==adr[AWID-1:6] && valid[0][ndx];
 always_comb	//(posedge clk_g)
-  hits[1] <= tags[{2'd1,ndx}]==adr[AWID-1:6] && valid[1][ndx];
+  hits[1] <= tags[2'd1]==adr[AWID-1:6] && valid[1][ndx];
 always_comb	//(posedge clk_g)
-  hits[2] <= tags[{2'd2,ndx}]==adr[AWID-1:6] && valid[2][ndx];
+  hits[2] <= tags[2'd2]==adr[AWID-1:6] && valid[2][ndx];
 always_comb	//(posedge clk_g)
-  hits[3] <= tags[{2'd3,ndx}]==adr[AWID-1:6] && valid[3][ndx];
+  hits[3] <= tags[2'd3]==adr[AWID-1:6] && valid[3][ndx];
 wire hit = |hits;
 
 always_comb

@@ -261,7 +261,7 @@ any1_mem_fifo #(.WID($bits(MemoryRequest))) uififo1
 );
 assign fifoToCtrl_v = TRUE;
 */
-/*
+
 Thor2022_mem_req_queue umreqq
 (
 	.rst(rst),
@@ -281,7 +281,8 @@ Thor2022_mem_req_queue umreqq
 	.ldo1(),
 	.found1()
 );
-*/
+
+/*
 assign fifoToCtrl_wack = 1'b1;
 // 236 wide
 MemoryRequestFifo uififo1
@@ -296,7 +297,7 @@ MemoryRequestFifo uififo1
   .empty(fifoToCtrl_empty),  // output wire empty
   .valid(fifoToCtrl_v)  // output wire valid
 );
-
+*/
 
 /*
 bc_fifo16X #(.WID($bits(MemoryRequest))) uififo1
@@ -509,10 +510,10 @@ always_comb
 	1'b1:	dc_line = {dc_eline,dc_oline};
 	endcase
 
-wire [AWID-7:0] dc_etag [511:0];
+wire [AWID-7:0] dc_etag [3:0];
 wire [127:0] dc_evalid [0:3];
 wire [3:0] dhit1e;
-wire [AWID-7:0] dc_otag [511:0];
+wire [AWID-7:0] dc_otag [3:0];
 wire [127:0] dc_ovalid [0:3];
 wire [3:0] dhit1o;
 
@@ -556,6 +557,8 @@ udcotag
 	.wr(state==DFETCH7 && dadr[6]),
 	.adr(dadr),
 	.way(lfsr_o[1:0]),
+	.rclk(tlbclk),
+	.ndx(adr_o[13:7]),
 	.tag(dc_otag)
 );
 
@@ -571,6 +574,8 @@ udcetag
 	.wr(state==DFETCH7 && ~dadr[6]),
 	.adr(dadr),
 	.way(lfsr_o[1:0]),
+	.rclk(tlbclk),
+	.ndx(adr_o[13:7]+adr_o[6]),
 	.tag(dc_etag)
 );
 
@@ -2171,6 +2176,8 @@ begin
 	strips <= 2'd0;
 	memresp.cause <= {8'h00,FLT_NONE};
 	memresp.badAddr <= memreq.adr;	// Handy for debugging
+	memresp.func <= memreq.func;
+	memresp.func2 <= memreq.func2;
 	ealow <= ea[7:0];
 	// Detect cache controller commands
 	case(memreq.func)

@@ -38,7 +38,7 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_dctag(clk, wr, adr, way, tag);
+module Thor2022_dctag(clk, wr, adr, way, rclk, ndx, tag);
 parameter LINES=128;
 parameter WAYS=4;
 parameter AWID=32;
@@ -46,8 +46,13 @@ input clk;
 input wr;
 input [AWID-1:0] adr;
 input [1:0] way;
-(* ram_style="distributed" *)
-output reg [AWID-1:6] tag [0:WAYS *LINES-1];
+input rclk;
+input [6:0] ndx;
+(* ram_style="block" *)
+output reg [AWID-1:6] tag [3:0];
+
+reg [AWID-1:6] tags [0:WAYS *LINES-1];
+reg [6:0] rndx;
 
 integer g;
 integer n;
@@ -55,14 +60,24 @@ integer n;
 initial begin
 for (g = 0; g < WAYS; g = g + 1) begin
   for (n = 0; n < LINES; n = n + 1)
-    tag[g * LINES + n] = 32'd1;
+    tags[g * LINES + n] = 32'd1;
 end
 end
 
 always_ff @(posedge clk)
 begin
 	if (wr)
-		tag[way * LINES + adr[13:7]] <= adr[AWID-1:6];
+		tags[way * LINES + adr[13:7]] <= adr[AWID-1:6];
 end
+always_ff @(posedge rclk)
+	rndx <= ndx;
+always_comb
+	tag[0] = tags[0 * LINES + rndx];
+always_comb
+	tag[1] = tags[1 * LINES + rndx];
+always_comb
+	tag[2] = tags[2 * LINES + rndx];
+always_comb
+	tag[3] = tags[3 * LINES + rndx];
 
 endmodule
