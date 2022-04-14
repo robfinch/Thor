@@ -624,6 +624,8 @@ end
 // Execute stage combinational logic
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+wire multovf;
+wire dvByZr;
 wire [2:0] pte_en;
 wire pte_found;
 reg [511:0] ptg;
@@ -683,24 +685,6 @@ wire [$bits(Value)*2-1:0] sllro = {'d0,xa[$bits(Value)-1:0]|pn[$bits(Value)-1:0]
 wire [$bits(Value)*2-1:0] srlro = {pn[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> xb[6:0];
 wire [$bits(Value)*2-1:0] sraro = {{$bits(Value){xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> xb[6:0];
 
-wire [$bits(Value)*2-1:0] mul_prod1;
-reg [$bits(Value)*2-1:0] mul_prod;
-wire [$bits(Value)*2-1:0] mul_prod2561;
-reg [$bits(Value)*2-1:0] mul_prod256='d0;
-wire [39:0] mulf_prod;
-reg mul_sign;
-Value aa, bb;
-
-// 18 stage pipeline
-mult128x128 umul1
-(
-	.clk(clk_g),
-	.ce(1'b1),
-	.a(aa),
-	.b(bb),
-	.o(mul_prod2561)
-);
-wire multovf = ((reb[exec].dec.mulu|reb[exec].dec.mului) ? mul_prod256[$bits(Value)*2-1:$bits(Value)] != 'd0 : mul_prod256[$bits(Value)*2-1:$bits(Value)] != {$bits(Value){mul_prod256[$bits(Value)-1]}});
 /*
 Thor2021_multiplier umul
 (
@@ -762,40 +746,6 @@ Thor2022_fifo #(.WID($bits(AQE))) uaqefifo
 	.cnt(aqe_qcnt)
 );
 
-// 3 stage pipeline
-mult24x16 umulf
-(
-  .clk(clk_g),
-  .ce(1'b1),
-  .a(aa[23:0]),
-  .b(bb[15:0]),
-  .o(mulf_prod)
-);
-
-wire [127:0] qo, ro;
-wire dvd_done;
-wire dvByZr;
-
-Thor2022_divider #(.WID($bits(Value))) udiv
-(
-  .rst(rst_i),
-  .clk(clk2x_i),
-  .ld(state==DIV1),
-  .abort(1'b0),
-  .ss(aqe_dato.dec.div),
-  .su(aqe_dato.dec.divsu),
-  .isDivi(aqe_dato.dec.divi),
-  .a(mc_xa),
-  .b(mc_xb),
-  .imm(mc_imm),
-  .qo(qo),
-  .ro(ro),
-  .dvByZr(dvByZr),
-  .done(dvd_done),
-  .idle()
-);
-
-
 Thor2022_bitfield ubf
 (
 	.ir(xir),
@@ -816,40 +766,6 @@ Thor2022_crypto ucrypto
 	.t(),
 	.o(crypto_res)
 );
-
-wire [$bits(Value)-1:0] dfmulo;
-wire dfmul_done;
-wire [$bits(Value)-1:0] dfaso;
-
-`ifdef SUPPORT_FLOAT
-// takes about 30 clocks (32 to be safe)
-DFPAddsub128nr udfa1
-(
-	.clk(clk_g),
-	.ce(1'b1),
-	.rm(xdfrm),
-	.op(mc_xir.r3.func==DFSUB),
-	.a(mc_xa),
-	.b(mc_xb),
-	.o(dfaso)
-);
-
-DFPMultiply128nr udfmul1
-(
-	.clk(clk_g),
-	.ce(1'b1),
-	.ld(state==DF1),
-	.a(mc_xa),
-	.b(mc_xb),
-	.o(dfmulo),
-	.rm(xdfrm),
-	.sign_exe(),
-	.inf(),
-	.overflow(),
-	.underflow(),
-	.done(dfmul_done)
-);
-`endif
 
 Value mux_out;
 integer n2;
@@ -885,20 +801,6 @@ R2:
 	SRA:	res2 = sraio[$bits(Value)*2-1:$bits(Value)];
 	ROL:	res2 = sllio[$bits(Value)-1:0]|sllro[$bits(Value)*2-1:$bits(Value)];
 	ROR:	res2 = srlio[$bits(Value)*2-1:$bits(Value)]|srlro[$bits(Value)-1:0];
-//	SLLH:	res2 = sllrho[127:0] + xc;
-//	SRLH:	res2 = srlrho[255:128];
-//	SRAH:	res2 = sraho[255:128];
-//	ROLH:	res2 = sllrho[127:0]|sllrho[255:128];
-//	RORH:	res2 = srlrho[255:128]|srlrho[127:0];
-	MUL:	mc_res = mul_prod256[$bits(Value)-1:0] + xc + pn;
-	MULH:	mc_res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULU:	mc_res = mul_prod256[$bits(Value)-1:0] + xc + pn;
-	MULUH:	mc_res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULSU:mc_res = mul_prod256[$bits(Value)-1:0] + xc + pn;
-	MULF:	mc_res = mul_prod256[$bits(Value)-1:0] + xc + pn;
-	DIV:	mc_res = qo;
-	DIVU:	mc_res = qo;
-	DIVSU:	mc_res = qo;
 	MUX:	res2 = mux_out;
 	SLT:	res2 = ($signed(xa) < $signed(xb)) ? xc : 'd0;
 	SGE:	res2 = ($signed(xa) >= $signed(xb)) ? xc : 'd0;
@@ -912,11 +814,6 @@ R2:
 			res2 = 'd0;
 			mc_res = 'd0;
 		end
-	endcase
-DF2:
-	case(xir.r3.func)
-	DFADD,DFSUB:	res2 = dfaso;
-	default:	res2 = 'd0;
 	endcase
 VM:
 	case(xir.vmr2.func)
@@ -959,10 +856,6 @@ SRAI:					res2 = sraio[$bits(Value)*2-1:$bits(Value)];
 //SLLHR2:				res2 = sllrho[127:0];// + xc;
 CMPI,CMPIL:		res2 = cmpio;//$signed(xa) < $signed(imm) ? -128'd1 : xa==imm ? 'd0 : 128'd1;
 //CMPUI,CMPUIL:	res2 = xa < imm ? -128'd1 : xa==imm ? 'd0 : 128'd1;
-MULI,MULIL:		mc_res = mul_prod256[$bits(Value)-1:0] + pn;
-MULUI,MULUIL:	mc_res = mul_prod256[$bits(Value)-1:0] + pn;
-MULFI:				mc_res = mul_prod256[$bits(Value)-1:0] + pn;
-DIVI,DIVIL:		mc_res = qo;
 SEQI,SEQIL:		res2 = xa == imm;
 SNEI,SNEIL:		res2 = xa != imm;
 SLTI,SLTIL:		res2 = $signed(xa) < $signed(imm);
@@ -1019,17 +912,12 @@ R2:
 	case(xir.r3.func)
 	ADD:			carry_res = res2[$bits(Value)];
 	SUB:			carry_res = res2[$bits(Value)];
-	MUL:			mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULU:			mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULSU:		mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULF:			mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
 	SLL:			carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
 	SRL:			carry_res = srlio[$bits(Value)-1:0];
 	SRA:			carry_res = sraio[$bits(Value)-1:0];
 	default:	
 		begin
 			carry_res = 'd0;
-			mc_carry_res = 'd0;
 		end
 	endcase
 // (a&b)|(a&~s)|(b&~s)
@@ -1041,15 +929,32 @@ SRAR2:	carry_res = sraro[$bits(Value)-1:0];
 SLLI:		carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
 SRLI:		carry_res = srlio[$bits(Value)-1:0];
 SRAI:		carry_res = sraio[$bits(Value)-1:0];
-MULI,MULIL:		mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-MULUI,MULUIL:	mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-MULFI:	mc_carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
 default:	
 	begin
 		carry_res = 'd0;
-		mc_carry_res = 'd0;
 	end
 endcase
+
+Thor2022_mc_alu umcalu1
+(
+	.rst(rst_i),
+	.clk(clk_g),
+	.clk2x(clk2x_i),
+	.state(state),
+	.ir(mc_ir),
+	.dec(aqe_dato.dec),
+	.xa(mc_xa),
+	.xb(mc_xb),
+	.xc(mc_xc),
+	.imm(mc_imm),
+	.pn('d0),
+	.res(mc_res),
+	.carry_res(mc_carry_res),
+	.multovf(multovf),
+	.dvByZr(dvByZr),
+	.dvd_done(dvd_done),
+	.dfmul_done(dfmul_done)
+);
 
 Thor2022_inslength uil(insn, ilen);
 
@@ -1459,22 +1364,6 @@ INVnRUN2:
 // Step1: setup operands and capture sign
 MUL1:
   begin
-    if (aqe_dato.dec.mul) mul_sign <= mc_xa[$bits(Value)-1] ^ mc_xb[$bits(Value)-1];
-    else if (aqe_dato.dec.muli) mul_sign <= mc_xa[$bits(Value)-1] ^ mc_imm[$bits(Value)-1];
-    else if (aqe_dato.dec.mulsu) mul_sign <= mc_xa[$bits(Value)-1];
-    else if (aqe_dato.dec.mulsui) mul_sign <= mc_xa[$bits(Value)-1];
-    else mul_sign <= 1'b0;  // MULU, MULUI
-    if (aqe_dato.dec.mul) aa <= fnAbs(mc_xa);
-    else if (aqe_dato.dec.muli) aa <= fnAbs(mc_xa);
-    else if (aqe_dato.dec.mulsu) aa <= fnAbs(mc_xa);
-    else if (aqe_dato.dec.mulsui) aa <= fnAbs(mc_xa);
-    else aa <= mc_xa;
-    if (aqe_dato.dec.mul) bb <= fnAbs(mc_xb);
-    else if (aqe_dato.dec.muli) bb <= fnAbs(mc_imm);
-    else if (aqe_dato.dec.mulsu) bb <= mc_xb;
-    else if (aqe_dato.dec.mulsui) bb <= mc_imm;
-    else if (aqe_dato.dec.mulu|aqe_dato.dec.mulf) bb <= mc_xb;
-    else bb <= mc_imm; // MULUI
     delay_cnt <= (aqe_dato.dec.mulf|aqe_dato.dec.mulfi) ? 8'd3 : 8'd18;	// Multiplier has 18 stages
 	// Now wait for the six stage pipeline to finish
     goto (MUL2);
@@ -1483,8 +1372,6 @@ MUL2:
   call(DELAYN,MUL9);
 MUL9:
   begin
-//    mul_prod <= (xMulf|xMulfi) ? mulf_prod : mul_sign ? -mul_prod1 : mul_prod1;
-    mul_prod256 <= (aqe_dato.dec.mulf|aqe_dato.dec.mulfi) ? mulf_prod : mul_sign ? -mul_prod2561 : mul_prod2561;
     //upd_rf <= `TRUE;
     goto(INVnRUN);
     if (multovf & mexrout[5]) begin
