@@ -39,11 +39,13 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_schedule(reb, sns, stomp, next_fetch, next_decompress, next_decode, next_execute, next_retire);
+module Thor2022_schedule(reb, sns, stomp, next_fetch0, next_fetch1,
+	next_decompress, next_decode, next_execute, next_retire);
 input sReorderEntry [REB_ENTRIES-1:0] reb;
 input [5:0] sns [0:7];
 input [7:0] stomp;
-output [2:0] next_fetch;
+output [2:0] next_fetch0;
+output [2:0] next_fetch1;
 output [2:0] next_decompress;
 output [2:0] next_decode;
 output reg [2:0] next_execute;
@@ -55,16 +57,30 @@ output reg [2:0] next_retire;
 // Chooses the next bucket to queue an instruction in any order.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ffz6 uffoq (
-	.i({
+wire [5:0] vv = {
 		reb[5].v,
 		reb[4].v,
 		reb[3].v,
 		reb[2].v,
 		reb[1].v,
 		reb[0].v
-	}),
-	.o(next_fetch)
+	};
+reg [5:0] vv1;
+
+ffz6 uffoq (
+	.i(vv),
+	.o(next_fetch0)
+);
+
+always_comb
+if (next_fetch0 != 3'd7)
+	vv1 = vv | (6'd1 << next_fetch0);
+else
+	vv1 = 6'b111111;
+
+ffz6 uffoq1 (
+	.i(vv1),
+	.o(next_fetch1)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -349,7 +349,7 @@ reg icache_wr;
 always_comb icache_wr = state==IFETCH3;
 reg ic_invline,ic_invall;
 Address ipo;
-wire [AWID-1:6] ictag [0:511];
+wire [AWID-1:6] ictag [0:3];
 wire [512/4-1:0] icvalid [0:3];
 
 reg [639:0] ici;		// Must be a multiple of 128 bits wide for shifting.
@@ -384,8 +384,10 @@ uictag1
 (
 	.clk(tlbclk),
 	.wr(icache_wr),
-	.ip(ipo),
+	.ipo(ipo),
 	.way(waycnt),
+	.rclk(~tlbclk),
+	.ip(ip),
 	.tag(ictag)
 );
 

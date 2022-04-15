@@ -52,8 +52,8 @@ generate begin : gStMask
 for (g = 0; g < BUSWID/8; g = g + 1)
 	always_comb
 		lomask[g*8+7:g*8] <= sel[g] ? 8'hFF : 8'h00;
-always_comb mask <= lomask << {adr,7'd0};
 end
 endgenerate
+always_comb mask <= lomask << {adr,7'd0};
 
 endmodule

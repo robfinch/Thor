@@ -44,7 +44,7 @@ parameter WAYS=4;
 parameter AWID=32;
 input clk;
 input [AWID-1:0] ip;
-input [AWID-1:6] tag [0:511];
+input [AWID-1:6] tag [0:3];
 input [LINES-1:0] valid [0:WAYS-1];
 output reg ihit;
 output reg [1:0] rway;
@@ -59,7 +59,7 @@ integer k;
 always_comb
 begin
 	for (k = 0; k < WAYS; k = k + 1)
-	  ihit1[k] = tag[{k[1:0],ip[12:6]}]==ip[AWID-1:6] && valid[k][ip[12:6]]==1'b1;
+	  ihit1[k] = tag[k[1:0]]==ip[AWID-1:6] && valid[k][ip[12:6]]==1'b1;
 end
 
 integer n;
@@ -76,7 +76,7 @@ always_comb
 begin
 	vtag = prev_vtag;
 	for (m = 0; m < WAYS; m = m + 1)
-		if (ihit1[m]) vtag = tag[{m[1:0],ip[12:6]}];
+		if (ihit1[m]) vtag = tag[m[1:0]];
 end
 
 

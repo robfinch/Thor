@@ -104,7 +104,7 @@ always_comb
 // Generate a mask for the load data.
 
 genvar g1;
-generate begin : giMask
+generate begin
 for (g1 = 0; g1 < 32; g1 = g1 + 1)
 begin
 	always_comb

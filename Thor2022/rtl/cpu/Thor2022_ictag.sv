@@ -38,16 +38,21 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_ictag(clk, wr, ip, way, tag);
+module Thor2022_ictag(clk, wr, ipo, way, rclk, ip, tag);
 parameter LINES=128;
 parameter WAYS=4;
 parameter AWID=32;
 input clk;
 input wr;
-input [AWID-1:0] ip;
+input [AWID-1:0] ipo;
 input [1:0] way;
-(* ram_style="distributed" *)
-output reg [AWID-1:6] tag [0:WAYS*LINES-1];
+input rclk;
+input [AWID-1:0] ip;
+(* ram_style="block" *)
+output [AWID-1:6] tag [0:3];
+
+reg [AWID-1:6] tags [0:WAYS*LINES-1];
+reg [AWID-1:0] rip;
 
 integer g;
 integer n;
@@ -55,14 +60,21 @@ integer n;
 initial begin
 for (g = 0; g < WAYS; g = g + 1) begin
   for (n = 0; n < LINES; n = n + 1)
-    tag[g * LINES + n] = 32'd1;
+    tags[g * LINES + n] = 32'd1;
 end
 end
 
 always_ff @(posedge clk)
 begin
 	if (wr)
-		tag[way * LINES + ip[12:6]] <= ip[AWID-1:6];
+		tags[way * LINES + ipo[12:6]] <= ipo[AWID-1:6];
 end
+
+always_ff @(posedge rclk)
+	rip <= ip;
+assign tag[0] = tags[{2'b00,rip[12:6]}];
+assign tag[1] = tags[{2'b01,rip[12:6]}];
+assign tag[2] = tags[{2'b10,rip[12:6]}];
+assign tag[3] = tags[{2'b11,rip[12:6]}];
 
 endmodule
