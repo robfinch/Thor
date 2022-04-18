@@ -68,8 +68,8 @@ case(ir.any.opcode)
 JEQZ,JNEZ:
 	Rt = 'd0;
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
-	Rt = 'd0;
-JMP:	Rt = 'd0;
+	Rt = {3'd0,ir.jxx.lk};
+JMP,BRA:	 Rt = {3'd0,ir.jmp.lk};
 DJMP,BSET:
 	Rt = 5'd26;
 STSP,
@@ -80,6 +80,8 @@ STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
 EXI8,EXI24,EXI40,EXI56,EXIM:
 	Rt = 'd0;
 EXI8+1,EXI24+1,EXI40+1,EXI56+1:
+	Rt = 'd0;
+RTS:
 	Rt = 'd0;
 default:	Rt = ir[13:9];
 endcase
@@ -94,6 +96,12 @@ STHS:
 	Rc = ir.sts.Rs;
 BSET:
 	Rc = 5'd26;
+JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
+	Rc = ir.jxx.Rc;
+JMP,DJMP:
+	Rc = ir.jmp.Rc;
+RTS:
+	Rc = {3'd0,ir[10:9]};
 MTLK:			Rc = ir[13:9];
 default:	Rc = ir.r3.Rc;
 endcase
@@ -108,8 +116,8 @@ default:
 	deco.Rbvec = ir.r3.Tb==1'b1;
 endcase
 case(ir.any.opcode)
-R2,R3:	deco.Rcvec = ir.r3.Tc==2'b01;
-BTFLD:	deco.Rcvec = ir.r3.Tc==2'b01;
+R2,R3:	deco.Rcvec = ir.r3.Tc==1'b1;
+BTFLD:	deco.Rcvec = ir.r3.Tc==1'b1;
 default:	deco.Rcvec = 1'b0;
 endcase
 
@@ -139,10 +147,6 @@ CSR:
 	default:	deco.carfwr = `FALSE;
 	endcase
 // Cannot update ca[0] with a branch
-JMP,DJMP,BRA:
-	deco.carfwr = ir.jxx.lk != 2'd0;
-JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
-	deco.carfwr = ir.jxx.lk != 2'd0;
 default: 	deco.carfwr = `FALSE;
 endcase
 
@@ -157,10 +161,6 @@ CSR:
 			deco.Cat = 4'd0;
 	default:	deco.Cat = 4'd0;
 	endcase
-JMP,DJMP,BRA:
-	deco.Cat = {2'b0,ir.jxx.lk};
-JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
-	deco.Cat = {2'b0,ir.jxx.lk};
 default: 	deco.Cat = 4'd0;
 endcase
 
@@ -208,6 +208,8 @@ SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL:		rfwr = `TRUE;
 LDSP,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
 	rfwr = `TRUE;
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS:
+	rfwr = `TRUE;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	rfwr = `TRUE;
 LDHP,LDHPX,LDHQ,LDHQX:	rfwr = `TRUE;
@@ -217,8 +219,12 @@ SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
 	rfwr = `TRUE;
 SLLI,SRLI,SRAI:
 	rfwr = `TRUE;
-DJMP,BSET:
+BSET:
 	rfwr = `TRUE;
+JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
+	rfwr = ir.jxx.lk!=2'b00;
+JMP,DJMP,BRA:
+	rfwr = ir.jmp.lk!=2'b00;
 default:	rfwr = `FALSE;
 endcase
 
@@ -242,6 +248,8 @@ SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULUIL:
 	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
 ANDIL:	imm = ir.any.v ? {{103{1'b1}},ir.rilv.imm} : {{99{1'b1}},ir.ril.imm};
 ORIL,XORIL:	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS:
+	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHP,LDHQ:
 	imm = ir.any.v ? {{104{ir.ld.disp[23]}},ir.ld.disp} : {{99{ir.ld.disp[28]}},ir.ld.disp};
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX,LDHPX,LDHQX:
@@ -251,7 +259,8 @@ STB,STW,STT,STO,STH,STHP,STHC,STPTR:
 STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
 	imm = 'd0;
 LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
-STHS:	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
+STBS,STWS,STTS,STOS,STHS:
+	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
 LDSP,STSP:	imm = {{122{1'b0}},ir[15:14],4'h0};
 SLLI,SRLI,SRAI:	imm = {122'd0,ir[24:19]};
 default:
@@ -362,7 +371,8 @@ endcase
 case(ir.any.opcode)
 LDSP,
 CACHE,CACHEX,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDHS,LDHR,
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
 LDOU,LDOUX,LDH,LDHX,
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX:
 	deco.ld = `TRUE;
@@ -371,6 +381,7 @@ endcase
 
 case(ir.any.opcode)
 LDBU,LDWU,LDTU,LDOU,
+LDBUS,LDWUS,LDTUS,LDOUS,
 LDBUX,LDWUX,LDTUX,LDOUX:
 	deco.ldz = `TRUE;
 default:	deco.ldz = `FALSE;
@@ -378,7 +389,8 @@ endcase
 
 case(ir.any.opcode)
 CACHE,LDSP,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS:
 	deco.loadr = `TRUE;
 default:	deco.loadr = `FALSE;
 endcase
@@ -393,6 +405,7 @@ endcase
 
 case(ir.any.opcode)
 STSP,
+STBS,STWS,STTS,STOS,
 STB,STW,STT,STO,STHS,STHC,STH,STHP,STPTR,
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
 	deco.st = `TRUE;
@@ -401,6 +414,7 @@ endcase
 
 case(ir.any.opcode)
 STSP,
+STBS,STWS,STTS,STOS,
 STB,STW,STT,STO,STHC,STHS,STH,STHP,STPTR:
 	deco.storer = `TRUE;
 default:	deco.storer = `FALSE;
@@ -412,18 +426,20 @@ STBX,STWX,STTX,STHCX,STOX,STHX,STHPX,STPTRX:
 default:	deco.storen = `FALSE;
 endcase
 
-deco.ldoo = ir.any.opcode==LDOO || ir.any.opcode==LDOOX;
-deco.stoo = ir.any.opcode==STOO || ir.any.opcode==STOOX;
+//deco.ldoo = ir.any.opcode==LDOO || ir.any.opcode==LDOOX;
+//deco.stoo = ir.any.opcode==STOO || ir.any.opcode==STOOX;
+deco.ldoo = 1'b0;
+deco.stoo = 1'b0;
 
 case(ir.any.opcode)
-LDB,LDBU,STB:	deco.memsz = byt;
-LDW,LDWU,STW:	deco.memsz = wyde;
-LDT,LDTU,STT:	deco.memsz = tetra;
+LDB,LDBU,LDBS,LDBUS,STB,STBS:	deco.memsz = byt;
+LDW,LDWU,LDWS,LDWUS,STW,STWS:	deco.memsz = wyde;
+LDT,LDTU,LDTS,LDTUS,STT,STTS:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
-LDHS,LDOO,LDOOX,LDH,LDHX,LDSP:	deco.memsz = hexi;
-STHS,STOOX,STH,STHC,STHX,STHCX,STSP:	deco.memsz = hexi;
+LDHS,LDH,LDHX,LDSP:	deco.memsz = hexi;
+STHS,STH,STHC,STHX,STHCX,STSP:	deco.memsz = hexi;
 LDHP,LDHPX,STHP,STHPX: deco.memsz = hexipair;
 STPTR,STPTRX:	deco.memsz = ptr;
 default:	deco.memsz = octa;
@@ -464,17 +480,17 @@ OSR2:
 MULI,MULIL:		deco.multi_cycle = `TRUE;
 DIVI,DIVIL:		deco.multi_cycle = `TRUE;
 CACHE,CACHEX:	deco.multi_cycle = `TRUE;
-LDB,LDBU,STB:	deco.multi_cycle = `TRUE;
-LDW,LDWU,STW:	deco.multi_cycle = `TRUE;
-LDT,LDTU,STT: deco.multi_cycle = `TRUE;
-LDO,LDHS,LDHR,LDOU:		deco.multi_cycle = `TRUE;
+LDB,LDBU,LDBS,LDBUS,STB,STBS:	deco.multi_cycle = `TRUE;
+LDW,LDWU,LDWS,LDWUS,STW,STWS:	deco.multi_cycle = `TRUE;
+LDT,LDTU,LDTS,LDTUS,STT,STTS: deco.multi_cycle = `TRUE;
+LDO,LDOS,LDHS,LDHR,LDOU,LDOUS:		deco.multi_cycle = `TRUE;
 LDH,LDSP:					deco.multi_cycle = `TRUE;
 LDBX,LDBUX,STBX:	deco.multi_cycle = `TRUE;
 LDWX,LDWUX,STWX:	deco.multi_cycle = `TRUE;
 LDTX,LDTUX,STT:		deco.multi_cycle = `TRUE;
 LDOX,LDHRX,LDOUX:				deco.multi_cycle = `TRUE;
 LDHX:					deco.multi_cycle = `TRUE;
-STO,STHS,STHC,STHX,STH,STHP,STPTR,STSP:		deco.multi_cycle = `TRUE;
+STO,STOS,STHS,STHC,STHX,STH,STHP,STPTR,STSP:		deco.multi_cycle = `TRUE;
 STOX,STHPX,STHCX,STPTRX:		deco.multi_cycle = `TRUE;
 STMOV,STFND,STCMP,BSET:			deco.multi_cycle = `TRUE;
 default:	deco.multi_cycle = `FALSE;
@@ -526,19 +542,19 @@ deco.divalli = deco.divi|deco.divui|deco.divsui;
 deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ;
 deco.bra = ir.any.opcode==BRA;
 if (deco.bra)
-	deco.jmptgt = {{109{ir[28]}},ir[28:11],1'b0};
+	deco.jmptgt = {{106{ir[31]}},ir[31:11],1'b0};
 else if (deco.jxx)
-	deco.jmptgt = {{107{ir.jxx.Tgthi[20]}},ir.jxx.Tgthi,1'b0};
+	deco.jmptgt = {{109{ir.jxx.Tgthi[18]}},ir.jxx.Tgthi,1'b0};
 else if (deco.jxz)
-	deco.jmptgt = {{112{ir[28]}},ir[28:19],ir[13:9],1'b0};
+	deco.jmptgt = {{109{ir[31]}},ir[31:19],ir[13:9],1'b0};
 else
-	deco.jmptgt = {{94{ir.jmp.Tgthi[15]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
+	deco.jmptgt = {{94{ir.jmp.Tgthi[18]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	
 deco.is_cbranch = deco.jxx | deco.jxz;
 deco.csr = ir.any.opcode==CSR;
 deco.rti = ir.any.opcode==OSR2 && ir.r3.func==RTI;
 deco.sei = ir.any.opcode==R1 && ir.r3.func==SEI;
-deco.rex = ir.any.opcode==OSR2 && ir.r3.func==REX;
+deco.rex = ir.any.opcode==R1 && ir.r3.func==REX;
 deco.sync = ir.any.opcode==CSR || ir.any.opcode==SYNC;
 deco.tlb = ir.any.opcode==OSR2 && ir.r3.func==TLBRW;
 deco.rgn = ir.any.opcode==OSR2 && ir.r3.func==RGNRW;
@@ -603,14 +619,10 @@ deco.store = deco.storer|deco.storen|deco.stset|deco.stmov|deco.stfnd|deco.stcmp
 
 if (deco.mflk)
 	deco.Ca = {2'd0,ir[15:14]};
-else if (deco.jxx)
-	deco.Ca = {1'd0,ir.jxx.Ca};
 else if (deco.jxz|deco.bra)
 	deco.Ca = {1'd0,ir[31:29]};
 else if (deco.rts)
 	deco.Ca = {2'd0,ir.rts.lk};
-else if (deco.jmp)
-	deco.Ca = {1'd0,ir.jmp.Ca};
 else
 	deco.Ca = 4'h0;
 

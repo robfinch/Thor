@@ -359,6 +359,7 @@ reg [2:0] vcn;
 reg [pL1ICacheLineSize-1:0] ivcache [0:4];
 reg [AWID-1:6] ivtag [0:4];
 reg [4:0] ivvalid;
+wire ic_valid;
 
 
 // 640 wide x 512 deep
@@ -369,7 +370,7 @@ icache_blkmem uicm (
   .addra({waycnt,ipo[12:6]}),  // input wire [8 : 0] addra
   .dina(ici[pL1ICacheLineSize-1:0]),    // input wire [511 : 0] dina
   .clkb(~clk),    // input wire clkb
-  .enb(!ifStall),      // input wire enb
+  .enb(1'b1),//!ifStall),      // input wire enb
   .addrb({ic_rway,ip[12:6]}),  // input wire [8 : 0] addrb
   .doutb(ic_line)  // output wire [511 : 0] doutb
 );
@@ -382,7 +383,7 @@ Thor2022_ictag
 )
 uictag1
 (
-	.clk(tlbclk),
+	.clk(clk),
 	.wr(icache_wr),
 	.ipo(ipo),
 	.way(waycnt),
@@ -405,7 +406,8 @@ uichit1
 	.valid(icvalid),
 	.ihit(ihit),
 	.rway(ic_rway),
-	.vtag(ic_tag)
+	.vtag(ic_tag),
+	.icv(ic_valid)
 );
 
 Thor2022_icvalid 
@@ -870,7 +872,6 @@ Thor2022_ptg_search uptgs
 
 `endif
 
-`ifdef SUPPORT_HASHPT
 // Hold onto the previous idadr if none is selected, to allow the update of
 // the PTG RAM to complete without changes. A PTG write cycle will bounce
 // back to the memory IDLE state almost immediately, this leaves the address
@@ -885,6 +886,7 @@ always_comb
 always_ff @(posedge clk)
 	prev_idadr <= idadr;
 
+`ifdef SUPPORT_HASHPT
 Thor2022_ipt_hash uhash
 (
 	.clk(clk),
@@ -933,6 +935,19 @@ end
 assign tlbacr = ptgacr;
 assign tlbrdy = 1'b1;
 assign tlb_cyc = 1'b0;
+`else
+always_comb
+begin
+	next_adr_o <= adr_o;
+	/*
+	if (ptg_en) begin
+		if (pte_found)
+			next_adr_o <= {tmptlbe2.ppn,idadr[15:12]+tmptlbe2.mb,idadr[11:0]};
+	end
+	else
+	*/
+		next_adr_o <= idadr;
+end
 `endif
 
 // 0   159  319 479  639  799   959  1119  1279
@@ -1204,8 +1219,8 @@ else begin
 		  ret();
 		end
 `endif
-
-	MEMORY5:		// Allow time for lookup
+	MEMORY5: goto (MEMORY5a);
+	MEMORY5a:		// Allow time for lookup
 		goto (MEMORY_ACTIVATE_LO);
 
 	MEMORY_ACTIVATE_LO:
@@ -1328,12 +1343,16 @@ else begin
 			  if (!ack_i) begin
 			  	// Cache miss, select an entry in the victim cache to
 			  	// update.
-					ivcnt <= ivcnt + 2'd1;
-					if (ivcnt>=3'd4)
-						ivcnt <= 3'd0;
-					ivcache[ivcnt] <= ic_line;
-					ivtag[ivcnt] <= ic_tag;
-					ivvalid[ivcnt] <= TRUE;
+			  	if (ic_valid) begin
+						ivcnt <= ivcnt + 2'd1;
+						if (ivcnt>=3'd4)
+							ivcnt <= 3'd0;
+						ivcache[ivcnt] <= ic_line;
+						ivtag[ivcnt] <= ic_tag;
+						ivvalid[ivcnt] <= TRUE;
+						if (ic_line=='d0)
+							$stop;
+					end
 			  	vpa_o <= HIGH;
 			  	bte_o <= 2'b00;
 			  	cti_o <= 3'b001;	// constant address burst cycle
@@ -1378,7 +1397,8 @@ else begin
 		begin
 		  ic_wway <= waycnt;
 		  xlaten <= FALSE;
-	  	ret();
+		  goto (IFETCH3a);
+	  	//ret();
 		end
 	IFETCH3a:
 		begin
@@ -1390,9 +1410,13 @@ else begin
 	IFETCH5:
 		begin
 			ici <= {96'd0,ivcache[vcn]};
-			ivcache[vcn] <= ic_line;
-			ivtag[vcn] <= ic_tag;
-			ivvalid[vcn] <= `VAL;
+			if (ic_valid) begin
+				ivcache[vcn] <= ic_line;
+				ivtag[vcn] <= ic_tag;
+				ivvalid[vcn] <= `VAL;
+				if (ic_line=='d0)
+					$stop;
+			end
 			goto (IFETCH3);
 		end
 

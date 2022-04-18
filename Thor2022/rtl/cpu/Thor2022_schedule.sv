@@ -40,7 +40,7 @@ import const_pkg::*;
 import Thor2022_pkg::*;
 
 module Thor2022_schedule(reb, sns, stomp, next_fetch0, next_fetch1,
-	next_decompress, next_decode, next_execute, next_retire);
+	next_decompress, next_decode, next_execute, next_retire0, next_retire1);
 input sReorderEntry [REB_ENTRIES-1:0] reb;
 input [5:0] sns [0:7];
 input [7:0] stomp;
@@ -49,7 +49,8 @@ output [2:0] next_fetch1;
 output [2:0] next_decompress;
 output [2:0] next_decode;
 output reg [2:0] next_execute;
-output reg [2:0] next_retire;
+output reg [2:0] next_retire0;
+output reg [2:0] next_retire1;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Instruction fetch scheduler
@@ -180,11 +181,16 @@ end
 integer n8;
 always_comb
 begin
-	next_retire = 3'd7;
+	next_retire0 = 3'd7;
+	next_retire1 = 3'd7;
 	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-		if ((sns[n8] < sns[next_retire] || next_retire > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
+		if ((sns[n8] < sns[next_retire0] || next_retire0 > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
 			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM)
-			next_retire = n8;
+			next_retire0 = n8;
+	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
+		if ((sns[n8] < sns[next_retire1] || next_retire1 > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
+			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM && n8 != next_retire0)
+			next_retire1 = n8;
 end
 
 endmodule

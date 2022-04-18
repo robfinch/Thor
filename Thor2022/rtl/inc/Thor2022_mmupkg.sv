@@ -292,6 +292,7 @@ parameter IPT_RW_PTG5 = 7'd72;
 parameter IPT_RW_PTG6 = 7'd73;
 parameter IPT_WRITE_PTE = 7'd75;
 parameter IPT_IDLE = 7'd76;
+parameter MEMORY5a = 7'd77;
 parameter PT_FETCH1 = 7'd81;
 parameter PT_FETCH2 = 7'd82;
 parameter PT_FETCH3 = 7'd83;

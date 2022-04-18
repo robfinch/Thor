@@ -1,11 +1,12 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2022  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022_ichit.sv
+//	Thor2022_gp_regfile.sv
+//
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -35,74 +36,79 @@
 //                                                                          
 // ============================================================================
 
+import const_pkg::*;
 import Thor2022_pkg::*;
-import Thor2022_mmupkg::*;
 
-module Thor2022_ichit(clk, ip, tag, valid, ihit, rway, vtag, icv);
-parameter LINES=128;
-parameter WAYS=4;
-parameter AWID=32;
+module Thor2022_gp_regfile(clk, wr0, wr1, wa0, wa1, i0, i1,
+	ip0, ip1,
+	ra0, ra1, ra2, ra3, ra4, ra5, o0, o1, o2, o3, o4, o5);
 input clk;
-input [AWID-1:0] ip;
-input [AWID-1:6] tag [0:3];
-input [LINES-1:0] valid [0:WAYS-1];
-output reg ihit;
-output reg [1:0] rway;
-output reg [AWID-7:0] vtag;	// victim tag
-output reg icv;
-
-reg [AWID-7:0] prev_vtag = 'd0;
-reg [1:0] prev_rway = 'd0;
-reg [WAYS-1:0] ihit1;
-reg ihit2;
-reg icv2, icv1;
-
-integer k;
-always_comb
-begin
-	for (k = 0; k < WAYS; k = k + 1)
-	  ihit1[k] = tag[k[1:0]]==ip[AWID-1:6] && valid[k][ip[12:6]]==1'b1;
-end
-
-integer k1;
-always_comb
-begin
-	icv2 = 1'b0;
-	for (k1 = 0; k1 < WAYS; k1 = k1 + 1)
-	  icv2 = icv2 | valid[k1][ip[12:6]]==1'b1;
-end
+input wr0;
+input wr1;
+input [4:0] wa0;
+input [4:0] wa1;
+input Value i0;
+input Value i1;
+input CodeAddress ip0;
+input CodeAddress ip1;
+input [4:0] ra0;
+input [4:0] ra1;
+input [4:0] ra2;
+input [4:0] ra3;
+input [4:0] ra4;
+input [4:0] ra5;
+output Value o0;
+output Value o1;
+output Value o2;
+output Value o3;
+output Value o4;
+output Value o5;
 
 integer n;
-always_comb
-begin
-	rway = prev_rway;
-	for (n = 0; n < WAYS; n = n + 1)	
-		if (ihit1[n]) rway = n;
+reg [31:0] way;
+Value regfileA [0:31];
+Value regfileB [0:31];
+
+initial begin
+	for (n = 0; n < 32; n = n + 1) begin
+		regfileA[n] = 'd0;
+		regfileB[n] = 'd0;
+	end
 end
 
-// For victim cache update
-integer m;
-always_comb
-begin
-	vtag = prev_vtag;
-	for (m = 0; m < WAYS; m = m + 1)
-		if (ihit1[m]) vtag = tag[m[1:0]];
+always_ff @(posedge clk)
+if (wr0 & wr1) begin
+	if (wa0==wa1) begin
+		way[wa0] <= 1'b1;
+		regfileB[wa1] <= i1;
+	end
+	else begin
+		way[wa0] <= 1'b0;
+		way[wa1] <= 1'b1;
+		regfileA[wa0] <= i0;
+		regfileB[wa1] <= i1;
+	end
+end
+else if (wr0) begin
+	way[wa0] <= 1'b0;
+	regfileA[wa0] <= i0;
+end
+else if (wr1) begin
+	way[wa1] <= 1'b1;
+	regfileB[wa1] <= i1;
 end
 
-
-always_ff @(posedge clk)
-	prev_rway <= rway;
-
-always_ff @(posedge clk)
-	ihit2 = #1 |ihit1;
-always_ff @(posedge clk)
-	ihit = #1 ihit2 & |ihit1;
-
-always_ff @(posedge clk)
-	prev_vtag <= vtag;
-always_ff @(posedge clk)
-	icv1 <= icv2;
-always_ff @(posedge clk)
-	icv <= icv1;	
+always_comb
+	o0 = ra0=='d0 ? 'd0 : ra0==wa1 ? i1 : ra0==wa0 ? i0 : way[ra0] ? regfileB[ra0] : regfileA[ra0];
+always_comb
+	o1 = ra1=='d0 ? 'd0 : ra1==wa1 ? i1 : ra1==wa0 ? i0 : way[ra1] ? regfileB[ra1] : regfileA[ra1];
+always_comb
+	o2 = ra2=='d0 ? 'd0 : ra2==5'd31 ? ip0 : ra2==wa1 ? i1 : ra2==wa0 ? i0 : way[ra2] ? regfileB[ra2] : regfileA[ra2];
+always_comb
+	o3 = ra3=='d0 ? 'd0 : ra3==wa1 ? i1 : ra3==wa0 ? i0 : way[ra3] ? regfileB[ra3] : regfileA[ra3];
+always_comb
+	o4 = ra4=='d0 ? 'd0 : ra4==wa1 ? i1 : ra4==wa0 ? i0 : way[ra4] ? regfileB[ra4] : regfileA[ra4];
+always_comb
+	o5 = ra5=='d0 ? 'd0 : ra5==5'd31 ? ip1 : ra5==wa1 ? i1 : ra5==wa0 ? i0 : way[ra5] ? regfileB[ra5] : regfileA[ra5];
 
 endmodule

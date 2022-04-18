@@ -182,6 +182,14 @@ parameter SLLI		= 8'h6C;
 parameter SRLI		= 8'h6D;
 parameter SRAI		= 8'h6E;
 //parameter EXI41		= 8'b011011??;
+parameter LDBS		= 8'h78;
+parameter LDBUS		= 8'h79;
+parameter LDWS		= 8'h7A;
+parameter LDWUS		= 8'h7B;
+parameter LDTS		= 8'h7C;
+parameter LDTUS		= 8'h7D;
+parameter LDOS		= 8'h7E;
+parameter LDOUS		= 8'h7F;
 
 parameter LDB			= 8'h80;
 parameter LDBU		= 8'h81;
@@ -262,8 +270,12 @@ parameter STHCX		= 8'hC6;
 parameter STHPX		= 8'hC7;
 parameter LDSP		= 8'hC8;
 parameter STSP		= 8'hC9;
-parameter STOOX		= 8'hCC;
-parameter LDOOX		= 8'hCD;
+parameter STBS		= 8'hCA;
+parameter STWS		= 8'hCB;
+parameter STTS		= 8'hCC;
+parameter STOS		= 8'hCD;
+//parameter STOOX		= 8'hCC;
+//parameter LDOOX		= 8'hCD;
 parameter CACHEX	= 8'hCF;
 
 parameter LDxX		= 8'hB0;
@@ -733,8 +745,8 @@ typedef struct packed
 typedef struct packed
 {
 	logic [15:0] pad;
-	logic [20:0] Tgthi;
-	logic [2:0] Ca;
+	logic [18:0] Tgthi;
+	logic [4:0] Rc;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
 	logic [2:0] cm;
@@ -746,9 +758,9 @@ typedef struct packed
 typedef struct packed
 {
 	logic [15:0] pad;
-	logic [15:0] Tgthi;
-	logic [2:0] Ca;
-	logic [17:0] Tgtlo;
+	logic [18:0] Tgthi;
+	logic [4:0] Rc;
+	logic [12:0] Tgtlo;
 	logic [1:0] lk;
 	logic v;
 	logic [7:0] opcode;
@@ -1135,6 +1147,7 @@ typedef struct packed
 	DecodeOut dec;
 	Value a;
 	Value b;
+	Value c;
 	Value i;
 } AQE;
 
@@ -1301,12 +1314,14 @@ P1:
 P2:	Source1Valid = isn.r2.Ra==5'd0;
 P3:	Source1Valid = isn.r3.Ra==5'd0;
 LDSP,
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
 	Source1Valid = isn.ld.Ra==5'd0;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	Source1Valid = isn.ld.Ra==6'd0;
 LDHP,LDHPX,LDHQ,LDHQX:
 	Source1Valid = isn.ld.Ra==5'd0;
+STBS,STWS,STTS,STOS,
 STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
 	Source1Valid = isn.st.Ra==5'd0;
 STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
@@ -1409,11 +1424,13 @@ P1:
 P2:	Source2Valid = isn.r2.Rb==6'd0;
 P3:	Source2Valid = isn.r3.Rb==6'd0;
 LDSP,
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
 LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
 	Source2Valid = `TRUE;
 LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
 	Source2Valid = isn.ldx.Rb==6'd0;
 LDHP,LDHPX,LDHQ,LDHQX:	Source2Valid = isn.ldx.Rb==6'd0;
+STBS,STWS,STTS,STOS,
 STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
 	Source2Valid = `TRUE;
 STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
@@ -1454,12 +1471,14 @@ F3:	Source3Valid = isn.r3.Rc==5'd0;
 DF3:	Source3Valid = isn.r3.Rc==5'd0;
 P3:	Source3Valid = isn.r3.Rc==5'd0;
 BTFLD:	Source3Valid = isn.r3.Rc==5'd0;
+STBS,STWS,STTS,STOS,
 STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
 	Source3Valid = isn.st.Rs=='d0;
 STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
 	Source3Valid = isn.stx.Rs=='d0;
 LEAVE: Source3Valid = `TRUE;
 MTLK:	 Source3Valid = isn[13:9]=='d0;
+RTS:	Source3Valid = isn[10:9]==2'b00;
 default:
 	Source3Valid = `TRUE;
 endcase
@@ -1472,16 +1491,6 @@ STHP,STHPX:	Source31Valid = isn.st.Rs=='d0;
 default:
 	Source31Valid = `TRUE;
 endcase
-endfunction
-
-function Source32Valid;
-input Instruction isn;
-Source32Valid = `TRUE;
-endfunction
-
-function Source33Valid;
-input Instruction isn;
-Source33Valid = `TRUE;
 endfunction
 
 endpackage

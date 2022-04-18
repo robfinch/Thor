@@ -216,6 +216,7 @@ SLEUIL:				res2 = xa <= imm;
 SGTUIL:				res2 = xa > imm;
 SGEUIL:				res2 = xa >= imm;
 DJMP:					res2 = xa - 2'd1;
+JMP,BRA:			res2 = ip + ilen;
 //STSET:				res2 = xc - 2'd1;
 //LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDH,LDHR,LDHS,
 //LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDHX:
