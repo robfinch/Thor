@@ -16,6 +16,7 @@ Variable length instruction set, 16, 32, 48 or 64-bit instructions.
 Five stage pipeline, Fetch, Decompress, Decode, Execute, and Writeback.
 6 entry (or more) reorder entry buffer (REB)
 32 general purpose registers, unified integer and float register file
+32 vector registers, parameterized number of elements
 Out-of-order execution of instructions
 Branch predictors including branch target buffer and return address stack predictors.
 128-bit decimal floating-point
@@ -63,6 +64,25 @@ Load and store operations are queued in a memory queue. Once the operation is qu
 Stores are allowed to proceed only if it is known that there are no prior instructions that can cause a change of program flow.
 Loads do not yet bypass stores. There is a component in the works that allows this but it does not work 100% yet.
 There are bits in control register zero assigned for future use to indicate more relaxed memory models.
+
+### Vector Instructions
+Thor2022 has a flexible mechanism for specifying vector operations. Every
+instruction has a vector bit indicator which allows virtually any instruction to
+be interpreted as a vector instruction. For vector instructions, usually Rt and Ra are vector values and Rb and Rc are either vector or scalar values. The assembler identifies vector instructions from the use of vector registers in the instruction.
+Most vector instructions specify a mask register to use to indicate which vector elements to update. Each mask register has a bits corresponding to the vector elements.
+
+#### Vector Addition
+`add v3,v2,v1,vm1`
+Adds two vector registers v2 and v1 under the guidance of mask register vm1 and stores the result in vector register v3.
+
+#### Vector and Scalar Addition
+`add v3,v2,a1,vm2`
+Adds the scalar register a1 to v2 and stores the result to v3 under the guidance of mask register vm2.
+
+#### Vector Element Insert
+A vector element insert operation may be performed using the MOV instruction.
+`mov v2,t1,vm0`
+Will move r1 to the element position(s) identified by the vector mask register vm0.
 
 ### Instruction Prefixes
 The ISA uses instruction prefixes to extend constant ranges. In the author's opinion this is one of the better ways to handle large constants because the extension can be applied to a wide range of instructions without needing to add a whole bunch of instructions for larger constants.

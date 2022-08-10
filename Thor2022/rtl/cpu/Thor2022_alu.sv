@@ -38,17 +38,19 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_alu(clk, ir, ip, ilen, xa, xb, xc, imm, pn, ca, lr, asid, ptbr,
-	csr_res, ilvl, res, carry_res, cares);
+module Thor2022_alu(clk, ir, ip, ilen, m, z, xa, xb, xc, t, imm, ca, lr, asid, ptbr,
+	csr_res, ilvl, res, res_t2, cares);
 input clk;
 input Instruction ir;
 input CodeAddress ip;
 input [3:0] ilen;
+input m;
+input z;
 input Value xa;
 input Value xb;
 input Value xc;
+input Value t;
 input Value imm;
-input Value pn;
 input CodeAddress ca;
 input CodeAddress lr;
 input [9:0] asid;
@@ -56,12 +58,14 @@ input [63:0] ptbr;
 input Value csr_res;
 input [2:0] ilvl;
 output Value res;
-output Value carry_res;
+output Value res_t2;
 output CodeAddress cares;
 
 Value res2;
+Value res_t2;
 
-wire [127:0] cmpo, cmpio;
+VecValue cmpo, cmpio;
+
 Thor2022_compare ucmp1
 (
 	.a(xa),
@@ -94,12 +98,19 @@ cntlz128 uclz(ir.r1.func[0] ? ~xa : xa, cntlz_out);
 //wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
 //wire [255:0] sraho = {{128{xa[127]}},xa[127:0],128'd0} >> {xb[4:0],4'h0};
 reg [$bits(Value)-1:0] zeros = 'd0;
-wire [$bits(Value)*2-1:0] sllio = {'d0,xa[$bits(Value)-1:0]|pn[$bits(Value)-1:0]} << imm[6:0];
-wire [$bits(Value)*2-1:0] srlio = {pn[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> imm[6:0];
-wire [$bits(Value)*2-1:0] sraio = {{$bits(Value){xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> imm[6:0];
-wire [$bits(Value)*2-1:0] sllro = {'d0,xa[$bits(Value)-1:0]|pn[$bits(Value)-1:0]} << xb[6:0];
-wire [$bits(Value)*2-1:0] srlro = {pn[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> xb[6:0];
-wire [$bits(Value)*2-1:0] sraro = {{$bits(Value){xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> xb[6:0];
+wire [$bits(Value)*2-1:0] sllio;
+wire [$bits(Value)*2-1:0] srlio;
+wire [$bits(Value)*2-1:0] sraio;
+wire [$bits(Value)*2-1:0] sllro;
+wire [$bits(Value)*2-1:0] srlro;
+wire [$bits(Value)*2-1:0] sraro;
+
+assign sllio = {'d0,xa[$bits(Value)-1:0]|xc[$bits(Value)-1:0]} << imm[5:0];
+assign srlio = {xc[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> imm[5:0];
+assign sraio = {{64{xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> imm[5:0];
+assign sllro = {'d0,xa[$bits(Value)-1:0]|xc[$bits(Value)-1:0]} << xb[5:0];
+assign srlro = {xc[$bits(Value)-1:0]|xa[$bits(Value)-1:0],zeros} >> xb[5:0];
+assign sraro = {{64{xa[$bits(Value)-1]}},xa[$bits(Value)-1:0],zeros} >> xb[5:0];
 
 Thor2022_bitfield ubf
 (
@@ -113,12 +124,9 @@ Thor2022_bitfield ubf
 Thor2022_crypto ucrypto
 (
 	.ir(ir),
-	.m(xmaskbit),
-	.z(xzbit),
-	.a(xa[63:0]),
-	.b(xb[63:0]),
-	.c(xc[63:0]),
-	.t(),
+	.a(xa),
+	.b(xb),
+	.c(xc),
 	.o(crypto_res)
 );
 
@@ -132,17 +140,17 @@ always_comb
 case(ir.any.opcode)
 R1:
 	case(ir.r1.func)
-	CNTLZ:	res2 = {121'd0,cntlz_out};
-	CNTLO:	res2 = {121'd0,cntlz_out};
+	CNTLZ:	res2 = {57'd0,cntlz_out};
+	CNTLO:	res2 = {57'd0,cntlz_out};
 	PTGHASH:	res2 = hash;
-	NOT:		res2 = |xa ? 'd0 : 128'd1;
+	NOT:		res2 = |xa ? 'd0 : 64'd1;
 	SEI:		res2 = ilvl;
 	default:	res2 = 'd0;
 	endcase
 R2:
 	case(ir.r3.func)
-	ADD:	res2 = xa + xb + (xc|pn);
-	SUB:	res2 = xa - xb - pn;
+	ADD:	res2 = xa + xb + xc;
+	SUB:	res2 = xa - xb - xc;
 	CMP:	res2 = cmpo;
 	AND:	res2 = xa & xb & xc;
 	OR:		res2 = xa | xb | xc;
@@ -160,6 +168,7 @@ R2:
 	SEQ:	res2 = (xa == xb) ? xc : 'd0;
 	SNE:	res2 = (xa != xb) ? xc : 'd0;
 //	PTENDX:	res2 = pte_found ? pte_en : -128'd1;
+	VEX:	res2 = xb;
 	default:
 		begin
 			res2 = 'd0;
@@ -177,11 +186,11 @@ OSR2:
 CSR:		res2 = csr_res;
 MFLK:		begin res2 = ca.offs; $display("%d MFLK: %h", $time, ca.offs); end
 BTFLD:	res2 = bf_out;
-ADD2R:				res2 = xa + xb + pn;
-SUB2R:				res2 = xa - xb - pn;
+ADD2R:				res2 = xa + xb;
+SUB2R:				res2 = xa - xb;
 AND2R:				res2 = xa & xb;
-OR2R:					res2 = xa | xb | pn;
-XOR2R:				res2 = xa ^ xb ^ pn;
+OR2R:					res2 = xa | xb;
+XOR2R:				res2 = xa ^ xb;
 SEQ2R:				res2 = xa == xb;
 SNE2R:				res2 = xa != xb;
 SLT2R:				res2 = $signed(xa) < $signed(xb);
@@ -189,11 +198,11 @@ SLTU2R:				res2 = xa < xb;
 SGEU2R:				res2 = xa >= xb;
 SGE2R:				res2 = $signed(xa) >= $signed(xb);
 CMP2R:				res2 = cmpo;
-ADDI,ADDIL:		res2 = xa + imm + pn;
-SUBFI,SUBFIL:	res2 = imm - xa - pn;
+ADDI,ADDIL:		res2 = xa + imm;
+SUBFI,SUBFIL:	res2 = imm - xa;
 ANDI,ANDIL:		res2 = xa & imm;
-ORI,ORIL:			res2 = xa | imm | pn;
-XORI,XORIL:		res2 = xa ^ imm ^ pn;
+ORI,ORIL:			res2 = xa | imm;
+XORI,XORIL:		res2 = xa ^ imm;
 SLLR2:				res2 = sllro[$bits(Value)-1:0];
 SRLR2:				res2 = srlro[$bits(Value)*2-1:$bits(Value)];
 SRAR2:				res2 = sraro[$bits(Value)*2-1:$bits(Value)];
@@ -247,7 +256,7 @@ default:			res2 = 64'd0;
 endcase
 
 always_comb
-	res = res2|crypto_res;
+	res = m ? res2|crypto_res : z ? 64'd0 : t;
 
 always_comb
 case(ir.any.opcode)
@@ -256,34 +265,38 @@ JMP,DJMP,BRA:	cares <= ip + ilen;
 default:	cares <= lr;
 endcase
 
+Value res_t3;
 always_comb
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
-	ADD:			carry_res = res2[$bits(Value)];
-	SUB:			carry_res = res2[$bits(Value)];
-	SLL:			carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
-	SRL:			carry_res = srlio[$bits(Value)-1:0];
-	SRA:			carry_res = sraio[$bits(Value)-1:0];
+	ADD:			res_t3 = res2[$bits(Value)];
+	SUB:			res_t3 = res2[$bits(Value)];
+	SLL:			res_t3 = sllio[$bits(Value)*2-1:$bits(Value)];
+	SRL:			res_t3 = srlio[$bits(Value)-1:0];
+	SRA:			res_t3 = sraio[$bits(Value)-1:0];
 	default:	
 		begin
-			carry_res = 'd0;
+			res_t3 = 'd0;
 		end
 	endcase
 // (a&b)|(a&~s)|(b&~s)
-ADD2R:	carry_res = res2[$bits(Value)];
-SUB2R:	carry_res = res2[$bits(Value)];
-SLLR2:	carry_res = sllro[$bits(Value)*2-1:$bits(Value)];
-SRLR2:	carry_res = srlro[$bits(Value)-1:0];
-SRAR2:	carry_res = sraro[$bits(Value)-1:0];
-SLLI:		carry_res = sllio[$bits(Value)*2-1:$bits(Value)];
-SRLI:		carry_res = srlio[$bits(Value)-1:0];
-SRAI:		carry_res = sraio[$bits(Value)-1:0];
+ADD2R:	res_t3 = res2[$bits(Value)];
+SUB2R:	res_t3 = res2[$bits(Value)];
+SLLR2:	res_t3 = sllro[$bits(Value)*2-1:$bits(Value)];
+SRLR2:	res_t3 = srlro[$bits(Value)-1:0];
+SRAR2:	res_t3 = sraro[$bits(Value)-1:0];
+SLLI:		res_t3 = sllio[$bits(Value)*2-1:$bits(Value)];
+SRLI:		res_t3 = srlio[$bits(Value)-1:0];
+SRAI:		res_t3 = sraio[$bits(Value)-1:0];
 default:	
 	begin
-		carry_res = 'd0;
+		res_t3 = 'd0;
 	end
 endcase
+
+always_comb
+	res_t2 = res_t3;
 
 endmodule
 

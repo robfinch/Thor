@@ -39,18 +39,15 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_crypto(ir, m, z, a, b, c, t, o);
+module Thor2022_crypto(ir, a, b, c, o);
 input Instruction ir;
-input m;
-input z;
 input Value a;
 input Value b;
 input Value c;
-input Value t;
 output Value o;
 
-Value o1;
-wire M = m | ~ir.any.v;
+Value o1, o2;
+//wire M = m | ~ir.any.v;
 reg [4:0] shamt;
 reg [7:0] sb_in;
 reg [31:0] x;
@@ -332,50 +329,50 @@ R1:
 	SHA256SIG0:
 		begin
 			o1 = {a[6:0],a[31:7]} ^ {a[17:0],a[31:18]} ^ a[31:3];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SHA256SIG1:
 		begin
 			o1 = {a[16:0],a[31:17]} ^ {a[18:0],a[31:19]} ^ a[31:10];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SHA256SUM0:
 		begin
 			o1 = {a[1:0],a[31:2]} ^ {a[12:0],a[31:13]} ^ {a[21:0],a[31:22]};
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SHA256SUM1:
 		begin
 			o1 = {a[5:0],a[31:6]} ^ {a[10:0],a[31:11]} ^ {a[24:0],a[31:25]};
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SHA512SIG0:
 		begin
-			o = M ? {a[0],a[63:1]} ^ {a[7:0],a[63:8]} ^ a[63:7] : z ? 64'd0 : t;
+			o2 = {a[0],a[63:1]} ^ {a[7:0],a[63:8]} ^ a[63:7];
 		end
 	SHA512SIG1:
 		begin
-			o = M ? {a[18:0],a[63:19]} ^ {a[60:0],a[63:61]} ^ a[63:6] : z ? 64'd0 : t;
+			o2 = {a[18:0],a[63:19]} ^ {a[60:0],a[63:61]} ^ a[63:6];
 		end
 	SHA512SUM0:
 		begin
-			o = M ? {a[27:0],a[63:28]} ^ {a[33:0],a[63:34]} ^ {a[38:0],a[63:39]} : z ? 64'd0 : t;
+			o2 = {a[27:0],a[63:28]} ^ {a[33:0],a[63:34]} ^ {a[38:0],a[63:39]};
 		end
 	SHA512SUM1:
 		begin
-			o = M ? {a[13:0],a[63:14]} ^ {a[17:0],a[63:18]} ^ {a[40:0],a[63:41]} : z ? 64'd0 : t;
+			o2 = {a[13:0],a[63:14]} ^ {a[17:0],a[63:18]} ^ {a[40:0],a[63:41]};
 		end
 	SM3P0:
 		begin
 			o1 = {a[8:0],a[31:9]} ^ {a[16:0],a[31:17]} ^ a[31:0];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SM3P0:
 		begin
 			o1 = {a[14:0],a[31:15]} ^ {a[22:0],a[31:23]} ^ a[31:0];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
-	default:	o = 64'd0;
+	default:	o2 = 64'd0;
 	endcase
 R3:
 	case(ir.r3.func)
@@ -388,7 +385,7 @@ R3:
 			z1 = {32'd0,y} << shamt;
 			z = z1[63:32] | z1[31:0];
 			o1 = z ^ a[31:0];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
 	SM4KS:
 		begin
@@ -399,11 +396,13 @@ R3:
 			z1 = {32'd0,y} << shamt;
 			z = z1[63:32] | z1[31:0];
 			o1 = z ^ a[31:0];
-			o = M ? {{32{o1[31]}},o1[31:0]} : z ? 64'd0 : t;
+			o2 = {{32{o1[31]}},o1[31:0]};
 		end
-	default:	o = 'd0;
+	default:	o2 = 'd0;
 	endcase
-default:	o = 'd0;
+default:	o2 = 'd0;
 endcase
+
+assign o = o2;
 
 endmodule

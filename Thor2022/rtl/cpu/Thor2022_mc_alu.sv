@@ -38,7 +38,7 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_mc_alu(rst, clk, clk2x, state, ir, dec, xa, xb, xc, imm, pn, res, carry_res,
+module Thor2022_mc_alu(rst, clk, clk2x, state, ir, dec, xa, xb, xc, imm, res, res_t2,
 	multovf, dvByZr, dvd_done, dfmul_done);
 input rst;
 input clk;
@@ -50,9 +50,8 @@ input Value xa;
 input Value xb;
 input Value xc;
 input Value imm;
-input Value pn;
 output Value res;
-output Value carry_res;
+output Value res_t2;
 output multovf;
 output dvByZr;
 output dvd_done;
@@ -151,12 +150,12 @@ always_comb
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
-	MUL:	res = mul_prod256[$bits(Value)-1:0] + xc + pn;
+	MUL:	res = mul_prod256[$bits(Value)-1:0] + xc;
 	MULH:	res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULU:	res = mul_prod256[$bits(Value)-1:0] + xc + pn;
+	MULU:	res = mul_prod256[$bits(Value)-1:0] + xc;
 	MULUH:	res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULSU:res = mul_prod256[$bits(Value)-1:0] + xc + pn;
-	MULF:	res = mul_prod256[$bits(Value)-1:0] + xc + pn;
+	MULSU:res = mul_prod256[$bits(Value)-1:0] + xc;
+	MULF:	res = mul_prod256[$bits(Value)-1:0] + xc;
 	DIV:	res = qo;
 	DIVU:	res = qo;
 	DIVSU:	res = qo;
@@ -170,9 +169,9 @@ DF2:
 	DFADD,DFSUB:	res = dfaso;
 	default:	res = 'd0;
 	endcase
-MULI,MULIL:		res = mul_prod256[$bits(Value)-1:0] + pn;
-MULUI,MULUIL:	res = mul_prod256[$bits(Value)-1:0] + pn;
-MULFI:				res = mul_prod256[$bits(Value)-1:0] + pn;
+MULI,MULIL:		res = mul_prod256[$bits(Value)-1:0];
+MULUI,MULUIL:	res = mul_prod256[$bits(Value)-1:0];
+MULFI:				res = mul_prod256[$bits(Value)-1:0];
 DIVI,DIVIL:		res = qo;
 default:			res = 'd0;
 endcase
@@ -181,21 +180,21 @@ always_comb
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
-	MUL:			carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULU:			carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULSU:		carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-	MULF:			carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MUL:			res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MULU:			res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MULSU:		res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
+	MULF:			res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
 	default:	
 		begin
-			carry_res = 'd0;
+			res_t2 = 'd0;
 		end
 	endcase
-MULI,MULIL:		carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-MULUI,MULUIL:	carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
-MULFI:	carry_res = mul_prod[$bits(Value)*2-1:$bits(Value)];
+MULI,MULIL:		res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
+MULUI,MULUIL:	res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
+MULFI:	res_t2 = mul_prod[$bits(Value)*2-1:$bits(Value)];
 default:	
 	begin
-		carry_res = 'd0;
+		res_t2 = 'd0;
 	end
 endcase
 

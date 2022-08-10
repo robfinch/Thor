@@ -48,6 +48,8 @@
 
 package Thor2022_pkg;
 
+parameter NLANES = 2;
+
 `define QSLOTS	2		// number of simulataneously queueable instructions
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
@@ -153,6 +155,7 @@ parameter EXIM		= 8'h50;
 parameter SLT2R		= 8'h4E;
 parameter DIVUI		= 8'h4F;
 
+parameter REG			= 8'h51;
 parameter VM			= 8'h52;
 parameter VMFILL	= 8'h53;
 parameter BYTNDXI	= 8'h55;
@@ -383,6 +386,9 @@ parameter SRAH		= 7'h4A;
 parameter ROLH		= 7'h4B;
 parameter RORH		= 7'h4C;
 
+// Vector Specific
+parameter VEX			= 7'h3A;
+
 // OSR2
 parameter PUSHQ		= 7'h08;
 parameter POPQ		= 7'h09;
@@ -594,6 +600,8 @@ parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
 typedef logic [63:0] Value;
+typedef logic [$bits(Value)*NLANES-1:0] VecValue;
+typedef logic [NLANES-1:0] VMValue;
 typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
 typedef logic [11:0] ASID;
@@ -1050,6 +1058,7 @@ typedef struct packed
 	logic [4:0] Rb;
 	logic [4:0] Rc;
 	logic [4:0] Rt;
+	logic [4:0] Rt2;
 	logic [1:0] Tb;
 	logic [1:0] Tc;
 	logic [2:0] Rvm;
@@ -1134,6 +1143,8 @@ typedef struct packed
 	logic [2:0] dfrm;
 	logic isDF;
 	logic isExi;
+	logic isReg;
+	logic vex;
 } DecodeOut;
 
 parameter RS_INVALID = 3'd0;
@@ -1145,9 +1156,9 @@ typedef struct packed
 	SrcId ndx;
 	Instruction ir;
 	DecodeOut dec;
-	Value a;
-	Value b;
-	Value c;
+	VecValue a;
+	VecValue b;
+	VecValue c;
 	Value i;
 } AQE;
 
@@ -1182,10 +1193,11 @@ typedef struct packed
 	logic [5:0] step;			// vector step
 	logic step_v;
 	logic [15:0] cause;
-	Value ia;
-	Value ib;
-	Value ic;
-	Value id;
+	VecValue ia;
+	VecValue ib;
+	VecValue ic;
+	VecValue id;
+	VecValue it;
 	Value pn;
 	IPAddress lk;
 	IPAddress ca;
@@ -1197,16 +1209,17 @@ typedef struct packed
 	logic [5:0] id_ele;
 	logic [5:0] it_ele;
 	logic [127:0] imm;
-	Value vmask;						// vector mask register value
+	VMValue vmask;						// vector mask register value
 	logic mask_bit;
 	logic zbit;
 	logic z;
 	logic iav;
 	logic ibv;
 	logic icv;
-	logic lkv;
 	logic idv;
+	logic lkv;
 	logic itv;
+	logic niv;					// next instruction valid
 	logic vmv;
 	SrcId ias;
 	SrcId ibs;
@@ -1217,9 +1230,9 @@ typedef struct packed
 	SrcId its;
 	SrcId vms;
 	//logic [511:0] res;
-	Value res;
+	VecValue res;
+	VecValue res_t2;
 	IPAddress cares;
-	Value carry_res;
 	sFPFlags fp_flags;
 	logic [5:0] res_ele;
 //	logic [15:0] cause;
@@ -1339,6 +1352,16 @@ EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 LEAVE: Source1Valid = `TRUE;
 MFLK: Source1Valid = `TRUE;
 MTLK: Source1Valid = `TRUE;
+ADD2R,SUB2R,AND2R,OR2R,XOR2R:
+	Source1Valid = isn.r3.Ra=='d0;
+SEQ2R,SNE2R,SLT2R,SLTU2R,SGE2R,SGEU2R,CMP2R:
+	Source1Valid = isn.r3.Ra=='d0;
+SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
+	Source1Valid = isn.r3.Ra=='d0;
+ENTER,LEAVE:
+	Source1Valid = `TRUE;
+REG:
+	Source1Valid = isn.r3.Ra=='d0;
 default:
 	Source1Valid = `FALSE;
 endcase
@@ -1439,18 +1462,27 @@ INT:	Source2Valid = `TRUE;
 MOV:	Source2Valid = `TRUE;
 BTFLD:	
 	case(isn.rm.func)
-	default:	Source2Valid = isn.r2.Rb==6'd0;
+	default:	Source2Valid = isn.r2.Rb=='d0;
 	endcase
 NOP:	Source2Valid = `TRUE;
 RTS:	Source2Valid = `TRUE;
-BCD:	Source2Valid = isn.r2.Rb==6'd0;
+BCD:	Source2Valid = isn.r2.Rb=='d0;
 SYNC,MEMSB,MEMDB,WFI:	Source2Valid = `TRUE;
 EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 	Source2Valid = `TRUE;
-RTS:	Source2Valid = `TRUE;
 LEAVE: Source2Valid = `TRUE;
 MFLK: Source2Valid = `TRUE;
 MTLK: Source2Valid = `TRUE;
+ADD2R,SUB2R,AND2R,OR2R,XOR2R:
+	Source2Valid = isn.r3.Rb=='d0;
+SEQ2R,SNE2R,SLT2R,SLTU2R,SGE2R,SGEU2R,CMP2R:
+	Source2Valid = isn.r3.Rb=='d0;
+SLLR2,SRLR2,SRAR2,ROLR2,RORR2:
+	Source2Valid = isn.r3.Rb=='d0;
+ENTER,LEAVE:
+	Source2Valid = `TRUE;
+REG:
+	Source2Valid = isn.r3.Rb=='d0;
 default:
 	Source2Valid = `FALSE;
 endcase
@@ -1484,6 +1516,48 @@ default:
 endcase
 endfunction
 
+function SourceTValid;
+input Instruction isn;
+case(isn.any.opcode)
+R1:	SourceTValid = isn.r3.Rt==5'd0;
+R2:	SourceTValid = isn.r3.Rt==5'd0;
+R3:
+	case(isn.r3.func)
+	CHK:	SourceTValid = 1'b1;
+	default:	SourceTValid = isn.r3.Rt==5'd0;
+	endcase
+ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
+	SourceTValid = isn.ri.Rt==5'd0;
+JMP,DJMP,BRA:	SourceTValid = `TRUE;
+JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
+	SourceTValid = isn.jxx.lk==2'd0;
+JBSI:	SourceTValid = `TRUE;
+DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
+	SourceTValid = isn.ri.Rt==5'd0;
+CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
+	SourceTValid = isn.ri.Rt==5'd0;
+DF3:	SourceTValid = isn.r3.Rt==5'd0;
+P3:	SourceTValid = isn.r3.Rt==5'd0;
+BTFLD:	SourceTValid = isn.r3.Rt==5'd0;
+MTLK:	 SourceTValid = isn[13:9]=='d0;
+INT:	SourceTValid = `TRUE;
+MOV:	SourceTValid = isn.r1.Rt==5'd0;
+RTS:	SourceTValid = `TRUE;
+LDSP,
+LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
+	SourceTValid = isn.ld.Rt==5'd0;
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
+	SourceTValid = isn.ldx.Rt==5'd0;
+LDHP,LDHPX,LDHQ,LDHQX:	SourceTValid = isn.ldx.Rt==6'd0;
+STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+	SourceTValid = isn.st.Rs=='d0;
+STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+	SourceTValid = isn.stx.Rs=='d0;
+default:	SourceTValid = 1'b1;
+endcase
+endfunction
+
 function Source31Valid;
 input Instruction isn;
 case(isn.any.opcode)
@@ -1491,6 +1565,11 @@ STHP,STHPX:	Source31Valid = isn.st.Rs=='d0;
 default:
 	Source31Valid = `TRUE;
 endcase
+endfunction
+
+function NextInsnValid;
+input Instruction isn;
+	NextInsnValid = isn.any.opcode != REG;
 endfunction
 
 endpackage

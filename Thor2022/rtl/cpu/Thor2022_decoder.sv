@@ -85,8 +85,23 @@ RTS:
 	Rt = 'd0;
 default:	Rt = ir[13:9];
 endcase
+
+case(ir.any.opcode)
+R2:
+	case(ir.r3.func)
+	ADD:			deco.Rt2 = {1'b0,ir[27:25]!=3'd0,ir[30:28]};
+	default:	deco.Rt2 = {1'b0,ir[27:25]!=3'd0,ir[30:28]};
+	endcase
+default:	deco.Rt2 = 'd0;
+endcase
+
 // Rc
 case(ir.any.opcode)
+R2:
+	case(ir.r3.func)
+	ADD:			Rc = {1'b0,ir[27:25]!=3'd0,ir[27:25]};
+	default:	Rc = {1'b0,ir[27:25]!=3'd0,ir[27:25]};
+	endcase
 STSP,
 STB,STW,STT,STO,STHC,STH,STHP,STHS,STPTR:
 	Rc = ir.st.Rs;
@@ -562,6 +577,8 @@ deco.ptg = ir.any.opcode==OSR2 && (ir.r3.func==LDPTG || ir.r3.func==STPTG);
 deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
 deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
+deco.isReg = ir.any.opcode==REG;
+deco.vex = ir.any.opcode==R2 && ir.r3.func==VEX;
 
 case(ir.any.opcode)
 R2,R3:

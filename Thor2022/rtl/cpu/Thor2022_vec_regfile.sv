@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022_gp_regfile.sv
+//	Thor2022_vec_regfile.sv
 //
 //
 // BSD 3-Clause License
@@ -39,7 +39,7 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_gp_regfile(clk, wr0, wr1, wa0, wa1, i0, i1,
+module Thor2022_vec_regfile(clk, wr0, wr1, wa0, wa1, i0, i1,
 	ip0, ip1,
 	ra0, ra1, ra2, ra3, ra4, ra5, ra6, ra7, o0, o1, o2, o3, o4, o5, o6, o7);
 input clk;
@@ -47,8 +47,8 @@ input wr0;
 input wr1;
 input [4:0] wa0;
 input [4:0] wa1;
-input Value i0;
-input Value i1;
+input VecValue i0;
+input VecValue i1;
 input CodeAddress ip0;
 input CodeAddress ip1;
 input [4:0] ra0;
@@ -59,19 +59,19 @@ input [4:0] ra4;
 input [4:0] ra5;
 input [4:0] ra6;
 input [4:0] ra7;
-output Value o0;
-output Value o1;
-output Value o2;
-output Value o3;
-output Value o4;
-output Value o5;
-output Value o6;
-output Value o7;
+output VecValue o0;
+output VecValue o1;
+output VecValue o2;
+output VecValue o3;
+output VecValue o4;
+output VecValue o5;
+output VecValue o6;
+output VecValue o7;
 
 integer n;
 reg [31:0] way = 'd0;
-Value regfileA [0:31];
-Value regfileB [0:31];
+VecValue regfileA [0:31];
+VecValue regfileB [0:31];
 
 initial begin
 	for (n = 0; n < 32; n = n + 1) begin
@@ -109,7 +109,7 @@ always_comb
 always_comb
 	o1 = ra1=='d0 ? 'd0 : ra1==wa1 && wr1 ? i1 : ra1==wa0 && wr0 ? i0 : way[ra1] ? regfileB[ra1] : regfileA[ra1];
 always_comb
-	o2 = ra2=='d0 ? 'd0 : ra2==5'd31 ? ip0 : ra2==wa1 && wr1 ? i1 : ra2==wa0 && wr0 ? i0 : way[ra2] ? regfileB[ra2] : regfileA[ra2];
+	o2 = ra2=='d0 ? 'd0 : ra2==wa1 && wr1 ? i1 : ra2==wa0 && wr0 ? i0 : way[ra2] ? regfileB[ra2] : regfileA[ra2];
 always_comb
 	o3 = ra3=='d0 ? 'd0 : ra3==wa1 && wr1 ? i1 : ra3==wa0 && wr0 ? i0 : way[ra3] ? regfileB[ra3] : regfileA[ra3];
 always_comb
@@ -117,7 +117,7 @@ always_comb
 always_comb
 	o5 = ra5=='d0 ? 'd0 : ra5==wa1 && wr1 ? i1 : ra5==wa0 && wr0 ? i0 : way[ra5] ? regfileB[ra5] : regfileA[ra5];
 always_comb
-	o6 = ra6=='d0 ? 'd0 : ra6==5'd31 ? ip1 : ra6==wa1 && wr1 ? i1 : ra6==wa0 && wr0 ? i0 : way[ra6] ? regfileB[ra6] : regfileA[ra6];
+	o6 = ra6=='d0 ? 'd0 : ra6==wa1 && wr1 ? i1 : ra6==wa0 && wr0 ? i0 : way[ra6] ? regfileB[ra6] : regfileA[ra6];
 always_comb
 	o7 = ra7=='d0 ? 'd0 : ra7==wa1 && wr1 ? i1 : ra7==wa0 && wr0 ? i0 : way[ra7] ? regfileB[ra7] : regfileA[ra7];
 

@@ -39,15 +39,21 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_schedule(reb, sns, stomp, next_fetch0, next_fetch1,
-	next_decompress, next_decode, next_execute, next_retire0, next_retire1);
+module Thor2022_schedule(clk, reb, sns, stomp, 
+	fetch0, next_fetch0, next_fetch1,
+	next_decompress0, next_decompress1, next_decode0, next_decode1,
+	next_execute, next_retire0, next_retire1);
+input clk;	
 input sReorderEntry [REB_ENTRIES-1:0] reb;
 input [5:0] sns [0:7];
 input [7:0] stomp;
+input [2:0] fetch0;
 output [2:0] next_fetch0;
 output [2:0] next_fetch1;
-output [2:0] next_decompress;
-output [2:0] next_decode;
+output reg [2:0] next_decompress0;
+output reg [2:0] next_decompress1;
+output reg [2:0] next_decode0;
+output reg [2:0] next_decode1;
 output reg [2:0] next_execute;
 output reg [2:0] next_retire0;
 output reg [2:0] next_retire1;
@@ -57,6 +63,10 @@ output reg [2:0] next_retire1;
 //
 // Chooses the next bucket to queue an instruction in any order.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+reg [5:0] lov;		// lock-out v
+always_comb
+	lov = (6'd1 << fetch0);
 
 wire [5:0] vv = {
 		reb[5].v,
@@ -69,7 +79,7 @@ wire [5:0] vv = {
 reg [5:0] vv1;
 
 ffz6 uffoq (
-	.i(vv),
+	.i(vv | lov),
 	.o(next_fetch0)
 );
 
@@ -90,35 +100,75 @@ ffz6 uffoq1 (
 // Chooses the next bucket to decode, essentially in any order.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ffo6 uffodecompress (
-	.i({
+wire [5:0] fd = {
 		reb[5].fetched,
 		reb[4].fetched,
 		reb[3].fetched,
 		reb[2].fetched,
 		reb[1].fetched,
 		reb[0].fetched
-	}),
-	.o(next_decompress)
+	};
+reg [5:0] fd1;
+wire [2:0] next_decompress0a;
+wire [2:0] next_decompress1a;
+always_comb
+if (next_decompress0a != 3'd7)
+	fd1 = fd & ~(6'd1 << next_decompress0a);
+else
+	fd1 = 6'b000000;
+
+ffo6 uffodecompress0 (
+	.i(fd),
+	.o(next_decompress0a)
 );
+
+ffo6 uffodecompress1 (
+	.i(fd1),
+	.o(next_decompress1a)
+);
+
+always_comb// @(posedge clk)
+	next_decompress0 <= next_decompress0a;
+always_comb// @(posedge clk)
+	next_decompress1 <= next_decompress1a;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Decode scheduler
 //
 // Chooses the next bucket to decode, essentially in any order.
+// Decodes are processed in order, all prior decodes must have been done
+// before the newly choosen one.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ffo6 uffodecode (
-	.i({
-		reb[5].decompressed,
-		reb[4].decompressed,
-		reb[3].decompressed,
-		reb[2].decompressed,
-		reb[1].decompressed,
-		reb[0].decompressed
-	}),
-	.o(next_decode)
-);
+function fnPriorsDecoded;
+input [2:0] kk;
+integer n;
+begin
+	fnPriorsDecoded = 1'b1;
+	for (n = 0; n < REB_ENTRIES; n = n + 1)
+		if (sns[n] < sns[kk] && !(reb[n].decoded || reb[n].executed || reb[n].out) && reb[n].v)
+			fnPriorsDecoded = 1'b0;
+end
+endfunction
+
+integer mm;
+always_comb// @(posedge clk)
+begin
+	next_decode0 = 3'd7;
+	next_decode1 = 3'd7;
+	for (mm = 0; mm < REB_ENTRIES; mm = mm + 1) begin
+		if ((sns[mm] < sns[next_decode0] || next_decode0==3'd7) && reb[mm].decompressed) begin
+			if (fnPriorsDecoded(mm))
+				next_decode0 = mm;
+		end
+	end
+	for (mm = 0; mm < REB_ENTRIES; mm = mm + 1) begin
+		if ((sns[mm] < sns[next_decode0] || next_decode1==3'd7) && next_decode0 != 3'd7 && reb[mm].decompressed) begin
+			if (fnPriorsDecoded(mm))
+				next_decode1 = mm;
+		end
+	end
+end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute scheduler
@@ -126,6 +176,7 @@ ffo6 uffodecode (
 // Picks instructions in any order except:
 // a) memory instructions are executed in strict order
 // b) preference is given to executing earlier instructions over later ones
+// c) prior instructions must at least have been decoded (for arg dependency)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 function fnPriorFc;
@@ -141,7 +192,7 @@ endfunction
 
 function fnArgsValid;
 input [2:0] kk;
-fnArgsValid = (reb[kk].iav && reb[kk].ibv && reb[kk].icv && reb[kk].lkv);
+fnArgsValid = (reb[kk].iav && reb[kk].ibv && reb[kk].icv && reb[kk].idv && reb[kk].niv);
 endfunction
 
 integer kk;
@@ -178,19 +229,27 @@ end
 // Skip over constant prefixes.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+reg [2:0] next_retire0a;
+reg [2:0] next_retire1a;
+
 integer n8;
 always_comb
 begin
-	next_retire0 = 3'd7;
-	next_retire1 = 3'd7;
+	next_retire0a = 3'd7;
+	next_retire1a = 3'd7;
 	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-		if ((sns[n8] < sns[next_retire0] || next_retire0 > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
+		if ((sns[n8] < sns[next_retire0a] || next_retire0a > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
 			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM)
-			next_retire0 = n8;
+			next_retire0a = n8;
 	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-		if ((sns[n8] < sns[next_retire1] || next_retire1 > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
-			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM && n8 != next_retire0)
-			next_retire1 = n8;
+		if ((sns[n8] < sns[next_retire1a] || next_retire1a > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
+			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM && n8 != next_retire0a)
+			next_retire1a = n8;
 end
 
+always_comb// @(posedge clk)
+	next_retire0 <= next_retire0a;
+always_comb// @(posedge clk)
+	next_retire1 <= next_retire1a;
+	
 endmodule

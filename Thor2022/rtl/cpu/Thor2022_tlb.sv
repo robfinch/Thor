@@ -413,6 +413,9 @@ ST_READ_PMT3:
 				tlbdati[n2] <= tlbdat_i;
 		end
 	endcase
+	if (tlbdati[4].ppn=='d0 && tlbdati[4].vpn != 'd0) begin
+		$display("PPN zero");
+	end
 end
 always_comb
 	adr_i = iacc_i ? iadr_i : dadr_i;
