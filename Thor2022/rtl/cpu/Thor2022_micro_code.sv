@@ -72,8 +72,8 @@ begin
 	// LEAVE
 	7'd20:	begin next_mip = 7'd21; ir = {13'h000,5'd30,5'd31,1'b0,ADDI};	end						// ADD $SP,$FP,#0
 	7'd21:	begin next_mip = 7'd22; ir = {29'h00,5'd31,5'd30,1'b0,LDH}; end				// LDO $FP,[$SP]
-	7'd22:	begin next_mip = 7'd26; ir = {29'h10,5'd31,5'd01,1'b0,LDH}; end				// LDO $LR,16[$SP]
-//	7'd23:	begin next_mip = 7'd26; ir = {2'd1,5'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
+	7'd22:	begin next_mip = 7'd23; ir = {29'h10,5'd31,5'd03,1'b0,LDH}; end				// LDO $T0,16[$SP]
+	7'd23:	begin next_mip = 7'd26; ir = {2'd1,5'd03,1'b0,MTLK}; end										// MTLK LK1,$T0
 //			7'd24:	begin next_mip = 7'd25; ir = {3'd6,8'h18,6'd63,6'd03,1'b0,LDOS}; end				// LDO $T0,24[$SP]
 //			7'd25:	begin next_mip = 7'd26; ir = {3'd0,1'b0,CSRRW,4'd0,16'h3103,6'd03,6'd00,1'b0,CSR}; end	// CSRRW $R0,$T0,0x3103
 	7'd26: 	begin next_mip = 7'd27; ir = {{6'h0,micro_ir[31:13]}+8'd4,4'b0,5'd31,5'd31,1'b0,ADDIL}; end	// ADD $SP,$SP,#Amt
@@ -85,9 +85,9 @@ begin
 	7'd31:	begin next_mip = 7'd0;  ir = {micro_ir[47:12],3'd6,1'b0,STOO}; incr = 4'd6; end
 	// ENTER
 	7'd32: 	begin next_mip = 7'd33; ir = {13'h1FC0,5'd31,5'd31,1'b0,ADDI}; incr = 4'd4; end						// ADD $SP,$SP,#-64
-	7'd33:	begin next_mip = 7'd35; ir = {29'h00,5'd31,5'd30,1'b0,STH}; end				// STO $FP,[$SP]
-//	7'd34:	begin next_mip = 7'd35; ir = {2'd1,5'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
-	7'd35:	begin next_mip = 7'd38; ir = {29'h10,5'd31,5'd01,1'b0,STH}; end				// STO $LR,16[$SP]
+	7'd33:	begin next_mip = 7'd34; ir = {29'h00,5'd31,5'd30,1'b0,STH}; end				// STO $FP,[$SP]
+	7'd34:	begin next_mip = 7'd35; ir = {2'd1,5'd03,1'b0,MFLK}; end										// MFLK $T0,LK1
+	7'd35:	begin next_mip = 7'd38; ir = {29'h10,5'd31,5'd03,1'b0,STH}; end				// STO $T0,16[$SP]
 //			7'd36:	begin next_mip = 7'd37; ir = {3'd0,1'b0,CSRRD,4'd0,16'h3103,6'd00,6'd03,1'b0,CSR}; end	// CSRRD $T0,$R0,0x3103
 //			7'd37:	begin next_mip = 7'd38; ir = {3'd6,8'h18,6'd63,6'd03,1'b0,STOS}; end				// STO $T0,24[$SP]
 	7'd38:	begin next_mip = 7'd39; ir = {29'h20,5'd31,5'd00,1'b0,STH}; end				// STH $R0,32[$SP]

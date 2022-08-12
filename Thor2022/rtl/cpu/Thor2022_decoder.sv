@@ -51,27 +51,37 @@ input [2:0] dfrm;
 
 integer n;
 Value imm;
-reg [4:0] Ra, Rb, Rc, Rt;
+reg [5:0] Ra, Rb, Rc, Rt;
 reg rfwr;
 
 always_comb
 begin
 case(ir.any.opcode)
-DJMP:	Ra = 5'd26;
-LDSP,STSP:	Ra = 5'd31;
-default:	Ra = ir.r3.Ra;
+DJMP:	Ra = 6'd42;
+LDSP,STSP:	Ra = 6'd31;
+VM:
+	case(ir.vmr2.func)
+	MFLC:				Ra = 6'd42;
+	MTVM,MTVL:	Ra = {1'b0,ir.r3.Ra};
+	VMADD,VMAND,VMOR,VMSLL,VMSRL,VMSUB,VMXOR:
+		Ra = {3'b100,ir[14:12]};
+	default:	Ra = 'd0;
+	endcase
+MFLK:			Ra = {4'b1010,ir[15:14]};
+MOV:			Ra = ir[19:14];
+default:	Ra = {1'b0,ir.r3.Ra};
 endcase
-Rb = ir.r3.Rb;
+
 rfwr = `FALSE;
 // Target register
 case(ir.any.opcode)
 JEQZ,JNEZ:
 	Rt = 'd0;
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
-	Rt = {3'd0,ir.jxx.lk};
-JMP,BRA:	 Rt = {3'd0,ir.jmp.lk};
+	Rt = {4'd0,ir.jxx.lk};
+JMP,BRA:	 Rt = {4'd0,ir.jmp.lk};
 DJMP,BSET:
-	Rt = 5'd26;
+	Rt = 6'd42;
 STSP,
 STB,STW,STT,STO,STHC,STHS,STH,STHP,STPTR:
 	Rt = 'd0;
@@ -83,7 +93,15 @@ EXI8+1,EXI24+1,EXI40+1,EXI56+1:
 	Rt = 'd0;
 RTS:
 	Rt = 'd0;
-default:	Rt = ir[13:9];
+VM:
+	case(ir.vmr2.func)
+	MTLC:	Rt = 6'd42;
+	MFVM,MFVL,VMCNTPOP,VMFIRST,VMLAST:
+		Rt = {1'b0,ir[13:9]};
+	default:	Rt = {3'b100,ir[11:9]};
+	endcase
+MOV:			Rt = {ir[20],ir[13:9]};
+default:	Rt = {1'b0,ir[13:9]};
 endcase
 
 case(ir.any.opcode)
@@ -104,21 +122,29 @@ R2:
 	endcase
 STSP,
 STB,STW,STT,STO,STHC,STH,STHP,STHS,STPTR:
-	Rc = ir.st.Rs;
+	Rc = {1'b0,ir.st.Rs};
 STBX,STWX,STTX,STOX,STHCX,STHX,STHPX,STPTRX:
-	Rc = ir.stx.Rs;
+	Rc = {1'b0,ir.stx.Rs};
 STHS:
-	Rc = ir.sts.Rs;
+	Rc = {1'b0,ir.sts.Rs};
 BSET:
-	Rc = 5'd26;
+	Rc = 6'd42;
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
-	Rc = ir.jxx.Rc;
+	case(ir.jxx.Rc)
+	6'd29:	Rc = 6'd40;
+	6'd30:	Rc = 6'd41;
+	default:	Rc = {1'b0,ir.jxx.Rc};
+	endcase
 JMP,DJMP:
-	Rc = ir.jmp.Rc;
+	case(ir.jmp.Rc)
+	6'd29:	Rc = 6'd40;
+	6'd30:	Rc = 6'd41;
+	default:	Rc = {1'b0,ir.jmp.Rc};
+	endcase
 RTS:
-	Rc = {3'd0,ir[10:9]};
-MTLK:			Rc = ir[13:9];
-default:	Rc = ir.r3.Rc;
+	Rc = {4'b1010,ir[10:9]};
+MTLK:			Rc = {1'b0,ir[13:9]};
+default:	Rc = {1'b0,ir.r3.Rc};
 endcase
 
 deco.Ravec = ir.any.v;
@@ -193,6 +219,14 @@ R3,F3,DF3,P3:
 	case(ir.r3.func)
 	default:	rfwr = `TRUE;
 	endcase
+VM:
+	case(ir.vmr2.func)
+	MFVM,MFVL,MTVM,
+	VMADD,VMAND,VMCNTPOP,VMFILL,VMFIRST,VMLAST,
+	VMOR,VMSLL,VMSRL,VMSUB,VMXOR:
+		rfwr = `TRUE;
+	default:	rfwr = `FALSE;
+	endcase
 OSR2:
 	case(ir.r3.func)
 	POPQ:			rfwr = `TRUE;
@@ -212,11 +246,11 @@ BTFLD:
 	endcase
 CSR:	rfwr = `TRUE;
 MFLK:	rfwr = `TRUE;
-ADDI,SUBFI,CMPI,MULI,DIVI,MULUI:
+ADDI,SUBFI,CMPI,MULI,DIVI,MULUI,LDI:
 	rfwr = `TRUE;
 ANDI,ORI,XORI:		rfwr = `TRUE;
 SEQI,SNEI,SLTI,SLEI,SGTI,SGEI:		rfwr = `TRUE;
-ADDIL,SUBFIL,CMPIL,MULIL,DIVIL,MULUIL:
+ADDIL,SUBFIL,CMPIL,MULIL,DIVIL,MULUIL,LDIL:
 	rfwr = `TRUE;
 ANDIL,ORIL,XORIL:	rfwr = `TRUE;
 SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL:		rfwr = `TRUE;
@@ -250,14 +284,14 @@ R2:
 	SLL,SRL,SRA,ROL,ROR: imm = {120'd0,ir[35:29]};
 	default:	imm = 'd0;
 	endcase
-ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SLEI,SGTI,SGEI,MULI,DIVI:
+ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SLEI,SGTI,SGEI,MULI,DIVI,LDI:
 	imm = {{115{ir.ri.imm[12]}},ir.ri.imm};
 ANDI:	// Pad with ones to the left
 	imm = {{115{1'b1}},ir.ri.imm};
 ORI,XORI,SLTUI,SGTUI,MULUI,DIVUI:	// Pad with zeros to the left
 	imm = {{115{1'b0}},ir.ri.imm};
 CHKI:	imm = {{106{ir[47]}},ir[47:29],ir[11:9]};
-ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,MULIL,DIVIL:
+ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,MULIL,DIVIL,LDIL:
 	imm = ir.any.v ? {{103{ir.ril.imm[24]}},ir.rilv.imm} : {{99{ir.ril.imm[28]}},ir.ril.imm};
 SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULUIL:
 	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
@@ -301,7 +335,7 @@ if (mval)
 	endcase
 */
 case(ir.any.opcode)
-ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULIL,DIVIL,MULUIL:
+ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULIL,DIVIL,MULUIL,LDIL:
 	deco.ril = `TRUE;
 ANDIL,ORIL,XORIL:
 	deco.ril = `TRUE;
@@ -578,7 +612,21 @@ deco.mtlc = ir.any.opcode==VM && ir.vmr2.func==MTLC;
 deco.mfsel = ir.any.opcode==OSR2 && ir.r3.func==MFSEL;
 deco.mtsel = ir.any.opcode==OSR2 && ir.r3.func==MTSEL;
 deco.isReg = ir.any.opcode==REG;
-deco.vex = ir.any.opcode==R2 && ir.r3.func==VEX;
+
+case(ir.any.opcode)
+R1:
+	case(ir.r1.func)
+	VCMPRSS:	deco.is_valu = `TRUE;
+	default:	deco.is_valu = `FALSE;
+	endcase
+R2:
+	case(ir.r3.func)
+	VEX,V2BITS,BITS2V,VSLLV,VSRLV:
+		deco.is_valu = `TRUE;
+	default:	deco.is_valu = `FALSE;
+	endcase
+default:	deco.is_valu = `FALSE;
+endcase
 
 case(ir.any.opcode)
 R2,R3:
@@ -678,6 +726,16 @@ default:	deco.dfrm = dfrm;
 endcase
 
 deco.isDF = ir.any.opcode==DF2;
+
+case(ir.any.opcode)
+VM:
+	case(ir.vmr2.func)
+	MFVM,VMADD,VMAND,VMCNTPOP,VMFIRST,VMLAST,VMOR,VMSUB,VMXOR:
+		Rb = {3'b100,ir[17:15]};
+	default:	Rb = 'd0;
+	endcase
+default:	Rb = {1'b0,ir.r3.Rb};
+endcase
 
 end
 endmodule

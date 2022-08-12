@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022io.sv
+//	Thor2022oo.sv
 //
 //
 // BSD 3-Clause License
@@ -133,17 +133,17 @@ Value carry_reg [0:3];
 sReorderEntry [7:0] reb;
 reg [5:0] sns [0:7];
 SSrcId head0, head1, head2;
-reg [4:0] Ra;
-reg [4:0] Rb;
-reg [4:0] Rc;
-reg [4:0] Rt;
+reg [5:0] Ra;
+reg [5:0] Rb;
+reg [5:0] Rc;
+reg [5:0] Rt;
 reg [1:0] Tb;
 reg [1:0] Tc;
 reg [2:0] Rvm;
 reg [3:0] Ca;
 reg [3:0] Ct;
 
-reg [4:0] commit0_tgt, commit1_tgt;
+reg [5:0] commit0_tgt, commit1_tgt;
 reg commit0_wr, commit1_wr;
 VecValue commit0_bus,commit1_bus;
 reg [2:0] commit0_src, commit1_src;
@@ -226,8 +226,8 @@ always_comb
 		commit_cnt = 2'd1;
 */
 //Value regfile [0:31];
-Value rfoa, rfob, rfoc, rfot, rfop;
-Value rfoa1, rfob1, rfoc1, rfot1, rfop1;
+Value rfoa, rfob, rfoc, rfot, rfop, vmrfo;
+Value rfoa1, rfob1, rfoc1, rfot1, rfop1, vmrfo1;
 reg rfoa_v, rfob_v, rfoc_v, rfot_v;
 reg rfoa_v1, rfob_v1, rfoc_v1, rfot_v1;
 
@@ -250,6 +250,8 @@ Thor2022_gp_regfile ugprs
 	.ra5(deco1.Rb),
 	.ra6(deco1.Rc),
 	.ra7(deco1.Rt),
+	.ra8({3'b100,deco.Rvm}),
+	.ra9({3'b100,deco1.Rvm}),
 	.o0(rfoa),
 	.o1(rfob),
 	.o2(rfoc),
@@ -257,11 +259,13 @@ Thor2022_gp_regfile ugprs
 	.o4(rfoa1),
 	.o5(rfob1),
 	.o6(rfoc1),
-	.o7(rfot1)
+	.o7(rfot1),
+	.o8(vmrfo),
+	.o9(vmrfo1)
 );
 
-wire [4:0] regfile_src [0:31];
-wire [4:0] next_regfile_src [0:31];
+wire [5:0] regfile_src [0:NREGS-1];
+wire [5:0] next_regfile_src [0:NREGS-1];
 Value r58;
 reg [127:0] preg [0:7];
 reg [15:0] cio;
@@ -271,6 +275,14 @@ CodeAddress eip_regfile [0:7];
 SrcId [15:0] eip_src;
 (* ram_style="block" *)
 Value vregfile [0:31][0:63];
+/*
+Thor2022_vm_regfile uvmrf1
+(
+	.clk(clk_g),
+	.wr0, wr1, wa0, wa1, i0, i1,
+	ra0, ra1, ra2, ra3, o0, o1, o2, o3);
+*/
+reg [63:0] vmrfoa, vmrfob;
 reg [63:0] vm_regfile [0:7];
 wire ipage_fault;
 reg clr_ipage_fault = 1'b0;
@@ -278,13 +290,13 @@ wire itlbmiss;
 reg clr_itlbmiss = 1'b0;
 reg wackr;
 reg mc_busy;
-wire [31:0] livetarget;
-wire [31:0] livetarget2;
-wire [31:0] reb_latestID [0:7];
-wire [31:0] reb_latestID2 [0:7];
+wire [NREGS-1:0] livetarget;
+wire [NREGS-1:0] livetarget2;
+wire [NREGS-1:0] reb_latestID [0:7];
+wire [NREGS-1:0] reb_latestID2 [0:7];
 SSrcId MaxSrcId = 5'h07;
-wire [31:0] regfile_valid;
-wire [31:0] next_regfile_valid;
+wire [NREGS-1:0] regfile_valid;
+wire [NREGS-1:0] next_regfile_valid;
 
 
 Thor2022_regfile_src urfs1
@@ -517,6 +529,7 @@ wire memresp_fifo_empty;
 wire memresp_fifo_v;
 reg [7:0] tid;
 VecValue res,res2,exres2,mcres2;
+VecValue vres;
 VecValue crypto_res, res_t2;
 CodeAddress cares, cares2;
 reg ld_vtmp;
@@ -762,7 +775,7 @@ reg rts_miss;
 always_comb
 	djxxa_miss = (reb[dec].ir.jxx.Rc=='d0 && deco.jxx && dpredict_taken && bpe) && (ip.offs != deco.jmptgt) && reb[dec].v;
 always_comb
-	djxxr_miss = (reb[dec].ir.jxx.Rc==5'd31 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt) && reb[dec].v;
+	djxxr_miss = (reb[dec].ir.jxx.Rc==6'd31 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt) && reb[dec].v;
 always_comb
 	jxx_miss = reb[exec].dec.jxx && takb && reb[exec].v && !reb[exec].executed;
 always_comb
@@ -942,9 +955,23 @@ Thor2022_mc_alu umcalu1
 end
 endgenerate
 
+Thor2022_valu64 uvalu1
+(
+	.ir(reb[exec].ir),
+	.m(reb[exec].vmask),
+	.z(reb[exec].zbit),
+	.xa(reb[exec].ia),
+	.xb(reb[exec].ib),
+	.xc(reb[exec].ic),
+	.t(reb[exec].it),
+	.res(vres)
+);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Instruction fetch combo logic.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+wire sig1 = ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip);
 
 Thor2022_inslength uil(insn0, ilen0);
 Thor2022_inslength ui2(insn1, ilen1);
@@ -953,7 +980,7 @@ always_comb
 begin
 	if (branchmiss)
 		next_ip = branchmiss_adr;
-	else if (ihit) begin
+	else if (sig1) begin
 		next_ip.micro_ip = 'd0;
 		if (fetch0 != fetch1) begin
 			next_ip.offs = ip.offs + ilen0 + ilen1;
@@ -1309,7 +1336,7 @@ begin
 	end
 	//sns[0] <= 32'hFFFFFFFF;
 	for (n6 = 0; n6 < 16; n6 = n6 + 1)
-		eip_src[n6] <= 5'd31;
+		eip_src[n6] <= 6'd31;
 	head0 <= 'd0;
 	fetch0 <= 'd0;
 	fetch1 <= 'd0;
@@ -2050,10 +2077,7 @@ begin
 		reb[dec].dec <= deco;
 		reb[dec].istk_depth <= distk_depth;
 		reb[dec].ia <= deco.Ravec ? vroa : {NLANES{rfoa}};
-		if (reb[dec].vex)
-			reb[dec].ib <= (vrob >> {rfoa[5:0],6'd0}) & 64'hFFFFFFFFFFFFFFFF;
-		else
-			reb[dec].ib <= deco.Rbvec ? vrob : {NLANES{rfob}};
+		reb[dec].ib <= deco.Rbvec ? vrob : {NLANES{rfob}};
 		reb[dec].ic <= deco.Rcvec ? vroc : {NLANES{rfoc}};
 		reb[dec].it <= deco.Rtvec ? vrot : {NLANES{rfot}};
 		reb[dec].ca <= rfoca;
@@ -2064,10 +2088,10 @@ begin
 		reb[dec].idv <= !fnPrevReg(dec);
 		reb[dec].lkv <= 1'b1;//(reb[head0].dec.Rt==deco.Rc && reb[head0].v && reb[head0].executed && reb[head0].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || LkValid(reb[dec].ir);
 		reb[dec].niv <= NextInsnValid(reb[dec].ir) || fnNextInsnValid(dec);
-		reb[dec].ias <= Source1Valid(reb[dec].ir)||deco.Ra=='d0 ? 5'd31 : regfile_src[deco.Ra];
-		reb[dec].ibs <= Source2Valid(reb[dec].ir)||deco.Rb=='d0 ? 5'd31 : regfile_src[deco.Rb];
-		reb[dec].ics <= Source3Valid(reb[dec].ir)||deco.Rc=='d0 ? 5'd31 : regfile_src[deco.Rc];
-		reb[dec].lks <= LkValid(reb[dec].ir) ? 5'd31 : regfile_src[deco.Rc];
+		reb[dec].ias <= Source1Valid(reb[dec].ir)||deco.Ra=='d0 ? 6'd31 : regfile_src[deco.Ra];
+		reb[dec].ibs <= Source2Valid(reb[dec].ir)||deco.Rb=='d0 ? 6'd31 : regfile_src[deco.Rb];
+		reb[dec].ics <= Source3Valid(reb[dec].ir)||deco.Rc=='d0 ? 6'd31 : regfile_src[deco.Rc];
+		reb[dec].lks <= LkValid(reb[dec].ir) ? 6'd31 : regfile_src[deco.Rc];
 		reb[dec].cioreg <= cioreg;
 		reb[dec].cio <= cio[1:0];
 //		reb[dec].predict_taken <= dpredict_taken;
@@ -2076,7 +2100,7 @@ begin
 //		reb[dec].mask_bit <= mask[dstep];
 		reb[dec].vmask <= mask;
 		reb[dec].zbit <= deco.Rz;
-		reb[dec].predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==5'd31) || deco.jxz);
+		reb[dec].predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==6'd31) || deco.jxz);
 		
 		if (fnPrevReg(dec)) begin
 			if (reb[fnPrevInsn(dec)].decompressed) begin
@@ -2109,7 +2133,7 @@ begin
 			end
 			tStackRetadr(dec);
 		end
-		else if (reb[dec].ir.jxx.Rc==5'd31 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
+		else if (reb[dec].ir.jxx.Rc==6'd31 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
 				branchmiss_adr.offs <= reb[dec].ip.offs + deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
@@ -2336,7 +2360,7 @@ task tJmp;
 begin
   if (reb[exec].dec.jmp) begin
  		reb[exec].takb <= 1'b1;
-  	if (reb[exec].dec.dj ? (reb[exec].ia != 64'd0) : (reb[exec].dec.Rc != 'd0 && reb[exec].dec.Rc != 5'd31))	// ==0,7 was already done at ifetch
+  	if (reb[exec].dec.dj ? (reb[exec].ia != 64'd0) : (reb[exec].dec.Rc != 'd0 && reb[exec].dec.Rc != 6'd31))	// ==0,7 was already done at ifetch
   		tBranch(4'd5);
   	else
   		tStackRetadr(exec);
@@ -2353,7 +2377,7 @@ task tBra;
 begin
   if (reb[exec].dec.bra) begin
  		reb[exec].takb <= 1'b1;
-  	if (reb[exec].dec.Rc != 'd0 && reb[exec].dec.Rc != 5'd31)	// ==0,7 was already done at ifetch
+  	if (reb[exec].dec.Rc != 'd0 && reb[exec].dec.Rc != 6'd31)	// ==0,7 was already done at ifetch
   		tBranch(4'd6);
   	else
   		tStackRetadr(exec);
@@ -2443,7 +2467,10 @@ begin
 		if (fnArgsValid(exec)) begin
 			reb[exec].w256 <= 1'b0;
 			reb[exec].w512 <= 1'b0;
-			reb[exec].res <= res;
+			if (reb[exec].dec.is_valu)
+				reb[exec].res <= vres;
+			else
+				reb[exec].res <= res;
 			reb[exec].res_t2 <= res_t2;
 			if (reb[exec].v) begin
 				if (!reb[exec].dec.multi_cycle) begin
@@ -2578,7 +2605,7 @@ begin
   if (commit0_wr) begin
     $display("regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus);
     // Globally enable interrupts after first update of stack pointer.
-    if (reb[commit0_src].dec.Rt==5'd31) begin
+    if (reb[commit0_src].dec.Rt==6'd31) begin
     	sp <= commit0_bus[63:0];	// debug
       gie <= TRUE;
     end
@@ -2586,7 +2613,7 @@ begin
   if (commit1_wr) begin
   	if (commit_cnt==2'd2) begin
 	    $display("regfile[%d] <= %h", reb[commit1_src].dec.Rt, commit1_bus);
-	    if (reb[commit1_src].dec.Rt==5'd31) begin
+	    if (reb[commit1_src].dec.Rt==6'd31) begin
 	    	sp <= commit1_bus[63:0];	// debug
 	      gie <= TRUE;
 	    end
@@ -2648,7 +2675,7 @@ begin
 	cause[2'd3] <= reb[head0].cause & 16'h80FF;
 	badaddr[2'd3] <= reb[head0].badAddr;
 	eip_regfile[reb[head0].istk_depth] <= reb[head0].ip;
-	eip_src[reb[head0].istk_depth] <= 5'd31;
+	eip_src[reb[head0].istk_depth] <= 6'd31;
 	ip.offs <= tvec[3'd3] + {omode,6'h00};
 	tNullReb(head0);
 end
@@ -2787,7 +2814,7 @@ begin
   end
   for (n = 0; n < 16; n = n + 1) begin
   	if (~livetarget2[n])
-  		eip_src[n] <= 5'd31;
+  		eip_src[n] <= 6'd31;
   end
 end
 endtask
@@ -2825,7 +2852,7 @@ begin
   	reb[exec].jmptgt.offs <= reb[exec].dec.jmptgt;
 		xx <= 4'd6;
   end
-  else if (reb[exec].dec.Rc == 5'd31) begin
+  else if (reb[exec].dec.Rc == 6'd31) begin
   	branchmiss_adr.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
  		branchmiss_adr.micro_ip <= 'd0;
   	reb[exec].jmptgt.offs <= reb[exec].ip.offs + reb[exec].dec.jmptgt;
@@ -3032,41 +3059,49 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 function [31:0] fnRegName;
-input [4:0] Rn;
+input [5:0] Rn;
 begin
 	case(Rn)
-	5'd0:	fnRegName = "zero";
-	5'd1:	fnRegName = "lr";
-	5'd2:	fnRegName = "lr2";
-	5'd3:	fnRegName = "a0";
-	5'd4:	fnRegName = "a1";
-	5'd5:	fnRegName = "t0";
-	5'd6:	fnRegName = "t1";
-	5'd7:	fnRegName = "t2";
-	5'd8:	fnRegName = "t3";
-	5'd9:	fnRegName = "t4";
-	5'd10:	fnRegName = "t5";
-	5'd11:	fnRegName = "t6";
-	5'd12:	fnRegName = "s0";
-	5'd13:	fnRegName = "s1";
-	5'd14:	fnRegName = "s2";
-	5'd15:	fnRegName = "s3";
-	5'd16:	fnRegName = "s4";
-	5'd17:	fnRegName = "s5";
-	5'd18:	fnRegName = "s6";
-	5'd19:	fnRegName = "s7";
-	5'd20:	fnRegName = "a2";
-	5'd21:	fnRegName = "a3";
-	5'd22:	fnRegName = "a4";
-	5'd23:	fnRegName = "a5";
-	5'd24:	fnRegName = "a6";
-	5'd25:	fnRegName = "a7";
-	5'd26:	fnRegName = "lc";
-	5'd27:	fnRegName = "r27";
-	5'd28:	fnRegName = "r28";
-	5'd29:	fnRegName = "gp";
-	5'd30:	fnRegName = "fp";
-	5'd31:	fnRegName = "sp";
+	6'd0:	fnRegName = "zero";
+	6'd1:	fnRegName = "lr";
+	6'd2:	fnRegName = "lr2";
+	6'd3:	fnRegName = "a0";
+	6'd4:	fnRegName = "a1";
+	6'd5:	fnRegName = "t0";
+	6'd6:	fnRegName = "t1";
+	6'd7:	fnRegName = "t2";
+	6'd8:	fnRegName = "t3";
+	6'd9:	fnRegName = "t4";
+	6'd10:	fnRegName = "t5";
+	6'd11:	fnRegName = "t6";
+	6'd12:	fnRegName = "s0";
+	6'd13:	fnRegName = "s1";
+	6'd14:	fnRegName = "s2";
+	6'd15:	fnRegName = "s3";
+	6'd16:	fnRegName = "s4";
+	6'd17:	fnRegName = "s5";
+	6'd18:	fnRegName = "s6";
+	6'd19:	fnRegName = "s7";
+	6'd20:	fnRegName = "a2";
+	6'd21:	fnRegName = "a3";
+	6'd22:	fnRegName = "a4";
+	6'd23:	fnRegName = "a5";
+	6'd24:	fnRegName = "a6";
+	6'd25:	fnRegName = "a7";
+	6'd26:	fnRegName = "lc";
+	6'd27:	fnRegName = "r27";
+	6'd28:	fnRegName = "r28";
+	6'd29:	fnRegName = "gp";
+	6'd30:	fnRegName = "fp";
+	6'd31:	fnRegName = "sp";
+	6'd32:	fnRegName = "vm0";
+	6'd33:	fnRegName = "vm1";
+	6'd34:	fnRegName = "vm2";
+	6'd35:	fnRegName = "vm3";
+	6'd36:	fnRegName = "vm4";
+	6'd37:	fnRegName = "vm5";
+	6'd38:	fnRegName = "vm6";
+	6'd39:	fnRegName = "vm7";
 	endcase
 end
 endfunction

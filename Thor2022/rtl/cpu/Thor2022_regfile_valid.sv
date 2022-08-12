@@ -43,21 +43,21 @@ input rst;
 input clk;
 input [2:0] commit0_id;
 input commit0_wr;
-input [4:0] commit0_tgt;
+input [5:0] commit0_tgt;
 input [2:0] commit1_id;
 input commit1_wr;
-input [4:0] commit1_tgt;
+input [5:0] commit1_tgt;
 input branchmiss;
 input sReorderEntry [7:0] reb;
-input [31:0] latestID [0:7];
-input [31:0] livetarget;
+input [NREGS-1:0] latestID [0:7];
+input [NREGS-1:0] livetarget;
 input DecodeOut decbus0;
 input DecodeOut decbus1;
 input [2:0] dec0;
 input [2:0] dec1;
-input [4:0] regfile_src [0:31];
-output reg [31:0] next_regfile_valid;
-output reg [31:0] regfile_valid;
+input [5:0] regfile_src [0:NREGS-1];
+output reg [NREGS-1:0] next_regfile_valid;
+output reg [NREGS-1:0] regfile_valid;
 
 integer n,n1,n2;
 
@@ -68,16 +68,16 @@ always_comb
 
 always_comb
 if (rst) begin
-	for (n = 0; n < 32; n = n + 1)
+	for (n = 0; n < NREGS; n = n + 1)
 		next_regfile_valid[n] = 1'd1;
 end
 else begin
 
-	for (n = 0; n < 32; n = n + 1)
+	for (n = 0; n < NREGS; n = n + 1)
 		next_regfile_valid[n] = regfile_valid[n];
 
 	if (branchmiss) begin
-	  for (n = 0; n < 32; n = n + 1) begin
+	  for (n = 0; n < NREGS; n = n + 1) begin
 	  	if (~livetarget[n]) begin
 	  		next_regfile_valid[n] = 1'd1;
 	  		$display("%d Reg %d - no live target", $time, n);
@@ -94,16 +94,16 @@ else begin
   	$display("Regfile %d valid=%d", commit1_tgt, (regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]));
 	end
 
-	next_regfile_valid[5'd0] <= 1'd1;
+	next_regfile_valid[6'd0] <= 1'd1;
 end
 
 always_ff @(posedge clk)
 if (rst) begin
-	for (n1 = 0; n1 < 32; n1 = n1 + 1)
+	for (n1 = 0; n1 < NREGS; n1 = n1 + 1)
 		regfile_valid[n1] <= 1'b1;
 end
 else begin
-	for (n1 = 0; n1 < 32; n1 = n1 + 1) begin
+	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
 		regfile_valid[n1] <= #1 next_regfile_valid[n1];
 	end
 	if (dec0 != 3'd7 && reb[dec0].decompressed) begin
@@ -119,7 +119,7 @@ else begin
 				regfile_valid[decbus1.Rt] <= 1'b0;
 		end
 	end
-	regfile_valid[5'd0] <= 1'd1;
+	regfile_valid[6'd0] <= 1'd1;
 end
 
 endmodule

@@ -117,6 +117,7 @@ wire [31:0] pic_dato;
 wire pit_ack;
 wire [31:0] pit_dato;
 wire pit_out0, pit_out1;
+wire pit_irq;
 wire crd_ack;
 wire [63:0] crd_dato;
 reg ack;
@@ -161,7 +162,7 @@ case(sel)
 default:	dat32 <= dato[31:0];
 endcase
 
-Thor2022_pit upit1
+Thor2022_pit #(.NTIMER(8)) upit1
 (
 	.rst_i(rst_i),
 	.clk_i(clk_i),
@@ -171,7 +172,7 @@ Thor2022_pit upit1
 	.ack_o(pit_ack),
 	.sel_i(sel_o[15:12]|sel_o[11:8]|sel_o[7:4]|sel_o[3:0]),
 	.we_i(we_o),
-	.adr_i(adr32[5:0]),
+	.adr_i(adr32[8:0]),
 	.dat_i(dat32),
 	.dat_o(pit_dato),
 	.clk0(1'b0),
@@ -185,7 +186,8 @@ Thor2022_pit upit1
 	.out2(pit_out2),
 	.clk3(1'b0),
 	.gate3(1'b0),
-	.out3(pit_out3)
+	.out3(pit_out3),
+	.irq(pit_irq)
 );
 
 wire irq3;
@@ -230,8 +232,8 @@ Thor2022_pic upic1
 	.i26(i26),
 	.i27(i27),
 	.i28(i28),
-	.i29(pit_out2),	// garbage collector stop interrupt
-	.i30(pit_out1),	// garbage collector interrupt
+	.i29(i29),			// 
+	.i30(pit_irq),	// 
 	.i31(pit_out0),	// time slice interrupt
 	.irqo({irq3,irq}),
 	.nmii(1'b0),

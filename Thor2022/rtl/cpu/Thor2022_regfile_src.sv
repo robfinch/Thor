@@ -44,33 +44,33 @@ input rst;
 input clk;
 input [2:0] head0;
 input commit0_wr;
-input [4:0] commit0_tgt;
+input [5:0] commit0_tgt;
 input commit1_wr;
-input [4:0] commit1_tgt;
+input [5:0] commit1_tgt;
 input branchmiss;
 input sReorderEntry [7:0] reb;
-input [31:0] latestID [0:7];
-input [31:0] livetarget;
-input [31:0] latestID2 [0:7];
-input [31:0] livetarget2;
+input [NREGS-1:0] latestID [0:7];
+input [NREGS-1:0] livetarget;
+input [NREGS-1:0] latestID2 [0:7];
+input [NREGS-1:0] livetarget2;
 input DecodeOut decbus0;
 input DecodeOut decbus1;
 input [2:0] dec0;
 input [2:0] dec1;
-input [31:0] regfile_valid;
-output reg [4:0] next_regfile_src [0:31];
-output reg [4:0] regfile_src [0:31];
+input [NREGS-1:0] regfile_valid;
+output reg [5:0] next_regfile_src [0:NREGS-1];
+output reg [5:0] regfile_src [0:NREGS-1];
 
 integer n,n1;
 
 always_ff @(negedge clk)
 if (rst) begin
-	for (n = 0; n < 32; n = n + 1)
-		next_regfile_src[n] <= 5'd31;
+	for (n = 0; n < NREGS; n = n + 1)
+		next_regfile_src[n] <= 6'd31;
 end
 else begin
 
-	for (n = 0; n < 32; n = n + 1)
+	for (n = 0; n < NREGS; n = n + 1)
 		next_regfile_src[n] <= regfile_src[n];
 
 	if (branchmiss) begin
@@ -99,10 +99,10 @@ else begin
 	end
 	else begin
 		if (dec0!= 3'd7 && reb[dec0].decompressed) begin
-			for (n = 0; n < 32; n = n + 1)
+			for (n = 0; n < 40; n = n + 1)
 				if (regfile_src[n]==dec0 && n != decbus0.Rt && n != decbus0.Rt2) begin
 					if (regfile_valid[n])
-						next_regfile_src[n] <= 5'd31;
+						next_regfile_src[n] <= 6'd31;
 					$display("%d Register %d source not reset.", $time, n);
 					//next_regfile_src[n] <= 5'd31;
 				end
@@ -129,22 +129,22 @@ else begin
   	$display("Regfile %d source reset", commit1_tgt);
 	end
 	*/
-	next_regfile_src[5'd0] <= #1 5'd31;
+	next_regfile_src[6'd0] <= #1 6'd31;
 end
 
 
 always_ff @(posedge clk)
 if (rst) begin
-	for (n1 = 0; n1 < 32; n1 = n1 + 1)
-		regfile_src[n1] <= #1 5'd31;
+	for (n1 = 0; n1 < NREGS; n1 = n1 + 1)
+		regfile_src[n1] <= #1 6'd31;
 end
 else begin
-	for (n1 = 0; n1 < 32; n1 = n1 + 1) begin
+	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
 		regfile_src[n1] <= #1 next_regfile_src[n1];
 		if (regfile_src[n1] != next_regfile_src[n1])
 			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, decbus0.Rt, dec0);
 	end
-	regfile_src[5'd0] <= #1 5'd31;
+	regfile_src[6'd0] <= #1 6'd31;
 end
 
 endmodule

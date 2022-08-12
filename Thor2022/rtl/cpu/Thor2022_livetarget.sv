@@ -44,42 +44,42 @@ input sReorderEntry [REB_ENTRIES-1:0] reb;
 input [REB_ENTRIES-1:0] stomp;
 input [5:0] sns [0:7];
 input [2:0] missid;
-output reg [31:0] livetarget;
-output reg [31:0] livetarget2;
-output reg [31:0] latestID [0:7];
-output reg [31:0] latestID2 [0:7];
+output reg [NREGS-1:0] livetarget;
+output reg [NREGS-1:0] livetarget2;
+output reg [NREGS-1:0] latestID [0:7];
+output reg [NREGS-1:0] latestID2 [0:7];
 
-reg [31:0] reb_out [0:REB_ENTRIES-1];
-reg [31:0] reb_out2 [0:REB_ENTRIES-1];
-reg [31:0] reb_livetarget [0:7];
-reg [31:0] reb_livetarget2 [0:7];
-reg [31:0] reb_cumulative [0:7];
-reg [31:0] reb_cumulative2 [0:7];
+reg [NREGS-1:0] reb_out [0:REB_ENTRIES-1];
+reg [NREGS-1:0] reb_out2 [0:REB_ENTRIES-1];
+reg [NREGS-1:0] reb_livetarget [0:7];
+reg [NREGS-1:0] reb_livetarget2 [0:7];
+reg [NREGS-1:0] reb_cumulative [0:7];
+reg [NREGS-1:0] reb_cumulative2 [0:7];
 
 integer n1,n2;
 always_comb
 for (n1 = 0; n1 < REB_ENTRIES; n1 = n1 + 1)
-	reb_out[n1] <= (32'h1 << reb[n1].dec.Rt) & 32'hFFFFFFFE;
+	reb_out[n1] <= (64'h1 << reb[n1].dec.Rt) & {{NREGS-1{1'b1}},1'b0};
 always_comb
 for (n2 = 0; n2 < REB_ENTRIES; n2 = n2 + 1)
-	reb_out2[n2] <= (32'h1 << reb[n2].dec.Rt2) & 32'hFFFFFFFE;
+	reb_out2[n2] <= (64'h1 << reb[n2].dec.Rt2) & {{NREGS-1{1'b1}},1'b0};
 
 integer n31;
 always_comb
 	for (n31 = 0; n31 < REB_ENTRIES; n31 = n31 + 1) begin
-		reb_livetarget[n31] = {32{reb[n31].v}} & {32{~stomp[n31]}} & reb_out[n31];// & {32{~reb[n31].out}};
-		reb_livetarget2[n31] = {32{reb[n31].v}} & {32{~stomp[n31]}} & reb_out2[n31];// & {16{~reb[n31].out}};
+		reb_livetarget[n31] = {NREGS{reb[n31].v}} & {NREGS{~stomp[n31]}} & reb_out[n31];// & {32{~reb[n31].out}};
+		reb_livetarget2[n31] = {NREGS{reb[n31].v}} & {NREGS{~stomp[n31]}} & reb_out2[n31];// & {16{~reb[n31].out}};
 	end
 integer n32,j32;
 always_comb
-for (j32 = 1; j32 < 32; j32 = j32 + 1) begin
+for (j32 = 1; j32 < NREGS; j32 = j32 + 1) begin
 	livetarget[j32] = 1'b0;
 	for (n32 = 0; n32 < REB_ENTRIES; n32 = n32 + 1)
 		livetarget[j32] = livetarget[j32] | reb_livetarget[n32][j32];
 end
 integer n33,j33;
 always_comb
-for (j33 = 1; j33 < 32; j33 = j33 + 1) begin
+for (j33 = 1; j33 < NREGS; j33 = j33 + 1) begin
 	livetarget2[j33] = 1'b0;
 	for (n33 = 0; n33 < REB_ENTRIES; n33 = n33 + 1)
 		livetarget2[j33] = livetarget2[j33] | reb_livetarget2[n33][j33];
@@ -105,14 +105,14 @@ always_comb
 integer n36;
 always_comb
 	for (n36 = 0; n36 < REB_ENTRIES; n36 = n36 + 1)
-    latestID[n36] = (missid == n36 || ((reb_livetarget[n36] & reb_cumulative[(n36+1)%REB_ENTRIES]) == {32{1'b0}}))
+    latestID[n36] = (missid == n36 || ((reb_livetarget[n36] & reb_cumulative[(n36+1)%REB_ENTRIES]) == {NREGS{1'b0}}))
 				    ? reb_livetarget[n36]
-				    : {32{1'b0}};
+				    : {NREGS{1'b0}};
 integer n37;
 always_comb
 	for (n37 = 0; n37 < REB_ENTRIES; n37 = n37 + 1)
-    latestID2[n37] = (missid == n37 || ((reb_livetarget2[n37] & reb_cumulative2[(n37+1)%REB_ENTRIES]) == {32{1'b0}}))
+    latestID2[n37] = (missid == n37 || ((reb_livetarget2[n37] & reb_cumulative2[(n37+1)%REB_ENTRIES]) == {NREGS{1'b0}}))
 				    ? reb_livetarget2[n37]
-				    : {32{1'b0}};
+				    : {NREGS{1'b0}};
 
 endmodule

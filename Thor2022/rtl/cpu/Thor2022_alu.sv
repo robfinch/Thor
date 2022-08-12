@@ -91,8 +91,11 @@ Thor2022_ipt_hash uhash1
 	.hash(hash)
 );
 
-wire [7:0] cntlz_out;
-cntlz128 uclz(ir.r1.func[0] ? ~xa : xa, cntlz_out);
+wire [6:0] cntlz_out;
+cntlz64 uclz(ir.r1.func[0] ? ~xa : xa, cntlz_out);
+
+wire [6:0] vmcntpop;
+cntpop64 uvmcntpop(xb, vmcntpop);
 
 //wire [255:0] sllrho = {128'd0,xa[127:0]|pn[127:0]} << {xb[4:0],4'h0};
 //wire [255:0] srlrho = {pn[127:0]|xa[127:0],128'd0} >> {xb[4:0],4'h0};
@@ -136,6 +139,43 @@ always_comb
   for (n2 = 0; n2 < $bits(Value); n2 = n2 + 1)
     mux_out[n2] = xa[n2] ? xb[n2] : xc[n2];
 
+Value vmfirst;
+integer n3;
+always_comb
+begin
+	vmfirst = 64'hFFFFFFFFFFFFFFFF;
+	for (n3 = 0; n3 < NLANES; n3 = n3 + 1)
+		if (xb[n3] && vmfirst[63])
+			vmfirst = n3;
+end
+
+Value vmlast;
+integer n4;
+always_comb
+begin
+	vmlast = 64'hFFFFFFFFFFFFFFFF;
+	for (n4 = NLANES-1; n4 >= 0; n4 = n4 - 1)
+		if (xb[n4] && vmlast[63])
+			vmlast = n4;
+end
+
+Value vmfill;
+integer n5;
+always_comb
+begin
+	vmfill = {64{~ir[24]}};
+	for (n5 = 0; n5 < NLANES; n5 = n5 + 1) begin
+		if (ir[17:12] > ir[23:18]) begin
+			if (n5 > ir[17:12] || n5 < ir[23:18])
+				vmfill[n5] = ir[24];
+		end
+		else begin
+			if (n5 > ir[17:12] && n5 < ir[23:18])
+				vmfill[n5] = ir[24];
+		end
+	end
+end
+
 always_comb
 case(ir.any.opcode)
 R1:
@@ -176,7 +216,18 @@ R2:
 	endcase
 VM:
 	case(ir.vmr2.func)
-	MTVM:			res2 = xa;
+	MTVM,MTVL:	res2 = xa;
+	VMADD:		res2 = xa + xb;
+	VMSUB:		res2 = xa - xb;
+	VMAND:		res2 = xa & xb;
+	VMOR:			res2 = xa | xb;
+	VMXOR:		res2 = xa ^ xb;
+	VMSLL:		res2 = xa << xb[5:0];
+	VMSRL:		res2 = xa >> xb[5:0];
+	VMFIRST:	res2 = vmfirst;
+	VMLAST:		res2 = vmlast;
+	VMFILL:		res2 = vmfill;
+	VMCNTPOP:	res2 = {57'd0,vmcntpop};
 	default:	res2 = 'd0;
 	endcase
 OSR2:
@@ -224,6 +275,7 @@ SLTUI,SLTUIL:	res2 = xa < imm;
 SLEUIL:				res2 = xa <= imm;
 SGTUIL:				res2 = xa > imm;
 SGEUIL:				res2 = xa >= imm;
+MOV:					res2 = xa;
 DJMP:					res2 = xa - 2'd1;
 JMP,BRA:			res2 = ip + ilen;
 //STSET:				res2 = xc - 2'd1;
