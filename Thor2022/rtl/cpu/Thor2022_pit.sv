@@ -38,10 +38,10 @@
 // ============================================================================
 //
 //	Reg	Description
-//	00	current count   (read only)
-//	04	max count	    (read-write)
-//  08  on time			(read-write)
-//	0C	control
+//	000	current count   (read only)
+//	008	max count	    (read-write)
+//  010  on time			(read-write)
+//	018	control
 //		byte 0 for counter 0, byte 1 for counter 1, byte 2 for counter 2
 //		bit in byte
 //		0 = 1 = load, automatically clears
@@ -49,25 +49,27 @@
 //		2 = 1 = auto-reload on terminal count, 0 = no reload
 //		3 = 1 = use external clock, 0 = internal clk_i
 //      4 = 1 = use gate to enable count, 0 = ignore gate
-//	10	current count 1
-//	14  max count 1
-//	18  on time 1
-//	20	current count 2
-//	24	max count 2
-//	28	on time 2
-//	30	current count 3
-//	34	max count 3
-//	38	on time 3
+//	020	current count 1
+//	028  max count 1
+//	030  on time 1
+//	040	current count 2
+//	048	max count 2
+//	050	on time 2
+//	060	current count 3
+//	068	max count 3
+//	070	on time 3
 //	...
-//	200	underflow status
-//  204 synchronization register
-//  208 interrupt enable
-//	20C temporary register
+//	400	underflow status
+//  408 synchronization register
+//  410 interrupt enable
+//	418 temporary register
+//	420 output status
+//	428 internal gate
 //
 //	- all counter controls can be written at the same time with a
 //    single instruction allowing synchronization of the counters.
 //
-// 4k346 LUTs 5k578 FF's
+// 8k556 LUTs 10k730 FF's (32x64 bit timers)
 // ============================================================================
 //
 module Thor2022_pit(rst_i, clk_i, cs_i, cyc_i, stb_i, ack_o, sel_i, we_i, adr_i, dat_i, dat_o,
@@ -75,17 +77,18 @@ module Thor2022_pit(rst_i, clk_i, cs_i, cyc_i, stb_i, ack_o, sel_i, we_i, adr_i,
 	irq,
 	);
 parameter NTIMER=8;
+parameter BITS=48;
 input rst_i;
 input clk_i;
 input cs_i;
 input cyc_i;
 input stb_i;
 output ack_o;
-input [3:0] sel_i;
+input [7:0] sel_i;
 input we_i;
-input [8:0] adr_i;
-input [31:0] dat_i;
-output reg [31:0] dat_o;
+input [10:0] adr_i;
+input [63:0] dat_i;
+output reg [63:0] dat_o;
 input clk0;
 input gate0;
 output out0;
@@ -98,15 +101,16 @@ output out2;
 input clk3;
 input gate3;
 output out3;
-output reg irq;
+output irq;
 
 integer n;
-reg [31:0] maxcounth [0:NTIMER-1];
-reg [31:0] maxcount [0:NTIMER-1];
-reg [31:0] count [0:NTIMER-1];
-reg [31:0] onth [0:NTIMER-1];
-reg [31:0] ont [0:NTIMER-1];
+reg [BITS-1:0] maxcounth [0:NTIMER-1];
+reg [BITS-1:0] maxcount [0:NTIMER-1];
+reg [BITS-1:0] count [0:NTIMER-1];
+reg [BITS-1:0] onth [0:NTIMER-1];
+reg [BITS-1:0] ont [0:NTIMER-1];
 wire [NTIMER-1:0] gate;
+reg [NTIMER-1:0] igate;
 wire [NTIMER-1:0] pulse;
 reg ldh [0:NTIMER-1];
 reg ceh [0:NTIMER-1];
@@ -120,9 +124,10 @@ reg ar [0:NTIMER-1];
 reg ge [0:NTIMER-1];
 reg xc [0:NTIMER-1];
 reg [NTIMER-1:0] ie;
-reg out [0:NTIMER-1];
+reg [NTIMER-1:0] out;
 reg [NTIMER-1:0] underflow;
 reg [NTIMER-1:0] tmp;
+reg [NTIMER-1:0] irqf;
 
 wire cs = cyc_i & stb_i & cs_i;
 reg rdy;
@@ -144,13 +149,22 @@ edge_det ued1 (.rst(rst_i), .clk(clk_i), .ce(1'b1), .i(clk1), .pe(pulse[1]), .ne
 edge_det ued2 (.rst(rst_i), .clk(clk_i), .ce(1'b1), .i(clk2), .pe(pulse[2]), .ne(), .ee());
 edge_det ued3 (.rst(rst_i), .clk(clk_i), .ce(1'b1), .i(clk3), .pe(pulse[3]), .ne(), .ee());
 
+genvar g;
+generate
+	for (g = 4; g < NTIMER; g = g + 1) begin
+assign gate[g] = 1'b1;
+assign pulse[g] = 1'b0;
+	end
+endgenerate
+
 initial begin
 	for (n = 0; n < NTIMER; n = n + 1) begin
-		maxcount[n] <= 32'd0;
-		maxcounth[n] <= 32'd0;
-		count[n] <= 32'd0;
-		ont[n] <= 32'd0;
-		onth[n] <= 32'd0;
+		maxcount[n] <= 'd0;
+		maxcounth[n] <= 'd0;
+		count[n] <= 'd0;
+		ont[n] <= 'd0;
+		onth[n] <= 'd0;
+		igate[n] <= 1'b0;
 		ld[n] <= 1'b0;
 		ce[n] <= 1'b0;
 		ar[n] <= 1'b0;
@@ -162,14 +176,20 @@ initial begin
 		geh[n] <= 1'b0;
 		xch[n] <= 1'b0;
 		out[n] <= 1'b0;
+		irqf[n] <= 1'b0;
 	end
 end
 
 always @(posedge clk_i)
 if (rst_i) begin
-	irq <= 1'b0;
 	ie <= 'd0;
 	for (n = 0; n < NTIMER; n = n + 1) begin
+		maxcount[n] <= 'd0;
+		maxcounth[n] <= 'd0;
+		count[n] <= 'd0;
+		ont[n] <= 'd0;
+		onth[n] <= 'd0;
+		igate[n] <= 1'b0;
 		ld[n] <= 1'b0;
 		ce[n] <= 1'b0;
 		ar[n] <= 1'b1;
@@ -179,24 +199,32 @@ if (rst_i) begin
 		arh[n] <= 1'b1;
 		geh[n] <= 1'b0;
 		out[n] <= 1'b0;
+		irqf[n] <= 1'b0;
 	end	
 end
 else begin
 	for (n = 0; n < NTIMER; n = n + 1) begin
 		ld[n] <= 1'b0;
-		if (cs && we_i && adr_i[8:4]==n)
-		case(adr_i[3:2])
+		if (cs && we_i && adr_i[10:5]==n)
+		case(adr_i[4:3])
 		2'd1:	maxcounth[n] <= dat_i;
 		2'd2:	onth[n] <= dat_i;
 		2'd3:	begin
-					if (sel_i[0]) begin
 						ldh[n] <= dat_i[0];
 						ceh[n] <= dat_i[1];
 						arh[n] <= dat_i[2];
 						xch[n] <= dat_i[3];
 						geh[n] <= dat_i[4];
+						if (dat_i[7]) begin
+							ld[n] <= dat_i[0];
+							ce[n] <= dat_i[1];
+							ar[n] <= dat_i[2];
+							xc[n] <= dat_i[3];
+							ge[n] <= dat_i[4];
+							maxcount[n] <= maxcounth[n];
+							ont[n] <= onth[n];
+						end
 					end
-				end
 		default:	;
 		endcase
 		// Writing the underflow register clears the underflows and disable further
@@ -204,16 +232,16 @@ else begin
 		// Interrupt processing should read the underflow register to determine
 		// which timers underflowed, then write back the value to the underflow
 		// register.
-		if (cs && we_i && adr_i[8:2]==7'h40) begin
+		if (cs && we_i && adr_i[10:3]==8'h80) begin
 			if (dat_i[n]) begin
 				ie[n] <= 1'b0;
 				underflow[n] <= 1'b0;
+				irqf[n] <= 1'b0;
 			end
-			irq <= 1'b0;
 		end
 		// The timer synchronization register indicates which timer's registers to
 		// update. All timers may have their registers updated synchronously.
-		if (cs && we_i && adr_i[8:2]==7'h41)
+		if (cs && we_i && adr_i[10:3]==8'h81)
 			if (dat_i[n]) begin
 				ld[n] <= ldh[n];
 				ce[n] <= ceh[n];
@@ -224,23 +252,27 @@ else begin
 				maxcount[n] <= maxcounth[n];
 				ont[n] <= onth[n];
 			end
-		if (cs && we_i && adr_i[8:2]==7'h42)
+		if (cs && we_i && adr_i[10:3]==8'h82)
 			ie <= dat_i;
-		if (cs && we_i && adr_i[8:2]==7'h43)
+		if (cs && we_i && adr_i[10:3]==8'h83)
 			tmp <= dat_i;
+		if (cs && we_i && adr_i[10:3]==8'h85)
+			igate <= (igate & ~dat_i[63:32]) | dat_i[31:0];
 		if (cs) begin
-			case(adr_i[8:2])
-			7'h40:	dat_o <= underflow;
-			7'h41:	dat_o <= 'd0;
-			7'h42:	dat_o <= ie;
-			7'h43:	dat_o <= tmp;
+			case(adr_i[10:3])
+			8'h80:	dat_o <= underflow;
+			8'h81:	dat_o <= 'd0;
+			8'h82:	dat_o <= ie;
+			8'h83:	dat_o <= tmp;
+			8'h84:	dat_o <= out;
+			8'h85:	dat_o <= igate;
 			default:
-				if (adr_i[8:4]==n)
-					case(adr_i[3:2])
+				if (adr_i[10:5]==n)
+					case(adr_i[4:3])
 					2'd0:	dat_o <= count[n];
 					2'd1:	dat_o <= maxcount[n];
 					2'd2:	dat_o <= ont[n];
-					2'd3:	dat_o <= {3'b0,ge[n],xc[n],ar[n],ce[n],1'b0};
+					2'd3:	dat_o <= {56'd0,3'b0,ge[n],xc[n],ar[n],ce[n],1'b0};
 					endcase
 			endcase
 		end
@@ -250,14 +282,15 @@ else begin
 		if (ld[n]) begin
 			count[n] <= maxcount[n];
 		end
-		else if ((xc[n] ? pulse[n] & ce[n] : ce[n]) & (ge[n] ? gate[n] : 1'b1)) begin
+		else if ((xc[n] ? pulse[n] & ce[n] : ce[n]) & (ge[n] ? igate[n] & gate[n] : 1'b1)) begin
 			count[n] <= count[n] - 2'd1;
-			if (count[n]==ont[n])
+			if (count[n]==ont[n]) begin
 				out[n] <= 1'b1;
+			end
 			else if (count[n]=='d0) begin
 				underflow[n] <= 1'b1;
 				if (ie[n])
-					irq <= 1'b1;
+					irqf[n] <= 1'b1;
 				out[n] <= 1'b0;
 				if (ar[n]) begin
 					count[n] <= maxcount[n];
@@ -269,5 +302,7 @@ else begin
 		end
 	end
 end
+
+assign irq = |irqf;
 
 endmodule

@@ -118,6 +118,7 @@ wire pit_ack;
 wire [31:0] pit_dato;
 wire pit_out0, pit_out1;
 wire pit_irq;
+wire [31:0] pet_out;
 wire crd_ack;
 wire [63:0] crd_dato;
 reg ack;
@@ -150,18 +151,17 @@ always @(posedge clk_i)
 
 wire cs_pit = adr[31:12]==20'hFF960;
 
-// Need to recreate the a2,a3 address bit for 32 bit peripherals.
-wire [31:0] adr32 = {adr[31:4],|sel[15:8],|sel[7:4]| |sel[15:12],2'b00};
-reg [31:0] dat32;
+// Need to recreate the a3 address bit for 64 bit peripherals.
+wire [31:0] adr64 = {adr[31:4],|sel[15:8],3'b00};
+reg [63:0] dat64;
 always @*
 case(sel)
-16'h000F:	dat32 <= dato[31:0];
-16'h00F0:	dat32 <= dato[63:32];
-16'h0F00:	dat32 <= dato[95:64];
-16'hF000:	dat32 <= dato[127:96];
-default:	dat32 <= dato[31:0];
+16'h00FF:	dat64 <= dato[63:0];
+16'hFF00:	dat64 <= dato[127:64];
+default:	dat64 <= dato[63:0];
 endcase
 
+/*
 Thor2022_pit #(.NTIMER(8)) upit1
 (
 	.rst_i(rst_i),
@@ -170,10 +170,10 @@ Thor2022_pit #(.NTIMER(8)) upit1
 	.cyc_i(cyc_o),
 	.stb_i(stb_o),
 	.ack_o(pit_ack),
-	.sel_i(sel_o[15:12]|sel_o[11:8]|sel_o[7:4]|sel_o[3:0]),
+	.sel_i(sel_o[15:8]|sel_o[7:0]),
 	.we_i(we_o),
-	.adr_i(adr32[8:0]),
-	.dat_i(dat32),
+	.adr_i(adr64[10:0]),
+	.dat_i(dat64),
 	.dat_o(pit_dato),
 	.clk0(1'b0),
 	.gate0(1'b0),
@@ -189,6 +189,30 @@ Thor2022_pit #(.NTIMER(8)) upit1
 	.out3(pit_out3),
 	.irq(pit_irq)
 );
+*/
+
+// Precision Event Timers
+Thor2022_pet #(.NTIMER(8), .BITS(48)) upet1
+(
+	.rst_i(rst_i),
+	.clk_i(clk_i),
+	.cs_i(cs_pit),
+	.cyc_i(cyc_o),
+	.stb_i(stb_o),
+	.ack_o(pit_ack),
+	.sel_i(sel_o[15:8]|sel_o[7:0]),
+	.we_i(we_o),
+	.adr_i(adr64[9:0]),
+	.dat_i(dat64),
+	.dat_o(pit_dato),
+	.cclk_i(clk_i),
+	.out(pet_out)
+);
+assign pit_out0 = pet_out[0];
+assign pit_out1 = pet_out[1];
+assign pit_out2 = pet_out[2];
+assign pit_out3 = pet_out[3];
+wire pet_irq = |pet_out[31:1];
 
 wire irq3;
 
@@ -233,7 +257,7 @@ Thor2022_pic upic1
 	.i27(i27),
 	.i28(i28),
 	.i29(i29),			// 
-	.i30(pit_irq),	// 
+	.i30(pet_irq),	// 
 	.i31(pit_out0),	// time slice interrupt
 	.irqo({irq3,irq}),
 	.nmii(1'b0),

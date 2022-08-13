@@ -48,8 +48,8 @@ output reg [3:0] incr;
 
 always_comb
 begin
-	next_mip = 'd0;
-	incr = 'd0;
+	next_mip = 7'd0;
+	incr = 4'd0;
 	case(micro_ipi)
 	// POP Ra
 	7'd1:		begin next_mip = 7'd2; ir = {29'h00,5'd31,micro_ir[13:9],1'b0,LDH}; incr = 4'd2; end	// LDOS $Ra,[$SP]
@@ -100,7 +100,7 @@ begin
 	7'd46:	begin next_mip = 7'd47; ir = {3'd6,8'h10,6'd62,6'd4,1'b0,STHS}; end					// STO $Tn+1,16[$FP]
 	7'd47:	begin next_mip = 7'd48; ir = {3'd6,8'h28,6'd3,6'd4,1'b0,LDHS}; end					// LDO $Tn+1,40[$Tn]
 	7'd48:	begin next_mip = 7'd0;  ir = {3'd6,8'h18,6'd62,6'd4,1'b0,STHS}; incr = 4'd2; end					// STO $Tn+1,24[$FP]
-	default:	begin next_mip = 'd0; ir = NOP; end
+	default:	begin next_mip = 7'd0; ir = NOP; end
 	endcase
 end
 
