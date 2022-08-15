@@ -38,18 +38,21 @@
 // ============================================================================
 //
 //	Reg	Description
-//	000	comparator #0
-//  008 control #0
-//	010	comparator #1
-//	018 control #1
-//	020 ...
-//	1F0 comparator #31
-//	1F8 control #31
-//	200	master counter
-//	208	master control
-//	210 match status
-//	218 out status / acknowledge
-//	220 capabilities register
+//	0000	comparator #0
+//  0008	control #0
+//	0010	comparator #1
+//	0018	control #1
+//	...
+//	0FF0 	comparator #255
+//	0FF8	control #255
+//	1000	master counter
+//	1008	master control
+//	1010	match status	(0 to 63)
+//	1018	match status	(64 to 127)
+//	1020	match status	(128 to 191)
+//	1028	match status	(192 to 255)
+//	1030	out status / acknowledge
+//	1038	capabilities register
 //
 // Comparators
 //	If the comparator value matches the counter value then the match status is
@@ -59,17 +62,18 @@
 //  comparator matches the counter value.
 //
 // Control Register bits
-//	0 to 31		output route
-//	32				output type 0 = level, 1 = pulse
-//	34				periodic = 1, non-periodic = 0
+//	0 to 55		output route
+//	56				interrupt enable 1=enabled, 0=disabled
+//	57				output type 0 = level, 1 = pulse
+//	58				periodic = 1, non-periodic = 0
+//	59				comparator style 1='==', 0='>=' only == supported
 //	The following bit is used only for periodic timers, it is otherwise
 // 	ignored. Setting the bit to 0 allows direct access to the compare
 //  register. This bit will automatically set back to 1 after the compare
 //  register has been updated.
-//	35				0 = access compare reg, 1 = access addend
-//	40				output status (read only)
-//	48				interrupt enable 1=enabled, 0=disabled
-// Byte lane selects on the control register are honored.
+//	60				0 = access compare reg, 1 = access addend
+//  61,62			reserved
+//	63				output status (read only)
 //	Output routing will cause the outputs specified to be affected by the
 //  timer. Multiple outputs may be affected by a single timing event. Usually
 //  the outputs will be connected to interrupt request lines, but they do not
@@ -98,10 +102,7 @@
 //
 // Capabilities Register
 //	0 to 7		core revision number
-//	8 to 12		number of timers supported - 1
-//	13				64-bit counter (0)
-//	14				no legacy support (0)
-//	15				reserved
+//	8 to 15		number of timers supported - 1
 //	16 to 27	vendor ID (0)
 //	28 to 31	counter size in bytes - 1
 //	32 to 63	time basis in femtoseconds
@@ -120,11 +121,11 @@ input stb_i;
 output ack_o;
 input [7:0] sel_i;
 input we_i;
-input [9:0] adr_i;
+input [12:0] adr_i;
 input [63:0] dat_i;
 output reg [63:0] dat_o;
 input cclk_i;
-output reg [31:0] out;
+output reg [55:0] out;
 output irq;
 
 integer n;
@@ -135,10 +136,11 @@ reg [63:0] master_control;
 reg [63:0] control [0:NTIMER-1];
 reg [BITS-1:0] addend [0:NTIMER-1];
 reg [BITS-1:0] compare [0:NTIMER-1];
-reg [31:0] out_route [0:NTIMER-1];
+reg [55:0] out_route [0:NTIMER-1];
 reg [NTIMER-1:0] ie;
 reg [NTIMER-1:0] ms;	// match status
 reg [NTIMER-1:0] es;	// edge (1) or level (0) sensitive
+reg [NTIMER-1:0] cst;	// comparator style (0) >=, (1) ==
 reg [3:0] outpulse [0:NTIMER-1];
 
 wire cs = cyc_i & stb_i & cs_i;
@@ -148,23 +150,12 @@ always_ff @(posedge clk_i)
 assign ack_o = cs ? (we_i ? 1'b1 : rdy) : 1'b0;
 
 initial begin
-	master_control = 'd0;
 	// 20 MHz time base
 	// 48 bit counter (6 bytes)
 	// 000 vendor ID
-	// no legacy routing
-	// 64-bit counter
 	// 8 timers
 	// revision 01
-	cap_reg = 64'h02FAF08050002701;
-	for (n = 0; n < NTIMER; n = n + 1) begin
-		es[n] = 2'b00;
-		control[n] = 64'd0;
-		compare[n] = 64'hFFFFFFFFFFFFFFFF;
-		out_route[n] = 32'd0;
-	end
-	ie = 'd0;
-	ms = 'd0;
+	cap_reg = 64'h02FAF08050000701;
 end
 
 reg upd_counter;
@@ -194,13 +185,14 @@ if (rst_i) begin
 	upd_counter <= 1'b0;
 	out <= 1'b0;
 	// Counter disabled
-	master_control <= 'd0;
+	master_control <= 64'd0;
 	for (n1 = 0; n1 < NTIMER; n1 = n1 + 1) begin
 		control[n1] <= 64'd0;
 		outpulse[n1] <= 4'd8;
 		compare[n1] = 64'hFFFFFFFFFFFFFFFF;
 		out_route[n1] <= 64'd0;
 		es[n1] <= 1'b0;
+		cst[n1] <= 1'b1;
 	end
 	ie <= 'd0;
 	ms <= 'd0;
@@ -215,46 +207,57 @@ else begin
 			outpulse[n1] <= outpulse[n1] + 2'd1;
 
 	if (cs && we_i) begin
-		casez(adr_i[9:3])
-		7'b0?????0:
-			if (control[adr_i[8:4]][34] & control[adr_i[8:4]][35])
-				addend[adr_i[8:4]] <= dat_i;
+		casez(adr_i[12:3])
+		10'b0????????0:
+			if (control[adr_i[11:4]][58] & control[adr_i[11:4]][60])
+				addend[adr_i[11:4]] <= dat_i;
 			else begin
-				compare[adr_i[8:4]] <= dat_i;
-				control[adr_i[8:4]][35] <= 1'b1;
+				compare[adr_i[11:4]] <= dat_i;
+				control[adr_i[11:4]][60] <= 1'b1;
 			end
-		7'b0?????1:
+		10'b0????????1:
 			begin
-				if (sel_i[0])	begin out_route[adr_i[8:4]][7:0] <= dat_i[7:0]; control[adr_i[8:4]][7:0] <= dat_i[7:0]; end
-				if (sel_i[1])	begin out_route[adr_i[8:4]][15:8] <= dat_i[15:8]; control[adr_i[8:4]][15:8] <= dat_i[15:8]; end
-				if (sel_i[2])	begin out_route[adr_i[8:4]][23:16] <= dat_i[23:16]; control[adr_i[8:4]][23:16] <= dat_i[23:16]; end
-				if (sel_i[3])	begin out_route[adr_i[8:4]][31:24] <= dat_i[31:24]; control[adr_i[8:4]][31:24] <= dat_i[31:24]; end
-				if (sel_i[4]) begin es[adr_i[8:4]] <= dat_i[32]; control[adr_i[8:4]][39:32] <= dat_i[39:32]; end
-				if (sel_i[5]) begin control[adr_i[8:4]][47:40] <= dat_i[47:40]; end
-				if (sel_i[6]) begin ie[adr_i[8:4]] <= dat_i[48]; control[adr_i[8:4]][55:48] <= dat_i[55:48]; end
-				if (sel_i[7]) begin control[adr_i[8:4]][63:56] <= dat_i[63:56]; end
+				if (sel_i[0])	begin out_route[adr_i[11:4]][7:0] <= dat_i[7:0]; control[adr_i[11:4]][7:0] <= dat_i[7:0]; end
+				if (sel_i[1])	begin out_route[adr_i[11:4]][15:8] <= dat_i[15:8]; control[adr_i[11:4]][15:8] <= dat_i[15:8]; end
+				if (sel_i[2])	begin out_route[adr_i[11:4]][23:16] <= dat_i[23:16]; control[adr_i[11:4]][23:16] <= dat_i[23:16]; end
+				if (sel_i[3])	begin out_route[adr_i[11:4]][31:24] <= dat_i[31:24]; control[adr_i[11:4]][31:24] <= dat_i[31:24]; end
+				if (sel_i[4])	begin out_route[adr_i[11:4]][39:32] <= dat_i[39:32]; control[adr_i[11:4]][39:32] <= dat_i[39:32]; end
+				if (sel_i[5])	begin out_route[adr_i[11:4]][47:40] <= dat_i[47:40]; control[adr_i[11:4]][47:40] <= dat_i[47:40]; end
+				if (sel_i[6])	begin out_route[adr_i[11:4]][55:48] <= dat_i[55:48]; control[adr_i[11:4]][55:48] <= dat_i[55:48]; end
+				if (sel_i[7]) begin
+					control[adr_i[11:4]][63:56] <= dat_i[63:56];
+					ie[adr_i[11:4]] <= dat_i[56];
+					es[adr_i[11:4]] <= dat_i[57];
+					cst[adr_i[11:4]] <= dat_i[59];
+				end
 			end
-		7'b1000000:
+		10'b1000000000:
 			begin
 				upd_counter <= 1'b1;
 				upd_value <= dat_i;
 			end
-		7'b1000001:	master_control <= dat_i;
-		7'b1000010:	ms <= ms & ~dat_i;
-		7'b1000011:	out <= out & ~dat_i;
-		7'b1000100:	;
+		10'b1000000001:	master_control <= dat_i;
+		10'b1000000010:	ms <= ms & ~dat_i;
+		10'b1000000011:	ms <= ms & ~dat_i;
+		10'b1000000100:	ms <= ms & ~dat_i;
+		10'b1000000101:	ms <= ms & ~dat_i;
+		10'b1000000110:	out <= out & ~dat_i;
+		10'b1000000111:	;
 		default:	;
 		endcase
 	end
 	if (cs && ~we_i) begin
-		casez(adr_i[9:3])
-		7'b0?????0:	dat_o <= compare[adr_i[8:4]];
-		7'b0?????1:	dat_o <= control[adr_i[8:4]]|{ms[adr_i[8:4]],40'd0};
-		7'b1000000:	dat_o <= counter;
-		7'b1000001:	dat_o <= master_control;
-		7'b1000010:	dat_o <= ms;
-		7'b1000011:	dat_o <= out;
-		7'b1000100:	dat_o <= cap_reg;
+		casez(adr_i[12:3])
+		10'b0????????0:	dat_o <= compare[adr_i[11:4]];
+		10'b0????????1:	dat_o <= control[adr_i[11:4]]|{out[adr_i[11:4]],63'd0};
+		10'b1000000000:	dat_o <= counter;
+		10'b1000000001:	dat_o <= master_control;
+		10'b1000000010:	dat_o <= ms;
+		10'b1000000011:	dat_o <= ms;
+		10'b1000000100:	dat_o <= ms;
+		10'b1000000101:	dat_o <= ms;
+		10'b1000000110:	dat_o <= out;
+		10'b1000000111:	dat_o <= cap_reg;
 		default:		dat_o <= 'd0;
 		endcase
 	end
@@ -265,13 +268,10 @@ else begin
 		if (compare[n1]==counter && ~ms[n1]) begin
 			ms[n1] <= 1'b1;
 			if (ie[n1] & master_control[1]) begin
-				case(es[n1])
-				1'b0:	out <= out | out_route[n1];		// set level
-				1'b1:	out <= out | out_route[n1];		// pulse
-				endcase
+				out <= out | out_route[n1];		// set level
 				outpulse[n1] <= 4'd0;
 			end
-			if (control[n1][34])
+			if (control[n1][58])
 				compare[n1] <= compare[n1] + addend[n1];
 		end
 	end

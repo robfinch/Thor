@@ -39,10 +39,11 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_gp_regfile(clk, wr0, wr1, wa0, wa1, i0, i1,
+module Thor2022_gp_regfile(rst, clk, wr0, wr1, wa0, wa1, i0, i1,
 	ip0, ip1,
 	ra0, ra1, ra2, ra3, ra4, ra5, ra6, ra7, ra8, ra9,
 	o0, o1, o2, o3, o4, o5, o6, o7, o8, o9);
+input rst;
 input clk;
 input wr0;
 input wr1;
@@ -80,33 +81,42 @@ Value regfileB [0:NREGS-1];
 
 initial begin
 	for (n = 0; n < NREGS; n = n + 1) begin
-		regfileA[n] = 'd0;
-		regfileB[n] = 'd0;
+		regfileA[n] <= 64'd0;
+		regfileB[n] <= 64'd0;
 	end
 end
 
+integer n1;
 always_ff @(posedge clk)
-if (wr0 & wr1) begin
-	if (wa0==wa1) begin
-		way[wa0] <= 1'b1;
-		regfileB[wa1] <= i1;
+if (rst) begin
+	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
+		regfileA[n1] <= 64'd0;
+		regfileB[n1] <= 64'd0;
 	end
-	else begin
+end
+else begin
+	if (wr0 & wr1) begin
+		if (wa0==wa1) begin
+			way[wa0] <= 1'b1;
+			regfileB[wa1] <= i1;
+		end
+		else begin
+			way[wa0] <= 1'b0;
+			way[wa1] <= 1'b1;
+			regfileA[wa0] <= i0;
+			regfileB[wa1] <= i1;
+		end
+	end
+	else if (wr0) begin
 		way[wa0] <= 1'b0;
-		way[wa1] <= 1'b1;
 		regfileA[wa0] <= i0;
+		if (i0==64'h0020ffa191dc0000)
+			$stop;
+	end
+	else if (wr1) begin
+		way[wa1] <= 1'b1;
 		regfileB[wa1] <= i1;
 	end
-end
-else if (wr0) begin
-	way[wa0] <= 1'b0;
-	regfileA[wa0] <= i0;
-	if (i0==64'h0020ffa191dc0000)
-		$stop;
-end
-else if (wr1) begin
-	way[wa1] <= 1'b1;
-	regfileB[wa1] <= i1;
 end
 
 always_comb

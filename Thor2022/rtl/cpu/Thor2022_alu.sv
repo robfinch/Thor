@@ -62,7 +62,6 @@ output Value res_t2;
 output CodeAddress cares;
 
 Value res2;
-Value res_t2;
 
 VecValue cmpo, cmpio;
 

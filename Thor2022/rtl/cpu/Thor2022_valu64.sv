@@ -57,7 +57,7 @@ generate
 	for (g = 0; g < NLANES; g = g + 1)
 	always_comb
 		if (m[g])
-			v2b[g] = xa[g * $bits(Value) + xb[5:0]];
+			v2b[g] = xa[g][xb[0][5:0]];
 		else if (z)
 			v2b[g] = 'd0;
 		else
@@ -129,9 +129,9 @@ always_comb
 		case(ir.r3.func)
 		V2BITS:		res <= v2b;
 //		BITS2V:		res <= b2v;
-		VEX:			res <= (xb >> {xa[5:0],6'd0}) & 64'hFFFFFFFFFFFFFFFF;
-		VSLLV:		res <= xb << {xa[5:0],6'd0};
-		VSRLV:		res <= xb >> {xa[5:0],6'd0};
+		VEX:			res <= xb[xa[0][5:0]];
+		VSLLV:		res <= xb << {xa[0][5:0],6'd0};
+		VSRLV:		res <= xb >> {xa[0][5:0],6'd0};
 		default:	res <= 'd0;
 		endcase
 	default:	res <= 'd0;

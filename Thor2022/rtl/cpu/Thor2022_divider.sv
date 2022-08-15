@@ -39,11 +39,12 @@
 import Thor2022_pkg::*;
 
 module Thor2022_divider(rst, clk, ld, abort, ss, su, isDivi, a, b, imm, qo, ro, dvByZr, done, idle);
-parameter WID=128;
+parameter WID=$bits(Value);
 parameter DIV=3'd3;
 parameter IDLE=3'd4;
 parameter DONE=3'd5;
 parameter DONE2=3'd6;
+parameter DONE_FAST=3'd7;
 input clk;
 input rst;
 input ld;
@@ -61,12 +62,13 @@ output idle;
 output dvByZr;
 reg dvByZr;
 
-Value aa,bb;
+integer n;
+Value a1,b1,bb;
 reg so;
 reg [2:0] state;
 reg [7:0] cnt;
 wire cnt_done = cnt==8'd0;
-assign done = state==DONE||state==DONE2||(state==IDLE && !ld);
+assign done = state==DONE||state==DONE2||state==DONE_FAST||(state==IDLE && !ld);
 assign idle = state==IDLE;
 reg ce1;
 Value q;
@@ -74,16 +76,25 @@ reg [WID:0] r;
 wire b0 = bb <= r;
 Value r1 = b0 ? r - bb : r;
 
+reg [1:0] rop;
+reg [1:0] cr_op;
+Value cr_aa [0:7];
+Value cr_bb [0:7];
+Value cr_qo [0:7];
+Value cr_ro [0:7];
+
+/*
 initial begin
   q = {$bits(Value){1'b0}};
   r = {$bits(Value){1'b0}};
   qo = {$bits(Value){1'b0}};
   ro = {$bits(Value){1'b0}};
 end
+*/
 
-always @(posedge clk)
+always_ff @(posedge clk)
 if (rst) begin
-	aa <= {$bits(Value){1'b0}};
+	a1 <= {$bits(Value){1'b0}};
 	bb <= {$bits(Value){1'b0}};
 	q <= {$bits(Value){1'b0}};
 	r <= {$bits(Value){1'b0}};
@@ -91,6 +102,13 @@ if (rst) begin
 	ro <= {$bits(Value){1'b0}};
 	cnt <= 8'd0;
 	dvByZr <= 1'b0;
+	for (n = 0; n < 8; n = n + 1) begin
+		cr_op[n] <= 2'b00;
+		cr_aa[n] <= 64'd1;
+		cr_bb[n] <= 64'd1;
+		cr_qo[n] <= 64'd1;
+		cr_ro[n] <= 64'd0;
+	end
 	state <= IDLE;
 end
 else
@@ -103,6 +121,16 @@ else if (!cnt_done)
 case(state)
 IDLE:
 	if (ld) begin
+		a1 <= a;
+		b1 <= b;
+		rop <= {ss,su};
+		for (n = 0; n < 8; n = n + 1) begin
+			if (a==cr_aa[n] && b==cr_bb[n] && {ss,su}==cr_op[n]) begin
+				qo <= cr_qo[n];
+				ro <= cr_ro[n];
+				state <= DONE_FAST;
+			end
+		end
 		if (ss) begin
 			q <= a[WID-1] ? -a : a;
 			bb <= isDivi ? (imm[WID-1] ? -imm : imm) :(b[WID-1] ? -b : b);
@@ -143,11 +171,27 @@ DIV:
 		state <= DONE;
 	end
 DONE:
+	begin
+		for (n = 0; n < 7; n = n + 1) begin
+			cr_op[n] <= cr_op[n+1];
+			cr_qo[n] <= cr_qo[n+1];
+			cr_ro[n] <= cr_ro[n+1];
+			cr_aa[n] <= cr_aa[n+1];
+			cr_bb[n] <= cr_bb[n+1];
+		end
+		cr_op[7] <= rop;
+		cr_qo[7] <= qo;
+		cr_ro[7] <= ro;
+		cr_aa[7] <= a1;
+		cr_bb[7] <= b1;
+		state <= DONE2;
+	end
+DONE_FAST:
 	state <= DONE2;
 DONE2:
-    state <= IDLE;
+  state <= IDLE;
 default:
-    state <= IDLE;
+  state <= IDLE;
 endcase
 end
 

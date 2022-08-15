@@ -38,10 +38,11 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_decoder(ir, xir, xval,mir, mval, deco, distk_depth, rm, dfrm);
+module Thor2022_decoder(ir, xir, xval, mir, sp_sel, mval, deco, distk_depth, rm, dfrm);
 input Instruction ir;
 input Instruction xir;
 input Instruction mir;
+input [2:0] sp_sel;
 input xval;
 input mval;
 output DecodeOut deco;
@@ -53,6 +54,7 @@ integer n;
 Value imm;
 reg [5:0] Ra, Rb, Rc, Rt;
 reg rfwr;
+reg frc;
 
 always_comb
 begin
@@ -71,6 +73,14 @@ MFLK:			Ra = {4'b1010,ir[15:14]};
 MOV:			Ra = ir[19:14];
 default:	Ra = {1'b0,ir.r3.Ra};
 endcase
+if (Ra==6'd31)
+	case(sp_sel)
+	3'd1:	Ra = 6'd43;
+	3'd2:	Ra = 6'd44;
+	3'd3:	Ra = 6'd45;
+	3'd4:	Ra = 6'd46;
+	default:	;
+	endcase
 
 rfwr = `FALSE;
 // Target register
@@ -103,6 +113,14 @@ VM:
 MOV:			Rt = {ir[20],ir[13:9]};
 default:	Rt = {1'b0,ir[13:9]};
 endcase
+if (Rt==6'd31)
+	case(sp_sel)
+	3'd1:	Rt = 6'd43;
+	3'd2:	Rt = 6'd44;
+	3'd3:	Rt = 6'd45;
+	3'd4:	Rt = 6'd46;
+	default:	;
+	endcase
 
 case(ir.any.opcode)
 R2:
@@ -114,6 +132,7 @@ default:	deco.Rt2 = 'd0;
 endcase
 
 // Rc
+frc = 1'b0;
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
@@ -130,22 +149,41 @@ STHS:
 BSET:
 	Rc = 6'd42;
 JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
+begin
+	frc = 1'b1;
 	case(ir.jxx.Rc)
 	6'd29:	Rc = 6'd40;
 	6'd30:	Rc = 6'd41;
 	default:	Rc = {1'b0,ir.jxx.Rc};
 	endcase
+end
 JMP,DJMP:
+begin
+	frc = 1'b1;
 	case(ir.jmp.Rc)
 	6'd29:	Rc = 6'd40;
 	6'd30:	Rc = 6'd41;
 	default:	Rc = {1'b0,ir.jmp.Rc};
 	endcase
+end
+BEQZ,BNEZ:
+begin
+	frc = 1'b1;
+	Rc = 6'd31;
+end
 RTS:
 	Rc = {4'b1010,ir[10:9]};
 MTLK:			Rc = {1'b0,ir[13:9]};
 default:	Rc = {1'b0,ir.r3.Rc};
 endcase
+if (Rc==6'd31 && !frc)
+	case(sp_sel)
+	3'd1:	Rc = 6'd43;
+	3'd2:	Rc = 6'd44;
+	3'd3:	Rc = 6'd45;
+	3'd4:	Rc = 6'd46;
+	default:	;
+	endcase
 
 deco.Ravec = ir.any.v;
 deco.Rtvec = ir.any.v;
@@ -356,10 +394,6 @@ default:	deco.isExi = `FALSE;
 endcase
 
 deco.rfwr = rfwr;
-deco.Ra = Ra;
-deco.Rb = Rb;
-deco.Rc = Rc;
-deco.Rt = Rt;
 deco.is_vector = ir.any.v;
 deco.imm = imm;
 
@@ -487,9 +521,9 @@ LDT,LDTU,LDTS,LDTUS,STT,STTS:	deco.memsz = tetra;
 LDBX,LDBUX,STBX:	deco.memsz = byt;
 LDWX,LDWUX,STWX:	deco.memsz = wyde;
 LDTX,LDTUX,STTX:	deco.memsz = tetra;
-LDHS,LDH,LDHX,LDSP:	deco.memsz = hexi;
-STHS,STH,STHC,STHX,STHCX,STSP:	deco.memsz = hexi;
-LDHP,LDHPX,STHP,STHPX: deco.memsz = hexipair;
+//LDHS,LDH,LDHX,LDSP:	deco.memsz = hexi;
+//STHS,STH,STHC,STHX,STHCX,STSP:	deco.memsz = hexi;
+//LDHP,LDHPX,STHP,STHPX: deco.memsz = hexipair;
 STPTR,STPTRX:	deco.memsz = ptr;
 default:	deco.memsz = octa;
 endcase
@@ -736,6 +770,19 @@ VM:
 	endcase
 default:	Rb = {1'b0,ir.r3.Rb};
 endcase
+if (Rb==6'd31)
+	case(sp_sel)
+	3'd1:	Rb = 6'd43;
+	3'd2:	Rb = 6'd44;
+	3'd3:	Rb = 6'd45;
+	3'd4:	Rb = 6'd46;
+	default:	;
+	endcase
+
+deco.Ra = Ra;
+deco.Rb = Rb;
+deco.Rc = Rc;
+deco.Rt = Rt;
 
 end
 endmodule

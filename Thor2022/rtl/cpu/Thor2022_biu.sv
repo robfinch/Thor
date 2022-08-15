@@ -520,6 +520,7 @@ wire [3:0] dhit1e;
 wire [AWID-7:0] dc_otag [3:0];
 wire [127:0] dc_ovalid [0:3];
 wire [3:0] dhit1o;
+wire dhito,dhite;
 
 Thor2022_dchit udchite
 (
@@ -1122,7 +1123,7 @@ if (rst) begin
 	ici <= 512'd0;
 	dci <= 512'd0;
 	memreq_rd <= FALSE;
-	memresp <= 'd0;
+	memresp <= 620'd0;
   xlaten <= FALSE;
   tmptlbe <= 'd0;
   wr_pte <= 1'b0;
@@ -1138,6 +1139,7 @@ if (rst) begin
 	pmtram_ena <= 1'b0;
 	pmtram_wea <= 1'b0;
 	pmt_store <= 1'b0;
+	sel <= 'd0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -1174,8 +1176,8 @@ else begin
 			wyde:	memreq_sel <= 32'h00000003;
 			tetra:memreq_sel <= 32'h0000000F;
 			octa:	memreq_sel <= 32'h000000FF;
-			hexi:	memreq_sel <= 32'h0000FFFF;
-			hexipair:	memreq_sel <= 32'hFFFFFFFF;
+//			hexi:	memreq_sel <= 32'h0000FFFF;
+//			hexipair:	memreq_sel <= 32'hFFFFFFFF;
 			default:	memreq_sel <= 32'h0000FFFF;
 			endcase
 			goto (MEMORY_DISPATCH);
@@ -1294,6 +1296,7 @@ else begin
 		goto (TLB3);	// Give time for MR_TLB to process
 	TLB3:
 		begin
+			memresp.cause <= 16'h0;
 			memresp.step <= memreq.step;
 	    memresp.res <= {432'd0,tlbdato};
 	    memresp.cmt <= TRUE;
@@ -2200,7 +2203,7 @@ endtask
 task tMemoryDispatch;
 begin
 	strips <= 2'd0;
-	memresp.cause <= {8'h00,FLT_NONE};
+	memresp.cause <= 16'h0;
 	memresp.badAddr <= memreq.adr;	// Handy for debugging
 	memresp.func <= memreq.func;
 	memresp.func2 <= memreq.func2;
@@ -2249,6 +2252,7 @@ begin
 			ic_invall	<= memreq.dat[1:0]==3'd2;
 			dc_invline <= memreq.dat[4:2]==3'd3;
 			dc_invall	<= memreq.dat[4:2]==3'd4;
+			memresp.cause <= 16'h0;
 			memresp.step <= memreq.step;
 			if (memreq.dat[4:2]==3'd1)
 				dce <= TRUE;
@@ -2400,6 +2404,7 @@ begin
   			case(1'b1)
   			rgn_en:
   				begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2409,6 +2414,7 @@ begin
   				end
   			ptgram_en:
   				begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2418,6 +2424,7 @@ begin
   				end
   			pmtram_ena:
   				begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2427,6 +2434,7 @@ begin
 					end
 				tlb_access:
 					begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2527,6 +2535,7 @@ begin
 			  else begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
 			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
+	  					memresp.cause <= 16'h0;
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
   						memresp.tid <= memreq.tid;
@@ -2546,6 +2555,7 @@ begin
 			    	end
 	    		end
 	    		else begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2653,6 +2663,7 @@ begin
 	    	begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
 			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
+	  					memresp.cause <= 16'h0;
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
 			  			memresp.tid <= memreq.tid;
@@ -2671,6 +2682,7 @@ begin
 			    	end
 	    		end
 	    		else begin
+  					memresp.cause <= 16'h0;
 		  			memresp.step <= memreq.step;
 		    	 	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2699,37 +2711,56 @@ begin
 	end
 	else
   	ret();
-	memresp.step <= memreq.step;
-  memresp.cmt <= TRUE;
-	memresp.tid <= memreq.tid;
-	memresp.wr <= TRUE;
+	memresp.cause <= 16'h0;
+	if (memreq.func2==MR_LDG) begin
+		if (memreq.step == NLANES-1) begin
+			memresp.wr <= TRUE;
+		end
+		memresp.res[memreq.count] <= datis[63:0];
+		memresp.step <= memreq.step;
+		memresp.tid <= memreq.tid;
+	end
+	else begin
+		memresp.step <= memreq.step;
+	  memresp.cmt <= TRUE;
+		memresp.tid <= memreq.tid;
+		memresp.wr <= TRUE;
+	end
 	sr_o <= LOW;
   case(memreq.func)
   MR_LOAD,MR_MOVLD:
   	begin
-    	case(memreq.sz)
-    	byt:	begin memresp.res <= {{120{datis[7]}},datis[7:0]}; end
-    	wyde:	begin memresp.res <= {{112{datis[15]}},datis[15:0]}; end
-    	tetra:	begin memresp.res <= {{96{datis[31]}},datis[31:0]}; end
-    	octa:	begin memresp.res <= {{64{datis[63]}},datis[63:0]}; end
-    	hexi:	begin memresp.res <= datis[127:0]; end
-    	hexipair:	memresp.res <= dati;
-    	hexiquad:	begin memresp.res <= dati512; end
-    	default:	memresp.res <= 'h0;
-    	endcase
+  		if (memreq.func2==MR_LDV)
+  			memresp.res <= dati512;
+  		else
+	    	case(memreq.sz)
+	    	nul:	memresp.res[memreq.count] <= 'h0;
+	    	byt:	begin memresp.res[memreq.count] <= {{56{datis[7]}},datis[7:0]}; end
+	    	wyde:	begin memresp.res[memreq.count] <= {{48{datis[15]}},datis[15:0]}; end
+	    	tetra:	begin memresp.res[memreq.count] <= {{32{datis[31]}},datis[31:0]}; end
+	    	octa:	begin memresp.res[memreq.count] <= {{64{datis[63]}},datis[63:0]}; end
+	//    	hexi:	begin memresp.res <= datis[127:0]; end
+	//    	hexipair:	memresp.res <= dati;
+	//    	hexiquad:	begin memresp.res <= dati512; end
+	    	default:	memresp.res[memreq.count] <= memreq.dat;
+	    	endcase
   	end
   MR_LOADZ:
   	begin
-    	case(memreq.sz)
-    	byt:	begin memresp.res <= {120'd0,datis[7:0]}; end
-    	wyde:	begin memresp.res <= {112'd0,datis[15:0]}; end
-    	tetra:	begin memresp.res <= {96'd0,datis[31:0]}; end
-    	octa:	begin memresp.res <= {64'd0,datis[63:0]}; end
-    	hexi:	begin memresp.res <= datis[127:0]; end
-    	hexipair:	memresp.res <= dati;
-    	hexiquad:	begin memresp.res <= dati512; end
-    	default:	memresp.res <= 'h0;
-    	endcase
+  		if (memreq.func2==MR_LDV)
+  			memresp.res <= dati512;
+  		else
+	    	case(memreq.sz)
+	    	nul:	memresp.res[memreq.count] <= 'h0;
+	    	byt:	begin memresp.res[memreq.count] <= {56'd0,datis[7:0]}; end
+	    	wyde:	begin memresp.res[memreq.count] <= {48'd0,datis[15:0]}; end
+	    	tetra:	begin memresp.res[memreq.count] <= {32'd0,datis[31:0]}; end
+	    	octa:	begin memresp.res[memreq.count] <= {64'd0,datis[63:0]}; end
+	//    	hexi:	begin memresp.res <= datis[127:0]; end
+	//    	hexipair:	memresp.res <= dati;
+	//    	hexiquad:	begin memresp.res <= dati512; end
+	    	default:	memresp.res[memreq.count] <= memreq.dat;
+	    	endcase
   	end
 //    	RTS2:	begin memresp.res <= datis[63:0]; memresp.ret <= TRUE; end
   default:  ;
@@ -2756,7 +2787,7 @@ begin
 	if (ptbr[4]) begin
 		memresp.step <= memreq.step;
 		memresp.cmt <= TRUE;
-	  memresp.cause <= 16'h8000|FLT_TLBMISS;
+	  memresp.cause <= {8'h80,FLT_TLBMISS};
 		memresp.tid <= memreq.tid;
 	  memresp.badAddr <= ba;
 	  memresp.wr <= TRUE;
@@ -2782,7 +2813,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= 16'h8000|typ;
+  memresp.cause <= {8'h80,typ};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2797,7 +2828,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= 16'h8000|FLT_WRV;
+  memresp.cause <= {8'h80,FLT_WRV};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2812,7 +2843,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= 16'h8000|FLT_RDV;
+  memresp.cause <= {8'h80,FLT_RDV};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2827,7 +2858,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= 16'h8000|FLT_KEY;
+  memresp.cause <= {8'h80,FLT_KEY};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2852,8 +2883,8 @@ begin
 	if (memreq.func==MR_CACHE)
   	tPMAEA();
   if (adr_o[31:16]==IO_KEY_ADR) begin
+		memresp.cause <= 16'h0;
   	memresp.step <= memreq.step;
-  	memresp.cause <= {8'h00,FLT_NONE};
   	memresp.cmt <= TRUE;
   	memresp.res <= io_keys[adr_o[12:2]];
   	memresp.wr <= TRUE;

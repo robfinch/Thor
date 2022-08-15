@@ -41,7 +41,7 @@ import Thor2022_mmupkg::*;
 module Thor2022_mem_req_queue(rst, clk, wr0, wr_ack0, i0, wr1, wr_ack1, i1,
 	rd, o, valid, empty, ldo0, found0, ldo1, found1);
 parameter AWID = 32;
-parameter QDEP = 7;
+parameter QDEP = 32;
 input rst;
 input clk;
 input wr0;
@@ -85,8 +85,8 @@ byt:	fnSel = 32'h00000001;
 wyde:	fnSel = 32'h00000003;
 tetra:	fnSel = 32'h0000000F;
 octa:	fnSel = 32'h000000FF;
-hexi:	fnSel = 32'h0000FFFF;
-hexipair:	fnSel = 32'hFFFFFFFF;
+//hexi:	fnSel = 32'h0000FFFF;
+//hexipair:	fnSel = 32'hFFFFFFFF;
 default:	fnSel = 32'h000000FF;
 endcase
 endfunction

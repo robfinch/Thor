@@ -42,6 +42,7 @@ import Thor2022_pkg::*;
 module Thor2022_schedule(clk, reb, sns, stomp, 
 	fetch0, next_fetch0, next_fetch1,
 	next_decompress0, next_decompress1, next_decode0, next_decode1,
+	next_regfetch0, next_regfetch1,
 	next_execute, next_retire0, next_retire1);
 input clk;	
 input sReorderEntry [REB_ENTRIES-1:0] reb;
@@ -54,6 +55,8 @@ output reg [2:0] next_decompress0;
 output reg [2:0] next_decompress1;
 output reg [2:0] next_decode0;
 output reg [2:0] next_decode1;
+output reg [2:0] next_regfetch0;
+output reg [2:0] next_regfetch1;
 output reg [2:0] next_execute;
 output reg [2:0] next_retire0;
 output reg [2:0] next_retire1;
@@ -171,6 +174,44 @@ begin
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Regfetch scheduler
+//
+// Chooses the next bucket to regfetch, essentially in any order.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+wire [5:0] rfd = {
+		reb[5].decoded,
+		reb[4].decoded,
+		reb[3].decoded,
+		reb[2].decoded,
+		reb[1].decoded,
+		reb[0].decoded
+	};
+reg [5:0] rfd1;
+wire [2:0] next_regfetch0a;
+wire [2:0] next_regfetch1a;
+always_comb
+if (next_regfetch0a != 3'd7)
+	rfd1 = rfd & ~(6'd1 << next_regfetch0a);
+else
+	rfd1 = 6'b000000;
+
+ffo6 ufforegfetch0 (
+	.i(rfd),
+	.o(next_regfetch0a)
+);
+
+ffo6 ufforegfetch1 (
+	.i(rfd1),
+	.o(next_regfetch1a)
+);
+
+always_comb// @(posedge clk)
+	next_regfetch0 <= next_regfetch0a;
+always_comb// @(posedge clk)
+	next_regfetch1 <= next_regfetch1a;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Execute scheduler
 //
 // Picks instructions in any order except:
@@ -200,7 +241,7 @@ always_comb
 begin
 next_execute = 3'd7;
 for (kk = REB_ENTRIES-1; kk >= 0; kk = kk - 1)
-	if ((reb[kk].decoded || reb[kk].out) && reb[kk].v && !stomp[kk]) begin
+	if ((reb[kk].rfetched || reb[kk].out) && reb[kk].v && !stomp[kk]) begin
 		if (fnArgsValid(kk)) begin
 			if (reb[kk].dec.mem && !fnPriorFc(kk)) begin
 				if (reb[next_execute].dec.mem && !reb[next_execute].executed && reb[next_execute].v) begin
