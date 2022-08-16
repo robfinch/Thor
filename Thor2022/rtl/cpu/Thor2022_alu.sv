@@ -234,7 +234,8 @@ OSR2:
 	default:	res2 = 'd0;
 	endcase
 CSR:		res2 = csr_res;
-MFLK:		begin res2 = ca.offs; $display("%d MFLK: %h", $time, ca.offs); end
+MTLK:		res2 = xc;
+MFLK:		begin res2 = xa; $display("%d MFLK: %h", $time, xa); end
 BTFLD:	res2 = bf_out;
 ADD2R:				res2 = xa + xb;
 SUB2R:				res2 = xa - xb;
@@ -311,8 +312,7 @@ always_comb
 
 always_comb
 case(ir.any.opcode)
-MTLK:	cares <= xc;
-JMP,DJMP,BRA:	cares <= ip + ilen;
+DJMP:	cares <= ip + ilen;
 default:	cares <= lr;
 endcase
 

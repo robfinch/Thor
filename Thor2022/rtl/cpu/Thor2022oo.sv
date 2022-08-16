@@ -291,18 +291,18 @@ Thor2022_gp_regfile ugprs
 	.wa1(commit1_tgt),
 	.i0(commit0_bus[0]),
 	.i1(commit1_bus[0]),
-	.ip0(reb[dec].ip),
-	.ip1(reb[dec1].ip),
-	.ra0(stalled ? reb[oldest].dec.Ra : reb[dec].dec.Ra),
-	.ra1(stalled ? reb[oldest].dec.Rb : reb[dec].dec.Rb),
-	.ra2(stalled ? reb[oldest].dec.Rc : reb[dec].dec.Rc),
-	.ra3(stalled ? reb[oldest].dec.Rt : reb[dec].dec.Rt),
-	.ra4(reb[dec1].dec.Ra),
-	.ra5(reb[dec1].dec.Rb),
-	.ra6(reb[dec1].dec.Rc),
-	.ra7(reb[dec1].dec.Rt),
-	.ra8({3'b100,reb[dec].dec.Rvm}),
-	.ra9({3'b100,reb[dec1].dec.Rvm}),
+	.ip0(reb[regfetch0].ip),
+	.ip1(reb[regfetch1].ip),
+	.ra0(stalled ? reb[oldest].dec.Ra : reb[regfetch0].dec.Ra),
+	.ra1(stalled ? reb[oldest].dec.Rb : reb[regfetch0].dec.Rb),
+	.ra2(stalled ? reb[oldest].dec.Rc : reb[regfetch0].dec.Rc),
+	.ra3(stalled ? reb[oldest].dec.Rt : reb[regfetch0].dec.Rt),
+	.ra4(reb[regfetch1].dec.Ra),
+	.ra5(reb[regfetch1].dec.Rb),
+	.ra6(reb[regfetch1].dec.Rc),
+	.ra7(reb[regfetch1].dec.Rt),
+	.ra8({3'b100,reb[regfetch0].dec.Rvm}),
+	.ra9({3'b100,reb[regfetch1].dec.Rvm}),
 	.o0(rfoa),
 	.o1(rfob),
 	.o2(rfoc),
@@ -314,6 +314,11 @@ Thor2022_gp_regfile ugprs
 	.o8(rfom),
 	.o9(rfom1)
 );
+
+MemoryRequest storeHistory [0:1023];
+MemoryRequest loadHistory [0:1023];
+reg [9:0] shndx;
+reg [9:0] ldndx;
 
 wire [5:0] regfile_src [0:NREGS-1];
 wire [5:0] next_regfile_src [0:NREGS-1];
@@ -774,11 +779,12 @@ reg jxx_miss;
 reg jxz_miss;
 reg mjnez_miss;
 reg rts_miss;
+reg ret_match;
 
 always_comb
-	djxxa_miss = (reb[dec].ir.jxx.Rc=='d0 && deco.jxx && dpredict_taken && bpe) && (ip.offs != deco.jmptgt) && reb[dec].v;
+	djxxa_miss = (reb[dec].ir.jxx.Rc=='d0 && reb[dec].dec.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].dec.jmptgt) && reb[dec].v;
 always_comb
-	djxxr_miss = (reb[dec].ir.jxx.Rc==6'd31 && deco.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + deco.jmptgt) && reb[dec].v;
+	djxxr_miss = (reb[dec].ir.jxx.Rc==6'd31 && reb[dec].dec.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + reb[dec].dec.jmptgt) && reb[dec].v;
 always_comb
 	jxx_miss = reb[exec].dec.jxx && takb && reb[exec].v && !reb[exec].executed;
 always_comb
@@ -786,7 +792,7 @@ always_comb
 always_comb
 	mjnez_miss = reb[exec].dec.mjnez && takb && reb[exec].v && !reb[exec].executed;
 always_comb
-	rts_miss = (reb[exec].dec.rts && reb[exec].ir.rts.lk != 2'b00) && !reb[exec].executed;
+	rts_miss = (reb[exec].dec.rts && reb[exec].ir.rts.lk != 2'b00) && !reb[exec].executed && !ret_match;
 
 always_comb
 	dec_miss = djxxa_miss | djxxr_miss;
@@ -873,6 +879,7 @@ Thor2022_eval_branch ube (
 
 reg aqe_wr;
 reg aqe_rd;
+wire aqe_full;
 wire [4:0] aqe_qcnt;
 AQE aqe_dat, aqe_dato;
 
@@ -900,7 +907,8 @@ Thor2022_fifo #(.WID($bits(AQE))) uaqefifo
 	.di(aqe_dat),
 	.rd(aqe_rd),
 	.dout(aqe_dato),
-	.cnt(aqe_qcnt)
+	.cnt(aqe_qcnt),
+	.full(aqe_full)
 );
 
 Value csr_res;
@@ -1003,14 +1011,13 @@ end
 
 // Detect if the return address was successfully predicted.
 
-reg ret_match;
 integer n3;
 always_comb
 begin
 	ret_match = 1'b0;
 	for (n3 = 0; n3 < REB_ENTRIES; n3 = n3 + 1)
 		if (sns[n3]==sns[exec]+1)
-			if (reb[n3].ip==reb[exec].ca)
+			if (reb[n3].ip==reb[exec].ic[0])
 				ret_match = 1'b1;
 end
 
@@ -1068,6 +1075,7 @@ Thor2022_gselectPredictor ubp
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 wire memreq_wack;
+wire memreq_full;
 Thor2022_biu ubiu
 (
 	.rst(rst_i),
@@ -1085,7 +1093,7 @@ Thor2022_biu ubiu
 	.ifStall(!run),
 	.ic_line(ic_line),
 	.fifoToCtrl_i(memreq),
-	.fifoToCtrl_full_o(),
+	.fifoToCtrl_full_o(memreq_full),
 	.fifoToCtrl_wack(memreq_wack),
 	.fifoFromCtrl_o(memresp),
 	.fifoFromCtrl_rd(memresp_fifo_rd),
@@ -1253,6 +1261,7 @@ else begin
 	tArithStateMachine();
 	tMemStateMachine();
 	tArgCheck();
+	tMemHist();
 //	tStalled();
 //	pstall <= (commit0_tgt==deco.Ra && commit0_wr);
 end
@@ -1282,6 +1291,7 @@ begin
 	tid <= 8'h00;
 	memreq.tid <= 8'h00;
 	memreq.step <= 6'd0;
+	memreq.count <= 6'd0;
 	memreq.wr <= 1'b0;
 	memreq.func <= 'd0;
 	memreq.func2 <= 'd0;
@@ -1361,6 +1371,12 @@ begin
 	retired_count <= 'd0;
 	prev_fetch0 <= 3'd7;
 	prev_ip <= 'd0;
+	shndx <= 'd0;
+	ldndx <= 'd0;
+	for (n6 = 0; n6 < 1024; n6 = n6 + 1) begin
+		storeHistory[n6] <= 'd0;
+		loadHistory[n6] <= 'd0;
+	end
 end
 endtask
 
@@ -1575,7 +1591,7 @@ WAIT_MEM2:
 				end
 				reb[memresp.tid[2:0]].executed <= 1'b1;
 				reb[memresp.tid[2:0]].out <= 1'b0;	
-			 	mc_busy <= FALSE;
+//			 	mc_busy <= FALSE;
 				mstate <= RUN;
 			end
 		end
@@ -2101,7 +2117,8 @@ begin
 		reb[dec].cioreg <= cioreg;
 		reb[dec].cio <= cio[1:0];
 //		reb[dec].predict_taken <= dpredict_taken;
-		reb[dec].step <= dstep;
+		reb[dec].step <= 'd0;
+		reb[dec].count <= 'd0;
 //		reb[dec].mask_bit <= mask[dstep];
 //		reb[dec].vmask <= rfom;
 		reb[dec].zbit <= deco.Rz;
@@ -2190,6 +2207,14 @@ begin
 end
 endtask
 
+task tMarkExecDone;
+begin
+	reb[exec].rfetched <= 1'b0;
+	reb[exec].out <= 1'b0;
+	reb[exec].executed <= 1'b1;
+end
+endtask
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Add memory ops to the memory queue.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2213,38 +2238,61 @@ begin
 	memreq.sz <= reb[exec].dec.memsz;
 	memreq.dat <= reb[exec].it[reb[exec].step];
 	if (reb[exec].dec.is_vector) begin
-		memreq.func2 <= MR_LDO;
+		//memreq.func2 <= MR_LDO;
 		if (load_gather) begin
 			memreq.func2 <= MR_LDG;
 			memreq.step <= reb[exec].step;
 			memreq.count <= reb[exec].count;
 	  	memreq.adr.offs <= vadr;
 	  	// If not loading a compressed vector, always increment count.
-	  	if (!reb[exec].ir[27])
+	  	if (!reb[exec].ir[27] && !memreq_full) begin
+	  		memreq.count <= reb[exec].count + 2'd1;
 	  		reb[exec].count <= reb[exec].count + 2'd1;
+	  	end
 			if (reb[exec].vmask[reb[exec].step]) begin
-	  		memreq.wr <= TRUE;
-	  		reb[exec].count <= reb[exec].count + 2'd1;
+				if (!memreq_full) begin
+	  			memreq.wr <= TRUE;
+	  			memreq.count <= reb[exec].count + 2'd1;
+	  			reb[exec].count <= reb[exec].count + 2'd1;
+	  		end
 	  	end
 	  	else if (reb[exec].zbit)
 	  		memreq.sz <= nul;
+	  	if (reb[exec].step==NLANES-1 && !memreq_full)
+				tMarkExecDone();
 		end
 		else begin
 			memreq.func2 <= MR_LDV;
 	  	memreq.adr.offs <= vadr;
-  		memreq.wr <= TRUE;
-  		reb[exec].count <= 0;
-  		reb[exec].step <= 0;
+	  	if (!memreq_full) begin
+	  		memreq.wr <= TRUE;
+	  		reb[exec].count <= 0;
+	  		reb[exec].step <= 0;
+				tMarkExecDone();
+  		end
 		end
 	end
 	else begin
 		memreq.adr.offs <= sadr;
-		memreq.wr <= TRUE;
+		if (!memreq_full) begin
+			memreq.wr <= TRUE;
+			tMarkExecDone();
+		end
+	end
+end
+endtask
+
+task tMemHist;
+begin
+	if (memreq.wr) begin
+		storeHistory[shndx] <= memreq;
+		shndx <= shndx + 2'd1;
 	end
 end
 endtask
 
 task tStore;
+input scatter;
 input Address vadr;		// vector address
 input Address sadr;		// scalar address
 begin
@@ -2255,23 +2303,53 @@ begin
 	byt:		begin memreq.func2 <= MR_STB; end
 	wyde:		begin memreq.func2 <= MR_STW; end
 	tetra:	begin memreq.func2 <= MR_STT; end
+	octa:		begin memreq.func2 <= MR_STO; end
 //	hexi:		begin memreq.func2 <= MR_STH; end
 	default:	begin memreq.func2 <= MR_STO; end
 	endcase
 	memreq.sz <= reb[exec].dec.memsz;
-	memreq.dat <= reb[exec].ic[reb[exec].step];
+	// For a scatter operation there will be separate writes queued to memory
+	// for each vector lane.
+	case(reb[exec].dec.memsz)
+	byt:
+		case(reb[exec].step[2:0])
+		3'd0:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][ 7: 0];
+		3'd1:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][15: 8];
+		3'd2:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][23:16];
+		3'd3:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][31:24];
+		3'd4:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][39:32];
+		3'd5:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][47:40];
+		3'd6:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][55:48];
+		3'd7:	memreq.dat <= reb[exec].ic[reb[exec].step >> 3][63:56];
+		endcase
+	wyde:
+		case(reb[exec].step[1:0])
+		2'd0:	memreq.dat <= reb[exec].ic[reb[exec].step >> 2][15: 0];
+		2'd1:	memreq.dat <= reb[exec].ic[reb[exec].step >> 2][31:16];
+		2'd2:	memreq.dat <= reb[exec].ic[reb[exec].step >> 2][47:32];
+		2'd3:	memreq.dat <= reb[exec].ic[reb[exec].step >> 2][63:48];
+		endcase
+	tetra:
+		case(reb[exec].step[0])
+		1'd0:	memreq.dat <= reb[exec].ic[reb[exec].step >> 1][31: 0];
+		1'd1:	memreq.dat <= reb[exec].ic[reb[exec].step >> 1][63:32];
+		endcase
+	octa:		memreq.dat <= reb[exec].ic[reb[exec].step];
+	default:	memreq.dat <= reb[exec].ic[reb[exec].step];
+	endcase
 	if (reb[exec].dec.is_vector) begin
-		memreq.func2 <= MR_STO;
-		memreq.sz = octa;
+		//memreq.func2 <= MR_STO;
   	memreq.adr.offs <= vadr;
-		if (reb[exec].vmask[reb[exec].step]) begin
+		if (reb[exec].vmask[reb[exec].step] && !memreq_full) begin
   		memreq.wr <= TRUE;
+  		memreq.count <= reb[exec].count + 2'd1;
   		reb[exec].count <= reb[exec].count + 2'd1;
   	end
   	else if (reb[exec].zbit) begin
   		// If not compressing the vector, write out a zero.
-  		if (!reb[exec].ir[27]) begin
+  		if (!reb[exec].ir[27] && !memreq_full) begin
 	  		reb[exec].count <= reb[exec].count + 2'd1;
+	  		memreq.count <= reb[exec].count + 2'd1;
   			memreq.wr <= TRUE;
 	  		memreq.dat <= 'd0;
 	  	end
@@ -2281,10 +2359,15 @@ begin
   		if (!reb[exec].ir[27])
 	  		reb[exec].count <= reb[exec].count + 2'd1;
   	end
+  	if (reb[exec].step==NLANES-1 && !memreq_full)
+			tMarkExecDone();
 	end
 	else begin
   	memreq.adr.offs <= sadr;
-		memreq.wr <= TRUE;
+		if (!memreq_full) begin
+			memreq.wr <= TRUE;
+			tMarkExecDone();
+		end
 	end
 end
 endtask
@@ -2293,15 +2376,21 @@ task tExMultiCycle;
 begin
 	if (!reb[exec].out) begin
 	  if (reb[exec].dec.mulall) begin
-	  	aqe_wr <= 1'b1;
+	  	aqe_wr <= !aqe_full;
+	  	if (!aqe_full)
+				tMarkExecDone();
 //	    goto(MUL1);
 	  end
 	  else if (reb[exec].dec.divall) begin
-	  	aqe_wr <= 1'b1;
+	  	aqe_wr <= !aqe_full;
+	  	if (!aqe_full)
+				tMarkExecDone();
 //	    goto(DIV1);
 	  end
 	  else if (reb[exec].dec.isDF) begin
-	  	aqe_wr <= 1'b1;
+	  	aqe_wr <= !aqe_full;
+	  	if (!aqe_full)
+				tMarkExecDone();
 //	  	goto (DF1);
 	  end
 //    if (xFloat)
@@ -2331,17 +2420,61 @@ begin
 	  	//goto (WAIT_MEM1);
 	  end
 	  else if (reb[exec].dec.storer) begin
-	  	tStore(
-	  		reb[exec].ia[0] + reb[exec].count * $bits(Value) + reb[exec].dec.imm,
-	  		reb[exec].ia[0] + reb[exec].dec.imm
-	  	);
+	  	case(reb[exec].dec.memsz)
+	  	byt:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + reb[exec].count * 8 + reb[exec].dec.imm,
+		  		reb[exec].ia[0] + reb[exec].dec.imm
+		  	);
+		  wyde:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + reb[exec].count * 16 + reb[exec].dec.imm,
+		  		reb[exec].ia[0] + reb[exec].dec.imm
+		  	);
+		  tetra:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + reb[exec].count * 32 + reb[exec].dec.imm,
+		  		reb[exec].ia[0] + reb[exec].dec.imm
+		  	);
+	  	default:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + reb[exec].count * 64 + reb[exec].dec.imm,
+		  		reb[exec].ia[0] + reb[exec].dec.imm
+		  	);
+		  endcase
 	  	//goto (WAIT_MEM1);
 	  end
 	  else if (reb[exec].dec.storen) begin
-	  	tStore(
-	  		reb[exec].ia[0] + (reb[exec].dec.Rbvec ? reb[exec].ib[reb[exec].step] : (reb[exec].ib[0] + reb[exec].count * $bits(Value))),
-	  		reb[exec].ia[0] + reb[exec].ib[0]
-	  	);
+	  	case(reb[exec].dec.memsz)
+	  	byt:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + (reb[exec].dec.Rbvec ? reb[exec].ib[reb[exec].step] : (reb[exec].ib[0] + reb[exec].count * 8)),
+		  		reb[exec].ia[0] + reb[exec].ib[0]
+		  	);
+	  	wyde:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + (reb[exec].dec.Rbvec ? reb[exec].ib[reb[exec].step] : (reb[exec].ib[0] + reb[exec].count * 16)),
+		  		reb[exec].ia[0] + reb[exec].ib[0]
+		  	);
+	  	tetra:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + (reb[exec].dec.Rbvec ? reb[exec].ib[reb[exec].step] : (reb[exec].ib[0] + reb[exec].count * 32)),
+		  		reb[exec].ia[0] + reb[exec].ib[0]
+		  	);
+		  default:
+		  	tStore(
+		  		1'b0,
+		  		reb[exec].ia[0] + (reb[exec].dec.Rbvec ? reb[exec].ib[reb[exec].step] : (reb[exec].ib[0] + reb[exec].count * 64)),
+		  		reb[exec].ia[0] + reb[exec].ib[0]
+		  	);
+		  endcase
 	  	//goto (WAIT_MEM1);
 	  end
 		else if (reb[exec].dec.stset) begin
@@ -2386,8 +2519,7 @@ begin
 		end
 		// Trap invalid op to prevent hang.
 		else begin
-			reb[exec].executed <= 1'b1;
-			reb[exec].out <= 1'b0;
+			tMarkExecDone();
 			mc_busy <= FALSE;
 		end
 	end
@@ -2480,7 +2612,7 @@ task tRts;
 integer n;
 begin
 	if (reb[exec].dec.rts) begin
-		if (1'b1 || !ret_match) begin
+		if (!ret_match) begin
 			if (reb[exec].ir.rts.lk != 2'd0) begin
 				tNullReb(exec);
 	  		branchmiss_adr.offs <= reb[exec].ic[0];// + {reb[exec].ir.rts.cnst,1'b0};
@@ -2549,7 +2681,7 @@ begin
 		exec <= next_exec;
 	if (reb[exec].rfetched || reb[exec].out) begin
 		$display("%h", reb[exec].ip);
-		disassem(reb[exec].ir);
+		disassem(reb[exec].ip,reb[exec].ir);
 		if (fnArgsValid(exec)) begin
 			if (reb[exec].dec.is_valu)
 				reb[exec].res <= vres;
@@ -2558,8 +2690,6 @@ begin
 			reb[exec].res_t2 <= res_t2;
 			if (reb[exec].v) begin
 				if (!reb[exec].dec.multi_cycle) begin
-					reb[exec].rfetched <= 1'b0;
-					reb[exec].executed <= 1'b1;
 					tBra();
 					tJxx();
 			    tJmp();
@@ -2569,8 +2699,10 @@ begin
 						tArgUpdate(exec,vres);
 					else
 						tArgUpdate(exec,res);
+					tMarkExecDone();
 				end
-				else if (!mc_busy) begin
+				else //if (!mc_busy)
+				begin
 					reb[exec].rfetched <= 1'b0;
 					reb[exec].out <= 1'b1;
 					// For a vector load, if a gather operation execute the multi-cycle operation
@@ -2580,7 +2712,7 @@ begin
 						if (reb[exec].step==NLANES-1) begin
 							reb[exec].step <= 'd0;
 							reb[exec].count <= 'd0;
-							mc_busy = TRUE;
+							tMarkExecDone();
 						end
 						else begin
 							reb[exec].rfetched <= 1'b1;
@@ -2594,19 +2726,15 @@ begin
 						if (reb[exec].step==NLANES-1) begin
 							reb[exec].step <= 'd0;
 							reb[exec].count <= 'd0;
-							mc_busy = TRUE;
+							tMarkExecDone();
 						end
 						else begin
 							reb[exec].rfetched <= 1'b1;
 							reb[exec].out <= 1'b0;
 						end
 					end
-					else
-						mc_busy <= TRUE;
 					tExMultiCycle();
 				end
-				else
-					mc_busy <= FALSE;
 			end	// xval
 			exec <= next_exec;
 		end
@@ -2687,7 +2815,7 @@ begin
   if (commit0_wr) begin
     $display("regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus);
     // Globally enable interrupts after first update of stack pointer.
-    if (reb[commit0_src].dec.Rt==6'd31) begin
+    if (reb[commit0_src].dec.Rt==6'd45) begin
     	sp <= commit0_bus;	// debug
       gie <= TRUE;
     end
@@ -2712,6 +2840,7 @@ begin
 			else if (reb[head0].dec.rex)
 				tProcessRex();
 			// Register file update
+			/*
 		  if (reb[head0].dec.rfwr) begin
 		  	if (reb[head0].dec.Rtvec) begin
 		  		if (reb[head0].mask_bit)
@@ -2720,11 +2849,12 @@ begin
 		  			vregfile[reb[head0].dec.Rt][reb[head0].step] <= 64'd0;
 		  	end
 		  end
+		  */
 		end	// wcause
 	    //regfile[reb[head0].dec.Rt] <= reb[head0].res[$bits(Value)-1:0];
-	  tRetirePrefixes();
 	  tFreeRebs();
   end
+  tRetirePrefixes();
 end
 endtask
 
@@ -2755,12 +2885,17 @@ endtask
 // Retire prefixes once the instruction is retired.
 task tRetirePrefixes;
 integer n8;
+integer n11;
 begin
-	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
-		if (reb[n8].dec.isExi && sns[n8]==sns[commit0_src]-1)
-			reb[n8] <= 'd0;
-		if (sns[n8]==sns[commit0_src]-2 && reb[n8].ir.any.opcode==EXIM)
-			reb[n8] <= 'd0;
+	for (n11 = 0; n11 < REB_ENTRIES; n11 = n11 + 1) begin
+		if (reb[n11].executed) begin
+			for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
+				if (reb[n8].dec.isExi && sns[n8]==sns[n11]-1)
+					reb[n8] <= 'd0;
+				if (sns[n8]==sns[n11]-2 && reb[n8].ir.any.opcode==EXIM)
+					reb[n8] <= 'd0;
+			end
+		end
 	end
 	/*
 	if (commit_cnt==2'd2) begin
@@ -3251,6 +3386,7 @@ endfunction
 
 task disassem;
 input Instruction ir;
+input CodeAddress ip;
 begin
   case(ir.any.opcode)
   R2,R3:
@@ -3282,16 +3418,17 @@ begin
   LDTU:		$display("LDTU r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   LDO:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.ld.Ra);
   LDOS:		$display("LDO r%d,%d[r%d]", ir.ld.Rt, ir.lds.disp, ir.ld.Ra);
-  LDH:		$display("LDH r%d,%d[r%d] : %h", ir.ld.Rt, ir.ld.disp, ir.ld.Ra, reb[exec].ia[0] + ir.ld.disp);
+  LDV:		$display("LDV r%d,%d[r%d] : %h", ir.ld.Rt, ir.ld.disp, ir.ld.Ra, reb[exec].ia[0] + ir.ld.disp);
   LDHS:		$display("LDH r%d,%d[r%d] : %h", ir.ld.Rt, ir.lds.disp, ir.ld.Ra, reb[exec].ia[0] + ir.lds.disp);
   STT:		$display("STT r%d,%d[r%d]", ir.ld.Rt, ir.ld.disp, ir.st.Ra);
   STO:		$display("STO r%d,%d[r%d]", ir.st.Rs, ir.st.disp, ir.st.Ra);
   STOS:		$display("STO r%d,%d[r%d] : %h", ir.st.Rs, ir.sts.disp, ir.st.Ra, reb[exec].ia[0] + ir.sts.disp);
-  STH:		$display("STH r%d,%d[r%d] : %h", ir.st.Rs, ir.st.disp, ir.st.Ra, reb[exec].ia[0] + ir.st.disp);
+  STV:		$display("STV r%d,%d[r%d] : %h", ir.st.Rs, ir.st.disp, ir.st.Ra, reb[exec].ia[0] + ir.st.disp);
   STHS:		$display("STH r%d,%d[r%d] : %h", ir.st.Rs, ir.sts.disp, ir.st.Ra, reb[exec].ia[0] + ir.sts.disp);
   RTS:   	$display("RTS #%d", ir.rts.cnst);
   ENTER:	$display("ENTER");
   LEAVE:	$display("LEAVE");
+  BEQZ:		$display("BEQZ %h", {{64{ir[31]}},ir[31:19],ir[13:9]}+ip.offs);
   endcase
 end
 endtask

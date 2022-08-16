@@ -39,7 +39,7 @@ import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
 module Thor2022_mem_req_queue(rst, clk, wr0, wr_ack0, i0, wr1, wr_ack1, i1,
-	rd, o, valid, empty, ldo0, found0, ldo1, found1);
+	rd, o, valid, empty, ldo0, found0, ldo1, found1, full);
 parameter AWID = 32;
 parameter QDEP = 32;
 input rst;
@@ -58,8 +58,9 @@ output MemoryRequest ldo0;
 output reg found0;
 output MemoryRequest ldo1;
 output reg found1;
+output reg full;
 
-reg [3:0] qndx = 'd0;
+reg [4:0] qndx = 'd0;
 MemoryRequest [QDEP-1:0] que;
 reg [QDEP-1:0] valid_bits = 'd0;
 reg [63:0] isel0, isel1;
@@ -261,5 +262,7 @@ always_comb
 	o = que[0];
 always_comb
 	valid = valid_bits[0];
-	
+always_comb
+	full = qndx==QDEP-1;
+
 endmodule

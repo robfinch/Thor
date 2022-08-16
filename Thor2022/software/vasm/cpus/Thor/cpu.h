@@ -42,7 +42,7 @@ typedef struct {
 
 /* operand-types */
 #define OP_REG						0x00000001L
-#define OP_IMM11					0x00000002L
+#define OP_IMM13					0x00000002L
 #define OP_IMM23					0x00000004L
 #define OP_IMM30					0x00000008L
 #define OP_IMM46					0x00000010L
@@ -51,7 +51,7 @@ typedef struct {
 #define OP_REGT						0x00000100L
 #define OP_VMREG					0x00000200L
 #define OP_UIMM6					0x00000400L
-#define OP_REGIND8				0x00000800L
+#define OP_REGIND13				0x00000800L
 #define OP_REGIND24				0x00001000L
 #define OP_REGIND30				0x00002000L
 #define OP_REGIND46				0x00004000L
@@ -75,8 +75,8 @@ typedef struct {
 #define OP_NEXTREG	-2
 
 /* supersets of other operands */
-#define OP_IMM			(OP_IMM7|OP_IMM11|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78)
-#define OP_REGIND		(OP_REGIND8|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78)
+#define OP_IMM			(OP_IMM7|OP_IMM13|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64|OP_IMM78)
+#define OP_REGIND		(OP_REGIND13|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78)
 #define OP_MEM      (OP_REGIND|OP_SCNDX)
 #define OP_ALL      0x3fffffff
 
@@ -159,6 +159,7 @@ typedef struct {
 #define RB(x)		(((x) & 0x3fLL) << 19LL)
 #define TB(x)		(((x) & 1LL) << 24LL)
 #define RC(x)		(((x) & 0x3fLL) << 25LL)
+#define RCB(x)		(((x) & 0x1fLL) << 24LL)
 #define TC(x)		(((x) & 1LL) << 30LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
 #define CAB(x)		(((x) & 7LL) << 24LL)

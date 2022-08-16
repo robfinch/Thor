@@ -36,7 +36,7 @@
 //                                                                          
 // ============================================================================
 //
-module Thor2022_fifo(rst, clk, wr, di, rd, dout, cnt);
+module Thor2022_fifo(rst, clk, wr, di, rd, dout, cnt, full);
 parameter WID=3;
 input rst;
 input clk;
@@ -45,6 +45,7 @@ input [WID-1:0] di;
 input rd;
 output reg [WID-1:0] dout;
 output reg [3:0] cnt;
+output reg full;
 
 reg [3:0] wr_ptr;
 reg [3:0] rd_ptr;
@@ -75,5 +76,8 @@ always_comb
 		cnt = wr_ptr - rd_ptr;
 	else
 		cnt = wr_ptr + (5'd16 - rd_ptr);
+
+always_comb
+	full = cnt==4'd15;
 
 endmodule

@@ -279,7 +279,8 @@ Thor2022_mem_req_queue umreqq
 	.ldo0(),
 	.found0(),
 	.ldo1(),
-	.found1()
+	.found1(),
+  .full(fifoToCtrl_full_o)
 );
 
 /*
