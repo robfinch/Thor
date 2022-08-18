@@ -80,9 +80,24 @@ wire [5:0] vv = {
 		reb[0].v
 	};
 reg [5:0] vv1;
-
+wire [5:0] ev = {
+		reb[5].executed,
+		reb[4].executed,
+		reb[3].executed,
+		reb[2].executed,
+		reb[1].executed,
+		reb[0].executed
+	};
+wire [5:0] ol = {
+		reb[5].out,
+		reb[4].out,
+		reb[3].out,
+		reb[2].out,
+		reb[1].out,
+		reb[0].out
+	};
 ffz6 uffoq (
-	.i(vv | lov),
+	.i(vv | lov | ev | stomp | ol),
 	.o(next_fetch0)
 );
 
@@ -121,7 +136,7 @@ else
 	fd1 = 6'b000000;
 
 ffo6 uffodecompress0 (
-	.i(fd),
+	.i(fd|stomp),
 	.o(next_decompress0a)
 );
 
@@ -149,7 +164,7 @@ integer n;
 begin
 	fnPriorsDecoded = 1'b1;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n] < sns[kk] && !(reb[n].decoded || reb[n].executed || reb[n].out) && reb[n].v)
+		if (sns[n] < sns[kk] && !(reb[n].decoded || reb[n].rfetched || reb[n].executed || reb[n].out) && reb[n].v)
 			fnPriorsDecoded = 1'b0;
 end
 endfunction
@@ -160,7 +175,7 @@ begin
 	next_decode0 = 3'd7;
 	next_decode1 = 3'd7;
 	for (mm = 0; mm < REB_ENTRIES; mm = mm + 1) begin
-		if ((sns[mm] < sns[next_decode0] || next_decode0==3'd7) && reb[mm].decompressed) begin
+		if ((sns[mm] < sns[next_decode0] || next_decode0==3'd7) && reb[mm].decompressed && !stomp[mm]) begin
 			if (fnPriorsDecoded(mm))
 				next_decode0 = mm;
 		end
@@ -197,7 +212,7 @@ else
 	rfd1 = 6'b000000;
 
 ffo6 ufforegfetch0 (
-	.i(rfd),
+	.i(rfd|stomp),
 	.o(next_regfetch0a)
 );
 
@@ -226,7 +241,7 @@ integer kh;
 begin
 	fnPriorFc = 1'b0;
 	for (kh = 0; kh < REB_ENTRIES; kh = kh + 1)
-		if ((reb[kh].dec.flowchg && sns[kh] < sns[kk] /* && !reb[kh].executed*/)  || (|reb[kh].cause && sns[kh] < sns[kk]))
+		if ((reb[kh].dec.flowchg && sns[kh] < sns[kk] && !reb[kh].executed)  || (|reb[kh].cause && sns[kh] < sns[kk]))
 			fnPriorFc = 1'b1;
 end
 endfunction
@@ -241,7 +256,7 @@ always_comb
 begin
 next_execute = 3'd7;
 for (kk = REB_ENTRIES-1; kk >= 0; kk = kk - 1)
-	if ((reb[kk].rfetched || reb[kk].out) && reb[kk].v && !stomp[kk]) begin
+	if (reb[kk].rfetched && reb[kk].v && !stomp[kk]) begin
 		if (fnArgsValid(kk)) begin
 			if (reb[kk].dec.mem && !fnPriorFc(kk)) begin
 				if (reb[next_execute].dec.mem && !reb[next_execute].executed && reb[next_execute].v) begin

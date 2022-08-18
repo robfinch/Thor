@@ -37,12 +37,14 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_regfile_src(rst, clk, head0, commit0_wr, commit0_tgt, commit1_wr, commit1_tgt,
+module Thor2022_regfile_src(rst, clk, head0,
+	commit0_id, commit0_wr, commit0_tgt, commit1_wr, commit1_tgt,
 	branchmiss, reb, latestID, livetarget, latestID2, livetarget2, 
 	decbus0, decbus1, dec0, dec1, regfile_valid, next_regfile_src, regfile_src);
 input rst;
 input clk;
 input [2:0] head0;
+input [5:0] commit0_id;
 input commit0_wr;
 input [5:0] commit0_tgt;
 input commit1_wr;
@@ -65,8 +67,9 @@ integer n,n1;
 
 always_ff @(negedge clk)
 if (rst) begin
-	for (n = 0; n < NREGS; n = n + 1)
+	for (n = 0; n < NREGS; n = n + 1) begin
 		next_regfile_src[n] <= 6'd31;
+	end
 end
 else begin
 
@@ -98,8 +101,11 @@ else begin
 	  */
 	end
 	else begin
+//		for (n = 0; n < NREGS; n = n + 1)
+//			if (commit0_tgt==n && commit0_wr && commit0_id==regfile_src[n])
+//				regfile_src[n] <= 6'd31;
 		if (dec0!= 3'd7 && reb[dec0].decompressed) begin
-			for (n = 0; n < 40; n = n + 1)
+			for (n = 0; n < NREGS; n = n + 1)
 				if (regfile_src[n]==dec0 && n != decbus0.Rt && n != decbus0.Rt2) begin
 					if (regfile_valid[n])
 						next_regfile_src[n] <= 6'd31;
@@ -142,9 +148,10 @@ else begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
 		regfile_src[n1] <= #1 next_regfile_src[n1];
 		if (regfile_src[n1] != next_regfile_src[n1])
-			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, decbus0.Rt, dec0);
+			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, reb[dec0].dec.Rt, dec0);
 	end
 	regfile_src[6'd0] <= #1 6'd31;
 end
+
 
 endmodule

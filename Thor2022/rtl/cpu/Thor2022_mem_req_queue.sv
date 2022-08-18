@@ -41,7 +41,7 @@ import Thor2022_mmupkg::*;
 module Thor2022_mem_req_queue(rst, clk, wr0, wr_ack0, i0, wr1, wr_ack1, i1,
 	rd, o, valid, empty, ldo0, found0, ldo1, found1, full);
 parameter AWID = 32;
-parameter QDEP = 32;
+parameter QDEP = 8;
 input rst;
 input clk;
 input wr0;
@@ -194,12 +194,13 @@ else begin
 			qsel[n3-1] <= qsel[n3];
 			valid_bits[n3-1] <= valid_bits[n3];
 		end
+		valid_bits[QDEP-1] <= 1'b0;
 		wr_ack0 <= 1'b1;
 		if (last_tid != i0.tid) begin
-			que[qndx] <= i0;
-			qsel[qndx] <= fnSel(i0.sz) << i0.adr[3:0];
+			que[qndx-1] <= i0;
+			qsel[qndx-1] <= fnSel(i0.sz) << i0.adr[3:0];
 			last_tid <= i0.tid;
-			valid_bits[qndx] <= 1'b1;
+			valid_bits[qndx-1] <= 1'b1;
 		end
 		else
 			qndx <= qndx - 2'd1;
@@ -210,11 +211,12 @@ else begin
 			qsel[n3-1] <= qsel[n3];
 			valid_bits[n3-1] <= valid_bits[n3];
 		end
+		valid_bits[QDEP-1] <= 1'b0;
 		wr_ack1 <= 1'b1;
 		if (last_tid != i1.tid) begin
-			que[qndx] <= i1;
-			qsel[qndx] <= fnSel(i1.sz) << i1.adr[3:0];
-			valid_bits[qndx] <= 1'b1;
+			que[qndx-1] <= i1;
+			qsel[qndx-1] <= fnSel(i1.sz) << i1.adr[3:0];
+			valid_bits[qndx-1] <= 1'b1;
 			last_tid <= i1.tid;
 		end
 		else

@@ -38,7 +38,8 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_dcache_way(clk, state, ack, func, dce, hit, inv, acr, eaeo, daeo, lfsr, rway, wway);
+module Thor2022_dcache_way(rst, clk, state, ack, func, dce, hit, inv, acr, eaeo, daeo, lfsr, rway, wway);
+input rst;
 input clk;
 input [6:0] state;
 input ack;
@@ -54,7 +55,9 @@ input [1:0] rway;
 output reg [1:0] wway;
 
 always_ff @(posedge clk)
-begin
+if (rst)
+	wway <= 2'd0;
+else begin
 	case(state)
 	MEMORY_ACKLO:
 		if (!inv && (dce & hit & acr[3]) &&

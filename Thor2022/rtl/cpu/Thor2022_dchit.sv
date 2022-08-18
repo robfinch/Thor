@@ -38,8 +38,9 @@
 import Thor2022_pkg::*;
 import Thor2022_mmupkg::*;
 
-module Thor2022_dchit(clk, tags, ndx, adr, valid, hits, hit, rway);
+module Thor2022_dchit(rst, clk, tags, ndx, adr, valid, hits, hit, rway);
 parameter AWID=32;
+input rst;
 input clk;
 input [AWID-7:0] tags [3:0];
 input [6:0] ndx;
@@ -73,6 +74,9 @@ begin
 end
 
 always_ff @(posedge clk)
+if (rst)
+	prev_rway <= 2'b00;
+else
 	prev_rway <= rway;
 
 endmodule

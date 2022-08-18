@@ -263,6 +263,7 @@ ST_RST:
 				tlbdat_rst.v <= 1'b1;
 				tlbdat_rst.m <= 1'b1;
 				tlbdat_rst.rwx <= 3'd7;
+				tlbdat_rst.c <= 1'b1;
 				// FFFC0000
 				// 1111_1111_11_ 11_1100_0000 _0000_0000_0000
 				tlbdat_rst.vpn <= {44'h000FF,count[7:0]};
@@ -519,7 +520,7 @@ else begin
 			  	padr_o[15:10] <= iadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
 					if (iadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
-						acr_o <= {tentryo[n].ppn < 16'h0FFF,tentryo[n].rwx};
+						acr_o <= {tentryo[n].ppn < 16'h0FFF || tentryo[n].ppn==16'hFFFC,tentryo[n].rwx};
 					else
 						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;
@@ -549,7 +550,7 @@ else begin
 			  	padr_o[15:10] <= dadr_i[15:10] + tentryo[n].mb;
 					padr_o[31:16] <= tentryo[n].ppn;
 					if (dadr_i[15:10] + tentryo[n].mb <= tentryo[n].me)
-						acr_o <= {tentryo[n].ppn < 16'h0FFF,tentryo[n].rwx};
+						acr_o <= {tentryo[n].ppn < 16'h0FFF || tentryo[n].ppn==16'hFFFC,tentryo[n].rwx};
 					else
 						acr_o <= 4'h0;
 					tlbkey_o <= tentryo[n].key;

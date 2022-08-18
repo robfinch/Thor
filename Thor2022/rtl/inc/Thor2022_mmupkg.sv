@@ -69,6 +69,7 @@ typedef struct packed
 	Thor2022_pkg::Address adr;
 	Thor2022_pkg::Address pmtadr;
 	// PMT info
+	// 256 bits follow
 	logic vm;
 	logic n;
 	logic pm;
@@ -97,7 +98,7 @@ typedef struct packed
 	logic m;
 	logic [2:0] rwx;
 	logic a;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } TLBE;	// 288 bits
 
@@ -110,7 +111,7 @@ typedef struct packed
 	logic [2:0] me;
 	logic m;
 	logic [2:0] rwx;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } SPTE;	// 32 bits
 
@@ -124,7 +125,7 @@ typedef struct packed
 	logic [2:0] me;
 	logic m;
 	logic [2:0] rwx;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } PTE;	// 32 bits
 
@@ -143,7 +144,7 @@ typedef struct packed
 	logic m;
 	logic [2:0] rwx;
 	logic a;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } SHPTE;	// 64 bits
 
@@ -164,7 +165,7 @@ typedef struct packed
 	logic m;
 	logic [2:0] rwx;
 	logic a;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } HPTE;	// 64 bits
 
@@ -174,7 +175,7 @@ typedef struct packed
 	logic v;
 	logic [2:0] lvl;
 	logic [9:0] pad10a;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } SPDE;	// 32 bits + address
 
@@ -184,7 +185,7 @@ typedef struct packed
 	logic v;
 	logic [2:0] lvl;
 	logic [9:0] pad10a;
-	logic pad1a;
+	logic c;
 	logic [15:0] ppn;
 } PDE;	// 64 bits + address
 

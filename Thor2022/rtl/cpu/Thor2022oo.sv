@@ -316,7 +316,7 @@ Thor2022_gp_regfile ugprs
 );
 
 MemoryRequest storeHistory [0:1023];
-MemoryRequest loadHistory [0:1023];
+MemoryResponse loadHistory [0:1023];
 reg [9:0] shndx;
 reg [9:0] ldndx;
 
@@ -359,6 +359,7 @@ Thor2022_regfile_src urfs1
 	.rst(rst_i),
 	.clk(clk_g),
 	.head0(head0),
+	.commit0_id(commit0_src),
 	.commit0_wr(commit0_wr),
 	.commit0_tgt(commit0_tgt),
 	.commit1_wr(commit1_wr),
@@ -369,6 +370,9 @@ Thor2022_regfile_src urfs1
 	.livetarget(livetarget),
 	.latestID2(reb_latestID2),
 	.livetarget2(livetarget2),
+//	.decbus0(reb[regfetch0].dec),
+//	.decbus1(reb[regfetch1].dec),
+//	.dec0(regfetch0),
 	.decbus0(deco),
 	.decbus1(deco1),
 	.dec0(dec),
@@ -382,10 +386,10 @@ Thor2022_regfile_valid urfv1
 (
 	.rst(rst_i),
 	.clk(clk_g),
-	.commit0_id(head0),
+	.commit0_id(commit0_src),
 	.commit0_wr(commit0_wr),
 	.commit0_tgt(commit0_tgt),
-	.commit1_id(head1),
+	.commit1_id(commit1_src),
 	.commit1_wr(commit1_wr),
 	.commit1_tgt(commit1_tgt),
 	.branchmiss(branchmiss),
@@ -536,6 +540,7 @@ reg xMfsel,xMtsel;
 MemoryRequest memreq;
 (* MARK_DEBUG="TRUE" *)
 MemoryResponse memresp;
+reg [7:0] last_memresp_tid;
 reg memresp_fifo_rd;
 wire memresp_fifo_empty;
 wire memresp_fifo_v;
@@ -743,15 +748,15 @@ always_comb
 		rfop = preg[cioreg];
 */
 always_comb
-	rfoa_v = next_regfile_valid[reb[dec].dec.Ra] || Source1Valid(reb[dec].ir);
+	rfoa_v = next_regfile_valid[reb[regfetch0].dec.Ra] || Source1Valid(reb[regfetch0].ir);
 always_comb
-	rfob_v = next_regfile_valid[reb[dec].dec.Rb] || Source2Valid(reb[dec].ir);
+	rfob_v = next_regfile_valid[reb[regfetch0].dec.Rb] || Source2Valid(reb[regfetch0].ir);
 always_comb
-	rfoc_v = next_regfile_valid[reb[dec].dec.Rc] || Source3Valid(reb[dec].ir);
+	rfoc_v = next_regfile_valid[reb[regfetch0].dec.Rc] || Source3Valid(reb[regfetch0].ir);
 always_comb
-	rfot_v = next_regfile_valid[reb[dec].dec.Rt] || SourceTValid(reb[dec].ir);
+	rfot_v = next_regfile_valid[reb[regfetch0].dec.Rt] || SourceTValid(reb[regfetch0].ir);
 always_comb
-	rfom_v = next_regfile_valid[reb[dec].dec.Rvm] || SourceMValid(reb[dec].ir);
+	rfom_v = next_regfile_valid[reb[regfetch0].dec.Rvm] || SourceMValid(reb[regfetch0].ir);
 /*
 always_comb
 	rfoa_v1 = (reb[head0].dec.Rt==deco1.Ra && reb[head0].v && reb[head0].executed && reb[head0].dec.rfwr) || regfile_src[deco1.Ra]==5'd31 || Source1Valid(reb[dec1].ir);
@@ -786,9 +791,20 @@ always_comb
 always_comb
 	djxxr_miss = (reb[dec].ir.jxx.Rc==6'd31 && reb[dec].dec.jxx && dpredict_taken && bpe) && (ip.offs != reb[dec].ip.offs + reb[dec].dec.jmptgt) && reb[dec].v;
 always_comb
-	jxx_miss = reb[exec].dec.jxx && takb && reb[exec].v && !reb[exec].executed;
+	jxx_miss = ((reb[exec].predict_taken && !takb && reb[exec].predictable_branch) ||
+						((!reb[exec].predict_taken && takb) || !reb[exec].predictable_branch) ||
+						(takb && !bpe)) &&
+						reb[exec].dec.jxx && reb[exec].v && !reb[exec].executed && reb[exec].rfetched
+						;
+//always_comb
+//	jxx_miss = reb[exec].dec.jxx && takb && reb[exec].v && !reb[exec].executed;
 always_comb
-	jxz_miss = reb[exec].dec.jxz && takb && reb[exec].v && !reb[exec].executed;
+	jxz_miss = ((reb[exec].predict_taken && !takb && reb[exec].predictable_branch) ||
+						((!reb[exec].predict_taken && takb) || !reb[exec].predictable_branch) ||
+						(takb && !bpe)) &&
+						reb[exec].dec.jxz && reb[exec].v && !reb[exec].executed && reb[exec].rfetched
+						;
+//	jxz_miss = reb[exec].dec.jxz && takb && reb[exec].v && !reb[exec].executed;
 always_comb
 	mjnez_miss = reb[exec].dec.mjnez && takb && reb[exec].v && !reb[exec].executed;
 always_comb
@@ -1377,6 +1393,7 @@ begin
 		storeHistory[n6] <= 'd0;
 		loadHistory[n6] <= 'd0;
 	end
+	last_memresp_tid <= 'd0;
 end
 endtask
 
@@ -1435,7 +1452,7 @@ RUN:
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INVnRUN:
   begin
-  	reb[aqe_dato.ndx].executed <= #1 1'b1;
+  	reb[aqe_dato.ndx].executed <= reb[aqe_dato.ndx].v & !stomp[aqe_dato.ndx];
 		reb[aqe_dato.ndx].out <= 1'b0;	
   	reb[aqe_dato.ndx].res <= mc_res;
   	reb[aqe_dato.ndx].res_t2 <= mc_res_t2;
@@ -1572,28 +1589,36 @@ WAIT_MEM2:
 	begin
 		//wackr <= 1'b0;
 		mcflag <= 1'b0;
-		if (memresp_fifo_v)
+		if ((memresp_fifo_v && !memresp_fifo_empty) || (memresp.tid==memreq.tid && memresp.tid != last_memresp_tid))
 		begin
-			memresp_fifo_rd <= FALSE;
-			reb[memresp.tid[2:0]].res <= memresp.res;
+			last_memresp_tid <= memresp.tid;
 			mc_exec2 <= memresp.tid[2:0];
 			mcres2 <= memresp.res;
-			tArgUpdate(memresp.tid[2:0],memresp.res);
+			if (memresp.func==MR_LOAD||memresp.func==MR_LOADZ) begin
+				loadHistory[ldndx] <= memresp;
+				ldndx <= ldndx + 2'd1;
+			end
 			mcflag <= 1'b1;
 			if (mStset|mStmov)
 				reb[memresp.tid[2:0]].dec.rfwr <= TRUE;
-			if (1'b1 || memresp.tid == memreq.tid) begin
+			if (reb[memresp.tid[2:0]].out) begin
+				reb[memresp.tid[2:0]].res <= memresp.res;
+				tArgUpdate(memresp.tid[2:0],memresp.res);
 				if (|memresp.cause) begin
 					if (~|reb[memresp.tid[2:0]].cause)
 						reb[memresp.tid[2:0]].istk_depth <= reb[memresp.tid[2:0]].istk_depth + 2'd1;
 					reb[memresp.tid[2:0]].cause <= memresp.cause;
 					reb[memresp.tid[2:0]].badAddr <= memresp.badAddr;
 				end
-				reb[memresp.tid[2:0]].executed <= 1'b1;
-				reb[memresp.tid[2:0]].out <= 1'b0;	
+				// ToDo: handle vector stores
+				reb[memresp.tid[2:0]].executed <= reb[memresp.tid[2:0]].v & !stomp[memresp.tid[2:0]];
+				reb[memresp.tid[2:0]].out <= 1'b0;
 //			 	mc_busy <= FALSE;
-				mstate <= RUN;
 			end
+		end
+		else begin
+//			mstate <= RUN;
+//			memresp_fifo_rd <= FALSE;
 		end
 	end
 
@@ -2085,12 +2110,18 @@ begin
 		prev_dec <= dec;
 		dec <= next_dec0;
 	end
-//	if (reb[dec].state==FETCHED) begin
-	if (reb[dec].decompressed && !branchmiss) begin
+	if (reb[dec].decompressed && !branchmiss && reb[dec].v) begin
 		$display("%d dec=%d Decoded: %h", $time, dec, reb[dec].ir);
+		dec <= MaxSrcId;
 		reb[dec].decompressed <= 1'b0;
 		reb[dec].decoded <= 1'b1;
 		reb[dec].dec <= deco;
+		// There is no register fetch for an immediate prefix. Claim the stage is
+		// done already.
+		if (deco.isExi) begin
+			reb[dec].decoded <= 1'b0;
+			reb[dec].executed <= 1'b1;
+		end
 		reb[dec].istk_depth <= distk_depth;
 		/*
 		reb[dec].ia <= deco.Ravec ? vroa : {NLANES{rfoa}};
@@ -2184,25 +2215,61 @@ task tRegfetch;
 begin
 	if (next_regfetch0 != MaxSrcId)
 		regfetch0 <= next_regfetch0;
-	if (reb[regfetch0].decoded && !branchmiss) begin
+	if (reb[regfetch0].decoded && !branchmiss && reb[regfetch0].v) begin
+		$display("Regfetch");
+		$display("  Ra=%d iav=%d ias=%d", reb[regfetch0].dec.Ra, rfoa_v, Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra]);
+		$display("  rfoa=%h", rfoa);
 		reb[regfetch0].decoded <= 1'b0;
 		reb[regfetch0].rfetched <= 1'b1;
 		reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? vroa : {NLANES{rfoa}};
 		reb[regfetch0].ib <= reb[regfetch0].dec.Rbvec ? vrob : {NLANES{rfob}};
 		reb[regfetch0].ic <= reb[regfetch0].dec.Rcvec ? vroc : {NLANES{rfoc}};
 		reb[regfetch0].it <= reb[regfetch0].dec.Rtvec ? vrot : {NLANES{rfot}};
-		//reb[regfetch0].ca <= rfoca;
 		reb[regfetch0].iav <= rfoa_v;
 		reb[regfetch0].ibv <= rfob_v;
 		reb[regfetch0].icv <= rfoc_v;
 		reb[regfetch0].itv <= rfot_v;
 		reb[regfetch0].vmv <= rfom_v;
-		reb[regfetch0].ias <= Source1Valid(reb[regfetch0].ir)||reb[regfetch0].dec.Ra=='d0 ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra];
-		reb[regfetch0].ibs <= Source2Valid(reb[regfetch0].ir)||reb[regfetch0].dec.Rb=='d0 ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb];
-		reb[regfetch0].ics <= Source3Valid(reb[regfetch0].ir)||reb[regfetch0].dec.Rc=='d0 ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
+		reb[regfetch0].ias <= Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra];
+		reb[regfetch0].ibs <= Source2Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb];
+		reb[regfetch0].ics <= Source3Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
+		reb[regfetch0].its <= SourceTValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rt];
 		reb[regfetch0].vms <= SourceMValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rvm];
 		reb[regfetch0].lks <= LkValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
 		reb[regfetch0].vmask <= rfom;
+		
+		if (head0==regfile_src[reb[regfetch0].dec.Ra] && reb[head0].dec.rfwr) begin
+			reb[regfetch0].iav <= 1'b1;
+			reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
+		end
+		if (head0==regfile_src[reb[regfetch0].dec.Rb] && reb[head0].dec.rfwr) begin
+			reb[regfetch0].ibv <= 1'b1;
+			reb[regfetch0].ib <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
+		end
+		if (head0==regfile_src[reb[regfetch0].dec.Rc] && reb[head0].dec.rfwr) begin
+			reb[regfetch0].icv <= 1'b1;
+			reb[regfetch0].ic <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
+		end
+		if (head0==regfile_src[reb[regfetch0].dec.Rt] && reb[head0].dec.rfwr) begin
+			reb[regfetch0].itv <= 1'b1;
+			reb[regfetch0].it <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
+		end
+		if (head0==regfile_src[reb[regfetch0].dec.Rvm] && reb[head0].dec.rfwr) begin
+			reb[regfetch0].vmv <= 1'b1;
+			reb[regfetch0].vmask <= reb[head0].res[0];
+		end
+		
+		/*
+		if (commit0_src==regfile_src[reb[regfetch0].dec.Ra] && commit0_wr) begin
+			reb[regfetch0].iav <= 1'b1;
+			reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? commit0_bus : {NLANES{commit0_bus[0]}};
+		end
+		if (commit0_src==regfile_src[reb[regfetch0].dec.Rt] && commit0_wr) begin
+			reb[regfetch0].itv <= 1'b1;
+			reb[regfetch0].it <= reb[regfetch0].dec.Ravec ? commit0_bus : {NLANES{commit0_bus[0]}};
+		end
+		*/
+		regfetch0 <= MaxSrcId;
 	end
 end
 endtask
@@ -2211,7 +2278,7 @@ task tMarkExecDone;
 begin
 	reb[exec].rfetched <= 1'b0;
 	reb[exec].out <= 1'b0;
-	reb[exec].executed <= 1'b1;
+	reb[exec].executed <= reb[exec].v & !stomp[exec];
 end
 endtask
 
@@ -2226,6 +2293,7 @@ input Address sadr;		// scalar address
 begin
 	memreq.tid <= {tid,exec};
 	tid <= tid + 2'd1;
+	memreq.ip <= reb[exec].ip;
 	memreq.func <= reb[exec].dec.ldz ? MR_LOADZ : MR_LOAD;
 	case(reb[exec].dec.memsz)
 	byt:		begin memreq.func2 <= MR_LDB; end
@@ -2258,8 +2326,8 @@ begin
 	  	end
 	  	else if (reb[exec].zbit)
 	  		memreq.sz <= nul;
-	  	if (reb[exec].step==NLANES-1 && !memreq_full)
-				tMarkExecDone();
+	  	//if (reb[exec].step==NLANES-1 && !memreq_full)
+			//	tMarkMem();
 		end
 		else begin
 			memreq.func2 <= MR_LDV;
@@ -2268,7 +2336,6 @@ begin
 	  		memreq.wr <= TRUE;
 	  		reb[exec].count <= 0;
 	  		reb[exec].step <= 0;
-				tMarkExecDone();
   		end
 		end
 	end
@@ -2276,7 +2343,10 @@ begin
 		memreq.adr.offs <= sadr;
 		if (!memreq_full) begin
 			memreq.wr <= TRUE;
-			tMarkExecDone();
+		end
+		else begin
+			reb[exec].rfetched <= 1'b1;
+			reb[exec].out <= 1'b0;
 		end
 	end
 end
@@ -2285,8 +2355,10 @@ endtask
 task tMemHist;
 begin
 	if (memreq.wr) begin
-		storeHistory[shndx] <= memreq;
-		shndx <= shndx + 2'd1;
+		if (memreq.func==MR_STORE) begin
+			storeHistory[shndx] <= memreq;
+			shndx <= shndx + 2'd1;
+		end
 	end
 end
 endtask
@@ -2299,6 +2371,7 @@ begin
 	memreq.tid <= {tid,exec};
 	tid <= tid + 2'd1;
 	memreq.func <= MR_STORE;
+	memreq.ip <= reb[exec].ip;
 	case(reb[exec].dec.memsz)
 	byt:		begin memreq.func2 <= MR_STB; end
 	wyde:		begin memreq.func2 <= MR_STW; end
@@ -2359,14 +2432,17 @@ begin
   		if (!reb[exec].ir[27])
 	  		reb[exec].count <= reb[exec].count + 2'd1;
   	end
-  	if (reb[exec].step==NLANES-1 && !memreq_full)
-			tMarkExecDone();
+  	//if (reb[exec].step==NLANES-1 && !memreq_full)
+		//	tMarkMem();
 	end
 	else begin
   	memreq.adr.offs <= sadr;
 		if (!memreq_full) begin
 			memreq.wr <= TRUE;
-			tMarkExecDone();
+		end
+		else begin
+			reb[exec].rfetched <= 1'b1;
+			reb[exec].out <= 1'b0;
 		end
 	end
 end
@@ -2377,18 +2453,21 @@ begin
 	if (!reb[exec].out) begin
 	  if (reb[exec].dec.mulall) begin
 	  	aqe_wr <= !aqe_full;
+	  	reb[exec].out <= !aqe_full;
 	  	if (!aqe_full)
 				tMarkExecDone();
 //	    goto(MUL1);
 	  end
 	  else if (reb[exec].dec.divall) begin
 	  	aqe_wr <= !aqe_full;
+	  	reb[exec].out <= !aqe_full;
 	  	if (!aqe_full)
 				tMarkExecDone();
 //	    goto(DIV1);
 	  end
 	  else if (reb[exec].dec.isDF) begin
 	  	aqe_wr <= !aqe_full;
+	  	reb[exec].out <= !aqe_full;
 	  	if (!aqe_full)
 				tMarkExecDone();
 //	  	goto (DF1);
@@ -2677,9 +2756,9 @@ integer n;
 integer nn;
 begin
 	// Is there anything to execute?
-	if (next_exec != 3'd7)
+	if (next_exec != MaxSrcId)
 		exec <= next_exec;
-	if (reb[exec].rfetched || reb[exec].out) begin
+	if ((reb[exec].rfetched || reb[exec].out) & reb[exec].v & !stomp[exec]) begin
 		$display("%h", reb[exec].ip);
 		disassem(reb[exec].ip,reb[exec].ir);
 		if (fnArgsValid(exec)) begin
@@ -2800,16 +2879,21 @@ endtask
 // values to the execution unit arguments. And handle exceptions and
 // special instructions like RTI.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+reg [2:0] last_zero1, last_zero2;
 
 task tWriteback;
 integer n8;
+integer n13;
 begin
 	//if (reb[head0].state==EMPTY || reb[head0].state==RETIRED || reb[head0].state==EXECUTED)// && ((head0 + 2'd1) & 3'd7) != tail)
 	head0 <= next_head0;
 	head1 <= 3'd7;
 //	head1 <= next_head1;
-  if (commit0_wr)
+  if (commit0_wr) begin
+  	$display("Commit:");
+  	$display("  Src:%d val=%h", commit0_src,commit0_bus);
 		tArgUpdate(commit0_src,commit0_bus);//,reb[commit0_src].cares);
+	end
 //  if (commit1_wr)
 //		tArgUpdate(commit1_src,commit1_bus);//,reb[commit1_src].cares);
   if (commit0_wr) begin
@@ -2855,6 +2939,24 @@ begin
 	  tFreeRebs();
   end
   tRetirePrefixes();
+  
+	last_zero1 <= head0;
+	last_zero2 <= last_zero1;
+	if (reb[last_zero1] != 'd0 && last_zero1 != head0 && !reb[last_zero1].out)
+		$stop;
+  for (n13 = 0; n13 < REB_ENTRIES; n13 = n13 + 1) begin
+	  case({reb[n13].fetched,reb[n13].decompressed,reb[n13].decoded,reb[n13].rfetched,reb[n13].executed})
+	  5'b00000,
+	  5'b10000,
+	  5'b01000,
+	  5'b00100,
+	  5'b00010,
+	  5'b00001:	;
+	  default:
+			$stop;
+		endcase
+	end
+	
 end
 endtask
 
@@ -2866,7 +2968,8 @@ endtask
 // Freeup the REB slots
 task tFreeRebs;
 begin
-	reb[commit0_src] <= 'd0;
+	reb[head0] <= 'd0;
+	reb[head0].out <= reb[head0].out;	// keep this signal
 	/*
 	if (commit_cnt==2'd2) begin
 		reb[commit1_src].v <= 1'b0;
@@ -3102,6 +3205,7 @@ begin
 	for (n9 = 0; n9 < REB_ENTRIES; n9 = n9 + 1) begin
 		if (sns[n9] > sns[kk]) begin
 			reb[n9] <= 'd0;
+			reb[n9].out <= reb[n9].out;
 //			sns[n9] <= REB_ENTRIES;
 		end
 	end

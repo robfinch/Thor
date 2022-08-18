@@ -148,13 +148,13 @@ MemoryResponse memresp;
 reg zero_data = 0;
 Value movdat;
 
-// 0: PTE
-// 1: PMT
-// 2: PTE address
-// 3: PMT address
-// 4: TLB update address + way
-// 7: trigger read / write
-reg [127:0] tlb_bucket [0:7];
+// 0,1: PTE
+// 2,3: PMT
+// 4,5: PTE address
+// 6,7: PMT address
+// 8,9: TLB update address + way
+// 10,11: trigger read / write
+reg [63:0] tlb_bucket [0:15];
 
 Address cta;		// card table address
 Address ea;
@@ -313,6 +313,7 @@ bc_fifo16X #(.WID($bits(MemoryRequest))) uififo1
 );
 */
 
+wire memresp_full;
 MemoryResponseFifo uofifo1
 (
   .clk(clk),      // input wire clk
@@ -321,7 +322,7 @@ MemoryResponseFifo uofifo1
   .wr_en(memresp.wr),  // input wire wr_en
   .rd_en(fifoFromCtrl_rd),  // input wire rd_en
   .dout(fifoFromCtrl_o),    // output wire [197 : 0] dout
-  .full(),    // output wire full
+  .full(memresp_full),    // output wire full
   .empty(fifoFromCtrl_empty),  // output wire empty
   .valid(fifoFromCtrl_v)  // output wire valid
 );
@@ -525,6 +526,7 @@ wire dhito,dhite;
 
 Thor2022_dchit udchite
 (
+	.rst(rst),
 	.clk(clk),
 	.tags(dc_etag),
 	.ndx(adr_o[13:7]+adr_o[6]),
@@ -537,6 +539,7 @@ Thor2022_dchit udchite
 
 Thor2022_dchit udchito
 (
+	.rst(rst),
 	.clk(clk),
 	.tags(dc_otag),
 	.ndx(adr_o[13:7]),
@@ -657,6 +660,7 @@ Thor2022_dcache_wr udcwro
 
 Thor2022_dcache_way udcwaye
 (
+	.rst(rst),
 	.clk(clk),
 	.state(state),
 	.ack(ack_i),
@@ -674,6 +678,7 @@ Thor2022_dcache_way udcwaye
 
 Thor2022_dcache_way udcwayo
 (
+	.rst(rst),
 	.clk(clk),
 	.state(state),
 	.ack(ack_i),
@@ -712,11 +717,13 @@ VirtualAddress miss_adr;
 reg wr_ptg;
 always_comb
 begin
-	tlb_ib[127:  0] <= tlb_bucket[0];
-	tlb_ib[255:128] <= tlb_bucket[1];
-	tlb_ib.adr 			<= tlb_bucket[2];
-	tlb_ib.pmtadr 	<= tlb_bucket[3];
-	tlb_ia <= tlb_bucket[4];
+	tlb_ib[ 63:  0] <= tlb_bucket[0];
+	tlb_ib[127: 64] <= tlb_bucket[1];
+	tlb_ib[191:128] <= tlb_bucket[2];
+	tlb_ib[255:128] <= tlb_bucket[3];
+	tlb_ib.adr 			<= tlb_bucket[4];
+	tlb_ib.pmtadr 	<= tlb_bucket[6];
+	tlb_ia <= tlb_bucket[8][31:0];
 end
 
 `ifndef SUPPORT_HASHPT
@@ -1098,7 +1105,7 @@ PDCE [11:0] ptc;
 
 always_ff @(posedge clk)
 if (rst) begin
-	dce <= FALSE;
+	dce <= TRUE;
 	zero_data <= FALSE;
 	dcachable <= TRUE;
 	ivvalid <= 5'h00;
@@ -1131,6 +1138,7 @@ if (rst) begin
   wr_ptg <= 1'b0;
   tlb_ack <= 1'b0;
   ptgram_wr <= FALSE;
+  ptg_fault <= 1'b0;
 	clr_ptg_fault <= 1'b0;
 	ipage_fault <= 1'b0;
 	itlbmiss <= 1'b0;
@@ -1144,6 +1152,7 @@ if (rst) begin
 	goto (MEMORY_INIT);
 end
 else begin
+	dcachable <= TRUE;
 	inext <= FALSE;
 //	memreq_rd <= FALSE;
 	memresp.wr <= FALSE;
@@ -1169,19 +1178,21 @@ else begin
 		tMemoryIdle();
 
 	MEMORY1:
-		if (fifoToCtrl_v) begin
-			memreq_rd <= FALSE;
-			memreq <= imemreq;
-			case(imemreq.sz)
-			byt:	memreq_sel <= 32'h00000001;
-			wyde:	memreq_sel <= 32'h00000003;
-			tetra:memreq_sel <= 32'h0000000F;
-			octa:	memreq_sel <= 32'h000000FF;
-//			hexi:	memreq_sel <= 32'h0000FFFF;
-//			hexipair:	memreq_sel <= 32'hFFFFFFFF;
-			default:	memreq_sel <= 32'h0000FFFF;
-			endcase
-			goto (MEMORY_DISPATCH);
+		begin
+			if (fifoToCtrl_v) begin
+				memreq_rd <= FALSE;
+				memreq <= imemreq;
+				case(imemreq.sz)
+				byt:	memreq_sel <= 32'h00000001;
+				wyde:	memreq_sel <= 32'h00000003;
+				tetra:memreq_sel <= 32'h0000000F;
+				octa:	memreq_sel <= 32'h000000FF;
+	//			hexi:	memreq_sel <= 32'h0000FFFF;
+	//			hexipair:	memreq_sel <= 32'hFFFFFFFF;
+				default:	memreq_sel <= 32'h0000FFFF;
+				endcase
+				goto (MEMORY_DISPATCH);
+			end
 		end
 
 	MEMORY_DISPATCH:
@@ -1505,7 +1516,8 @@ else begin
 		begin
 			goto (DFETCH2);
 			if (dhit) begin
-				tPopBus();
+				//tPopBus();????
+				tDeactivateBus();
 				ret();
 			end
 			// If got a hit on the even address, the odd one must be missing
@@ -2181,7 +2193,7 @@ begin
 	  dcnt <= 5'd0;
 	  shr_ma <= 6'd0;
 	  cta <= 'd0;
-	  dcachable <= FALSE;
+	  //dcachable <= FALSE;
 	  if (tlb_cyc) begin
 	  	daccess <= TRUE;
 	  	tlb_ack <= 1'b1;
@@ -2205,6 +2217,7 @@ task tMemoryDispatch;
 begin
 	strips <= 2'd0;
 	memresp.cause <= 16'h0;
+	memresp.ip <= memreq.ip;
 	memresp.badAddr <= memreq.adr;	// Handy for debugging
 	memresp.func <= memreq.func;
 	memresp.func2 <= memreq.func2;
@@ -2323,15 +2336,19 @@ begin
 		end
 	32'hFFE?????:
 		begin
-			tlbwr <= memreq.func==MR_STORE && memreq.adr[6:4]==3'd7;
+			tlbwr <= memreq.func==MR_STORE && memreq.adr[7:4]==4'd15;
 			tlb_access <= 1'b1;
 			if (memreq.func==MR_STORE)
-				tlb_bucket[memreq.adr[6:4]] <= memreq.dat[127:0];
+				tlb_bucket[memreq.adr[6:3]] <= memreq.dat[63:0];
 			else begin
-				tlb_bucket[0] <= tlbdato[127:  0];
-				tlb_bucket[1] <= tlbdato[255:128];
-				tlb_bucket[2] <= tlbdato[287:256];
-				tlb_bucket[3] <= tlbdato[319:288];
+				tlb_bucket[0] <= tlbdato[ 63:  0];
+				tlb_bucket[1] <= tlbdato[127: 64];
+				tlb_bucket[2] <= tlbdato[191:128];
+				tlb_bucket[3] <= tlbdato[255:192];
+				tlb_bucket[4] <= tlbdato[287:256];
+				tlb_bucket[6] <= tlbdato[319:288];
+				//tlb_bucket[5] <= tlbdato[383:320];
+				//tlb_bucket[6] <= tlbdato[447:384];
 			end
 		end
 	default:	;
@@ -2411,7 +2428,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-						ret();
+						if (!memresp_full)
+							ret();
   				end
   			ptgram_en:
   				begin
@@ -2421,7 +2439,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-						ret();
+						if (!memresp_full)
+							ret();
   				end
   			pmtram_ena:
   				begin
@@ -2431,7 +2450,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-						ret();
+						if (!memresp_full)
+							ret();
 					end
 				tlb_access:
 					begin
@@ -2441,7 +2461,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-						ret();
+						if (!memresp_full)
+							ret();
 					end
 				default:
 	  			cr_o <= memreq.func2==MR_STOC;
@@ -2542,7 +2563,8 @@ begin
   						memresp.tid <= memreq.tid;
   						memresp.wr <= TRUE;
 							memresp.res <= {127'd0,rb_i};
-				    	ret();
+							if (!memresp_full)
+								ret();
 			    	end
 			    	else begin
 			    		if (shr_ma=='d0) begin
@@ -2562,7 +2584,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-			    	ret();
+						if (!memresp_full)
+							ret();
 		      end
 	    	end
     	end
@@ -2670,7 +2693,8 @@ begin
 			  			memresp.tid <= memreq.tid;
 			  			memresp.wr <= TRUE;
 							memresp.res <= {127'd0,rb_i};
-				    	ret();
+							if (!memresp_full)
+								ret();
 			    	end
 			    	else begin
 			    		if (shr_ma=='d0) begin
@@ -2689,7 +2713,8 @@ begin
 		  			memresp.tid <= memreq.tid;
 		  			memresp.wr <= TRUE;
 						memresp.res <= {127'd0,rb_i};
-		    		ret();
+						if (!memresp_full)
+							ret();
 		      end
 	    	end
       default:
@@ -2710,7 +2735,7 @@ begin
 		memreq.func <= MR_MOVST;
 		goto (MEMORY_DISPATCH);
 	end
-	else
+	else if (!memresp_full)
   	ret();
 	memresp.cause <= 16'h0;
 	if (memreq.func2==MR_LDG) begin
@@ -2793,7 +2818,8 @@ begin
 	  memresp.badAddr <= ba;
 	  memresp.wr <= TRUE;
 		memresp.res <= 128'd0;
-		goto (MEMORY_IDLE);
+		if (!memresp_full)
+			goto (MEMORY_IDLE);
 	end
 `ifdef SUPPORT_HWWALK
 	else begin
@@ -2820,7 +2846,8 @@ begin
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
 	tDeactivateBus();
-	goto (MEMORY_IDLE);
+	if (!memresp_full)
+		goto (MEMORY_IDLE);
 end
 endtask
 
@@ -2835,7 +2862,8 @@ begin
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
 	tDeactivateBus();
-	goto (MEMORY_IDLE);
+	if (!memresp_full)
+		goto (MEMORY_IDLE);
 end
 endtask
 
@@ -2850,7 +2878,8 @@ begin
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
 	tDeactivateBus();
-	goto (MEMORY_IDLE);
+	if (!memresp_full)
+		goto (MEMORY_IDLE);
 end
 endtask
 
@@ -2865,7 +2894,8 @@ begin
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
 	tDeactivateBus();
-	goto (MEMORY_IDLE);
+	if (!memresp_full)
+		goto (MEMORY_IDLE);
 end
 endtask
 
@@ -2892,7 +2922,8 @@ begin
   	if (memreq.func==MR_STORE) begin
   		io_keys[adr_o[12:2]] <= memreq.dat[19:0];
   	end
-  	ret();
+		if (!memresp_full)
+	  	ret();
 	end
 end
 endtask

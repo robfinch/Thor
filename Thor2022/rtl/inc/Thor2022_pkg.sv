@@ -54,6 +54,7 @@ parameter NLANES = 2;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 parameter REB_ENTRIES = 6;
+parameter NREGS = 47;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
@@ -145,6 +146,7 @@ parameter SGEU2R	= 8'h2F;
 
 parameter DIVI		= 8'h40;
 parameter CPUID		= 8'h41;
+parameter LDI			= 8'h43;
 parameter BLEND		= 8'h44;
 parameter CHKI		= 8'h45;
 parameter EXI8		= 8'h46;
@@ -202,7 +204,7 @@ parameter LDT			= 8'h84;
 parameter LDTU		= 8'h85;
 parameter LDO			= 8'h86;
 parameter LDOU		= 8'h87;
-parameter LDH			= 8'h88;
+parameter LDV			= 8'h88;
 parameter LDHS		= 8'h89;
 //parameter LLA			= 8'h88;
 parameter LDHP		= 8'h8A;
@@ -215,7 +217,7 @@ parameter STB			= 8'h90;
 parameter STW			= 8'h91;
 parameter STT			= 8'h92;
 parameter STO			= 8'h93;
-parameter STH			= 8'h94;
+parameter STV			= 8'h94;
 parameter STHS		= 8'h95;
 parameter STHC		= 8'h96;
 parameter STHP		= 8'h97;
@@ -255,7 +257,7 @@ parameter LDTX		= 8'hB4;
 parameter LDTUX		= 8'hB5;
 parameter LDOX		= 8'hB6;
 parameter LDOUX		= 8'hB7;
-parameter LDHX		= 8'hB8;
+parameter LDVX		= 8'hB8;
 parameter LDHPX		= 8'hBA;
 parameter LDHRX		= 8'hBB;
 parameter LEAVE		= 8'hBF;
@@ -268,7 +270,7 @@ parameter STBX		= 8'hC0;
 parameter STWX		= 8'hC1;
 parameter STTX		= 8'hC2;
 parameter STOX		= 8'hC3;
-parameter STHX		= 8'hC4;
+parameter STVX		= 8'hC4;
 parameter STHCX		= 8'hC6;
 parameter STHPX		= 8'hC7;
 parameter LDSP		= 8'hC8;
@@ -301,6 +303,7 @@ parameter DIVIL		= 8'hDD;
 parameter MULUIL	= 8'hDE;
 parameter SGTUIL	= 8'hDF;
 
+parameter LDIL		= 8'hE3;
 parameter ADDIXL	= 8'hE4;
 parameter SLEUIL	= 8'hE6;
 parameter SGEUIL	= 8'hE7;
@@ -328,8 +331,6 @@ parameter NEG			= 7'h05;
 parameter ABS			= 7'h06;
 parameter NABS		= 7'h07;
 parameter SQRT		= 7'h08;
-parameter V2BITS	= 7'h18;
-parameter BITS2V	= 7'h19;
 parameter PTGHASH	= 7'h2F;
 parameter SEI			= 7'h40;
 parameter DI			= 7'h41;
@@ -387,7 +388,16 @@ parameter ROLH		= 7'h4B;
 parameter RORH		= 7'h4C;
 
 // Vector Specific
+// R1
+parameter VCMPRSS	= 7'h2C;
+
+// R2
+parameter VSLLV		= 7'h38;
+parameter VSRLV		= 7'h39;
 parameter VEX			= 7'h3A;
+parameter VGIDX		= 7'h3C;
+parameter V2BITS	= 7'h3D;
+parameter BITS2V	= 7'h3E;
 
 // OSR2
 parameter PUSHQ		= 7'h08;
@@ -419,10 +429,10 @@ parameter MTVL		= 5'h12;
 parameter MFVL		= 5'h13;
 parameter MTLC		= 5'h14;
 parameter MFLC		= 5'h15;
-parameter VMSLL0	= 5'h1C;
-parameter VMSLL1	= 5'h1D;
-parameter VMSRL0	= 5'h1E;
-parameter VMSRL1	= 5'h1F;
+parameter VMSLL		= 5'h1C;
+//parameter VMSLL1	= 5'h1D;
+parameter VMSRL		= 5'h1E;
+//parameter VMSRL1	= 5'h1F;
 
 // Cypto
 parameter SM4ED		= 7'h56;	// R2
@@ -600,7 +610,7 @@ parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
 typedef logic [63:0] Value;
-typedef logic [$bits(Value)*NLANES-1:0] VecValue;
+typedef Value [0:NLANES-1] VecValue;
 typedef logic [NLANES-1:0] VMValue;
 typedef logic [31:0] Offset;
 typedef logic [32-13:0] BTBTag;
@@ -950,6 +960,8 @@ parameter MR_LDOB	= 4'd5;
 parameter MR_LDOO = 4'd6;
 parameter MR_LDH	= 4'd7;
 parameter MR_LDHP = 4'd8;
+parameter MR_LDV	= 4'd9;
+parameter MR_LDG	= 4'd10;
 parameter MR_LDPTG = 4'd0;
 parameter MR_STPTG = 4'd1;
 parameter MR_LDDESC = 4'd12;
@@ -966,19 +978,22 @@ parameter MR_STPTR	= 4'd9;
 typedef struct packed
 {
 	logic [7:0] tid;		// tran id
+	CodeAddress ip;
 	logic [5:0] step;		// vector operation step
+	logic [5:0] count;	// vector operation count
 	logic wr;
 	logic [3:0] func;		// function to perform
 	logic [3:0] func2;	// more resolution to function
 	Address adr;
 	logic [255:0] dat;
 	logic [3:0] sz;		// indicates size of data
-} MemoryRequest;	// 315
+} MemoryRequest;	// 385
 
 // All the fields in this structure are *output* back to the system.
 typedef struct packed
 {
 	logic [7:0] tid;		// tran id
+	CodeAddress ip;
 	logic [5:0] step;
 	logic wr;
 	logic [3:0] func;		// function to perform
@@ -987,11 +1002,11 @@ typedef struct packed
 	logic empty;
 	logic [15:0] cause;
 	Address badAddr;
-	logic [511:0] res;
+	VecValue res;
 	logic cmt;
 	logic ldcs;
 	logic mtsel;
-} MemoryResponse;	// 620
+} MemoryResponse;	// 660
 
 typedef struct packed
 {
@@ -1039,13 +1054,15 @@ typedef struct packed
 	logic inf;
 } sFPFlags;
 
-parameter byt = 3'd0;
-parameter wyde = 3'd1;
-parameter tetra = 3'd2;
-parameter octa = 3'd3;
-parameter hexi = 3'd4;
-parameter hexipair = 3'd5;
-parameter hexiquad = 3'd6;
+parameter nul = 3'd0;
+parameter byt = 3'd1;
+parameter wyde = 3'd2;
+parameter tetra = 3'd3;
+parameter octa = 3'd4;
+parameter octaocta = 3'd5;
+//parameter hexi = 3'd5;
+//parameter hexipair = 3'd6;
+//parameter hexiquad = 3'd6;
 parameter ptr = 3'd7;
 
 typedef struct packed
@@ -1054,11 +1071,11 @@ typedef struct packed
 	logic carfwr;
 	logic vmrfwr;
 	Value imm;
-	logic [4:0] Ra;
-	logic [4:0] Rb;
-	logic [4:0] Rc;
-	logic [4:0] Rt;
-	logic [4:0] Rt2;
+	logic [5:0] Ra;
+	logic [5:0] Rb;
+	logic [5:0] Rc;
+	logic [5:0] Rt;
+	logic [5:0] Rt2;
 	logic [1:0] Tb;
 	logic [1:0] Tc;
 	logic [2:0] Rvm;
@@ -1144,6 +1161,7 @@ typedef struct packed
 	logic isDF;
 	logic isExi;
 	logic isReg;
+	logic is_valu;
 	logic vex;
 } DecodeOut;
 
@@ -1169,13 +1187,14 @@ typedef struct packed
 	logic fetched;
 	logic decompressed;
 	logic decoded;
+	logic rfetched;				// registers have been fetched
 	logic out;						// instruction is out being executed
 	logic executed;
 	logic stomp;
 	logic cmt;						// commit, clears as soon as committed
 	logic cmt2;						// sticky commit, clears when entry reassigned
 	logic vcmt;						// entire vector is committed.
-	IPAddress ip;
+	CodeAddress ip;
 	Instruction ir;
 	Instruction lsm_mask;
 	logic w256;
@@ -1199,8 +1218,8 @@ typedef struct packed
 	VecValue id;
 	VecValue it;
 	Value pn;
-	IPAddress lk;
-	IPAddress ca;
+	CodeAddress lk;
+	CodeAddress ca;
 	logic [2:0] cioreg;
 	logic [1:0] cio;
 	logic [5:0] ia_ele;
@@ -1208,7 +1227,6 @@ typedef struct packed
 	logic [5:0] ic_ele;
 	logic [5:0] id_ele;
 	logic [5:0] it_ele;
-	logic [127:0] imm;
 	VMValue vmask;						// vector mask register value
 	logic mask_bit;
 	logic zbit;
@@ -1232,7 +1250,7 @@ typedef struct packed
 	//logic [511:0] res;
 	VecValue res;
 	VecValue res_t2;
-	IPAddress cares;
+	CodeAddress cares;
 	sFPFlags fp_flags;
 	logic [5:0] res_ele;
 //	logic [15:0] cause;
@@ -1266,6 +1284,7 @@ BRK:	Source1Valid = `TRUE;
 R1:
 	case(isn.r1.func)
 	SEI:	Source1Valid = isn.r2.Ra==5'd0;
+	default:	Source1Valid = `TRUE;
 	endcase
 R2:
 	case(isn.r2.func)
@@ -1277,6 +1296,7 @@ R3:
 	endcase
 ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
 	Source1Valid = isn.ri.Ra==5'd0;
+LDI:	Source1Valid = `TRUE;
 OSR2:
 	case(isn.r2.func)
 	RTI:	Source1Valid = isn.r2.Ra==5'd0;
@@ -1289,6 +1309,7 @@ JBS,JBSI,JEQ,JNE,JLT,JGE,JLE,JGT:
 	Source1Valid = isn.jxx.Ra==5'd0;
 DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
 	Source1Valid = isn.ri.Ra==5'd0;
+LDIL:	Source1Valid = `TRUE;
 CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 	Source1Valid = isn.ri.Ra==5'd0;
 VM:
@@ -1297,7 +1318,7 @@ VM:
 	MFVL:	Source1Valid = `FALSE;
 	MTVM:	Source1Valid = isn[17:12]==5'd0;
 	MTVL:	Source1Valid = isn[17:12]==5'd0;
-	VMADD,VMAND,VMOR,VMXOR,VMSLL0,VMSLL1,VMSRL0,VMSRL1,VMSUB:
+	VMADD,VMAND,VMOR,VMXOR,VMSLL,VMSRL,VMSUB:
 		Source1Valid = `FALSE;
 	VMCNTPOP,VMFIRST,VMLAST:
 		Source1Valid = `TRUE;
@@ -1328,20 +1349,20 @@ P2:	Source1Valid = isn.r2.Ra==5'd0;
 P3:	Source1Valid = isn.r3.Ra==5'd0;
 LDSP,
 LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDV,LDSP:
 	Source1Valid = isn.ld.Ra==5'd0;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDVX:
 	Source1Valid = isn.ld.Ra==6'd0;
 LDHP,LDHPX,LDHQ,LDHQX:
 	Source1Valid = isn.ld.Ra==5'd0;
 STBS,STWS,STTS,STOS,
-STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+STB,STW,STT,STO,STV,STHP,STHC,STPTR,STHS,STSP:
 	Source1Valid = isn.st.Ra==5'd0;
-STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+STBX,STWX,STTX,STOX,STVX,STHPX,STHCX,STPTRX:
 	Source1Valid = isn.st.Ra==5'd0;
 SYS:	Source1Valid = `TRUE;
 INT:	Source1Valid = `TRUE;
-MOV:	Source1Valid = isn.r1.Ra==5'd0;
+MOV:	Source1Valid = isn[19:14]==6'd0;
 BTFLD:	Source1Valid = isn.r1.Ra==5'd0;
 NOP:	Source1Valid = `TRUE;
 RTS:	Source1Valid = `TRUE;
@@ -1350,7 +1371,7 @@ SYNC,MEMSB,MEMDB,WFI:	Source1Valid = `TRUE;
 EXI8,EXI8+1,EXI24,EXI24+1,EXI40,EXI40+1,EXI56,EXI56+1,EXIM:
 	Source1Valid = `TRUE;
 LEAVE: Source1Valid = `TRUE;
-MFLK: Source1Valid = `TRUE;
+MFLK: Source1Valid = isn.r1.Ra==6'd0;
 MTLK: Source1Valid = `TRUE;
 ADD2R,SUB2R,AND2R,OR2R,XOR2R:
 	Source1Valid = isn.r3.Ra=='d0;
@@ -1393,7 +1414,7 @@ R3:
 	MUX:	Source2Valid = isn.r3.Rb==5'd0;
 	default:	Source2Valid = `TRUE;
 	endcase
-ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
+ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR,LDI:
 	Source2Valid = `TRUE;
 OSR2:
 	case(isn.r2.func)
@@ -1406,7 +1427,7 @@ JMP,DJMP,BRA:	Source2Valid = `TRUE;
 JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	Source2Valid = isn.jxx.Rb==5'd0;
 JBSI:	Source2Valid = `TRUE;
-DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
+DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI,LDIL:
 	Source2Valid = `TRUE;
 CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 	Source2Valid = `TRUE;
@@ -1416,7 +1437,7 @@ VM:
 	MFVL:	Source2Valid = `TRUE;
 	MTVM:	Source2Valid = `TRUE;
 	MTVL:	Source2Valid = `TRUE;
-	VMADD,VMAND,VMOR,VMXOR,VMSLL0,VMSLL1,VMSRL0,VMSRL1,VMSUB:
+	VMADD,VMAND,VMOR,VMXOR,VMSLL,VMSRL,VMSUB:
 		Source2Valid = `FALSE;
 	VMCNTPOP,VMFIRST,VMLAST:
 		Source2Valid = `FALSE;
@@ -1448,15 +1469,15 @@ P2:	Source2Valid = isn.r2.Rb==6'd0;
 P3:	Source2Valid = isn.r3.Rb==6'd0;
 LDSP,
 LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDV,LDSP:
 	Source2Valid = `TRUE;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDVX:
 	Source2Valid = isn.ldx.Rb==6'd0;
 LDHP,LDHPX,LDHQ,LDHQX:	Source2Valid = isn.ldx.Rb==6'd0;
 STBS,STWS,STTS,STOS,
-STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+STB,STW,STT,STO,STV,STHP,STHC,STPTR,STHS,STSP:
 	Source2Valid = `TRUE;
-STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+STBX,STWX,STTX,STOX,STVX,STHPX,STHCX,STPTRX:
 	Source2Valid = isn.stx.Rb==6'd0;
 INT:	Source2Valid = `TRUE;
 MOV:	Source2Valid = `TRUE;
@@ -1504,9 +1525,9 @@ DF3:	Source3Valid = isn.r3.Rc==5'd0;
 P3:	Source3Valid = isn.r3.Rc==5'd0;
 BTFLD:	Source3Valid = isn.r3.Rc==5'd0;
 STBS,STWS,STTS,STOS,
-STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+STB,STW,STT,STO,STV,STHP,STHC,STPTR,STHS,STSP:
 	Source3Valid = isn.st.Rs=='d0;
-STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+STBX,STWX,STTX,STOX,STVX,STHPX,STHCX,STPTRX:
 	Source3Valid = isn.stx.Rs=='d0;
 LEAVE: Source3Valid = `TRUE;
 MTLK:	 Source3Valid = isn[13:9]=='d0;
@@ -1526,13 +1547,13 @@ R3:
 	CHK:	SourceTValid = 1'b1;
 	default:	SourceTValid = isn.r3.Rt==5'd0;
 	endcase
-ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
+ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,DIVUI,CSR,LDI:
 	SourceTValid = isn.ri.Rt==5'd0;
 JMP,DJMP,BRA:	SourceTValid = `TRUE;
 JBS,JEQ,JNE,JLT,JGE,JLE,JGT:
 	SourceTValid = isn.jxx.lk==2'd0;
 JBSI:	SourceTValid = `TRUE;
-DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUI,DIVUI:
+DIVI,CPUID,DIVIL,ADDIL,CHKI,MULIL,SNEIL,ANDIL,ORIL,XORIL,SEQIL,MULUIL,LDIL:
 	SourceTValid = isn.ri.Rt==5'd0;
 CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 	SourceTValid = isn.ri.Rt==5'd0;
@@ -1541,21 +1562,29 @@ P3:	SourceTValid = isn.r3.Rt==5'd0;
 BTFLD:	SourceTValid = isn.r3.Rt==5'd0;
 MTLK:	 SourceTValid = isn[13:9]=='d0;
 INT:	SourceTValid = `TRUE;
-MOV:	SourceTValid = isn.r1.Rt==5'd0;
+//MOV:	SourceTValid = isn.r1.Rt==5'd0;
 RTS:	SourceTValid = `TRUE;
 LDSP,
 LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS,
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDH,LDSP:
+LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDHS,LDHR,LDOU,LDV,LDSP:
 	SourceTValid = isn.ld.Rt==5'd0;
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDHX:
+LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDHRX,LDOUX,LDVX:
 	SourceTValid = isn.ldx.Rt==5'd0;
 LDHP,LDHPX,LDHQ,LDHQX:	SourceTValid = isn.ldx.Rt==6'd0;
-STB,STW,STT,STO,STH,STHP,STHC,STPTR,STHS,STSP:
+STB,STW,STT,STO,STV,STHP,STHC,STPTR,STHS,STSP:
 	SourceTValid = isn.st.Rs=='d0;
-STBX,STWX,STTX,STOX,STHX,STHPX,STHCX,STPTRX:
+STBX,STWX,STTX,STOX,STVX,STHPX,STHCX,STPTRX:
 	SourceTValid = isn.stx.Rs=='d0;
 default:	SourceTValid = 1'b1;
 endcase
+endfunction
+
+function SourceMValid;
+input Instruction isn;
+if (isn.any.v)
+	SourceMValid = `FALSE;
+else
+	SourceMValid = `TRUE;
 endfunction
 
 function Source31Valid;

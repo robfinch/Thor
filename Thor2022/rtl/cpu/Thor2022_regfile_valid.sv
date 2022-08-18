@@ -94,7 +94,7 @@ else begin
   	$display("Regfile %d valid=%d", commit1_tgt, (regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]));
 	end
 
-	next_regfile_valid[6'd0] <= 1'd1;
+	next_regfile_valid[6'd0] = 1'd1;
 end
 
 always_ff @(posedge clk)
@@ -106,19 +106,24 @@ else begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
 		regfile_valid[n1] <= #1 next_regfile_valid[n1];
 	end
+
+
 	if (dec0 != 3'd7 && reb[dec0].decompressed) begin
 //			for (n = 0; n < 32; n = n + 1)
 //				if (regfile_src[n]==dec0 && n != decbus0.Rt && n != head0) begin
 //					$display("%d Register %d source not reset.", $time, n);
 //					regfile_valid[n] <= 1'd1;
 //				end
-		if (decbus0.rfwr)
+		if (decbus0.rfwr) begin
 			regfile_valid[decbus0.Rt] <= 1'b0;
+			$display("reg %d invalid", decbus0.Rt);
+		end
 		if (dec1 != 3'd7 && reb[dec1].decompressed) begin
 			if (decbus1.rfwr)
 				regfile_valid[decbus1.Rt] <= 1'b0;
 		end
 	end
+
 	regfile_valid[6'd0] <= 1'd1;
 end
 

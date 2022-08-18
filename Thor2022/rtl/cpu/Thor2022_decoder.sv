@@ -626,13 +626,13 @@ deco.divalli = deco.divi|deco.divui|deco.divsui;
 deco.jxz = ir.any.opcode==JEQZ || ir.any.opcode==JNEZ;
 deco.bra = ir.any.opcode==BRA;
 if (deco.bra)
-	deco.jmptgt = {{106{ir[31]}},ir[31:11],1'b0};
+	deco.jmptgt = {{42{ir[31]}},ir[31:11],1'b0};
 else if (deco.jxx)
-	deco.jmptgt = {{109{ir.jxx.Tgthi[18]}},ir.jxx.Tgthi,1'b0};
+	deco.jmptgt = {{45{ir.jxx.Tgthi[18]}},ir.jxx.Tgthi,1'b0};
 else if (deco.jxz)
-	deco.jmptgt = {{109{ir[31]}},ir[31:19],ir[13:9],1'b0};
+	deco.jmptgt = {{46{ir[31]}},ir[31:19],ir[13:9],1'b0};
 else
-	deco.jmptgt = {{94{ir.jmp.Tgthi[18]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
+	deco.jmptgt = {{64{ir.jmp.Tgthi[18]}},ir.jmp.Tgthi,ir.jmp.Tgtlo,1'b0};
 	
 deco.is_cbranch = deco.jxx | deco.jxz;
 deco.csr = ir.any.opcode==CSR;
