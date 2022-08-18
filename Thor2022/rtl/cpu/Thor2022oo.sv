@@ -167,41 +167,34 @@ always_comb rfwr0 = reb[head0].dec.rfwr && !reb[head0].dec.Rtvec && reb[head0].e
 always_comb vrfwr0 = reb[head0].dec.rfwr && reb[head0].dec.Rtvec && reb[head0].executed && reb[head0].v && head0 != 3'd7;
 //always_comb rfwr1 = ((reb[head1].dec.rfwr && reb[head1].executed && reb[head1].v && head1 != 3'd7) || reb[head0].dec.Rt2 != 'd0) && rfwr0;
 //always_comb rfwr2 = reb[head2].dec.rfwr && reb[head2].executed && reb[head2].v && head2 != 3'd7 && rfwr0 && rfwr1;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
+always_comb//ff @(posedge clk_g)
 	commit0_src = head0;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
-	commit0_tgt = rfwr0 ? reb[head0].dec.Rt : 6'd0;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
-	commit0_bus = rfwr0 ? reb[head0].res : 'd0;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
-	commit0_wr = rfwr0 ? 1'b1 : 1'b0;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
-	commit0_wrv = vrfwr0 ? 1'b1 : 1'b0;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
+always_comb//_ff @(posedge clk_g)
+	commit0_tgt = reb[head0].dec.Rt;
+always_comb//_ff @(posedge clk_g)
+	commit0_bus = reb[head0].res;
+always_comb//_ff @(posedge clk_g)
+	commit0_wr = rfwr0;
+always_comb//_ff @(posedge clk_g)
+	commit0_wrv = vrfwr0;
+always_comb//_ff @(posedge clk_g)
 	commit0_m = reb[head0].vmask;
-always_ff @(posedge clk_g)
-if (head0 != 3'd7)
+always_comb//_ff @(posedge clk_g)
 	commit0_z = reb[head0].zbit;
 
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_src = 3'd7;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_tgt = 6'd0;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_bus = 64'd0;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_wr = 1'b0;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_wrv = 1'b0;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_m = 64'd0;
-always_ff @(posedge clk_g)
+always_comb//_ff @(posedge clk_g)
 	commit1_z = 1'b0;
 /*
 always_ff @(posedge clk_g)
@@ -370,12 +363,12 @@ Thor2022_regfile_src urfs1
 	.livetarget(livetarget),
 	.latestID2(reb_latestID2),
 	.livetarget2(livetarget2),
-//	.decbus0(reb[regfetch0].dec),
-//	.decbus1(reb[regfetch1].dec),
-//	.dec0(regfetch0),
-	.decbus0(deco),
-	.decbus1(deco1),
-	.dec0(dec),
+	.decbus0(reb[regfetch0].dec),
+	.decbus1(reb[regfetch1].dec),
+	.dec0(regfetch0),
+//	.decbus0(deco),
+//	.decbus1(deco1),
+//	.dec0(dec),
 	.dec1(5'd7),//dec1),
 	.regfile_valid(regfile_valid),
 	.next_regfile_src(next_regfile_src),
@@ -396,9 +389,12 @@ Thor2022_regfile_valid urfv1
 	.reb(reb),
 	.latestID(reb_latestID),
 	.livetarget(livetarget),
-	.decbus0(deco),
-	.decbus1(deco1),
-	.dec0(dec),
+	.decbus0(reb[regfetch0]),
+	.decbus1(reb[regfetch1]),
+	.dec0(regfetch0),
+//	.decbus0(deco),
+//	.decbus1(deco1),
+//	.dec0(dec),
 	.dec1(5'd7),
 	.regfile_src(regfile_src),
 	.next_regfile_valid(next_regfile_valid),
@@ -2111,8 +2107,12 @@ begin
 		dec <= next_dec0;
 	end
 	if (reb[dec].decompressed && !branchmiss && reb[dec].v) begin
-		$display("%d dec=%d Decoded: %h", $time, dec, reb[dec].ir);
+		$display("%d Decode[%d]:", $time, dec);
+		$display("  ir=%h", reb[dec].ir);
+		$display("  Ra=%d Rb=%d Rc=%d Rt=%d Rvm=%d", deco.Ra, deco.Rb, deco.Rc, deco.Rt, deco.Rvm);
 		dec <= MaxSrcId;
+		if (deco.mtlk)
+			$stop;
 		reb[dec].decompressed <= 1'b0;
 		reb[dec].decoded <= 1'b1;
 		reb[dec].dec <= deco;
@@ -2211,14 +2211,40 @@ begin
 end
 endtask
 
-task tRegfetch;
-begin
+SrcId nxt_regfetch0;
+always_comb
 	if (next_regfetch0 != MaxSrcId)
-		regfetch0 <= next_regfetch0;
+		nxt_regfetch0 <= next_regfetch0;
+	else
+		nxt_regfetch0 <= regfetch0;
+always_comb
+	reb[regfetch0].nxt_rfetched <= reb[regfetch0].decoded && !branchmiss && reb[regfetch0].v;
+always_comb
+begin
+	reb[regfetch0].nxt_iav <= rfoa_v;
+	reb[regfetch0].nxt_ibv <= rfob_v;
+	reb[regfetch0].nxt_icv <= rfoc_v;
+	reb[regfetch0].nxt_itv <= rfot_v;
+	reb[regfetch0].nxt_vmv <= rfom_v;
+end
+always_comb
+begin
+		reb[regfetch0].nxt_ias <= Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra];
+		reb[regfetch0].nxt_ibs <= Source2Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb];
+		reb[regfetch0].nxt_ics <= Source3Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
+		reb[regfetch0].nxt_its <= SourceTValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rt];
+		reb[regfetch0].nxt_vms <= SourceMValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rvm];
+end
+
+task tRegfetch;
+integer n;
+begin
+	regfetch0 <= nxt_regfetch0;
 	if (reb[regfetch0].decoded && !branchmiss && reb[regfetch0].v) begin
-		$display("Regfetch");
-		$display("  Ra=%d iav=%d ias=%d", reb[regfetch0].dec.Ra, rfoa_v, Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra]);
-		$display("  rfoa=%h", rfoa);
+		$display("Regfetch[%d] %d", regfetch0, $time);
+		$display("  Ra=%d iav=%d ias=%d rfoa=%h", reb[regfetch0].dec.Ra, rfoa_v, Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra], rfoa);
+		$display("  Rb=%d ibv=%d ibs=%d rfob=%h", reb[regfetch0].dec.Rb, rfob_v, Source2Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb], rfob);
+		$display("  Rc=%d icv=%d ics=%d rfoc=%h", reb[regfetch0].dec.Rc, rfoc_v, Source3Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc], rfoc);
 		reb[regfetch0].decoded <= 1'b0;
 		reb[regfetch0].rfetched <= 1'b1;
 		reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? vroa : {NLANES{rfoa}};
@@ -2238,6 +2264,7 @@ begin
 		reb[regfetch0].lks <= LkValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
 		reb[regfetch0].vmask <= rfom;
 		
+		/*
 		if (head0==regfile_src[reb[regfetch0].dec.Ra] && reb[head0].dec.rfwr) begin
 			reb[regfetch0].iav <= 1'b1;
 			reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
@@ -2258,7 +2285,7 @@ begin
 			reb[regfetch0].vmv <= 1'b1;
 			reb[regfetch0].vmask <= reb[head0].res[0];
 		end
-		
+		*/
 		/*
 		if (commit0_src==regfile_src[reb[regfetch0].dec.Ra] && commit0_wr) begin
 			reb[regfetch0].iav <= 1'b1;
@@ -2271,6 +2298,30 @@ begin
 		*/
 		regfetch0 <= MaxSrcId;
 	end
+
+	if (exec != MaxSrcId) begin
+		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Ra && reb[exec].dec.rfwr && reb[exec].executed) begin
+			reb[fnNextInsn(exec)].iav <= 1'b1;
+			reb[fnNextInsn(exec)].ia <= reb[fnNextInsn(exec)].dec.Ravec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
+		end
+		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rb && reb[exec].dec.rfwr && reb[exec].executed) begin
+			reb[fnNextInsn(exec)].ibv <= 1'b1;
+			reb[fnNextInsn(exec)].ib <= reb[fnNextInsn(exec)].dec.Rbvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
+		end
+		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rc && reb[exec].dec.rfwr && reb[exec].executed) begin
+			reb[fnNextInsn(exec)].icv <= 1'b1;
+			reb[fnNextInsn(exec)].ic <= reb[fnNextInsn(exec)].dec.Rcvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
+		end
+		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rt && reb[exec].dec.rfwr && reb[exec].executed) begin
+			reb[fnNextInsn(exec)].itv <= 1'b1;
+			reb[fnNextInsn(exec)].it <= reb[fnNextInsn(exec)].dec.Rtvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
+		end
+		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rvm && reb[exec].dec.rfwr && reb[exec].executed) begin
+			reb[fnNextInsn(exec)].vmv <= 1'b1;
+			reb[fnNextInsn(exec)].vmask <= reb[exec].res[0];
+		end
+	end
+
 end
 endtask
 
@@ -2856,16 +2907,48 @@ begin
 				reb[n].itv <= 1'b1;
 			end
 		end
-		if (!reb[n].idv && reb[n].rfetched) begin
-			if (reb[n].ids==m) begin
-				reb[n].id <= bus;
-				reb[n].idv <= 1'b1;
-			end
-		end
 		if (!reb[n].vmv && reb[n].rfetched) begin
 			if (reb[n].vms==m) begin
 				reb[n].vmask <= bus;
 				reb[n].vmv <= 1'b1;
+			end
+		end
+		/*
+		if (!reb[n].nxt_iav && reb[n].nxt_rfetched) begin
+			if (reb[n].nxt_ias==m) begin
+				reb[n].ia <= bus;
+				reb[n].iav <= 1'b1;
+			end
+		end
+		if (!reb[n].nxt_ibv && reb[n].nxt_rfetched) begin
+			if (reb[n].nxt_ibs==m) begin
+				reb[n].ib <= bus;
+				reb[n].ibv <= 1'b1;
+			end
+		end
+		if (!reb[n].nxt_icv && reb[n].nxt_rfetched) begin
+			if (reb[n].nxt_ics==m) begin
+				reb[n].ic <= bus;
+				reb[n].icv <= 1'b1;
+			end
+		end
+		if (!reb[n].nxt_itv && reb[n].nxt_rfetched) begin
+			if (reb[n].nxt_its==m) begin
+				reb[n].it <= bus;
+				reb[n].itv <= 1'b1;
+			end
+		end
+		if (!reb[n].nxt_vmv && reb[n].nxt_rfetched) begin
+			if (reb[n].nxt_vms==m) begin
+				reb[n].vmask <= bus;
+				reb[n].vmv <= 1'b1;
+			end
+		end
+		*/
+		if (!reb[n].idv && reb[n].rfetched) begin
+			if (reb[n].ids==m) begin
+				reb[n].id <= bus;
+				reb[n].idv <= 1'b1;
 			end
 		end
 	end
@@ -2890,14 +2973,14 @@ begin
 	head1 <= 3'd7;
 //	head1 <= next_head1;
   if (commit0_wr) begin
-  	$display("Commit:");
-  	$display("  Src:%d val=%h", commit0_src,commit0_bus);
+  	$display("Writeback[%d]: %d", head0, $time);
+  	$display("  Src:%d Tgt: %d val=%h", commit0_src,commit0_tgt, commit0_bus);
 		tArgUpdate(commit0_src,commit0_bus);//,reb[commit0_src].cares);
 	end
 //  if (commit1_wr)
 //		tArgUpdate(commit1_src,commit1_bus);//,reb[commit1_src].cares);
   if (commit0_wr) begin
-    $display("regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus);
+    $display("  regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus);
     // Globally enable interrupts after first update of stack pointer.
     if (reb[commit0_src].dec.Rt==6'd45) begin
     	sp <= commit0_bus;	// debug
@@ -2942,8 +3025,8 @@ begin
   
 	last_zero1 <= head0;
 	last_zero2 <= last_zero1;
-	if (reb[last_zero1] != 'd0 && last_zero1 != head0 && !reb[last_zero1].out)
-		$stop;
+//	if (reb[last_zero1] != 'd0 && last_zero1 != head0 && !reb[last_zero1].out && last_zero1 != 3'd7 && head0!=3'd7)
+//		$stop;
   for (n13 = 0; n13 < REB_ENTRIES; n13 = n13 + 1) begin
 	  case({reb[n13].fetched,reb[n13].decompressed,reb[n13].decoded,reb[n13].rfetched,reb[n13].executed})
 	  5'b00000,
@@ -3533,6 +3616,8 @@ begin
   ENTER:	$display("ENTER");
   LEAVE:	$display("LEAVE");
   BEQZ:		$display("BEQZ %h", {{64{ir[31]}},ir[31:19],ir[13:9]}+ip.offs);
+  MTLK:		$display("MTLK r%d", ir.r1.Rt);
+  default:	$display("<op>");
   endcase
 end
 endtask

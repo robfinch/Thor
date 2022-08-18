@@ -1190,6 +1190,7 @@ typedef struct packed
 	logic rfetched;				// registers have been fetched
 	logic out;						// instruction is out being executed
 	logic executed;
+	logic nxt_rfetched;
 	logic stomp;
 	logic cmt;						// commit, clears as soon as committed
 	logic cmt2;						// sticky commit, clears when entry reassigned
@@ -1239,6 +1240,11 @@ typedef struct packed
 	logic itv;
 	logic niv;					// next instruction valid
 	logic vmv;
+	logic nxt_iav;
+	logic nxt_ibv;
+	logic nxt_icv;
+	logic nxt_itv;
+	logic nxt_vmv;
 	SrcId ias;
 	SrcId ibs;
 	SrcId ics;
@@ -1247,6 +1253,11 @@ typedef struct packed
 	logic idib;					// id comes from ia
 	SrcId its;
 	SrcId vms;
+	SrcId nxt_ias;
+	SrcId nxt_ibs;
+	SrcId nxt_ics;
+	SrcId nxt_its;
+	SrcId nxt_vms;
 	//logic [511:0] res;
 	VecValue res;
 	VecValue res_t2;
@@ -1560,7 +1571,7 @@ CMPI,BYTNDXI,WYDNDXI,UTF21NDXI:
 DF3:	SourceTValid = isn.r3.Rt==5'd0;
 P3:	SourceTValid = isn.r3.Rt==5'd0;
 BTFLD:	SourceTValid = isn.r3.Rt==5'd0;
-MTLK:	 SourceTValid = isn[13:9]=='d0;
+MTLK:	 SourceTValid = isn[15:14]=='d0;
 INT:	SourceTValid = `TRUE;
 //MOV:	SourceTValid = isn.r1.Rt==5'd0;
 RTS:	SourceTValid = `TRUE;

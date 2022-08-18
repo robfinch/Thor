@@ -66,7 +66,7 @@ always_comb
 	for (n2 = 0; n2 < REB_ENTRIES; n2 = n2 + 1)
 	  iq_source[n] = |latestID[n2];
 
-always_comb
+always_ff @(negedge clk)
 if (rst) begin
 	for (n = 0; n < NREGS; n = n + 1)
 		next_regfile_valid[n] = 1'd1;
@@ -104,7 +104,7 @@ if (rst) begin
 end
 else begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
-		regfile_valid[n1] <= #1 next_regfile_valid[n1];
+		regfile_valid[n1] <= next_regfile_valid[n1];
 	end
 
 

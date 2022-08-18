@@ -79,11 +79,11 @@ else begin
 	if (branchmiss) begin
 		for (n = 0; n < REB_ENTRIES; n = n + 1) begin
 	  	if (|latestID[n]) begin
-	  		next_regfile_src[reb[n].dec.Rt] <= #1 n;
+	  		next_regfile_src[reb[n].dec.Rt] <= n;
 	  		$display("%h Reset reg %d source to %d", reb[n].ip, reb[n].dec.Rt, n);
 	  	end
 	  	if (|latestID2[n]) begin
-	  		next_regfile_src[reb[n].dec.Rt2] <= #1 n;
+	  		next_regfile_src[reb[n].dec.Rt2] <= n;
 	  		$display("%h Reset reg %d source to %d", reb[n].ip, reb[n].dec.Rt2, n);
 	  	end
 	  end
@@ -113,14 +113,14 @@ else begin
 					//next_regfile_src[n] <= 5'd31;
 				end
 			if (decbus0.rfwr) begin
-				next_regfile_src[decbus0.Rt] <= #1 dec0;
-				next_regfile_src[decbus0.Rt2] <= #1 dec0;
+				next_regfile_src[decbus0.Rt] <= dec0;
+				next_regfile_src[decbus0.Rt2] <= dec0;
 			end
 				
 			if (dec1!=3'd7 && reb[dec1].decompressed) begin
 				if (decbus1.rfwr) begin
-					next_regfile_src[decbus1.Rt] <= #1 dec1;
-					next_regfile_src[decbus1.Rt2] <= #1 dec1;
+					next_regfile_src[decbus1.Rt] <= dec1;
+					next_regfile_src[decbus1.Rt2] <= dec1;
 				end
 			end
 		end
@@ -135,22 +135,22 @@ else begin
   	$display("Regfile %d source reset", commit1_tgt);
 	end
 	*/
-	next_regfile_src[6'd0] <= #1 6'd31;
+	next_regfile_src[6'd0] <= 6'd31;
 end
 
 
 always_ff @(posedge clk)
 if (rst) begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1)
-		regfile_src[n1] <= #1 6'd31;
+		regfile_src[n1] <= 6'd31;
 end
 else begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
-		regfile_src[n1] <= #1 next_regfile_src[n1];
+		regfile_src[n1] <= next_regfile_src[n1];
 		if (regfile_src[n1] != next_regfile_src[n1])
-			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, reb[dec0].dec.Rt, dec0);
+			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, decbus0.Rt, dec0);
 	end
-	regfile_src[6'd0] <= #1 6'd31;
+	regfile_src[6'd0] <= 6'd31;
 end
 
 

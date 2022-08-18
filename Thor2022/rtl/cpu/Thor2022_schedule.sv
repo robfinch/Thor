@@ -191,7 +191,7 @@ end
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Regfetch scheduler
 //
-// Chooses the next bucket to regfetch, essentially in any order.
+// Chooses the next bucket to regfetch.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 wire [5:0] rfd = {
@@ -221,8 +221,18 @@ ffo6 ufforegfetch1 (
 	.o(next_regfetch1a)
 );
 
+reg [2:0] rr;
 always_comb// @(posedge clk)
-	next_regfetch0 <= next_regfetch0a;
+begin
+	next_regfetch0 = 3'd7;
+	for (rr = 0; rr < REB_ENTRIES; rr = rr + 1)
+		if (next_regfetch0==3'd7 && reb[rr].decoded)
+			next_regfetch0 = rr;
+		else if (sns[rr] < sns[next_regfetch0] && reb[rr].decoded)
+			next_regfetch0 = rr;
+//	next_regfetch0 <= next_regfetch0a;
+end
+
 always_comb// @(posedge clk)
 	next_regfetch1 <= next_regfetch1a;
 
