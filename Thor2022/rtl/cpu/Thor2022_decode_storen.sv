@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022_stomp.sv
+//	Thor2022_decode_storen.sv
 //
 //
 // BSD 3-Clause License
@@ -36,28 +36,17 @@
 //                                                                          
 // ============================================================================
 
-import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_stomp(reb, branchmiss, missid, stomp);
-input sReorderEntry [7:0] reb;
-input branchmiss;
-input [2:0] missid;
-output reg [7:0] stomp;
+module Thor2022_decode_storen(ir, storen);
+input Instruction ir;
+output reg storen;
 
-integer n30;
 always_comb
-begin
-	stomp = 'd0;
-	for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1) begin
-		//if (reb[n30].executed && reb[n30].v)
-		//	stomp[n30] = 1'b1;
-		//else 
-		if (branchmiss) begin
-			if (reb[n30].sns > reb[missid].sns)
-				stomp[n30] = 1'b1;
-		end
-	end
-end
+case(ir.any.opcode)
+STBX,STWX,STTX,STHCX,STOX,STVX,STHPX,STPTRX:
+	storen = 1'b1;
+default:	storen = 1'b0;
+endcase
 
 endmodule

@@ -225,7 +225,7 @@ end
 
 reg [9:0] rcount;
 wire pe_clock;
-edge_det edclk (.rst(rst_i), .clk(clk_g), .i(clock), .pe(pe_clock), .ne(), .ee());
+edge_det edclk (.rst(rst_i), .clk(clk_g), .ce(1'b1), .i(clock), .pe(pe_clock), .ne(), .ee());
 
 always_ff @(posedge clk_g)
 if (rst_i) begin

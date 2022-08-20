@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022_stomp.sv
+//	Thor2022_decode_Rvm.sv
 //
 //
 // BSD 3-Clause License
@@ -36,28 +36,32 @@
 //                                                                          
 // ============================================================================
 
-import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_stomp(reb, branchmiss, missid, stomp);
-input sReorderEntry [7:0] reb;
-input branchmiss;
-input [2:0] missid;
-output reg [7:0] stomp;
+module Thor2022_decode_Rvm(ir, Rvm);
+input Instruction ir;
+output reg [2:0] Rvm;
 
-integer n30;
+wire ril, loadn, storen;
+Thor2022_decode_ril udril (ir, ril);
+Thor2022_decode_loadn uldn(ir, loadn);
+Thor2022_decode_storen ustn(ir, storen);
+
 always_comb
-begin
-	stomp = 'd0;
-	for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1) begin
-		//if (reb[n30].executed && reb[n30].v)
-		//	stomp[n30] = 1'b1;
-		//else 
-		if (branchmiss) begin
-			if (reb[n30].sns > reb[missid].sns)
-				stomp[n30] = 1'b1;
-		end
-	end
-end
+case(ir.any.opcode)
+R2,R3:
+	Rvm = ir.r3.m;
+ADD2R,SUB2R,AND2R,OR2R,XOR2R,CMP2R,SLT2R:
+	Rvm = ir.any[31:29];
+default:
+	if (ril & ir.any.v)
+		Rvm = ir.rilv.m;
+	else if (loadn)
+		Rvm = ir.ldx.m;
+	else if (storen)
+		Rvm = ir.stx.m;
+	else
+		Rvm = 3'd0;
+endcase
 
 endmodule

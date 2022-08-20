@@ -39,10 +39,9 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_livetarget(reb, stomp, sns, missid, livetarget, livetarget2, latestID, latestID2);
-input sReorderEntry [REB_ENTRIES-1:0] reb;
-input [REB_ENTRIES-1:0] stomp;
-input [5:0] sns [0:7];
+module Thor2022_livetarget(reb, stomp, missid, livetarget, livetarget2, latestID, latestID2);
+input sReorderEntry [7:0] reb;
+input [7:0] stomp;
 input [2:0] missid;
 output reg [NREGS-1:0] livetarget;
 output reg [NREGS-1:0] livetarget2;
@@ -90,7 +89,7 @@ always_comb
 	for (n34 = 0; n34 < REB_ENTRIES; n34 = n34 + 1) begin
 		reb_cumulative[n34] = 1'b0;
 		for (k34 = 0; k34 <= REB_ENTRIES; k34 = k34 + 1)
-			if (sns[k34] <= sns[missid] && sns[k34] >= sns[n34])
+			if (reb[k34].sns <= reb[missid].sns && reb[k34].sns >= reb[n34].sns)
 				reb_cumulative[n34] = reb_cumulative[n34] | reb_livetarget[k34];
 	end
 integer n35,j35,k35;
@@ -98,7 +97,7 @@ always_comb
 	for (n35 = 0; n35 < REB_ENTRIES; n35 = n35 + 1) begin
 		reb_cumulative2[n35] = 'd0;
 		for (k35 = 0; k35 < REB_ENTRIES; k35 = k35 + 1)
-			if (sns[k35] <= sns[missid] && sns[k35] >= sns[n35])
+			if (reb[k35].sns <= reb[missid].sns && reb[k35].sns >= reb[n35].sns)
 				reb_cumulative2[n35] = reb_cumulative2[n35] | reb_livetarget2[k35];
 	end
 

@@ -124,6 +124,9 @@ reg stalled, stalled1, pstall;
 SSrcId exec, exec2, mc_exec2;
 SSrcId dec,dec1,prev_dec;
 SSrcId oldest;
+wire [2:0] next_open_buf;
+wire open_buf;
+reg [2:0] queued0;
 
 reg [2:0] sp_sel;			// stack pointer selector
 reg fetch2 = 1'b0;
@@ -137,18 +140,24 @@ wire UserMode, SupervisorMode, HypervisorMode, MachineMode;
 wire MUserMode;
 reg gie;
 Value carry_reg [0:3];
+sReorderEntry ifetch_buf;
+sReorderEntry decomp_buf;
+sReorderEntry decode_buf;
+sReorderEntry rfetch_buf;
 sReorderEntry [7:0] reb;
-reg [5:0] sns [0:7];
 SSrcId head0, head1, head2;
 reg [5:0] Ra;
 reg [5:0] Rb;
 reg [5:0] Rc;
 reg [5:0] Rt;
-reg [1:0] Tb;
-reg [1:0] Tc;
+reg Tb;
+reg Tc;
 reg [2:0] Rvm;
 reg [3:0] Ca;
 reg [3:0] Ct;
+
+Value oplatch_d;
+Value oplatch_e;
 
 reg [5:0] commit0_tgt, commit1_tgt;
 reg commit0_wr, commit1_wr;
@@ -273,6 +282,8 @@ Value rfoa, rfob, rfoc, rfot, rfop, rfom;
 Value rfoa1, rfob1, rfoc1, rfot1, rfop1, rfom1;
 reg rfoa_v, rfob_v, rfoc_v, rfot_v, rfom_v;
 reg rfoa_v1, rfob_v1, rfoc_v1, rfot_v1, rfom_v1;
+reg [2:0] regfetch0, next_regfetch0;
+reg [2:0] regfetch1, next_regfetch1;
 
 Thor2022_gp_regfile ugprs
 (
@@ -284,17 +295,17 @@ Thor2022_gp_regfile ugprs
 	.wa1(commit1_tgt),
 	.i0(commit0_bus[0]),
 	.i1(commit1_bus[0]),
-	.ip0(reb[regfetch0].ip),
-	.ip1(reb[regfetch1].ip),
-	.ra0(stalled ? reb[oldest].dec.Ra : reb[regfetch0].dec.Ra),
-	.ra1(stalled ? reb[oldest].dec.Rb : reb[regfetch0].dec.Rb),
-	.ra2(stalled ? reb[oldest].dec.Rc : reb[regfetch0].dec.Rc),
-	.ra3(stalled ? reb[oldest].dec.Rt : reb[regfetch0].dec.Rt),
+	.ip0(ifetch_buf.ip),
+	.ip1(ifetch_buf.ip),
+	.ra0(Ra),
+	.ra1(Rb),
+	.ra2(Rc),
+	.ra3(Rt),
 	.ra4(reb[regfetch1].dec.Ra),
 	.ra5(reb[regfetch1].dec.Rb),
 	.ra6(reb[regfetch1].dec.Rc),
 	.ra7(reb[regfetch1].dec.Rt),
-	.ra8({3'b100,reb[regfetch0].dec.Rvm}),
+	.ra8({3'b100,Rvm}),
 	.ra9({3'b100,reb[regfetch1].dec.Rvm}),
 	.o0(rfoa),
 	.o1(rfob),
@@ -363,9 +374,9 @@ Thor2022_regfile_src urfs1
 	.livetarget(livetarget),
 	.latestID2(reb_latestID2),
 	.livetarget2(livetarget2),
-	.decbus0(reb[regfetch0].dec),
-	.decbus1(reb[regfetch1].dec),
-	.dec0(regfetch0),
+	.decbus0(reb[queued0].dec),
+	.decbus1('d0),
+	.dec0(queued0),
 //	.decbus0(deco),
 //	.decbus1(deco1),
 //	.dec0(dec),
@@ -389,9 +400,9 @@ Thor2022_regfile_valid urfv1
 	.reb(reb),
 	.latestID(reb_latestID),
 	.livetarget(livetarget),
-	.decbus0(reb[regfetch0]),
-	.decbus1(reb[regfetch1]),
-	.dec0(regfetch0),
+	.decbus0(reb[queued0].dec),
+	.decbus1('d0),
+	.dec0(queued0),
 //	.decbus0(deco),
 //	.decbus1(deco1),
 //	.dec0(dec),
@@ -427,8 +438,6 @@ wire [2:0] next_dec0, next_dec1;
 wire [2:0] next_exec;
 wire [2:0] next_head0, next_head1;
 reg [2:0] decompress0, decompress1;
-reg [2:0] regfetch0, next_regfetch0;
-reg [2:0] regfetch1, next_regfetch1;
 SSrcId fetch0, fetch1;
 
 // Instruction fetch stage vars
@@ -486,22 +495,22 @@ Thor2022_vec_regfile uvecrf
 	.clk(clk_g),
 	.wr0(commit0_wrv),
 	.wr1(commit1_wrv),
-	.wa0(commit0_tgt),
-	.wa1(commit1_tgt),
+	.wa0(commit0_tgt[4:0]),
+	.wa1(commit1_tgt[4:0]),
 	.m0(commit0_m),
 	.m1(commit1_m),
 	.z0(commit0_z),
 	.z1(commit1_z),
 	.i0(commit0_bus),
 	.i1(commit1_bus),
-	.ra0(stalled ? reb[oldest].dec.Ra : reb[dec].dec.Ra),
-	.ra1(stalled ? reb[oldest].dec.Rb : reb[dec].dec.Rb),
-	.ra2(stalled ? reb[oldest].dec.Rc : reb[dec].dec.Rc),
-	.ra3(stalled ? reb[oldest].dec.Rt : reb[dec].dec.Rt),
-	.ra4(reb[dec1].dec.Ra),
-	.ra5(reb[dec1].dec.Rb),
-	.ra6(reb[dec1].dec.Rc),
-	.ra7(reb[dec1].dec.Rt),
+	.ra0(stalled ? reb[oldest].dec.Ra : reb[dec].dec.Ra[4:0]),
+	.ra1(stalled ? reb[oldest].dec.Rb : reb[dec].dec.Rb[4:0]),
+	.ra2(stalled ? reb[oldest].dec.Rc : reb[dec].dec.Rc[4:0]),
+	.ra3(stalled ? reb[oldest].dec.Rt : reb[dec].dec.Rt[4:0]),
+	.ra4(reb[dec1].dec.Ra[4:0]),
+	.ra5(reb[dec1].dec.Rb[4:0]),
+	.ra6(reb[dec1].dec.Rc[4:0]),
+	.ra7(reb[dec1].dec.Rt[4:0]),
 	.o0(vroa),
 	.o1(vrob),
 	.o2(vroc),
@@ -689,19 +698,19 @@ begin
 	dxval1 = FALSE;
 	dmval1 = FALSE;
 	for (k2 = 0; k2 < REB_ENTRIES; k2 = k2 + 1) begin
-		if (sns[k2] == sns[dec] - 1) begin
+		if (reb[k2].sns == reb[dec].sns - 1) begin
 			dxir = reb[k2].ir;
 			dxval = reb[k2].v;
 		end
-		if (sns[k2] == sns[dec] - 2) begin
+		if (reb[k2].sns == reb[dec].sns - 2) begin
 			dmir = reb[k2].ir;
 			dmval = reb[k2].v;
 		end
-		if (sns[k2]==sns[dec1] - 1) begin
+		if (reb[k2].sns==reb[dec1].sns - 1) begin
 			dxir1 = reb[k2].ir;
 			dxval1 = reb[k2].v;
 		end
-		if (sns[k2] == sns[dec1] - 2) begin
+		if (reb[k2].sns == reb[dec1].sns - 2) begin
 			dmir1 = reb[k2].ir;
 			dmval1 = reb[k2].v;
 		end
@@ -709,9 +718,9 @@ begin
 end
 
 Thor2022_decoder udec0 (
-	.ir(reb[dec].ir),
-	.xir(dxir),
-	.xval(dxval),
+	.ir(decomp_buf.ir),
+	.xir(decode_buf.ir),
+	.xval(decode_buf.v),
 	.mir(dmir),
 	.sp_sel(sp_sel),
 	.mval(dmval),
@@ -744,15 +753,15 @@ always_comb
 		rfop = preg[cioreg];
 */
 always_comb
-	rfoa_v = next_regfile_valid[reb[regfetch0].dec.Ra] || Source1Valid(reb[regfetch0].ir);
+	rfoa_v = next_regfile_valid[Ra] || Source1Valid(ifetch_buf.ir);
 always_comb
-	rfob_v = next_regfile_valid[reb[regfetch0].dec.Rb] || Source2Valid(reb[regfetch0].ir);
+	rfob_v = next_regfile_valid[Rb] || Source2Valid(ifetch_buf.ir);
 always_comb
-	rfoc_v = next_regfile_valid[reb[regfetch0].dec.Rc] || Source3Valid(reb[regfetch0].ir);
+	rfoc_v = next_regfile_valid[Rc] || Source3Valid(ifetch_buf.ir);
 always_comb
-	rfot_v = next_regfile_valid[reb[regfetch0].dec.Rt] || SourceTValid(reb[regfetch0].ir);
+	rfot_v = next_regfile_valid[Rt] || SourceTValid(ifetch_buf.ir);
 always_comb
-	rfom_v = next_regfile_valid[reb[regfetch0].dec.Rvm] || SourceMValid(reb[regfetch0].ir);
+	rfom_v = next_regfile_valid[Rvm] || SourceMValid(ifetch_buf.ir);
 /*
 always_comb
 	rfoa_v1 = (reb[head0].dec.Rt==deco1.Ra && reb[head0].v && reb[head0].executed && reb[head0].dec.rfwr) || regfile_src[deco1.Ra]==5'd31 || Source1Valid(reb[dec1].ir);
@@ -828,9 +837,9 @@ always_comb
 
 Thor2022_stomp ustmp1
 (
+	.reb(reb),
 	.branchmiss(branchmiss),
 	.missid(missid),
-	.sns(sns),
 	.stomp(stomp)
 );
 
@@ -838,7 +847,6 @@ Thor2022_livetarget ult1
 (
 	.reb(reb),
 	.stomp(stomp),
-	.sns(sns),
 	.missid(missid),
 	.livetarget(livetarget),
 	.livetarget2(livetarget2),
@@ -852,7 +860,7 @@ always @*
 begin
 	oldest = 0;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n] < sns[oldest] && reb[n].v)
+		if (reb[n].sns < reb[oldest].sns && reb[n].v)
 			oldest = n;
 end
 
@@ -993,7 +1001,9 @@ Thor2022_valu64 uvalu1
 // Instruction fetch combo logic.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-wire sig1 = ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip);
+//wire sig1 = ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip);
+wire sig1 = ihit && open_buf && !branchmiss;
+wire advance_pipe = (ihit||micro_ip!=7'd0) && open_buf && !branchmiss;
 
 Thor2022_inslength uil(insn0, ilen0);
 Thor2022_inslength ui2(insn1, ilen1);
@@ -1002,17 +1012,19 @@ always_comb
 begin
 	if (branchmiss)
 		next_ip = branchmiss_adr;
-	else if (sig1) begin
+	else if (advance_pipe) begin
 		next_ip.micro_ip = 7'd0;
 		if (fetch0 != fetch1 && fetch2) begin	// always false for now
 			next_ip.offs = ip.offs + ilen0 + ilen1;
+			next_ip.micro_ip <= next_mip1;
  		end
  		else begin
 			next_ip.offs = ip.offs + ilen0;
+			next_ip.micro_ip <= next_mip;
  		end
 	end
 	else begin
-		next_ip.micro_ip = 7'd0;
+		next_ip.micro_ip = ip.micro_ip;
 		next_ip.offs = ip.offs;
 	end
 end
@@ -1028,7 +1040,7 @@ always_comb
 begin
 	ret_match = 1'b0;
 	for (n3 = 0; n3 < REB_ENTRIES; n3 = n3 + 1)
-		if (sns[n3]==sns[exec]+1)
+		if (reb[n3].sns==reb[exec].sns+1)
 			if (reb[n3].ip==reb[exec].ic[0])
 				ret_match = 1'b1;
 end
@@ -1230,9 +1242,9 @@ Thor2022_schedule usch1
 (
 	.clk(clk_g),
 	.reb(reb),
-	.sns(sns),
 	.stomp(stomp),
 	.fetch0(fetch0),
+	.queued0(queued0),
 	.next_fetch0(next_fetch0),
 	.next_fetch1(next_fetch1),
 	.next_decompress0(next_decompress0),
@@ -1243,7 +1255,9 @@ Thor2022_schedule usch1
 	.next_regfetch1(next_regfetch1),
 	.next_execute(next_exec),
 	.next_retire0(next_head0),
-	.next_retire1(next_head1)
+	.next_retire1(next_head1),
+	.next_open_buf(next_open_buf),
+	.open_buf(open_buf)
 );
 
 // =============================================================================
@@ -1253,7 +1267,24 @@ Thor2022_schedule usch1
 // Pipeline
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+task tDisplayRegs;
+integer n;
+begin
+	$display("GPRs");
+	for (n = 0; n < 48; n = n + 4) begin
+		$display("%s:%h%c  %s:%h%c  %s:%h%c  %s:%h%c  ",
+			fnRegName(n), ugprs.regfileA[n], regfile_valid[n] ? "v":" ",
+			fnRegName(n+1), ugprs.regfileA[n+1], regfile_valid[n+1] ? "v":" ",
+			fnRegName(n+2), ugprs.regfileA[n+2], regfile_valid[n+2] ? "v":" ",
+			fnRegName(n+3), ugprs.regfileA[n+3], regfile_valid[n+3] ? "v":" "
+			);
+	end
+	$display("");
+end
+endtask
+
 reg [5:0] mstate;
+integer n14;
 always_ff @(posedge clk_g)
 if (rst_i) begin
 	tReset();
@@ -1261,14 +1292,51 @@ if (rst_i) begin
 	mstate <= RESTART1;
 end
 else begin
+	$display(""); $display(""); $display("");
+	$display("===========================================");
+	$display("===========================================");
+	$display("Time: %d", $time);
+	$display("===========================================");
+	$display("===========================================");
+	tDisplayRegs();
+	$display("REB");
+	for (n14 = 0; n14 < REB_ENTRIES; n14 = n14 + 1) begin
+		$display("  %d: %c%c%c %c%c%c%c%c%c %h: %h %h T=%h%c %d A=%h%c %d B=%h%c %d C=%h%c %d",
+		n14[3:0],
+		n14==queued0 ? "Q" : " ",
+		n14==exec ? "X": " ",
+		n14==head0 ? "W": " ",
+		reb[n14].v ? "v" : "-",
+		reb[n14].decompressed ? "c": "-",
+		reb[n14].decoded ? "d": "-",
+		reb[n14].executed ? "x" : "-",
+		reb[n14].out ? "o" : "-",
+		(reb[n14].itv & reb[n14].iav & reb[n14].ibv & reb[n14].icv) ? "a" : "-",
+		reb[n14].ip,
+		reb[n14].ir,
+		reb[n14].res,
+		reb[n14].it,
+		reb[n14].itv ? "v" : " ",
+		reb[n14].its,
+		reb[n14].ia,
+		reb[n14].iav ? "v": " ",
+		reb[n14].ias,
+		reb[n14].ib,
+		reb[n14].ibv ? "v" : " ",
+		reb[n14].ibs,
+		reb[n14].ic,
+		reb[n14].icv ? "v" : " ",
+		reb[n14].ics
+		);
+	end
 	tOnce();
-	tWriteback();
 	tInsnFetch();
 	tDecompress0();
 //	tDecompress1();
 	tDecode();
-	tRegfetch();
+	tQueueInsn();
 	tExecute();
+	tWriteback();
 	tSyncTrailer();
 	tArithStateMachine();
 	tMemStateMachine();
@@ -1347,25 +1415,56 @@ begin
 	xd <= 'd0;
 	md <= 'd0;
 	wd <= 'd0;
+	ifetch_buf <= 'd0;
+	decomp_buf <= 'd0;
+	decode_buf <= 'd0;
+	ifetch_buf.ir <= NOP;
+	decomp_buf.ir <= NOP;
+	decode_buf.ir <= NOP;
+	ifetch_buf.v <= 1'b1;
+	decomp_buf.v <= 1'b1;
+	decode_buf.v <= 1'b1;
+	ifetch_buf.executed <= 1'b0;
+	decomp_buf.executed <= 1'b0;
+	decode_buf.executed <= 1'b0;
+	ifetch_buf.sns <= 6'd63;
+	decomp_buf.sns <= 6'd62;
+	decode_buf.sns <= 6'd61;
+	ifetch_buf.iav <= 1'b1;
+	ifetch_buf.ibv <= 1'b1;
+	ifetch_buf.icv <= 1'b1;
+	ifetch_buf.itv <= 1'b1;
+	ifetch_buf.vmv <= 1'b1;
+	decomp_buf.iav <= 1'b1;
+	decomp_buf.ibv <= 1'b1;
+	decomp_buf.icv <= 1'b1;
+	decomp_buf.itv <= 1'b1;
+	decomp_buf.vmv <= 1'b1;
+	decode_buf.iav <= 1'b1;
+	decode_buf.ibv <= 1'b1;
+	decode_buf.icv <= 1'b1;
+	decode_buf.itv <= 1'b1;
+	decode_buf.vmv <= 1'b1;
 	for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
 		reb[n6] <= 'd0;
 		reb[n6].v <= 1'b1;
-		reb[n6].executed <= 1'b1;
+		reb[n6].executed <= 1'b0;
 		reb[n6].cause <= 16'h0000;
 		reb[n6].ir <= NOP;
+		reb[n6].itv <= 1'b1;
 		reb[n6].iav <= 1'b1;
 		reb[n6].ibv <= 1'b1;
 		reb[n6].icv <= 1'b1;
 		reb[n6].lkv <= 1'b1;
 		reb[n6].vmv <= 1'b1;
-		sns[n6] <= 6'd63-n6;//FFFFFFFFFFFF;
+		reb[n6].sns <= 6'd63-n6 - 3;
 	end
-	//sns[0] <= 32'hFFFFFFFF;
 	for (n6 = 0; n6 < 16; n6 = n6 + 1)
 		eip_src[n6] <= 6'd31;
 	head0 <= 'd0;
 	fetch0 <= 'd0;
 	fetch1 <= 'd0;
+	queued0 <= 'd0;
 	exec <= 'd0;
 	dec <= 'd0;
 	mc_busy <= 'd0;
@@ -1786,7 +1885,9 @@ Thor2022_micro_code umc2
 	.incr(incr1)
 );
 
-wire [63:0] reb_fetch0_ir = reb[fetch0].ir;
+//wire [63:0] reb_fetch0_ir = reb[fetch0].ir;
+wire [63:0] reb_fetch0_ir = ifetch_buf.ir;
+
 
 function fnIsRepInsn;
 input CodeAddress ip;
@@ -1794,12 +1895,13 @@ integer n;
 begin
 	fnIsRepInsn = 1'b0;
 	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
-		if (reb[n].ip == ip && sns[n]==6'd63)
+		if (reb[n].ip == ip && reb[n].sns==6'd63)
 			fnIsRepInsn = 1'b1;
 	end
 end
 endfunction
 
+CodeAddress next_ip;
 
 task tInsnFetch;
 integer n;
@@ -1812,7 +1914,10 @@ begin
 	else
 		fetch1 <= next_fetch0;
 		
+	$display("InsnFetch:");
+	$display("  insn=%h", insn0);
 //	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED) && !branchmiss) begin// && ((tail + 2'd1) & 3'd7) != head0) begin
+	ifetch_buf.ip <= prev_ip;
 	if (branchmiss) begin
 		//prev_ip <= ip;
 		ip <= branchmiss_adr;
@@ -1820,37 +1925,40 @@ begin
 		tNullReb(missid);
 		clr_branchmiss <= 1'b1;
 	end
-	else if (ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip)) begin// && ((tail + 2'd1) & 3'd7) != head0) begin
+	else if (advance_pipe) begin
+//	else if (ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip)) begin// && ((tail + 2'd1) & 3'd7) != head0) begin
 		prev_ip <= ip;
 		// Age sequence numbers
 		for (n = 0; n < REB_ENTRIES; n = n + 1) begin
-			if (sns[n] > 'd0) begin
+			if (reb[n].sns > 'd0) begin
 				if (fetch0!=fetch1 && fetch2)
-					sns[n] <= sns[n] - 2'd2;
+					reb[n].sns <= reb[n].sns - 2'd2;
 				else
-					sns[n] <= sns[n] - 2'd1;
+					reb[n].sns <= reb[n].sns - 2'd1;
 			end
 		end
 		if (fetch1!=fetch0 && fetch2)
 		begin
-			sns[fetch0] <= 6'd62;
-			sns[fetch1] <= 6'd63;
-			reb[fetch0].fetched <= 1'b1;
-			reb[fetch0].v <= 1'b1;
-			reb[fetch1].fetched <= 1'b1;
-			reb[fetch1].v <= 1'b1;
+			//reb[fetch0].sns <= 6'd62;
+			//reb[fetch1].sns <= 6'd63;
+			//reb[fetch0].fetched <= 1'b1;
+			//reb[fetch0].v <= 1'b1;
+			//reb[fetch1].fetched <= 1'b1;
+			//reb[fetch1].v <= 1'b1;
 		end
 		else
 		begin
-			sns[fetch0] <= 6'd63;
-			reb[fetch0].fetched <= 1'b1;
-			reb[fetch0].v <= 1'b1;
+			//reb[fetch0].sns <= 6'd63;
+			//reb[fetch0].fetched <= 1'b1;
+			//reb[fetch0].v <= 1'b1;
+			ifetch_buf.sns <= 6'd63;
 		end
+		ifetch_buf.v <= 1'b1;
 		ival <= VAL;
 		dval <= ival;
 		dlen <= ilen0;
 		cio <= {2'b00,cio[15:2]};
-		if (insn0.any.v && istep < vl) begin
+		if (insn0.any.v && istep < vl && 1'b0) begin
 			istep <= istep + 2'd1;
 			ip <= ip;
 		end
@@ -1860,13 +1968,14 @@ begin
 			if (fetch0!=fetch1 && fetch2)
 			begin
 				micro_ip <= next_mip1;
-				reb[fetch0].ir <= mcir;
-				reb[fetch1].ir <= mcir1;
+				//reb[fetch0].ir <= mcir;
+				//reb[fetch1].ir <= mcir1;
 			end
 			else
 			begin
 				micro_ip <= next_mip;
-				reb[fetch0].ir <= mcir;
+				//reb[fetch0].ir <= mcir;
+				ifetch_buf.ir <= mcir;
 			end
 			if (next_mip=='d0) begin
 				ip.offs <= ip.offs + incr;
@@ -1883,11 +1992,14 @@ begin
 		end
 		if (micro_ip=='d0) begin
 			ir <= insn0;
-			reb[fetch0].ir <= insn0;
-			reb[fetch0].cause <= 16'h0000;
+			//reb[fetch0].ir <= insn0;
+			//reb[fetch0].cause <= 16'h0000;
+			ifetch_buf.ir <= insn0;
+			ifetch_buf.cause <= 16'h0000;
 			$display("%d %h reb[%d].ir=%h", $time, ip, fetch0, insn0);
-			if (fetch0!=fetch1 && fetch2)
-				reb[fetch1].ir <= insn1;
+			ifetch_buf.ip <= ip;
+//			if (fetch0!=fetch1 && fetch2)
+//				reb[fetch1].ir <= insn1;
 			micro_ir <= insn0;
 			case(insn0.any.opcode)
 			POP:		begin micro_ip <= 7'd1; ip <= ip; ip.micro_ip <= 7'd127; end
@@ -1905,26 +2017,35 @@ begin
 			BRA:		
 				begin
 					ip.offs <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
+					ifetch_buf.jmptgt <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
+					ifetch_buf.ip <= ip;
 				end
 			JMP:
 				if (insn0.jmp.Rc=='d0) begin
-					ip.offs <= {{94{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					ip.offs <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					ifetch_buf.jmptgt <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					$display("JMP %h", {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
+					ifetch_buf.ip <= ip;
 				end
-				else if (insn0.jmp.Rc==3'd7) begin
-					ip.offs <= ip.offs + {{94{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+				else if (insn0.jmp.Rc==6'd31) begin
+					ip.offs <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					ifetch_buf.jmptgt <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					$display("JMP %h", ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
+					ifetch_buf.ip <= ip;
 				end
-			CARRY:	begin cio <= insn0[30:15]; cioreg <= insn0[11:9]; end
+			//CARRY:	begin cio <= insn0[30:15]; cioreg <= insn0[11:9]; end
 			default:	;
 			endcase
 		end
-		reb[fetch0].ip.offs <= ip.offs;
-		reb[fetch0].ip.micro_ip <= micro_ip;
-		reb[fetch0].ilen <= ilen0;
-		if (fetch0!=fetch1 && fetch2) begin
-			reb[fetch1].ip.offs <= ip.offs + ilen0;
-			reb[fetch1].ip.micro_ip <= next_mip;
-			reb[fetch1].ilen <= ilen1;
-		end
+		ifetch_buf.ilen <= ilen0;
+		//reb[fetch0].ip.offs <= ip.offs;
+		//reb[fetch0].ip.micro_ip <= micro_ip;
+		//reb[fetch0].ilen <= ilen0;
+		//if (fetch0!=fetch1 && fetch2) begin
+		//	reb[fetch1].ip.offs <= ip.offs + ilen0;
+		//	reb[fetch1].ip.micro_ip <= next_mip;
+		//	reb[fetch1].ilen <= ilen1;
+		//end
 		/*
 		if (micro_ip==7'd0) begin
 			ir <= insn0;
@@ -1944,10 +2065,12 @@ begin
 				end
 			end
 		end
-		reb[fetch0].step <= istep;
-		reb[fetch0].predict_taken <= ipredict_taken;
-		if (fetch0!=fetch1 && fetch2)
-			reb[fetch1].predict_taken <= ipredict_taken;
+		ifetch_buf.step <= istep;
+		ifetch_buf.predict_taken <= ipredict_taken;
+		//reb[fetch0].step <= istep;
+		//reb[fetch0].predict_taken <= ipredict_taken;
+		//if (fetch0!=fetch1 && fetch2)
+		//	reb[fetch1].predict_taken <= ipredict_taken;
 		dpfx <= is_prefix(insn0.any.opcode);
 		distk_depth <= istk_depth;
 		if (is_prefix(insn0.any.opcode))
@@ -1959,24 +2082,28 @@ begin
 		// Interrupts disabled while running micro-code.
 		if (micro_ip=='d0 && cio==16'h0000) begin
 			if (irq_i > pmStack[3:1] && gie && !dpfx && !di) begin
-				reb[fetch0].cause <= 16'h8000|icause_i|(irq_i << 4'd8);
+				ifetch_buf.cause <= 16'h8000|icause_i|(irq_i << 4'd8);
+				//reb[fetch0].cause <= 16'h8000|icause_i|(irq_i << 4'd8);
 				//reb[fetch1].cause <= 16'h8000|icause_i|(irq_i << 4'd8);
 				istk_depth <= istk_depth + 2'd1;
 			end
 			else if (wc_time_irq && gie && !dpfx && !di) begin
-				reb[fetch0].cause <= {8'h80,FLT_TMR};
+				ifetch_buf.cause <= {8'h80,FLT_TMR};
+				//reb[fetch0].cause <= {8'h80,FLT_TMR};
 				//reb[fetch1].cause <= 16'h8000|FLT_TMR;
 				istk_depth <= istk_depth + 2'd1;
 			end
 			// Triple prefix fault.
 			else if (pfx_cnt > 3'd2) begin
-				reb[fetch0].cause <= {8'h80,FLT_PFX};
+				ifetch_buf.cause <= {8'h80,FLT_PFX};
+				//reb[fetch0].cause <= {8'h80,FLT_PFX};
 				//reb[fetch1].cause <= 16'h8000|FLT_PFX;
 				istk_depth <= istk_depth + 2'd1;
 			end
 			else begin
 				if (insn0.any.opcode==BRK) begin
-					reb[fetch0].cause <= FLT_BRK;
+					ifetch_buf.cause <= FLT_BRK;
+					//reb[fetch0].cause <= FLT_BRK;
 					istk_depth <= istk_depth + 2'd1;
 				end
 				/*
@@ -1988,17 +2115,21 @@ begin
 			end
 		end
 		if (ipage_fault) begin
-			reb[fetch0].cause <= {8'h80,FLT_CPF};
+			ifetch_buf.cause <= {8'h80,FLT_CPF};
+			//reb[fetch0].cause <= {8'h80,FLT_CPF};
 //			reb[fetch1].cause <= 16'h8000|FLT_CPF;
 			istk_depth <= istk_depth + 2'd1;
-			reb[fetch0].ir <= NOP_INSN;
+			ifetch_buf.ir <= NOP_INSN;
+			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
 		if (itlbmiss) begin
-			reb[fetch0].cause <= {8'h80,FLT_TLBMISS};
+			ifetch_buf.cause <= {8'h80,FLT_TLBMISS};
+			//reb[fetch0].cause <= {8'h80,FLT_TLBMISS};
 //			reb[fetch1].cause <= 16'h8000|FLT_TLBMISS;
 			istk_depth <= istk_depth + 2'd1;
-			reb[fetch0].ir <= NOP_INSN;
+			ifetch_buf.ir <= NOP_INSN;
+			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
 		if (insn0.any.opcode==R1 && insn0.r3.func==DI)
@@ -2006,11 +2137,12 @@ begin
 //		if (insn1.any.opcode==R1 && insn1.r3.func==DI)
 //			dicnt <= insn1[13:9];
 	end
-	// Wait for cache load
+	// Wait for cache load or open buffer
 	else begin
-//		else
-			ip <= ip;
-	end	
+		micro_ip <= micro_ip;
+		ip <= ip;
+	end
+	prev_ip <= ip;
 end
 endtask
 
@@ -2024,6 +2156,14 @@ endtask
 
 task tDecompress0;
 begin
+	$display("Decomp:");
+	disassem(ifetch_buf.ir, ifetch_buf.ip);
+	if (advance_pipe) begin
+		decomp_buf <= branchmiss ? 'd0 : ifetch_buf;
+		decomp_buf.ir <= ifetch_buf.ir ^ key;
+		decomp_buf.decompressed <= 1'b1;
+	end
+	/*
 	if (next_decompress0 != MaxSrcId)
 		decompress0 <= #1 next_decompress0;
 	if (reb[decompress0].fetched && !branchmiss) begin
@@ -2031,11 +2171,13 @@ begin
 		reb[decompress0].decompressed <= 1'b1;
 		reb[decompress0].ir <= reb[decompress0].ir ^ key;
 	end
+	*/
 end
 endtask
 
 task tDecompress1;
 begin
+	/*
 	if (next_decompress1 != MaxSrcId)
 		decompress1 <= #1 next_decompress1;
 	if (reb[decompress1].fetched && !branchmiss) begin
@@ -2043,6 +2185,7 @@ begin
 		reb[decompress1].decompressed <= 1'b1;
 		reb[decompress1].ir <= reb[decompress1].ir ^ key;
 	end
+	*/
 end
 endtask
 
@@ -2061,7 +2204,7 @@ integer n;
 begin
 	fnNextInsnValid = 1'b0;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n]==sns[kk]+1)
+		if (reb[n].sns==reb[kk].sns+1)
 			fnNextInsnValid = 1'b1;
 end
 endfunction
@@ -2072,7 +2215,7 @@ integer n;
 begin
 	fnPrevReg = 1'b0;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n]==sns[kk]-1 && reb[n].dec.isReg)
+		if (reb[n].sns==reb[kk].sns-1 && reb[n].dec.isReg)
 			fnPrevReg = 1'b1;
 end
 endfunction
@@ -2083,7 +2226,7 @@ integer n;
 begin
 	fnPrevInsn = 3'd7;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n]==sns[kk]-1)
+		if (reb[n].sns==reb[kk].sns-1)
 			fnPrevInsn = n;
 end
 endfunction
@@ -2094,7 +2237,7 @@ integer n;
 begin
 	fnNextInsn = 3'd7;
 	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (sns[n]==sns[kk]+1)
+		if (reb[n].sns==reb[kk].sns+1)
 			fnNextInsn = n;
 end
 endfunction
@@ -2106,55 +2249,75 @@ begin
 		prev_dec <= dec;
 		dec <= next_dec0;
 	end
-	if (reb[dec].decompressed && !branchmiss && reb[dec].v) begin
-		$display("%d Decode[%d]:", $time, dec);
-		$display("  ir=%h", reb[dec].ir);
-		$display("  Ra=%d Rb=%d Rc=%d Rt=%d Rvm=%d", deco.Ra, deco.Rb, deco.Rc, deco.Rt, deco.Rvm);
+	$display("Decode:");
+	disassem(decomp_buf.ir, decomp_buf.ip);
+	$display("  ip=%h ir=%h", decomp_buf.ip, decomp_buf.ir);
+	$display("  Ra=%d Rb=%d Rc=%d Rt=%d Rvm=%d", Ra, Rb, Rc, Rt, Rvm);
+	$display("  ip=%h ir=%h", decode_buf.ip, decode_buf.ir);
+	$display("  Ra=%d iav=%d ias=%d rfoa=%h", Ra, rfoa_v, Source1Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Ra], rfoa);
+	$display("  Rb=%d ibv=%d ibs=%d rfob=%h", Rb, rfob_v, Source2Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rb], rfob);
+	$display("  Rc=%d icv=%d ics=%d rfoc=%h", Rc, rfoc_v, Source3Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rc], rfoc);
+	$display("  imm=%h", deco.imm);
+	if (advance_pipe) begin
 		dec <= MaxSrcId;
-		if (deco.mtlk)
-			$stop;
-		reb[dec].decompressed <= 1'b0;
-		reb[dec].decoded <= 1'b1;
-		reb[dec].dec <= deco;
+		decode_buf <= branchmiss ? 'd0 : decomp_buf;
+		decode_buf.dec <= deco;
+		decode_buf.ia <= ifetch_buf.dec.Ravec ? vroa : {NLANES{rfoa}};
+		decode_buf.ib <= ifetch_buf.dec.Rbvec ? vrob : {NLANES{rfob}};
+		decode_buf.ic <= ifetch_buf.dec.Rcvec ? vroc : {NLANES{rfoc}};
+		decode_buf.it <= ifetch_buf.dec.Rtvec ? vrot : {NLANES{rfot}};
+		decode_buf.vmask <= rfom;
+		decode_buf.iav <= rfoa_v;
+		decode_buf.ibv <= rfob_v;
+		decode_buf.icv <= rfoc_v;
+		decode_buf.itv <= rfot_v;
+		decode_buf.vmv <= rfom_v;
+		decode_buf.ias <= Source1Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Ra];
+		decode_buf.ibs <= Source2Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rb];
+		decode_buf.ics <= Source3Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rc];
+		decode_buf.its <= SourceTValid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rt];
+		decode_buf.vms <= SourceMValid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rvm];
+		if ((Ra==6'd44 && omode < 2'b01) ||
+				(Ra==6'd45 && omode < 2'b10) ||
+				(Ra==6'd46 && omode < 2'b11) ||
+				(Ra==6'd47 && omode < 2'b11))
+			if (~|ifetch_buf.cause)
+				decode_buf.cause <= {8'h00,FLT_PRIV};
+		if ((Rb==6'd44 && omode < 2'b01) ||
+				(Rb==6'd45 && omode < 2'b10) ||
+				(Rb==6'd46 && omode < 2'b11) ||
+				(Rb==6'd47 && omode < 2'b11))
+			if (~|ifetch_buf.cause)
+				decode_buf.cause <= {8'h00,FLT_PRIV};
+		if ((Rc==6'd44 && omode < 2'b01) ||
+				(Rc==6'd45 && omode < 2'b10) ||
+				(Rc==6'd46 && omode < 2'b11) ||
+				(Rc==6'd47 && omode < 2'b11))
+			if (~|ifetch_buf.cause)
+				decode_buf.cause <= {8'h00,FLT_PRIV};
+		if ((Rt==6'd44 && omode < 2'b01) ||
+				(Rt==6'd45 && omode < 2'b10) ||
+				(Rt==6'd46 && omode < 2'b11) ||
+				(Rt==6'd47 && omode < 2'b11))
+			if (~|ifetch_buf.cause)
+				decode_buf.cause <= {8'h00,FLT_PRIV};
 		// There is no register fetch for an immediate prefix. Claim the stage is
 		// done already.
+		decode_buf.decoded <= 1'b1;
 		if (deco.isExi) begin
-			reb[dec].decoded <= 1'b0;
-			reb[dec].executed <= 1'b1;
+			decode_buf.decoded <= 1'b0;
+			decode_buf.executed <= 1'b1;
 		end
-		reb[dec].istk_depth <= distk_depth;
-		/*
-		reb[dec].ia <= deco.Ravec ? vroa : {NLANES{rfoa}};
-		reb[dec].ib <= deco.Rbvec ? vrob : {NLANES{rfob}};
-		reb[dec].ic <= deco.Rcvec ? vroc : {NLANES{rfoc}};
-		reb[dec].it <= deco.Rtvec ? vrot : {NLANES{rfot}};
-		reb[dec].ca <= rfoca;
-		reb[dec].iav <= rfoa_v;
-		reb[dec].ibv <= rfob_v;
-		reb[dec].icv <= rfoc_v;
-		reb[dec].itv <= rfot_v;
-		reb[dec].vmv <= rfom_v;
-		*/
-		reb[dec].idv <= !fnPrevReg(dec);
-		reb[dec].lkv <= 1'b1;//(reb[head0].dec.Rt==deco.Rc && reb[head0].v && reb[head0].executed && reb[head0].dec.rfwr) || regfile_src[deco.Rc]==5'd31 || LkValid(reb[dec].ir);
-		reb[dec].niv <= NextInsnValid(reb[dec].ir) || fnNextInsnValid(dec);
-		/*
-		reb[dec].ias <= Source1Valid(reb[dec].ir)||deco.Ra=='d0 ? 6'd31 : regfile_src[deco.Ra];
-		reb[dec].ibs <= Source2Valid(reb[dec].ir)||deco.Rb=='d0 ? 6'd31 : regfile_src[deco.Rb];
-		reb[dec].ics <= Source3Valid(reb[dec].ir)||deco.Rc=='d0 ? 6'd31 : regfile_src[deco.Rc];
-		reb[dec].vms <= SourceMValid(reb[dec].ir) ? 6'd31 : regfile_src[deco.Rvm];
-		reb[dec].lks <= LkValid(reb[dec].ir) ? 6'd31 : regfile_src[deco.Rc];
-		*/
-		reb[dec].cioreg <= cioreg;
-		reb[dec].cio <= cio[1:0];
-//		reb[dec].predict_taken <= dpredict_taken;
-		reb[dec].step <= 'd0;
-		reb[dec].count <= 'd0;
+		decode_buf.istk_depth <= distk_depth;
+		//reb[dec].idv <= !fnPrevReg(dec);
+		decode_buf.niv <= 1'b1;//NextInsnValid(reb[dec].ir) || fnNextInsnValid(dec);
+		decode_buf.step <= 'd0;
+		decode_buf.count <= 'd0;
 //		reb[dec].mask_bit <= mask[dstep];
 //		reb[dec].vmask <= rfom;
-		reb[dec].zbit <= deco.Rz;
-		reb[dec].predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==6'd31) || deco.jxz);
-		
+		decode_buf.zbit <= deco.Rz;
+		decode_buf.predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==6'd31) || deco.jxz);
+		/*
 		if (fnPrevReg(dec)) begin
 			if (reb[fnPrevInsn(dec)].decompressed) begin
 				reb[fnPrevInsn(dec)].niv <= 1'b1;	// Allows REG to execute
@@ -2167,56 +2330,67 @@ begin
 				reb[dec].ids <= reb[fnPrevInsn(dec)].ibs;
 			end
 		end
-		/*
-		for (n7 = 0; n7 < 32; n7 = n7 + 1)
-			if (regfile_src[n7]==dec && n7 != deco.Rt && n7 != head0) begin
-				$display("%d Register %d source not reset.", $time, n7);
-				//regfile_src[n7] <= 5'd31;
-			end
 		*/
 		if (deco.carfwr)
 			eip_src[deco.Ct] <= dec;
 		
 		
-		if (reb[dec].ir.jxx.Rc=='d0 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
+		if (decode_buf.ir.jxx.Rc=='d0 && deco.jxx && decode_buf.predict_taken && bpe) begin	// Jxx, DJxx
 			if (ip.offs != deco.jmptgt) begin
 				branchmiss_adr.offs <= deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 				xx <= 4'd1;
 			end
-			tStackRetadr(dec);
+			//tStackRetadr(dec);
 		end
-		else if (reb[dec].ir.jxx.Rc==6'd31 && deco.jxx && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
-			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				branchmiss_adr.offs <= reb[dec].ip.offs + deco.jmptgt;
+		else if (decode_buf.ir.jxx.Rc==6'd31 && deco.jxx && decode_buf.predict_taken && bpe) begin	// Jxx, DJxx
+			if (ip.offs != decode_buf.ip.offs + deco.jmptgt) begin
+				branchmiss_adr.offs <= decode_buf.ip.offs + deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 				xx <= 4'd2;
 			end
-			tStackRetadr(dec);
+			//tStackRetadr(dec);
 		end
-		else if (deco.jxz && reb[dec].predict_taken && bpe) begin	// Jxx, DJxx
-			if (ip.offs != reb[dec].ip.offs + deco.jmptgt) begin
-				branchmiss_adr.offs <= reb[dec].ip.offs + deco.jmptgt;
+		else if (deco.jxz && decode_buf.predict_taken && bpe) begin	// Jxx, DJxx
+			if (ip.offs != decode_buf.ip.offs + deco.jmptgt) begin
+				branchmiss_adr.offs <= decode_buf.ip.offs + deco.jmptgt;
 				branchmiss_adr.micro_ip <= 'd0;
 				xx <= 4'd3;
 			end
-			tStackRetadr(dec);
+			//tStackRetadr(dec);
 		end
 		
-		if (deco.jmp|deco.bra|deco.jxx)
-  		reb[dec].cares.offs <= reb[dec].ip.offs + reb[dec].ilen;
-//  	else if (deco.mtlk)
-//  		reb[dec].cares.offs <= rfoc;//(reb[head0].dec.Rt==deco.Rc && reb[head0].v && reb[head0].state==EXECUTED && reb[head0].dec.rfwr) ? reb[head0].res : regfile[deco.Rc];
+//		if (deco.jmp|deco.bra|deco.jxx)
+//  		decode_buf.cares.offs <= decode_buf.ip.offs + decode_buf.ilen;
 	end
+
 end
 endtask
 
+/*
 SrcId nxt_regfetch0;
 always_comb
 	if (next_regfetch0 != MaxSrcId)
 		nxt_regfetch0 <= next_regfetch0;
 	else
 		nxt_regfetch0 <= regfetch0;
+*/	
+always_comb
+	regfetch0 = next_open_buf;
+	
+task tQueueInsn;
+begin
+	if (advance_pipe) begin
+		queued0 <= next_open_buf;
+		$display("Queue to %d", next_open_buf);
+		disassem(decode_buf.ir, decode_buf.ip);
+		$display("  ip=%h ir=%h", decode_buf.ip, decode_buf.ir);
+		reb[next_open_buf] <= decode_buf;
+	end
+end
+endtask
+
+/*
 always_comb
 	reb[regfetch0].nxt_rfetched <= reb[regfetch0].decoded && !branchmiss && reb[regfetch0].v;
 always_comb
@@ -2235,99 +2409,10 @@ begin
 		reb[regfetch0].nxt_its <= SourceTValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rt];
 		reb[regfetch0].nxt_vms <= SourceMValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rvm];
 end
-
-task tRegfetch;
-integer n;
-begin
-	regfetch0 <= nxt_regfetch0;
-	if (reb[regfetch0].decoded && !branchmiss && reb[regfetch0].v) begin
-		$display("Regfetch[%d] %d", regfetch0, $time);
-		$display("  Ra=%d iav=%d ias=%d rfoa=%h", reb[regfetch0].dec.Ra, rfoa_v, Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra], rfoa);
-		$display("  Rb=%d ibv=%d ibs=%d rfob=%h", reb[regfetch0].dec.Rb, rfob_v, Source2Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb], rfob);
-		$display("  Rc=%d icv=%d ics=%d rfoc=%h", reb[regfetch0].dec.Rc, rfoc_v, Source3Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc], rfoc);
-		reb[regfetch0].decoded <= 1'b0;
-		reb[regfetch0].rfetched <= 1'b1;
-		reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? vroa : {NLANES{rfoa}};
-		reb[regfetch0].ib <= reb[regfetch0].dec.Rbvec ? vrob : {NLANES{rfob}};
-		reb[regfetch0].ic <= reb[regfetch0].dec.Rcvec ? vroc : {NLANES{rfoc}};
-		reb[regfetch0].it <= reb[regfetch0].dec.Rtvec ? vrot : {NLANES{rfot}};
-		reb[regfetch0].iav <= rfoa_v;
-		reb[regfetch0].ibv <= rfob_v;
-		reb[regfetch0].icv <= rfoc_v;
-		reb[regfetch0].itv <= rfot_v;
-		reb[regfetch0].vmv <= rfom_v;
-		reb[regfetch0].ias <= Source1Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Ra];
-		reb[regfetch0].ibs <= Source2Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rb];
-		reb[regfetch0].ics <= Source3Valid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
-		reb[regfetch0].its <= SourceTValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rt];
-		reb[regfetch0].vms <= SourceMValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rvm];
-		reb[regfetch0].lks <= LkValid(reb[regfetch0].ir) ? 6'd31 : regfile_src[reb[regfetch0].dec.Rc];
-		reb[regfetch0].vmask <= rfom;
-		
-		/*
-		if (head0==regfile_src[reb[regfetch0].dec.Ra] && reb[head0].dec.rfwr) begin
-			reb[regfetch0].iav <= 1'b1;
-			reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
-		end
-		if (head0==regfile_src[reb[regfetch0].dec.Rb] && reb[head0].dec.rfwr) begin
-			reb[regfetch0].ibv <= 1'b1;
-			reb[regfetch0].ib <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
-		end
-		if (head0==regfile_src[reb[regfetch0].dec.Rc] && reb[head0].dec.rfwr) begin
-			reb[regfetch0].icv <= 1'b1;
-			reb[regfetch0].ic <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
-		end
-		if (head0==regfile_src[reb[regfetch0].dec.Rt] && reb[head0].dec.rfwr) begin
-			reb[regfetch0].itv <= 1'b1;
-			reb[regfetch0].it <= reb[regfetch0].dec.Rbvec ? reb[head0].res : {NLANES{reb[head0].res[0]}};
-		end
-		if (head0==regfile_src[reb[regfetch0].dec.Rvm] && reb[head0].dec.rfwr) begin
-			reb[regfetch0].vmv <= 1'b1;
-			reb[regfetch0].vmask <= reb[head0].res[0];
-		end
-		*/
-		/*
-		if (commit0_src==regfile_src[reb[regfetch0].dec.Ra] && commit0_wr) begin
-			reb[regfetch0].iav <= 1'b1;
-			reb[regfetch0].ia <= reb[regfetch0].dec.Ravec ? commit0_bus : {NLANES{commit0_bus[0]}};
-		end
-		if (commit0_src==regfile_src[reb[regfetch0].dec.Rt] && commit0_wr) begin
-			reb[regfetch0].itv <= 1'b1;
-			reb[regfetch0].it <= reb[regfetch0].dec.Ravec ? commit0_bus : {NLANES{commit0_bus[0]}};
-		end
-		*/
-		regfetch0 <= MaxSrcId;
-	end
-
-	if (exec != MaxSrcId) begin
-		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Ra && reb[exec].dec.rfwr && reb[exec].executed) begin
-			reb[fnNextInsn(exec)].iav <= 1'b1;
-			reb[fnNextInsn(exec)].ia <= reb[fnNextInsn(exec)].dec.Ravec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
-		end
-		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rb && reb[exec].dec.rfwr && reb[exec].executed) begin
-			reb[fnNextInsn(exec)].ibv <= 1'b1;
-			reb[fnNextInsn(exec)].ib <= reb[fnNextInsn(exec)].dec.Rbvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
-		end
-		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rc && reb[exec].dec.rfwr && reb[exec].executed) begin
-			reb[fnNextInsn(exec)].icv <= 1'b1;
-			reb[fnNextInsn(exec)].ic <= reb[fnNextInsn(exec)].dec.Rcvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
-		end
-		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rt && reb[exec].dec.rfwr && reb[exec].executed) begin
-			reb[fnNextInsn(exec)].itv <= 1'b1;
-			reb[fnNextInsn(exec)].it <= reb[fnNextInsn(exec)].dec.Rtvec ? reb[exec].res : {NLANES{reb[exec].res[0]}};
-		end
-		if (reb[exec].dec.Rt==reb[fnNextInsn(exec)].dec.Rvm && reb[exec].dec.rfwr && reb[exec].executed) begin
-			reb[fnNextInsn(exec)].vmv <= 1'b1;
-			reb[fnNextInsn(exec)].vmask <= reb[exec].res[0];
-		end
-	end
-
-end
-endtask
-
+*/
 task tMarkExecDone;
 begin
-	reb[exec].rfetched <= 1'b0;
+	reb[exec].decoded <= 1'b0;
 	reb[exec].out <= 1'b0;
 	reb[exec].executed <= reb[exec].v & !stomp[exec];
 end
@@ -2785,15 +2870,8 @@ endtask
 task tExReg;
 begin
 	if (reb[exec].dec.isReg) begin
-		reb[fnNextInsn(exec)].dec.Rt2 = reb[exec].dec.Rt;
-		if (!reb[fnNextInsn(exec)].icv) begin
-			reb[fnNextInsn(exec)].icv <= 1'b1;
-			reb[fnNextInsn(exec)].ic <= reb[exec].ia;
-		end
-		if (!reb[fnNextInsn(exec)].idv) begin
-			reb[fnNextInsn(exec)].idv <= 1'b1;
-			reb[fnNextInsn(exec)].id <= reb[exec].ib;
-		end
+		oplatch_d <= reb[exec].ia;
+		oplatch_e <= reb[exec].ib;
 	end
 end
 endtask
@@ -2807,67 +2885,69 @@ integer n;
 integer nn;
 begin
 	// Is there anything to execute?
-	if (next_exec != MaxSrcId)
-		exec <= next_exec;
-	if ((reb[exec].rfetched || reb[exec].out) & reb[exec].v & !stomp[exec]) begin
-		$display("%h", reb[exec].ip);
-		disassem(reb[exec].ip,reb[exec].ir);
-		if (fnArgsValid(exec)) begin
+//	if (next_exec != MaxSrcId)
+	exec <= next_exec;
+	if (exec != MaxSrcId) begin
+		$display("Execute[%d] rfetch=%d out=%d v=%d stomp=%d", exec, reb[exec].rfetched, reb[exec].out, reb[exec].v, stomp[exec]);
+		disassem(reb[exec].ir, reb[exec].ip);
+		$display("  ip=%h ir=%h", reb[exec].ip, reb[exec].ir);
+		if (reb[exec].dec.is_valu) begin
+			reb[exec].res <= vres;
+			$display("  res=%h", vres);
+		end
+		else begin
+			reb[exec].res <= res;
+			$display("  res=%h", res);
+		end
+		reb[exec].res_t2 <= res_t2;
+		if (!reb[exec].dec.multi_cycle) begin
+			tBra();
+			tJxx();
+	    tJmp();
+	    tRts();
+	    tExReg();
 			if (reb[exec].dec.is_valu)
-				reb[exec].res <= vres;
+				tArgUpdate(exec,vres);
 			else
-				reb[exec].res <= res;
-			reb[exec].res_t2 <= res_t2;
-			if (reb[exec].v) begin
-				if (!reb[exec].dec.multi_cycle) begin
-					tBra();
-					tJxx();
-			    tJmp();
-			    tRts();
-			    tExReg();
-					if (reb[exec].dec.is_valu)
-						tArgUpdate(exec,vres);
-					else
-						tArgUpdate(exec,res);
+				tArgUpdate(exec,res);
+			tMarkExecDone();
+		end
+		else //if (!mc_busy)
+		begin
+			reb[exec].decoded <= 1'b0;
+			reb[exec].out <= 1'b1;
+			// For a vector load, if a gather operation execute the multi-cycle operation
+			// multiple time until the entire vector is loaded.
+			if (reb[exec].dec.is_vector && (reb[exec].dec.loadn && reb[exec].dec.Rbvec)) begin
+				reb[exec].step <= reb[exec].step + 2'd1;
+				if (reb[exec].step==NLANES-1) begin
+					reb[exec].step <= 'd0;
+					reb[exec].count <= 'd0;
 					tMarkExecDone();
 				end
-				else //if (!mc_busy)
-				begin
-					reb[exec].rfetched <= 1'b0;
-					reb[exec].out <= 1'b1;
-					// For a vector load, if a gather operation execute the multi-cycle operation
-					// multiple time until the entire vector is loaded.
-					if (reb[exec].dec.is_vector && (reb[exec].dec.loadn && reb[exec].dec.Rbvec)) begin
-						reb[exec].step <= reb[exec].step + 2'd1;
-						if (reb[exec].step==NLANES-1) begin
-							reb[exec].step <= 'd0;
-							reb[exec].count <= 'd0;
-							tMarkExecDone();
-						end
-						else begin
-							reb[exec].rfetched <= 1'b1;
-							reb[exec].out <= 1'b0;
-						end
-					end
-					// For a vector store execute the multi-cycle operation multiple times until
-					// the entire vector is queued.
-					else if (reb[exec].dec.is_vector && (reb[exec].dec.storer || reb[exec].dec.storen)) begin
-						reb[exec].step <= reb[exec].step + 2'd1;
-						if (reb[exec].step==NLANES-1) begin
-							reb[exec].step <= 'd0;
-							reb[exec].count <= 'd0;
-							tMarkExecDone();
-						end
-						else begin
-							reb[exec].rfetched <= 1'b1;
-							reb[exec].out <= 1'b0;
-						end
-					end
-					tExMultiCycle();
+				else begin
+					reb[exec].decoded <= 1'b1;
+					reb[exec].out <= 1'b0;
 				end
-			end	// xval
-			exec <= next_exec;
-		end
+			end
+			// For a vector store execute the multi-cycle operation multiple times until
+			// the entire vector is queued.
+			else if (reb[exec].dec.is_vector && (reb[exec].dec.storer || reb[exec].dec.storen)) begin
+				reb[exec].step <= reb[exec].step + 2'd1;
+				if (reb[exec].step==NLANES-1) begin
+					reb[exec].step <= 'd0;
+					reb[exec].count <= 'd0;
+					tMarkExecDone();
+				end
+				else begin
+					reb[exec].decoded <= 1'b1;
+					reb[exec].out <= 1'b0;
+				end
+			end
+			tExMultiCycle();
+		end	// xval
+//			if (next_exec != MaxSrcId)
+//			exec <= next_exec;
 	end
 end
 endtask
@@ -2883,31 +2963,31 @@ input VecValue bus;
 integer n;
 begin
 	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
-		if (!reb[n].iav && reb[n].rfetched) begin
+		if (!reb[n].iav && reb[n].decoded) begin
 			if (reb[n].ias==m) begin
 				reb[n].ia <= bus;
 				reb[n].iav <= 1'b1;
 			end
 		end
-		if (!reb[n].ibv && reb[n].rfetched) begin
+		if (!reb[n].ibv && reb[n].decoded) begin
 			if (reb[n].ibs==m) begin
 				reb[n].ib <= bus;
 				reb[n].ibv <= 1'b1;
 			end
 		end
-		if (!reb[n].icv && reb[n].rfetched) begin
+		if (!reb[n].icv && reb[n].decoded) begin
 			if (reb[n].ics==m) begin
 				reb[n].ic <= bus;
 				reb[n].icv <= 1'b1;
 			end
 		end
-		if (!reb[n].itv && reb[n].rfetched) begin
+		if (!reb[n].itv && reb[n].decoded) begin
 			if (reb[n].its==m) begin
 				reb[n].it <= bus;
 				reb[n].itv <= 1'b1;
 			end
 		end
-		if (!reb[n].vmv && reb[n].rfetched) begin
+		if (!reb[n].vmv && reb[n].decoded) begin
 			if (reb[n].vms==m) begin
 				reb[n].vmask <= bus;
 				reb[n].vmv <= 1'b1;
@@ -2945,7 +3025,7 @@ begin
 			end
 		end
 		*/
-		if (!reb[n].idv && reb[n].rfetched) begin
+		if (!reb[n].idv && reb[n].decoded) begin
 			if (reb[n].ids==m) begin
 				reb[n].id <= bus;
 				reb[n].idv <= 1'b1;
@@ -2973,31 +3053,30 @@ begin
 	head1 <= 3'd7;
 //	head1 <= next_head1;
   if (commit0_wr) begin
-  	$display("Writeback[%d]: %d", head0, $time);
+  	$display("Writeback[%d]:", head0);
   	$display("  Src:%d Tgt: %d val=%h", commit0_src,commit0_tgt, commit0_bus);
 		tArgUpdate(commit0_src,commit0_bus);//,reb[commit0_src].cares);
 	end
 //  if (commit1_wr)
 //		tArgUpdate(commit1_src,commit1_bus);//,reb[commit1_src].cares);
   if (commit0_wr) begin
-    $display("  regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus);
+    $display("  regfile[%d] <= %h", reb[commit0_src].dec.Rt, commit0_bus[0]);
     // Globally enable interrupts after first update of stack pointer.
-    if (reb[commit0_src].dec.Rt==6'd45) begin
+    if (reb[commit0_src].dec.Rt==6'd46) begin
     	sp <= commit0_bus;	// debug
       gie <= TRUE;
     end
   end
-  if (reb[head0].executed && reb[head0].v) begin
+  if (head0 != MaxSrcId) begin
+  	$display("Writeback[%d]:", head0);
 		if (reb[head0].cio[0])
 			preg[reb[head0].cioreg] <= reb[head0].res_t2;
-		/*
+		
 		if (|reb[head0].cause) begin
 			wcause <= reb[head0].cause;
 			tProcessException();
 		end
-		else
-		*/
-		begin
+		else begin
 			if (reb[head0].dec.sei)
 				pmStack[3:1] <= reb[head0].ia[0][2:0]|reb[head0].ir[24:22];
 			else if (reb[head0].dec.rti)
@@ -3006,17 +3085,6 @@ begin
 	    	tProcessCsr();
 			else if (reb[head0].dec.rex)
 				tProcessRex();
-			// Register file update
-			/*
-		  if (reb[head0].dec.rfwr) begin
-		  	if (reb[head0].dec.Rtvec) begin
-		  		if (reb[head0].mask_bit)
-		  			vregfile[reb[head0].dec.Rt][reb[head0].step] <= reb[head0].res;
-		  		else if (reb[head0].zbit)
-		  			vregfile[reb[head0].dec.Rt][reb[head0].step] <= 64'd0;
-		  	end
-		  end
-		  */
 		end	// wcause
 	    //regfile[reb[head0].dec.Rt] <= reb[head0].res[$bits(Value)-1:0];
 	  tFreeRebs();
@@ -3027,18 +3095,6 @@ begin
 	last_zero2 <= last_zero1;
 //	if (reb[last_zero1] != 'd0 && last_zero1 != head0 && !reb[last_zero1].out && last_zero1 != 3'd7 && head0!=3'd7)
 //		$stop;
-  for (n13 = 0; n13 < REB_ENTRIES; n13 = n13 + 1) begin
-	  case({reb[n13].fetched,reb[n13].decompressed,reb[n13].decoded,reb[n13].rfetched,reb[n13].executed})
-	  5'b00000,
-	  5'b10000,
-	  5'b01000,
-	  5'b00100,
-	  5'b00010,
-	  5'b00001:	;
-	  default:
-			$stop;
-		endcase
-	end
 	
 end
 endtask
@@ -3051,8 +3107,8 @@ endtask
 // Freeup the REB slots
 task tFreeRebs;
 begin
-	reb[head0] <= 'd0;
-	reb[head0].out <= reb[head0].out;	// keep this signal
+	if (reb[head0].v)
+		reb[head0] <= 'd0;
 	/*
 	if (commit_cnt==2'd2) begin
 		reb[commit1_src].v <= 1'b0;
@@ -3068,7 +3124,8 @@ begin
 end
 endtask
 
-// Retire prefixes once the instruction is retired.
+// Retire prefixes once the instruction has executed. Does not need to wait
+// until results are committed.
 task tRetirePrefixes;
 integer n8;
 integer n11;
@@ -3076,23 +3133,15 @@ begin
 	for (n11 = 0; n11 < REB_ENTRIES; n11 = n11 + 1) begin
 		if (reb[n11].executed) begin
 			for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
-				if (reb[n8].dec.isExi && sns[n8]==sns[n11]-1)
+				if (reb[n8].dec.isExi && reb[n8].sns==reb[n11].sns-1) begin
+					$display("Prefix freed[%d]",n8);
 					reb[n8] <= 'd0;
-				if (sns[n8]==sns[n11]-2 && reb[n8].ir.any.opcode==EXIM)
+				end
+				if (reb[n8].sns==reb[n11].sns-2 && reb[n8].ir.any.opcode==EXIM)
 					reb[n8] <= 'd0;
 			end
 		end
 	end
-	/*
-	if (commit_cnt==2'd2) begin
-		for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
-			if (reb[n8].dec.isExi && sns[n8]==sns[commit1_src]-1)
-				reb[n8] <= 'd0;
-			if (sns[n8]==sns[commit1_src]-2 && reb[n8].ir.any.opcode==EXIM)
-				reb[n8] <= 'd0;
-		end
-	end
-	*/
 end
 endtask
 
@@ -3285,8 +3334,11 @@ task tNullReb;
 input SSrcId kk;
 integer n9;
 begin
+	ifetch_buf <= 'd0;
+	decomp_buf <= 'd0;
+	decode_buf <= 'd0;
 	for (n9 = 0; n9 < REB_ENTRIES; n9 = n9 + 1) begin
-		if (sns[n9] > sns[kk]) begin
+		if (reb[n9].sns > reb[kk].sns) begin
 			reb[n9] <= 'd0;
 			reb[n9].out <= reb[n9].out;
 //			sns[n9] <= REB_ENTRIES;
@@ -3521,34 +3573,34 @@ input [5:0] Rn;
 begin
 	case(Rn)
 	6'd0:	fnRegName = "zero";
-	6'd1:	fnRegName = "lr";
-	6'd2:	fnRegName = "lr2";
-	6'd3:	fnRegName = "a0";
-	6'd4:	fnRegName = "a1";
-	6'd5:	fnRegName = "t0";
-	6'd6:	fnRegName = "t1";
-	6'd7:	fnRegName = "t2";
-	6'd8:	fnRegName = "t3";
-	6'd9:	fnRegName = "t4";
-	6'd10:	fnRegName = "t5";
-	6'd11:	fnRegName = "t6";
-	6'd12:	fnRegName = "s0";
-	6'd13:	fnRegName = "s1";
-	6'd14:	fnRegName = "s2";
-	6'd15:	fnRegName = "s3";
-	6'd16:	fnRegName = "s4";
-	6'd17:	fnRegName = "s5";
-	6'd18:	fnRegName = "s6";
-	6'd19:	fnRegName = "s7";
-	6'd20:	fnRegName = "a2";
-	6'd21:	fnRegName = "a3";
-	6'd22:	fnRegName = "a4";
-	6'd23:	fnRegName = "a5";
-	6'd24:	fnRegName = "a6";
-	6'd25:	fnRegName = "a7";
-	6'd26:	fnRegName = "lc";
-	6'd27:	fnRegName = "r27";
-	6'd28:	fnRegName = "r28";
+	6'd1:	fnRegName = "a0";
+	6'd2:	fnRegName = "a1";
+	6'd3:	fnRegName = "t0";
+	6'd4:	fnRegName = "t1";
+	6'd5:	fnRegName = "t2";
+	6'd6:	fnRegName = "t3";
+	6'd7:	fnRegName = "t4";
+	6'd8:	fnRegName = "t5";
+	6'd9:	fnRegName = "t6";
+	6'd10:	fnRegName = "t7";
+	6'd11:	fnRegName = "s0";
+	6'd12:	fnRegName = "s1";
+	6'd13:	fnRegName = "s2";
+	6'd14:	fnRegName = "s3";
+	6'd15:	fnRegName = "s4";
+	6'd16:	fnRegName = "s5";
+	6'd17:	fnRegName = "s6";
+	6'd18:	fnRegName = "s7";
+	6'd19:	fnRegName = "s8";
+	6'd20:	fnRegName = "s9";
+	6'd21:	fnRegName = "a2";
+	6'd22:	fnRegName = "a3";
+	6'd23:	fnRegName = "a4";
+	6'd24:	fnRegName = "a5";
+	6'd25:	fnRegName = "a6";
+	6'd26:	fnRegName = "a7";
+	6'd27:	fnRegName = "gp3";
+	6'd28:	fnRegName = "gp2";
 	6'd29:	fnRegName = "gp";
 	6'd30:	fnRegName = "fp";
 	6'd31:	fnRegName = "sp";
@@ -3560,13 +3612,14 @@ begin
 	6'd37:	fnRegName = "vm5";
 	6'd38:	fnRegName = "vm6";
 	6'd39:	fnRegName = "vm7";
-	6'd40:	fnRegName = "lk1";
-	6'd41:	fnRegName = "lk2";
-	6'd42:	fnRegName = "lc";
-	6'd43:	fnRegName = "ssp";
-	6'd44:	fnRegName = "hsp";
-	6'd45:	fnRegName = "msp";
-	6'd46:	fnRegName = "isp";
+	6'd40:	fnRegName = "lc";
+	6'd41:	fnRegName = "lk1";
+	6'd42:	fnRegName = "lk2";
+	6'd43:	fnRegName = "r43";
+	6'd44:	fnRegName = "ssp";
+	6'd45:	fnRegName = "hsp";
+	6'd46:	fnRegName = "msp";
+	6'd47:	fnRegName = "isp";
 	endcase
 end
 endfunction
@@ -3575,6 +3628,7 @@ task disassem;
 input Instruction ir;
 input CodeAddress ip;
 begin
+	$display("ip=%h", ip);
   case(ir.any.opcode)
   R2,R3:
   	case(ir.r3.func)
@@ -3617,6 +3671,13 @@ begin
   LEAVE:	$display("LEAVE");
   BEQZ:		$display("BEQZ %h", {{64{ir[31]}},ir[31:19],ir[13:9]}+ip.offs);
   MTLK:		$display("MTLK r%d", ir.r1.Rt);
+  NOP:		$display("NOP");
+  JMP:		$display("JMP");
+  CSR:		$display("CSR");
+  EXI8:		$display("EXI8");
+  EXI24:		$display("EXI24");
+  EXI40:		$display("EXI40");
+  EXI56:		$display("EXI56");
   default:	$display("<op>");
   endcase
 end

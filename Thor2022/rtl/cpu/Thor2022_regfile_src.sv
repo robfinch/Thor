@@ -104,7 +104,9 @@ else begin
 //		for (n = 0; n < NREGS; n = n + 1)
 //			if (commit0_tgt==n && commit0_wr && commit0_id==regfile_src[n])
 //				regfile_src[n] <= 6'd31;
-		if (dec0!= 3'd7 && reb[dec0].decompressed) begin
+		//if (reb[dec0].decoded) 
+		begin
+			
 			for (n = 0; n < NREGS; n = n + 1)
 				if (regfile_src[n]==dec0 && n != decbus0.Rt && n != decbus0.Rt2) begin
 					if (regfile_valid[n])
@@ -112,12 +114,13 @@ else begin
 					$display("%d Register %d source not reset.", $time, n);
 					//next_regfile_src[n] <= 5'd31;
 				end
+			
 			if (decbus0.rfwr) begin
 				next_regfile_src[decbus0.Rt] <= dec0;
 				next_regfile_src[decbus0.Rt2] <= dec0;
 			end
 				
-			if (dec1!=3'd7 && reb[dec1].decompressed) begin
+			if (dec1!=3'd7 && reb[dec1].decoded) begin
 				if (decbus1.rfwr) begin
 					next_regfile_src[decbus1.Rt] <= dec1;
 					next_regfile_src[decbus1.Rt2] <= dec1;
@@ -148,7 +151,7 @@ else begin
 	for (n1 = 0; n1 < NREGS; n1 = n1 + 1) begin
 		regfile_src[n1] <= next_regfile_src[n1];
 		if (regfile_src[n1] != next_regfile_src[n1])
-			$display("%d %h Register %d source set to %d", $time, reb[dec0].ip, decbus0.Rt, dec0);
+			$display("  %h Register %d source set to %d", reb[dec0].ip, decbus0.Rt, dec0);
 	end
 	regfile_src[6'd0] <= 6'd31;
 end

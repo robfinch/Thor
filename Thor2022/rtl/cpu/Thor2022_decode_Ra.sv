@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2022_stomp.sv
+//	Thor2022_decode_Ra.sv
 //
 //
 // BSD 3-Clause License
@@ -36,28 +36,36 @@
 //                                                                          
 // ============================================================================
 
-import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_stomp(reb, branchmiss, missid, stomp);
-input sReorderEntry [7:0] reb;
-input branchmiss;
-input [2:0] missid;
-output reg [7:0] stomp;
+module Thor2022_decode_Ra(ir, sp_sel, Ra);
+input Instruction ir;
+input [2:0] sp_sel;
+output reg [5:0] Ra;
 
-integer n30;
 always_comb
 begin
-	stomp = 'd0;
-	for (n30 = 0; n30 < REB_ENTRIES; n30 = n30 + 1) begin
-		//if (reb[n30].executed && reb[n30].v)
-		//	stomp[n30] = 1'b1;
-		//else 
-		if (branchmiss) begin
-			if (reb[n30].sns > reb[missid].sns)
-				stomp[n30] = 1'b1;
-		end
-	end
+case(ir.any.opcode)
+DJMP:	Ra = 6'd40;						// Loop counter implied
+LDSP,STSP:	Ra = 6'd31;			// SP reference implied
+VM:
+	case(ir.vmr2.func)
+	MTVL:	Ra = {1'b0,ir.r3.Ra};
+	default:	Ra = 'd0;
+	endcase
+MFLK:			Ra = (ir[15:14]==2'b00) ? 6'd0 : {4'b1010,ir[15:14]};
+MOV:			Ra = ir.r3.Ra;
+R2:				Ra = ir.r3.Ra;
+default:	Ra = {1'b0,ir.r2.Ra};
+endcase
+if (Ra==6'd31)
+	case(sp_sel)
+	3'd1:	Ra = 6'd44;
+	3'd2:	Ra = 6'd45;
+	3'd3:	Ra = 6'd46;
+	3'd4:	Ra = 6'd47;
+	default:	;
+	endcase
 end
 
 endmodule

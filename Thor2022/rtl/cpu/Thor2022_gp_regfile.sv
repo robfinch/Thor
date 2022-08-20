@@ -110,8 +110,6 @@ else begin
 	else if (wr0) begin
 		way[wa0] <= 1'b0;
 		regfileA[wa0] <= i0;
-		if (i0==64'h0020ffa191dc0000)
-			$stop;
 	end
 	else if (wr1) begin
 		way[wa1] <= 1'b1;
