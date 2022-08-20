@@ -1272,11 +1272,11 @@ integer n;
 begin
 	$display("GPRs");
 	for (n = 0; n < 48; n = n + 4) begin
-		$display("%s:%h%c  %s:%h%c  %s:%h%c  %s:%h%c  ",
-			fnRegName(n), ugprs.regfileA[n], regfile_valid[n] ? "v":" ",
-			fnRegName(n+1), ugprs.regfileA[n+1], regfile_valid[n+1] ? "v":" ",
-			fnRegName(n+2), ugprs.regfileA[n+2], regfile_valid[n+2] ? "v":" ",
-			fnRegName(n+3), ugprs.regfileA[n+3], regfile_valid[n+3] ? "v":" "
+		$display("%s:%h%c%d  %s:%h%c%d  %s:%h%c%d  %s:%h%c%d  ",
+			fnRegName(n), ugprs.regfileA[n], regfile_valid[n] ? "v":" ", regfile_src[n],
+			fnRegName(n+1), ugprs.regfileA[n+1], regfile_valid[n+1] ? "v":" ", regfile_src[n+1],
+			fnRegName(n+2), ugprs.regfileA[n+2], regfile_valid[n+2] ? "v":" ", regfile_src[n+2],
+			fnRegName(n+3), ugprs.regfileA[n+3], regfile_valid[n+3] ? "v":" ", regfile_src[n+3]
 			);
 	end
 	$display("");
@@ -1917,7 +1917,6 @@ begin
 	$display("InsnFetch:");
 	$display("  insn=%h", insn0);
 //	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED) && !branchmiss) begin// && ((tail + 2'd1) & 3'd7) != head0) begin
-	ifetch_buf.ip <= prev_ip;
 	if (branchmiss) begin
 		//prev_ip <= ip;
 		ip <= branchmiss_adr;
@@ -1976,6 +1975,7 @@ begin
 				micro_ip <= next_mip;
 				//reb[fetch0].ir <= mcir;
 				ifetch_buf.ir <= mcir;
+				ifetch_buf.ip <= ip;
 			end
 			if (next_mip=='d0) begin
 				ip.offs <= ip.offs + incr;
@@ -2018,20 +2018,17 @@ begin
 				begin
 					ip.offs <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
 					ifetch_buf.jmptgt <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
-					ifetch_buf.ip <= ip;
 				end
 			JMP:
 				if (insn0.jmp.Rc=='d0) begin
 					ip.offs <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					ifetch_buf.jmptgt <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					$display("JMP %h", {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
-					ifetch_buf.ip <= ip;
 				end
 				else if (insn0.jmp.Rc==6'd31) begin
 					ip.offs <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					ifetch_buf.jmptgt <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					$display("JMP %h", ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
-					ifetch_buf.ip <= ip;
 				end
 			//CARRY:	begin cio <= insn0[30:15]; cioreg <= insn0[11:9]; end
 			default:	;
@@ -2120,6 +2117,7 @@ begin
 //			reb[fetch1].cause <= 16'h8000|FLT_CPF;
 			istk_depth <= istk_depth + 2'd1;
 			ifetch_buf.ir <= NOP_INSN;
+			ifetch_buf.ip <= ip;
 			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
@@ -2129,6 +2127,7 @@ begin
 //			reb[fetch1].cause <= 16'h8000|FLT_TLBMISS;
 			istk_depth <= istk_depth + 2'd1;
 			ifetch_buf.ir <= NOP_INSN;
+			ifetch_buf.ip <= ip;
 			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
