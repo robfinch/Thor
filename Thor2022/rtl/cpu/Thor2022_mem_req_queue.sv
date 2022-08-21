@@ -131,13 +131,18 @@ endgenerate
 // Search the queue for a matching store. If more than one store matches the
 // most recently added store is the chosen one.
 
+reg foundst0, foundst1;
 always_comb
 begin
-	tSearch(i0,isel0,sx0,imask0,ldo0,found0);
-	tSearch(i1,isel1,sx1,imask1,ldo1,found1);
+	tSearch(MR_LOAD,MR_LOADZ,i0,isel0,sx0,imask0,ldo0,found0);
+	tSearch(MR_LOAD,MR_LOADZ,i1,isel1,sx1,imask1,ldo1,found1);
+	tSearch(MR_STORE,MR_STORE,i0,isel0,sx0,imask0,ldo0,foundst0);
+	tSearch(MR_STORE,MR_STORE,i1,isel1,sx1,imask1,ldo1,foundst1);
 end
 
 task tSearch;
+input [3:0] func1;
+input [3:0] func2;
 input MemoryRequest i;
 input [63:0] isel;
 input sx;
@@ -149,7 +154,7 @@ reg [255:0] dat1;
 begin
 	ldo = i;
 	found = 1'b0;
-	if (i.func==MR_LOAD || i.func==MR_LOADZ) begin
+	if (i.func==func1 || i.func==func2) begin
 		for (n2 = 0; n2 < QDEP; n2 = n2 + 1) begin
 			if (i.adr[AWID-1:4]==que[n2].adr[AWID-1:4] && valid_bits[n2]) begin
 				if ((isel & qsel[n2])==isel) begin
@@ -188,7 +193,7 @@ else begin
 	if (wr1 && found1)
 		wr_ack1 <= 1'b1;
 	// Port #0 take precedence.
-	if (rd & wr0 & !found0) begin
+	if (rd & wr0 & !foundst0) begin
 		for (n3 = 1; n3 < QDEP; n3 = n3 + 1) begin
 			que[n3-1] <= que[n3];
 			qsel[n3-1] <= qsel[n3];
@@ -205,7 +210,7 @@ else begin
 		else
 			qndx <= qndx - 2'd1;
 	end
-	else if (rd & wr1 & !found1) begin
+	else if (rd & wr1 & !foundst1) begin
 		for (n3 = 1; n3 < QDEP; n3 = n3 + 1) begin
 			que[n3-1] <= que[n3];
 			qsel[n3-1] <= qsel[n3];
@@ -222,7 +227,7 @@ else begin
 		else
 			qndx <= qndx - 2'd1;
 	end
-	else if (wr0 & !found0) begin
+	else if (wr0 && !foundst0) begin
 		if (qndx < QDEP) begin
 			if (last_tid != i0.tid) begin
 				que[qndx] <= i0;
@@ -234,7 +239,7 @@ else begin
 			wr_ack0 <= 1'b1;
 		end
 	end
-	else if (wr1 & !found1) begin
+	else if (wr1 & !foundst1) begin
 		if (qndx < QDEP) begin
 			if (last_tid != i1.tid) begin
 				que[qndx] <= i1;

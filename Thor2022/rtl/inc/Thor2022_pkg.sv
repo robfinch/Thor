@@ -54,7 +54,7 @@ parameter NLANES = 2;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 parameter REB_ENTRIES = 6;
-parameter NREGS = 47;
+parameter NREGS = 48;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
@@ -711,12 +711,11 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [23:0] pad;
-	logic [6:0] func;
+	logic [31:0] pad;
 	logic [2:0] m;
 	logic z;
-	logic [2:0] sz;
-	logic p;
+	logic [1:0] sz;
+	logic pad1;
 	logic Tb;
 	logic [4:0] Rb;
 	logic [4:0] Ra;
@@ -731,18 +730,30 @@ typedef struct packed
 	logic [6:0] func;
 	logic [2:0] m;
 	logic z;
-	logic [1:0] pad2;
-	logic [2:0] sz;
-	logic p;
+	logic [1:0] sz;
 	logic Tc;
-	logic [4:0] Rc;
+	logic [5:0] Rc;
 	logic Tb;
-	logic [4:0] Rb;
-	logic [4:0] Ra;
-	logic [4:0] Rt;
+	logic [5:0] Rb;
+	logic [5:0] Ra;
+	logic [5:0] Rt;
 	logic v;
 	logic [7:0] opcode;
 } r3inst;
+
+typedef struct packed
+{
+	logic [15:0] pad;
+	logic [6:0] func;
+	logic [2:0] m;
+	logic z;
+	logic [1:0] sz;
+	logic [13:0] imm;
+	logic [5:0] Ra;
+	logic [5:0] Rt;
+	logic v;
+	logic [7:0] opcode;
+} r3i_inst;
 
 typedef struct packed
 {
@@ -915,6 +926,7 @@ typedef union packed
 	bmapinst bmap;
 	r3inst r3;
 	r2inst r2;
+	r3i_inst r3i;
 	r1inst r1;
 	rilinst ril;
 	rilvinst rilv;
@@ -1076,8 +1088,8 @@ typedef struct packed
 	logic [5:0] Rc;
 	logic [5:0] Rt;
 	logic [5:0] Rt2;
-	logic [1:0] Tb;
-	logic [1:0] Tc;
+	logic Tb;
+	logic Tc;
 	logic [2:0] Rvm;
 	logic Rz;
 	logic Ravec;
@@ -1085,6 +1097,7 @@ typedef struct packed
 	logic Rcvec;
 	logic Rtvec;
 	logic [3:0] Cat;
+	logic is_imm;					// has immediate instead of Rb
 	logic is_vector;			// a vector instruction
 	logic is_cbranch;			// is a conditional branch
 	logic float;
@@ -1183,6 +1196,7 @@ typedef struct packed
 typedef struct packed
 {
 	logic [5:0] rid;
+	logic [5:0] sns;
 	logic v;
 	logic fetched;
 	logic decompressed;
@@ -1298,7 +1312,7 @@ R1:
 	default:	Source1Valid = `TRUE;
 	endcase
 R2:
-	case(isn.r2.func)
+	case(isn.r3.func)
 	default:	Source1Valid = isn.r3.Ra==5'd0;
 	endcase
 R3:
@@ -1309,7 +1323,7 @@ ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR:
 	Source1Valid = isn.ri.Ra==5'd0;
 LDI:	Source1Valid = `TRUE;
 OSR2:
-	case(isn.r2.func)
+	case(isn.r3.func)
 	RTI:	Source1Valid = isn.r2.Ra==5'd0;
 	REX:	Source1Valid = isn.r2.Ra==5'd0;
 	default: Source1Valid = `TRUE;
@@ -1428,7 +1442,7 @@ R3:
 ADDI,SUBFI,MULI,ANDI,ORI,XORI,MULUI,CSR,LDI:
 	Source2Valid = `TRUE;
 OSR2:
-	case(isn.r2.func)
+	case(isn.r3.func)
 	RTI:	Source2Valid = `TRUE;
 	REX:	Source2Valid = `TRUE;
 	default: Source2Valid = `TRUE;

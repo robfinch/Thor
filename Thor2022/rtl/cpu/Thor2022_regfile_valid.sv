@@ -66,7 +66,7 @@ always_comb
 	for (n2 = 0; n2 < REB_ENTRIES; n2 = n2 + 1)
 	  iq_source[n] = |latestID[n2];
 
-always_ff @(negedge clk)
+always_comb// @(negedge clk)
 if (rst) begin
 	for (n = 0; n < NREGS; n = n + 1)
 		next_regfile_valid[n] = 1'd1;
@@ -85,12 +85,14 @@ else begin
 	  end
 	end
 	
-	if (commit0_wr && !regfile_valid[commit0_tgt] && !(branchmiss && !livetarget[commit0_tgt])) begin
-		next_regfile_valid[commit0_tgt] = (regfile_src[commit0_tgt]==commit0_id) || (branchmiss && iq_source[commit0_id]);
+	if (commit0_wr && !regfile_valid[commit0_tgt]) begin// && !(branchmiss && !livetarget[commit0_tgt])) begin
+		if ((regfile_src[commit0_tgt]==commit0_id) || (branchmiss && iq_source[commit0_id]))
+			next_regfile_valid[commit0_tgt] = 1'b1;
   	$display("Regfile %d valid=%d", commit0_tgt, (regfile_src[commit0_tgt]==commit0_id) || (branchmiss && iq_source[commit0_id]));
   end
-	if (commit1_wr && !regfile_valid[commit1_tgt] && !(branchmiss && !livetarget[commit1_tgt])) begin
-		next_regfile_valid[commit1_tgt] = (regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]);
+	if (commit1_wr && !regfile_valid[commit1_tgt]) begin// && !(branchmiss && !livetarget[commit1_tgt])) begin
+		if ((regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]))
+			next_regfile_valid[commit1_tgt] = 1'b1;
   	$display("Regfile %d valid=%d", commit1_tgt, (regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]));
 	end
 

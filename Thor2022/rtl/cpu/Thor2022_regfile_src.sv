@@ -38,7 +38,7 @@
 import Thor2022_pkg::*;
 
 module Thor2022_regfile_src(rst, clk, head0,
-	commit0_id, commit0_wr, commit0_tgt, commit1_wr, commit1_tgt,
+	commit0_id, commit0_wr, commit0_tgt, commit1_id, commit1_wr, commit1_tgt,
 	branchmiss, reb, latestID, livetarget, latestID2, livetarget2, 
 	decbus0, decbus1, dec0, dec1, regfile_valid, next_regfile_src, regfile_src);
 input rst;
@@ -47,6 +47,7 @@ input [2:0] head0;
 input [5:0] commit0_id;
 input commit0_wr;
 input [5:0] commit0_tgt;
+input [5:0] commit1_id;
 input commit1_wr;
 input [5:0] commit1_tgt;
 input branchmiss;
@@ -63,7 +64,12 @@ input [NREGS-1:0] regfile_valid;
 output reg [5:0] next_regfile_src [0:NREGS-1];
 output reg [5:0] regfile_src [0:NREGS-1];
 
-integer n,n1;
+integer n,n1,n2;
+
+reg [REB_ENTRIES-1:0] iq_source;
+always_comb
+	for (n2 = 0; n2 < REB_ENTRIES; n2 = n2 + 1)
+	  iq_source[n] = |latestID[n2];
 
 always_ff @(negedge clk)
 if (rst) begin
@@ -127,6 +133,14 @@ else begin
 				end
 			end
 		end
+	end
+	if (commit0_wr && !regfile_valid[commit0_tgt]) begin// && !(branchmiss && !livetarget[commit0_tgt])) begin
+		if ((regfile_src[commit0_tgt]==commit0_id) || (branchmiss && iq_source[commit0_id]))
+			next_regfile_src[commit0_tgt] = 5'd31;
+  end
+	if (commit1_wr && !regfile_valid[commit1_tgt]) begin// && !(branchmiss && !livetarget[commit1_tgt])) begin
+		if ((regfile_src[commit1_tgt]==commit1_id) || (branchmiss && iq_source[commit1_id]))
+			next_regfile_src[commit1_tgt] = 5'd31;
 	end
 	/*
 	if (commit0_wr) begin

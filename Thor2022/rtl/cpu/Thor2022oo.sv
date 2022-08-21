@@ -127,6 +127,7 @@ SSrcId oldest;
 wire [2:0] next_open_buf;
 wire open_buf;
 reg [2:0] queued0;
+reg [2:0] prev_queued0;
 
 reg [2:0] sp_sel;			// stack pointer selector
 reg fetch2 = 1'b0;
@@ -366,6 +367,7 @@ Thor2022_regfile_src urfs1
 	.commit0_id(commit0_src),
 	.commit0_wr(commit0_wr),
 	.commit0_tgt(commit0_tgt),
+	.commit1_id(commit1_src),
 	.commit1_wr(commit1_wr),
 	.commit1_tgt(commit1_tgt),
 	.branchmiss(branchmiss),
@@ -719,8 +721,8 @@ end
 
 Thor2022_decoder udec0 (
 	.ir(decomp_buf.ir),
-	.xir(decode_buf.ir),
-	.xval(decode_buf.v),
+	.xir(reb[queued0].ir),
+	.xval(reb[queued0].v),
 	.mir(dmir),
 	.sp_sel(sp_sel),
 	.mval(dmval),
@@ -752,16 +754,17 @@ always_comb
 	else
 		rfop = preg[cioreg];
 */
+reg rfocv;
 always_comb
-	rfoa_v = next_regfile_valid[Ra] || Source1Valid(ifetch_buf.ir);
+	rfoa_v = (next_regfile_valid[Ra]) || Source1Valid(decomp_buf.ir);
 always_comb
-	rfob_v = next_regfile_valid[Rb] || Source2Valid(ifetch_buf.ir);
+	rfob_v = (next_regfile_valid[Rb]) || Source2Valid(decomp_buf.ir);
 always_comb
-	rfoc_v = next_regfile_valid[Rc] || Source3Valid(ifetch_buf.ir);
+	rfoc_v = (next_regfile_valid[Rc]) || Source3Valid(decomp_buf.ir);
 always_comb
-	rfot_v = next_regfile_valid[Rt] || SourceTValid(ifetch_buf.ir);
+	rfot_v = (next_regfile_valid[Rt]) || SourceTValid(decomp_buf.ir);
 always_comb
-	rfom_v = next_regfile_valid[Rvm] || SourceMValid(ifetch_buf.ir);
+	rfom_v = (next_regfile_valid[Rvm]) || SourceMValid(decomp_buf.ir);
 /*
 always_comb
 	rfoa_v1 = (reb[head0].dec.Rt==deco1.Ra && reb[head0].v && reb[head0].executed && reb[head0].dec.rfwr) || regfile_src[deco1.Ra]==5'd31 || Source1Valid(reb[dec1].ir);
@@ -1301,7 +1304,7 @@ else begin
 	tDisplayRegs();
 	$display("REB");
 	for (n14 = 0; n14 < REB_ENTRIES; n14 = n14 + 1) begin
-		$display("  %d: %c%c%c %c%c%c%c%c%c %h: %h %h T=%h%c %d A=%h%c %d B=%h%c %d C=%h%c %d",
+		$display("  %d: %c%c%c %c%c%c%c%c%c %h: %h %h T%d=%h%c %d A%d=%h%c %d B%d=%h%c %d C%d=%h%c %d I=%h",
 		n14[3:0],
 		n14==queued0 ? "Q" : " ",
 		n14==exec ? "X": " ",
@@ -1315,18 +1318,23 @@ else begin
 		reb[n14].ip,
 		reb[n14].ir,
 		reb[n14].res,
+		reb[n14].dec.Rt,
 		reb[n14].it,
 		reb[n14].itv ? "v" : " ",
 		reb[n14].its,
+		reb[n14].dec.Ra,
 		reb[n14].ia,
 		reb[n14].iav ? "v": " ",
 		reb[n14].ias,
+		reb[n14].dec.Rb,
 		reb[n14].ib,
 		reb[n14].ibv ? "v" : " ",
 		reb[n14].ibs,
+		reb[n14].dec.Rc,
 		reb[n14].ic,
 		reb[n14].icv ? "v" : " ",
-		reb[n14].ics
+		reb[n14].ics,
+		reb[n14].dec.imm
 		);
 	end
 	tOnce();
@@ -1334,7 +1342,7 @@ else begin
 	tDecompress0();
 //	tDecompress1();
 	tDecode();
-	tQueueInsn();
+//	tQueueInsn();
 	tExecute();
 	tWriteback();
 	tSyncTrailer();
@@ -1448,6 +1456,7 @@ begin
 	for (n6 = 0; n6 < 8; n6 = n6 + 1) begin
 		reb[n6] <= 'd0;
 		reb[n6].v <= 1'b1;
+		reb[n6].decoded <= 1'b1;
 		reb[n6].executed <= 1'b0;
 		reb[n6].cause <= 16'h0000;
 		reb[n6].ir <= NOP;
@@ -2158,7 +2167,7 @@ begin
 	$display("Decomp:");
 	disassem(ifetch_buf.ir, ifetch_buf.ip);
 	if (advance_pipe) begin
-		decomp_buf <= branchmiss ? 'd0 : ifetch_buf;
+		decomp_buf <= ifetch_buf;
 		decomp_buf.ir <= ifetch_buf.ir ^ key;
 		decomp_buf.decompressed <= 1'b1;
 	end
@@ -2248,74 +2257,104 @@ begin
 		prev_dec <= dec;
 		dec <= next_dec0;
 	end
-	$display("Decode:");
+	$display("Decode/Queue to %d:", next_open_buf);
 	disassem(decomp_buf.ir, decomp_buf.ip);
 	$display("  ip=%h ir=%h", decomp_buf.ip, decomp_buf.ir);
 	$display("  Ra=%d Rb=%d Rc=%d Rt=%d Rvm=%d", Ra, Rb, Rc, Rt, Rvm);
-	$display("  ip=%h ir=%h", decode_buf.ip, decode_buf.ir);
-	$display("  Ra=%d iav=%d ias=%d rfoa=%h", Ra, rfoa_v, Source1Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Ra], rfoa);
-	$display("  Rb=%d ibv=%d ibs=%d rfob=%h", Rb, rfob_v, Source2Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rb], rfob);
-	$display("  Rc=%d icv=%d ics=%d rfoc=%h", Rc, rfoc_v, Source3Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rc], rfoc);
+	$display("  Ra=%d iav=%d ias=%d rfoa=%h", Ra, rfoa_v, Source1Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Ra], rfoa);
+	$display("  Rb=%d ibv=%d ibs=%d rfob=%h", Rb, rfob_v, Source2Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rb], rfob);
+	$display("  Rc=%d icv=%d ics=%d rfoc=%h", Rc, rfoc_v, Source3Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rc], rfoc);
 	$display("  imm=%h", deco.imm);
+	queued0 <= next_open_buf;
 	if (advance_pipe) begin
 		dec <= MaxSrcId;
-		decode_buf <= branchmiss ? 'd0 : decomp_buf;
-		decode_buf.dec <= deco;
-		decode_buf.ia <= ifetch_buf.dec.Ravec ? vroa : {NLANES{rfoa}};
-		decode_buf.ib <= ifetch_buf.dec.Rbvec ? vrob : {NLANES{rfob}};
-		decode_buf.ic <= ifetch_buf.dec.Rcvec ? vroc : {NLANES{rfoc}};
-		decode_buf.it <= ifetch_buf.dec.Rtvec ? vrot : {NLANES{rfot}};
-		decode_buf.vmask <= rfom;
-		decode_buf.iav <= rfoa_v;
-		decode_buf.ibv <= rfob_v;
-		decode_buf.icv <= rfoc_v;
-		decode_buf.itv <= rfot_v;
-		decode_buf.vmv <= rfom_v;
-		decode_buf.ias <= Source1Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Ra];
-		decode_buf.ibs <= Source2Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rb];
-		decode_buf.ics <= Source3Valid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rc];
-		decode_buf.its <= SourceTValid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rt];
-		decode_buf.vms <= SourceMValid(ifetch_buf.ir) ? 6'd31 : regfile_src[Rvm];
+		reb[next_open_buf] <= decomp_buf;
+		reb[next_open_buf].dec <= deco;
+		reb[next_open_buf].ia <= decomp_buf.dec.Ravec ? vroa : {NLANES{rfoa}};
+		reb[next_open_buf].ib <= decomp_buf.dec.Rbvec ? vrob : {NLANES{rfob}};
+		reb[next_open_buf].ic <= decomp_buf.dec.Rcvec ? vroc : {NLANES{rfoc}};
+		reb[next_open_buf].it <= decomp_buf.dec.Rtvec ? vrot : {NLANES{rfot}};
+		reb[next_open_buf].vmask <= rfom;
+		if (reb[queued0].dec.Rt == Ra && reb[queued0].dec.rfwr) begin
+			reb[next_open_buf].iav <= 1'b0;
+			reb[next_open_buf].ias <= queued0;
+		end
+		else begin
+			reb[next_open_buf].iav <= rfoa_v;
+			reb[next_open_buf].ias <= Source1Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Ra];
+		end
+		if (reb[queued0].dec.Rt == Rb && reb[queued0].dec.rfwr) begin
+			reb[next_open_buf].ibv <= 1'b0;
+			reb[next_open_buf].ibs <= queued0;
+		end
+		else begin
+			reb[next_open_buf].ibv <= rfob_v;
+			reb[next_open_buf].ibs <= Source2Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rb];
+		end
+		if (reb[queued0].dec.Rt == Rc && reb[queued0].dec.rfwr) begin
+			reb[next_open_buf].icv <= 1'b0;
+			reb[next_open_buf].ics <= queued0;
+		end
+		else begin
+			reb[next_open_buf].icv <= rfoc_v;
+			reb[next_open_buf].ics <= Source3Valid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rc];
+		end
+		if (reb[queued0].dec.Rt == Rt && reb[queued0].dec.rfwr) begin
+			reb[next_open_buf].itv <= 1'b0;
+			reb[next_open_buf].its <= queued0;
+		end
+		else begin
+			reb[next_open_buf].itv <= rfot_v;
+			reb[next_open_buf].its <= SourceTValid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rt];
+		end
+		if (reb[queued0].dec.Rt == Rvm && reb[queued0].dec.rfwr) begin
+			reb[next_open_buf].vmv <= 1'b0;
+			reb[next_open_buf].vms <= queued0;
+		end
+		else begin
+			reb[next_open_buf].vmv <= rfom_v;
+			reb[next_open_buf].vms <= SourceMValid(decomp_buf.ir) ? 6'd31 : next_regfile_src[Rvm];
+		end
 		if ((Ra==6'd44 && omode < 2'b01) ||
 				(Ra==6'd45 && omode < 2'b10) ||
 				(Ra==6'd46 && omode < 2'b11) ||
 				(Ra==6'd47 && omode < 2'b11))
 			if (~|ifetch_buf.cause)
-				decode_buf.cause <= {8'h00,FLT_PRIV};
+				reb[next_open_buf].cause <= {8'h00,FLT_PRIV};
 		if ((Rb==6'd44 && omode < 2'b01) ||
 				(Rb==6'd45 && omode < 2'b10) ||
 				(Rb==6'd46 && omode < 2'b11) ||
 				(Rb==6'd47 && omode < 2'b11))
 			if (~|ifetch_buf.cause)
-				decode_buf.cause <= {8'h00,FLT_PRIV};
+				reb[next_open_buf].cause <= {8'h00,FLT_PRIV};
 		if ((Rc==6'd44 && omode < 2'b01) ||
 				(Rc==6'd45 && omode < 2'b10) ||
 				(Rc==6'd46 && omode < 2'b11) ||
 				(Rc==6'd47 && omode < 2'b11))
 			if (~|ifetch_buf.cause)
-				decode_buf.cause <= {8'h00,FLT_PRIV};
+				reb[next_open_buf].cause <= {8'h00,FLT_PRIV};
 		if ((Rt==6'd44 && omode < 2'b01) ||
 				(Rt==6'd45 && omode < 2'b10) ||
 				(Rt==6'd46 && omode < 2'b11) ||
 				(Rt==6'd47 && omode < 2'b11))
 			if (~|ifetch_buf.cause)
-				decode_buf.cause <= {8'h00,FLT_PRIV};
+				reb[next_open_buf].cause <= {8'h00,FLT_PRIV};
 		// There is no register fetch for an immediate prefix. Claim the stage is
 		// done already.
-		decode_buf.decoded <= 1'b1;
+		reb[next_open_buf].decoded <= 1'b1;
 		if (deco.isExi) begin
-			decode_buf.decoded <= 1'b0;
-			decode_buf.executed <= 1'b1;
+			reb[next_open_buf].decoded <= 1'b0;
+			reb[next_open_buf].executed <= 1'b1;
 		end
-		decode_buf.istk_depth <= distk_depth;
+		reb[next_open_buf].istk_depth <= distk_depth;
 		//reb[dec].idv <= !fnPrevReg(dec);
-		decode_buf.niv <= 1'b1;//NextInsnValid(reb[dec].ir) || fnNextInsnValid(dec);
-		decode_buf.step <= 'd0;
-		decode_buf.count <= 'd0;
+		reb[next_open_buf].niv <= 1'b1;//NextInsnValid(reb[dec].ir) || fnNextInsnValid(dec);
+		reb[next_open_buf].step <= 'd0;
+		reb[next_open_buf].count <= 'd0;
 //		reb[dec].mask_bit <= mask[dstep];
 //		reb[dec].vmask <= rfom;
-		decode_buf.zbit <= deco.Rz;
-		decode_buf.predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==6'd31) || deco.jxz);
+		reb[next_open_buf].zbit <= deco.Rz;
+		reb[next_open_buf].predictable_branch <= (deco.jxx && (reb[dec].ir.jxx.Rc=='d0 || reb[dec].ir.jxx.Rc==6'd31) || deco.jxz);
 		/*
 		if (fnPrevReg(dec)) begin
 			if (reb[fnPrevInsn(dec)].decompressed) begin
@@ -2362,6 +2401,8 @@ begin
 //		if (deco.jmp|deco.bra|deco.jxx)
 //  		decode_buf.cares.offs <= decode_buf.ip.offs + decode_buf.ilen;
 	end
+	if (reb[queued0].ias==queued0 && reb[queued0].v && !reb[queued0].iav)
+		$stop;
 
 end
 endtask
@@ -2376,16 +2417,49 @@ always_comb
 */	
 always_comb
 	regfetch0 = next_open_buf;
-	
+
+always_ff @(posedge clk_g)
+	prev_queued0 <= queued0;
+
 task tQueueInsn;
 begin
+	/*
 	if (advance_pipe) begin
 		queued0 <= next_open_buf;
 		$display("Queue to %d", next_open_buf);
 		disassem(decode_buf.ir, decode_buf.ip);
-		$display("  ip=%h ir=%h", decode_buf.ip, decode_buf.ir);
 		reb[next_open_buf] <= decode_buf;
+		$display("  ip=%h ir=%h", decode_buf.ip, decode_buf.ir);
+		$display("  Ra=%d Rb=%d Rc=%d Rt=%d Rvm=%d", decode_buf.dec.Ra, decode_buf.dec.Rb, decode_buf.dec.Rc, decode_buf.dec.Rt, decode_buf.dec.Rvm);
+		$display("  Ra=%d iav=%d ias=%d rfoa=%h", decode_buf.dec.Ra, decode_buf.iav, decode_buf.ias, decode_buf.ia);
+		$display("  Rb=%d ibv=%d ibs=%d rfob=%h", decode_buf.dec.Rb, decode_buf.ibv, decode_buf.ibs, decode_buf.ib);
+		$display("  Rc=%d icv=%d ics=%d rfoc=%h", decode_buf.dec.Rc, decode_buf.icv, decode_buf.ics, decode_buf.ic);
 	end
+	else
+		queued0 <= 3'd7;
+	// This kludge fixes back-to-back queues with register
+	// dependencies.
+	if (advance_pipe) begin
+		if (reb[prev_queued0].dec.Rt == reb[queued0].dec.Ra && reb[prev_queued0].dec.rfwr) begin
+			reb[queued0].ias <= prev_queued0;
+			if (prev_queued0==queued0)
+				$stop;
+		end
+		if (reb[prev_queued0].dec.Rt == reb[queued0].dec.Rb && reb[prev_queued0].dec.rfwr) begin
+			reb[queued0].ibs <= prev_queued0;
+			if (prev_queued0==queued0)
+				$stop;
+		end
+		if (reb[prev_queued0].dec.Rt == reb[queued0].dec.Rc && reb[prev_queued0].dec.rfwr)
+			reb[queued0].ics <= prev_queued0;
+		if (reb[prev_queued0].dec.Rt == reb[queued0].dec.Rt && reb[prev_queued0].dec.rfwr)
+			reb[queued0].its <= prev_queued0;
+		if (reb[prev_queued0].dec.Rt == reb[queued0].dec.Rvm && reb[prev_queued0].dec.rfwr)
+			reb[queued0].vms <= prev_queued0;
+	end
+	if (reb[queued0].ias==queued0 && reb[queued0].v && !reb[queued0].iav)
+		$stop;
+	*/
 end
 endtask
 
@@ -2828,7 +2902,7 @@ begin
 	if (reb[exec].dec.rts) begin
 		if (!ret_match) begin
 			if (reb[exec].ir.rts.lk != 2'd0) begin
-				tNullReb(exec);
+				//tNullReb(exec);
 	  		branchmiss_adr.offs <= reb[exec].ic[0];// + {reb[exec].ir.rts.cnst,1'b0};
 	  		branchmiss_adr.micro_ip <= 'd0;
 	  		reb[exec].jmptgt <= reb[exec].ic[0];
@@ -2961,6 +3035,42 @@ input SSrcId m;
 input VecValue bus;
 integer n;
 begin
+	/*
+	if (advance_pipe) begin
+		
+		if (!decode_buf.iav && decode_buf.v) begin
+			if (decode_buf.ias==m) begin
+				reb[next_open_buf].ia <= bus;
+				reb[next_open_buf].iav <= 1'b1;
+			end
+		end
+		if (!decode_buf.ibv && decode_buf.v) begin
+			if (decode_buf.ibs==m) begin
+				reb[next_open_buf].ib <= bus;
+				reb[next_open_buf].ibv <= 1'b1;
+			end
+		end
+		if (!decode_buf.icv && decode_buf.v) begin
+			if (decode_buf.ics==m) begin
+				reb[next_open_buf].ic <= bus;
+				reb[next_open_buf].icv <= 1'b1;
+			end
+		end
+		if (!decode_buf.itv && decode_buf.v) begin
+			if (decode_buf.its==m) begin
+				reb[next_open_buf].it <= bus;
+				reb[next_open_buf].itv <= 1'b1;
+			end
+		end
+		if (!decode_buf.vmv && decode_buf.v) begin
+			if (decode_buf.vms==m) begin
+				reb[next_open_buf].vmask <= bus;
+				reb[next_open_buf].vmv <= 1'b1;
+			end
+		end
+		
+	end
+	*/
 	for (n = 0; n < REB_ENTRIES; n = n + 1) begin
 		if (!reb[n].iav && reb[n].decoded) begin
 			if (reb[n].ias==m) begin
@@ -3372,7 +3482,7 @@ begin
   	reb[exec].jmptgt.offs <= reb[exec].ic[0] + reb[exec].dec.jmptgt;
 		xx <= 4'd8;
   end
-  tNullReb(exec);
+  //tNullReb(exec);
   tStackRetadr(exec);
 end
 endtask
