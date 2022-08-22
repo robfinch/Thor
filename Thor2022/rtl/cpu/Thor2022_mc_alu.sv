@@ -39,7 +39,7 @@
 import Thor2022_pkg::*;
 
 module Thor2022_mc_alu(rst, clk, clk2x, state, ir, dec, xa, xb, xc, imm, res, res_t2,
-	multovf, dvByZr, dvd_done, dfmul_done);
+	multovf, dvByZr, dvd_done, dfmul_done, shortcut);
 input rst;
 input clk;
 input clk2x;
@@ -56,28 +56,68 @@ output multovf;
 output dvByZr;
 output dvd_done;
 output dfmul_done;
+output reg shortcut;
 
 parameter MUL1 = 6'd5;
 parameter MUL9 = 6'd14;
 
+integer n,n1;
+
 wire [$bits(Value)*2-1:0] mul_prod1;
 reg [$bits(Value)*2-1:0] mul_prod;
-wire [$bits(Value)*2-1:0] mul_prod2561;
-reg [$bits(Value)*2-1:0] mul_prod256='d0;
+wire [$bits(Value)*2-1:0] mul_prod1281;
+reg [$bits(Value)*2-1:0] mul_prod128='d0;
 wire [39:0] mulf_prod;
 reg mul_sign;
 Value aa, bb;
 
-// 18 stage pipeline
-mult128x128 umul1
+reg [7:0] opcode [0:7];
+reg [6:0] func [0:7];
+Value [0:7] opera;
+Value [0:7] operb;
+Value [0:7] operc;
+Value [0:7] opimm;
+Value [0:7] res1;
+Value [0:7] res2;
+
+// Under construction: results caching
+reg func_match;
+
+always_comb
+for (n1 = 0; n1 < 8; n1 = n1 + 1)
+	func_match =
+		((ir.r3.func==MUL || ir.r3.func==MULH) && (func[n1]==MUL || func[n1]==MULH)) ||
+		((ir.r3.func==MULU || ir.r3.func==MULUH) && (func[n1]==MULU || func[n1]==MULUH)) ||
+		(ir.r3.func==DIV || ir.r3.func==REM) && (func[n1]==DIV || func[n1]==REM) ||
+		(ir.r3.func==DIVU || ir.r3.func==REMU) && (func[n1]==DIVU || func[n1]==REMU)
+		;
+
+always_ff @(posedge clk)
+begin
+	shortcut <= 1'b0;
+	/*
+	for (n = 0; n < 8; n = n + 1) begin
+		if (ir.any.opcode==opcode[n] && func_match &&
+			xa==opera[n] && xb==operb[n] && xc==operc[n] && imm==opimm[n]) begin
+			res3 <= res1[n];
+			res4 <= res2[n];
+			shortcut <= 1'b1;
+		end
+	end
+	*/
+end
+
+
+// 11 stage pipeline
+mult64x64 umul1
 (
 	.clk(clk),
 	.ce(1'b1),
 	.a(aa),
 	.b(bb),
-	.o(mul_prod2561)
+	.o(mul_prod1281)
 );
-assign multovf = ((dec.mulu|dec.mului) ? mul_prod256[$bits(Value)*2-1:$bits(Value)] != 'd0 : mul_prod256[$bits(Value)*2-1:$bits(Value)] != {$bits(Value){mul_prod256[$bits(Value)-1]}});
+assign multovf = ((dec.mulu|dec.mului) ? mul_prod128[$bits(Value)*2-1:$bits(Value)] != 'd0 : mul_prod128[$bits(Value)*2-1:$bits(Value)] != {$bits(Value){mul_prod128[$bits(Value)-1]}});
 
 // 3 stage pipeline
 mult24x16 umulf
@@ -147,15 +187,26 @@ DFPMultiply128nr udfmul1
 `endif
 
 always_comb
+if (shortcut)
 case(ir.any.opcode)
 R2:
 	case(ir.r3.func)
-	MUL:	res = mul_prod256[$bits(Value)-1:0] + xc;
-	MULH:	res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULU:	res = mul_prod256[$bits(Value)-1:0] + xc;
-	MULUH:	res = mul_prod256[$bits(Value)*2-1:$bits(Value)];
-	MULSU:res = mul_prod256[$bits(Value)-1:0] + xc;
-	MULF:	res = mul_prod256[$bits(Value)-1:0] + xc;
+//	MUL,MULU,DIV,DIVU:			res = res3;
+//	MULH,MULUH,REM,REMU:		res = res4;
+	default:			res = 'd0;
+	endcase
+default:			res = 'd0;
+endcase
+else
+case(ir.any.opcode)
+R2:
+	case(ir.r3.func)
+	MUL:	res = mul_prod128[$bits(Value)-1:0] + xc;
+	MULH:	res = mul_prod128[$bits(Value)*2-1:$bits(Value)];
+	MULU:	res = mul_prod128[$bits(Value)-1:0] + xc;
+	MULUH:	res = mul_prod128[$bits(Value)*2-1:$bits(Value)];
+	MULSU:res = mul_prod128[$bits(Value)-1:0] + xc;
+	MULF:	res = mul_prod128[$bits(Value)-1:0] + xc;
 	DIV:	res = qo;
 	DIVU:	res = qo;
 	DIVSU:	res = qo;
@@ -169,9 +220,9 @@ DF2:
 	DFADD,DFSUB:	res = dfaso;
 	default:	res = 'd0;
 	endcase
-MULI,MULIL:		res = mul_prod256[$bits(Value)-1:0];
-MULUI,MULUIL:	res = mul_prod256[$bits(Value)-1:0];
-MULFI:				res = mul_prod256[$bits(Value)-1:0];
+MULI,MULIL:		res = mul_prod128[$bits(Value)-1:0];
+MULUI,MULUIL:	res = mul_prod128[$bits(Value)-1:0];
+MULFI:				res = mul_prod128[$bits(Value)-1:0];
 DIVI,DIVIL:		res = qo;
 default:			res = 'd0;
 endcase
@@ -226,7 +277,7 @@ MUL1:
 MUL9:
   begin
 //    mul_prod <= (xMulf|xMulfi) ? mulf_prod : mul_sign ? -mul_prod1 : mul_prod1;
-    mul_prod256 <= (dec.mulf|dec.mulfi) ? mulf_prod : mul_sign ? -mul_prod2561 : mul_prod2561;
+    mul_prod128 <= (dec.mulf|dec.mulfi) ? mulf_prod : mul_sign ? -mul_prod1281 : mul_prod1281;
     //upd_rf <= `TRUE;
   end
 endcase

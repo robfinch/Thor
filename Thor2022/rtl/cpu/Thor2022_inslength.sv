@@ -37,11 +37,12 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_inslength(ir, o);
+module Thor2022_inslength(clk, ir, o);
+input clk;
 input Instruction ir;
 output reg [3:0] o;
 
-always_comb
+always_ff @(posedge clk)
 casez(ir.any.opcode)
 BRK:		o = 4'd2;
 R1:			o = 4'd4;

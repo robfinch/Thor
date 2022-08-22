@@ -639,7 +639,7 @@ Thor2022_dcache_wr udcwre
 	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
 	.acr(tlbacr),
 	.eaeo(~ealow[6]),
-	.daeo(dadr[6]),
+	.daeo(~dadr[6]),
 	.wr(dcache_ewr)
 );
 
@@ -654,7 +654,7 @@ Thor2022_dcache_wr udcwro
 	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
 	.acr(tlbacr),
 	.eaeo(ealow[6]),
-	.daeo(~dadr[6]),
+	.daeo(dadr[6]),
 	.wr(dcache_owr)
 );
 
@@ -670,7 +670,7 @@ Thor2022_dcache_way udcwaye
 	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
 	.acr(tlbacr),
 	.eaeo(~ealow[6]),
-	.daeo(dadr[6]),
+	.daeo(~dadr[6]),
 	.lfsr(lfsr_o[1:0]),
 	.rway(dc_erway),
 	.wway(dc_ewway)
@@ -688,7 +688,7 @@ Thor2022_dcache_way udcwayo
 	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
 	.acr(tlbacr),
 	.eaeo(ealow[6]),
-	.daeo(~dadr[6]),
+	.daeo(dadr[6]),
 	.lfsr(lfsr_o[1:0]),
 	.rway(dc_orway),
 	.wway(dc_owway)

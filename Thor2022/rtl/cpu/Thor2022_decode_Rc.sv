@@ -50,6 +50,7 @@ begin
 frc = 1'b0;
 case(ir.any.opcode)
 R2:	Rc = ir.r3.Rc;
+STBS,STWS,STTS,STOS,
 STSP,
 STB,STW,STT,STO,STHC,STV,STHP,STPTR:
 	Rc = {1'b0,ir.st.Rs};

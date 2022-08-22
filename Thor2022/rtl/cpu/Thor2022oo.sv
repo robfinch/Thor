@@ -918,6 +918,8 @@ wire [4:0] aqe_qcnt;
 AQE aqe_dat, aqe_dato;
 
 VecValue mc_res;
+wire [NLANES-1:0] shortcut;
+
 always_comb
 	pn = 'd0;//reb[exec].pn;
 
@@ -994,7 +996,8 @@ Thor2022_mc_alu umcalu1
 	.multovf(multovf[g]),
 	.dvByZr(dvByZr[g]),
 	.dvd_done(dvd_done[g]),
-	.dfmul_done(dfmul_done[g])
+	.dfmul_done(dfmul_done[g]),
+	.shortcut(shortcut[g])
 );
 end
 endgenerate
@@ -1016,26 +1019,32 @@ Thor2022_valu64 uvalu1
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 //wire sig1 = ihit && !reb[fetch0].v && !branchmiss && fetch0 != prev_fetch0 && !fnIsRepInsn(ip);
-wire advance_pipe = (ihit||micro_ip!=7'd0) && open_buf && !branchmiss;
+reg advance_pipe;
+always_comb
+	advance_pipe = (ihit||micro_ip!=7'd0) && open_buf && !branchmiss;
 
-Thor2022_inslength uil(insn0, ilen0);
-Thor2022_inslength ui2(insn1, ilen1);
+// In simulation the instruction length is avaiable too soon in some cases
+// so it was delayed a 1/2 cycle using an inverted clock.
 
-// The following code not actually used. The beginnings of next_ip logic
-// under construction.
+Thor2022_inslength uil(~clk_g, insn0, ilen0);
+Thor2022_inslength ui2(~clk_g, insn1, ilen1);
+
 always_comb
 begin
 	if (branchmiss)
 		next_ip = branchmiss_adr;
 	else if (advance_pipe) begin
 		next_ip.micro_ip = 7'd0;
+		/*
 		if (fetch0 != fetch1 && fetch2) begin	// always false for now
 			next_ip.offs = ip.offs + ilen0 + ilen1;
 			next_ip.micro_ip <= next_mip1;
  		end
- 		else begin
+ 		else
+ 		*/
+ 		begin
 			next_ip.offs = ip.offs + ilen0;
-			next_ip.micro_ip <= next_mip;
+			next_ip.micro_ip = next_mip;
  		end
 	end
 	else begin
@@ -1595,12 +1604,15 @@ INVnRUN2:
 // Step1: setup operands and capture sign
 MUL1:
   begin
-    delay_cnt <= (aqe_dato.dec.mulf|aqe_dato.dec.mulfi) ? 8'd3 : 8'd18;	// Multiplier has 18 stages
+    delay_cnt <= (aqe_dato.dec.mulf|aqe_dato.dec.mulfi) ? 8'd3 : 8'd12;	// Multiplier has 12 stages
 	// Now wait for the six stage pipeline to finish
     goto (MUL2);
   end
 MUL2:
-  call(DELAYN,MUL9);
+	if (shortcut[0])
+		goto(INVnRUN);
+	else
+  	call(DELAYN,MUL9);
 MUL9:
   begin
     //upd_rf <= `TRUE;
@@ -1944,7 +1956,7 @@ begin
 //	if (ihit && (reb[tail].state==EMPTY || reb[tail].state==RETIRED) && !branchmiss) begin// && ((tail + 2'd1) & 3'd7) != head0) begin
 	if (branchmiss) begin
 		//prev_ip <= ip;
-		ip <= branchmiss_adr;
+		ip <= #1 branchmiss_adr;
 		tNullReb(missid);
 		clr_branchmiss <= 1'b1;
 	end
@@ -1983,36 +1995,38 @@ begin
 		cio <= {2'b00,cio[15:2]};
 		if (insn0.any.v && istep < vl && 1'b0) begin
 			istep <= istep + 2'd1;
-			ip <= ip;
+			ip <= #1 ip;
 		end
 //		else if ((insn.any.opcode==BSET || insn.any.opcode==STMOV || insn.any.opcode==STFND || insn.any.opcode==STCMP) && r58 != 64'd0)
 //			ip <= ip;
 		else if (micro_ip != 'd0) begin
 			if (fetch0!=fetch1 && fetch2)
 			begin
-				micro_ip <= next_mip1;
+				micro_ip <= #1 next_mip1;
 				//reb[fetch0].ir <= mcir;
 				//reb[fetch1].ir <= mcir1;
 			end
 			else
 			begin
-				micro_ip <= next_mip;
+				micro_ip <= #1 next_mip;
 				//reb[fetch0].ir <= mcir;
 				ifetch_buf.ir <= mcir;
 				ifetch_buf.ip <= ip;
+				ifetch_buf.ip.micro_ip <= micro_ip;
 			end
 			if (next_mip=='d0) begin
-				ip.offs <= ip.offs + incr;
-				ip.micro_ip <= 7'd0;
+				ip.offs <= #1 ip.offs + incr;
+				ip.micro_ip <= #1 7'd0;
 			end
 		end
 		else begin
 			istep <= 8'h00;
-			ip <= next_ip;
+			ip <= #1 next_ip;
+			//ip.offs <= #1 ip.offs + ilen0;
 		end
 		if (btbe & btb_hit) begin
 			btb_hit_count <= btb_hit_count + 2'd1;
-			ip <= btb_tgt;
+			ip <= #1 btb_tgt;
 		end
 		if (micro_ip=='d0) begin
 			ir <= insn0;
@@ -2021,36 +2035,37 @@ begin
 			ifetch_buf.ir <= insn0;
 			ifetch_buf.cause <= 16'h0000;
 			$display("%d %h reb[%d].ir=%h", $time, ip, fetch0, insn0);
-			ifetch_buf.ip <= ip;
+			ifetch_buf.ip <= #1 ip;
+			ifetch_buf.ip.micro_ip <= #1 'd0;
 //			if (fetch0!=fetch1 && fetch2)
 //				reb[fetch1].ir <= insn1;
 			micro_ir <= insn0;
 			case(insn0.any.opcode)
-			POP:		begin micro_ip <= 7'd1; ip <= ip; ip.micro_ip <= 7'd127; end
-			POP4R:	begin micro_ip <= 7'd5; ip <= ip; ip.micro_ip <= 7'd127; end
-			PUSH:		begin micro_ip <= 7'd10; ip <= ip; ip.micro_ip <= 7'd127; end
-			PUSH4R:	begin micro_ip <= 7'd15; ip <= ip; ip.micro_ip <= 7'd127; end
-			ENTER:	begin micro_ip <= 7'd32; ip <= ip; ip.micro_ip <= 7'd127; end
-			LEAVE:	begin micro_ip <= 7'd20; ip <= ip; ip.micro_ip <= 7'd127; end
+			POP:		begin micro_ip <= 7'd1; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			POP4R:	begin micro_ip <= 7'd5; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			PUSH:		begin micro_ip <= 7'd10; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			PUSH4R:	begin micro_ip <= 7'd15; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			ENTER:	begin micro_ip <= 7'd32; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			LEAVE:	begin micro_ip <= 7'd20; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
 //			STOO:		begin if (insn[10]) begin micro_ip <= 7'd28; ip <= ip; end end
-			LDCTX:	begin micro_ip <= 7'd96; ip <= ip; ip.micro_ip <= 7'd127; end
-			STCTX:	begin micro_ip <= 7'd64; ip <= ip; ip.micro_ip <= 7'd127; end
-			BSET:		begin micro_ip <= 7'd55; ip <= ip; ip.micro_ip <= 7'd127; end
+			LDCTX:	begin micro_ip <= 7'd96; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			STCTX:	begin micro_ip <= 7'd64; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
+			BSET:		begin micro_ip <= 7'd55; ip <= #1 ip; ip.micro_ip <= #1 7'd127; end
 			// Note that BRA and JMP still need to be decoded for the execute stage
 			// to work correctly.
 			BRA:		
 				begin
-					ip.offs <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
+					ip.offs <= #1 ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
 					ifetch_buf.jmptgt <= ip.offs + {{106{insn0[31]}},insn0[31:11],1'b0};
 				end
 			JMP:
 				if (insn0.jmp.Rc=='d0) begin
-					ip.offs <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					ip.offs <= #1 {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					ifetch_buf.jmptgt <= {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					$display("JMP %h", {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
 				end
 				else if (insn0.jmp.Rc==6'd31) begin
-					ip.offs <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
+					ip.offs <= #1 ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					ifetch_buf.jmptgt <= ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0};
 					$display("JMP %h", ip.offs + {{30{insn0.jmp.Tgthi[18]}},insn0.jmp.Tgthi,insn0.jmp.Tgtlo,1'b0});
 				end
@@ -2080,7 +2095,7 @@ begin
 		if (micro_ip=='d0 || micro_ip==7'd27) begin
 			if ((insn0.any.opcode==RTS && insn0[10:9]==2'b01) || micro_ip==7'd27) begin
 				if (rts_sp > 5'd0) begin
-					ip <= rts_stack[rts_sp-2'd1];
+					ip <= #1 rts_stack[rts_sp-2'd1];
 					rts_sp <= rts_sp - 1'd1;
 					rts_pcount <= rts_pcount + 2'd1;
 				end
@@ -2142,6 +2157,7 @@ begin
 			istk_depth <= istk_depth + 2'd1;
 			ifetch_buf.ir <= NOP_INSN;
 			ifetch_buf.ip <= ip;
+			ifetch_buf.ip.micro_ip <= 'd0;
 			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
@@ -2152,6 +2168,7 @@ begin
 			istk_depth <= istk_depth + 2'd1;
 			ifetch_buf.ir <= NOP_INSN;
 			ifetch_buf.ip <= ip;
+			ifetch_buf.ip.micro_ip <= 'd0;
 			//reb[fetch0].ir <= NOP_INSN;
 			ir <= NOP_INSN;
 		end
@@ -2162,8 +2179,8 @@ begin
 	end
 	// Wait for cache load or open buffer
 	else begin
-		micro_ip <= micro_ip;
-		ip <= ip;
+		micro_ip <= #1 micro_ip;
+		ip <= #1 ip;
 	end
 	prev_ip <= ip;
 end
@@ -3288,7 +3305,7 @@ integer n8;
 integer n11;
 begin
 	for (n11 = 0; n11 < REB_ENTRIES; n11 = n11 + 1) begin
-		if (reb[n11].executed) begin
+		if (reb[n11].decoded) begin
 			for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1) begin
 				if (reb[n8].dec.isExi && reb[n8].sns==reb[n11].sns-1) begin
 					$display("Prefix freed[%d]",n8);

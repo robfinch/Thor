@@ -63,19 +63,19 @@ else begin
 		if (!inv && (dce & hit & acr[3]) &&
 			(func==MR_STORE || func==MR_MOVST || func==M_CALL) &&
 			ack) begin
-			if (~eaeo)
+			//if (~eaeo)
 				wway <= rway;
 		end
 	MEMORY_ACKHI:
 		if ((dce & hit & acr[3]) && 
 			(func==MR_STORE || func==MR_MOVST || func==M_CALL) &&
 			ack) begin
-			if (eaeo)
+			//if (eaeo)
 				wway <= rway;
 		end
 	DFETCH7:
 		begin
-	  	if (daeo)
+	  	//if (daeo)
 				wway <= lfsr;
 	  end
 	default:	;

@@ -54,7 +54,7 @@ parameter NLANES = 2;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 parameter REB_ENTRIES = 6;
-parameter NREGS = 48;
+parameter NREGS = 56;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
@@ -386,6 +386,9 @@ parameter SRLH		= 7'h49;
 parameter SRAH		= 7'h4A;
 parameter ROLH		= 7'h4B;
 parameter RORH		= 7'h4C;
+parameter REM			= 7'h58;
+parameter REMU		= 7'h59;
+parameter REMSU		= 7'h5A;
 
 // Vector Specific
 // R1
@@ -545,7 +548,7 @@ parameter MR_PTG = 4'd15;
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_SEMA	= 16'h?00C;
 parameter CSR_PTBR	= 16'h1003;
-parameter CSR_ARTBR	= 16'h1005;
+parameter CSR_HMASK	= 16'h1005;
 parameter CSR_FSTAT	= 16'h?014;
 parameter CSR_ASID	= 16'h101F;
 parameter CSR_KEYS	= 16'b00010000001000??;
@@ -1212,8 +1215,6 @@ typedef struct packed
 	CodeAddress ip;
 	Instruction ir;
 	Instruction lsm_mask;
-	logic w256;
-	logic w512;
 	logic [3:0] ilen;
 	logic [3:0] istk_depth;
 	DecodeOut dec;
@@ -1274,8 +1275,6 @@ typedef struct packed
 	SrcId nxt_vms;
 	//logic [511:0] res;
 	VecValue res;
-	VecValue res_t2;
-	CodeAddress cares;
 	sFPFlags fp_flags;
 	logic [5:0] res_ele;
 //	logic [15:0] cause;
