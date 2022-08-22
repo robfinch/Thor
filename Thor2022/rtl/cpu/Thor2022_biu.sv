@@ -150,10 +150,10 @@ Value movdat;
 
 // 0,1: PTE
 // 2,3: PMT
-// 4,5: PTE address
-// 6,7: PMT address
-// 8,9: TLB update address + way
-// 10,11: trigger read / write
+// 4: PTE address
+// 5: PMT address
+// 6: TLB update address + way
+// 15: trigger read / write
 reg [63:0] tlb_bucket [0:15];
 
 Address cta;		// card table address
@@ -477,7 +477,7 @@ Address dadr;
 reg [511:0] dci;		// 512 + 120 bit overflow area
 wire [511:0] dc_eline, dc_oline;
 reg [1023:0] dc_line;
-reg [511:0] datil;
+reg [1023:0] datil;
 reg dcachable;
 reg [1:0] dc_erway,prev_dc_erway;
 reg [1:0] dc_orway,prev_dc_orway;
@@ -490,7 +490,7 @@ dcache_blkmem udcb1e (
   .clka(clk),    // input wire clka
   .ena(1'b1),      // input wire ena
   .wea(dcache_ewr),      // input wire [0 : 0] wea
-  .addra({dc_ewway,dadr[13:7]}),  // input wire [8 : 0] addra
+  .addra({dc_ewway,dadr[13:7]+adr_o[6]}),  // input wire [8 : 0] addra
   .dina(dci),    // input wire [511 : 0] dina
   .clkb(clk),    // input wire clkb
   .enb(1'b1),      // input wire enb
@@ -722,8 +722,8 @@ begin
 	tlb_ib[191:128] <= tlb_bucket[2];
 	tlb_ib[255:128] <= tlb_bucket[3];
 	tlb_ib.adr 			<= tlb_bucket[4];
-	tlb_ib.pmtadr 	<= tlb_bucket[6];
-	tlb_ia <= tlb_bucket[8][31:0];
+	tlb_ib.pmtadr 	<= tlb_bucket[5];
+	tlb_ia <= tlb_bucket[6][31:0];
 end
 
 `ifndef SUPPORT_HASHPT
@@ -1103,6 +1103,7 @@ PDCE [11:0] ptc;
 // State Machine
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+reg dfetch2;
 always_ff @(posedge clk)
 if (rst) begin
 	dce <= TRUE;
@@ -1149,6 +1150,7 @@ if (rst) begin
 	pmtram_wea <= 1'b0;
 	pmt_store <= 1'b0;
 	sel <= 'd0;
+	dfetch2 <= 1'b0;
 	goto (MEMORY_INIT);
 end
 else begin
@@ -1458,7 +1460,9 @@ else begin
 		  	if (tlbmiss)
 		  		tTlbMiss(tlbmiss_adr, ptbr[0] ? PT_FETCH1 : IPT_FETCH1, FLT_DPF);
 			  // First time in, set to miss address, after that increment
-	      dadr <= {adr_o[AWID-1:6],6'h0};
+			  if (!dfetch2) begin
+      		dadr <= {adr_o[AWID-1:6],6'h0};
+      	end
 		  end
 	  end
 
@@ -1514,8 +1518,10 @@ else begin
 		goto (DFETCH9);
 	DFETCH9:
 		begin
+			dfetch2 <= 1'b1;
 			goto (DFETCH2);
 			if (dhit) begin
+				dfetch2 <= 1'b0;
 				//tPopBus();????
 				tDeactivateBus();
 				ret();
@@ -2215,6 +2221,7 @@ endtask
 
 task tMemoryDispatch;
 begin
+	dfetch2 <= 1'b0;
 	strips <= 2'd0;
 	memresp.cause <= 16'h0;
 	memresp.ip <= memreq.ip;
@@ -2336,17 +2343,18 @@ begin
 		end
 	32'hFFE?????:
 		begin
-			tlbwr <= memreq.func==MR_STORE && memreq.adr[7:4]==4'd15;
+			tlbwr <= memreq.func==MR_STORE && memreq.adr[6:3]==4'd15;
 			tlb_access <= 1'b1;
-			if (memreq.func==MR_STORE)
+			if (memreq.func==MR_STORE) begin
 				tlb_bucket[memreq.adr[6:3]] <= memreq.dat[63:0];
+			end
 			else begin
 				tlb_bucket[0] <= tlbdato[ 63:  0];
 				tlb_bucket[1] <= tlbdato[127: 64];
 				tlb_bucket[2] <= tlbdato[191:128];
 				tlb_bucket[3] <= tlbdato[255:192];
 				tlb_bucket[4] <= tlbdato[287:256];
-				tlb_bucket[6] <= tlbdato[319:288];
+				tlb_bucket[5] <= tlbdato[319:288];
 				//tlb_bucket[5] <= tlbdato[383:320];
 				//tlb_bucket[6] <= tlbdato[447:384];
 			end
@@ -2544,8 +2552,8 @@ begin
 	        goto (DATA_ALIGN);
 	      end
     		if (dce & dhit & tlbacr[3]) begin
-    			dati <= datil >> {adr_o[5:3],6'b0};
-    			dati512 <= datil;
+    			dati <= datil >> {adr_o[6:4],7'b0};
+    			dati512 <= datil[511:0];
     			tDeactivateBus();
 	        goto (DATA_ALIGN);
 	      end

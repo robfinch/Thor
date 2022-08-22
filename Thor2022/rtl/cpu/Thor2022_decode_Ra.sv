@@ -38,9 +38,10 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_decode_Ra(ir, sp_sel, Ra);
+module Thor2022_decode_Ra(ir, sp_sel, istk_depth, Ra);
 input Instruction ir;
 input [2:0] sp_sel;
+input [2:0] istk_depth;
 output reg [5:0] Ra;
 
 always_comb
@@ -56,8 +57,14 @@ VM:
 MFLK:			Ra = (ir[15:14]==2'b00) ? 6'd0 : {4'b1010,ir[15:14]};
 MOV:			Ra = ir.r3.Ra;
 R2:				Ra = ir.r3.Ra;
+OSR2:
+	case(ir.r3.func)
+	RTI:		Ra = {3'b110,istk_depth};
+	default:Ra = {1'b0,ir.r2.Ra};
+	endcase
 default:	Ra = {1'b0,ir.r2.Ra};
 endcase
+// Select alternate stack pointer register to use.
 if (Ra==6'd31)
 	case(sp_sel)
 	3'd1:	Ra = 6'd44;

@@ -40,7 +40,7 @@ import const_pkg::*;
 import Thor2022_pkg::*;
 
 module Thor2022_schedule(clk, reb, stomp, 
-	fetch0, queued0, next_fetch0, next_fetch1,
+	fetch0, queued0, exec0, memo, next_fetch0, next_fetch1,
 	next_decompress0, next_decompress1, next_decode0, next_decode1,
 	next_regfetch0, next_regfetch1,
 	next_execute, next_retire0, next_retire1,
@@ -50,6 +50,8 @@ input sReorderEntry [7:0] reb;
 input [7:0] stomp;
 input [2:0] fetch0;
 input [2:0] queued0;
+input [2:0] exec0;
+input [2:0] memo [0:7];
 output [2:0] next_fetch0;
 output [2:0] next_fetch1;
 output reg [2:0] next_decompress0;
@@ -267,7 +269,7 @@ integer kh;
 begin
 	fnPriorFc = 1'b0;
 	for (kh = 0; kh < REB_ENTRIES; kh = kh + 1)
-		if ((reb[kh].dec.flowchg && reb[kh].sns < reb[kk].sns && !reb[kh].executed)  || (|reb[kh].cause && reb[kh].sns < reb[kk].sns))
+		if ((reb[kh].dec.flowchg && reb[kh].sns < reb[kk].sns && !reb[kh].executed && reb[kh].v)  || (|reb[kh].cause && reb[kh].sns < reb[kk].sns))
 			fnPriorFc = 1'b1;
 end
 endfunction
@@ -277,29 +279,46 @@ input [2:0] kk;
 fnArgsValid = (reb[kk].iav && reb[kk].ibv && reb[kk].icv && reb[kk].itv);// && reb[kk].idv);
 endfunction
 
+function fnPriorMem;
+input [2:0] kk;
+integer kh;
+begin
+	fnPriorMem = 1'b0;
+	for (kh = 0; kh < REB_ENTRIES; kh = kh + 1)
+		if (reb[kh].dec.mem && reb[kh].sns < reb[kk].sns && !reb[kh].executed && reb[kh].v && kk != 3'd7);
+			fnPriorMem = 1'b1;
+end
+endfunction
+
 reg [2:0] next_execute_comb;
+reg picked_mem;
+reg [2:0] older_mem;
 integer kk;
 always_comb
 begin
 next_execute_comb = 3'd7;
-for (kk = REB_ENTRIES-1; kk >= 0; kk = kk - 1)
-	if (reb[kk].decoded && reb[kk].v) begin
-		if (fnArgsValid(kk)) begin
-			if (reb[kk].dec.mem && !fnPriorFc(kk)) begin
-				if (reb[next_execute_comb].dec.mem) begin
-					if (reb[kk].sns <= reb[next_execute_comb].sns || next_execute_comb > REB_ENTRIES)
-						next_execute_comb = kk;
-				end
-				else if (reb[kk].sns <= reb[next_execute_comb].sns || next_execute_comb > REB_ENTRIES)
-					next_execute_comb = kk;
-			end
-			else if (!reb[kk].dec.mem && !(reb[kk].dec.flowchg && fnPriorFc(kk))) begin
-				if (next_execute_comb > REB_ENTRIES)
-					next_execute_comb = kk;
-				// Prefer executing earlier instructions over later ones.
-				else if (reb[kk].sns <= reb[next_execute_comb].sns)
-					next_execute_comb = kk;
-			end
+picked_mem = 1'b0;
+older_mem = 3'd7;
+// Try and pick a memory operation first giving precedence to the oldest operation.
+for (kk = 7; kk >= 0; kk = kk - 1)
+	if (memo[kk] != 3'd7) begin
+		if (reb[memo[kk]].v && !reb[memo[kk]].executed && !reb[memo[kk]].out &&
+			fnArgsValid(memo[kk]) && !fnPriorFc(memo[kk]) && older_mem==3'd7) begin
+			next_execute_comb = memo[kk];
+			picked_mem = 1'b1;
+			older_mem = memo[kk];
+		end
+		else if (reb[memo[kk]].v && !reb[memo[kk]].executed && !reb[memo[kk]].out && older_mem==3'd7)
+			older_mem = memo[kk];
+	end
+for (kk = REB_ENTRIES - 1; kk >= 0; kk = kk - 1)
+	if (reb[kk].decoded && reb[kk].v && !reb[kk].dec.mem && fnArgsValid(kk) && !picked_mem) begin
+		begin
+			if (next_execute_comb > REB_ENTRIES)
+				next_execute_comb = kk;
+			// Prefer executing earlier instructions over later ones.
+			else if (reb[kk].sns <= reb[next_execute_comb].sns)
+				next_execute_comb = kk;
 		end
 	end
 end

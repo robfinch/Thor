@@ -46,13 +46,13 @@ input [2:0] sp_sel;
 input xval;
 input mval;
 output DecodeOut deco;
-input [3:0] distk_depth;
+input [2:0] distk_depth;
 input [2:0] rm;
 input [2:0] dfrm;
 
 integer n;
 
-Thor2022_decode_Ra udra(.ir(ir), .sp_sel(sp_sel), .Ra(deco.Ra));
+Thor2022_decode_Ra udra(.ir(ir), .sp_sel(sp_sel), .istk_depth(distk_depth), .Ra(deco.Ra));
 Thor2022_decode_Rb udrb(.ir(ir), .sp_sel(sp_sel), .Rb(deco.Rb));
 Thor2022_decode_Rc udrc(.ir(ir), .sp_sel(sp_sel), .Rc(deco.Rc));
 Thor2022_decode_Rt udrt(.ir(ir), .sp_sel(sp_sel), .Rt(deco.Rt));

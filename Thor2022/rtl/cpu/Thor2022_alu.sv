@@ -38,7 +38,7 @@
 
 import Thor2022_pkg::*;
 
-module Thor2022_alu(clk, ir, ip, ilen, m, z, xa, xb, xc, t, imm, ca, lr, asid, ptbr,
+module Thor2022_alu(clk, ir, ip, ilen, m, z, xa, xb, xc, t, imm, ca, lr, asid, hmask,
 	csr_res, ilvl, res, res_t2, cares);
 input clk;
 input Instruction ir;
@@ -54,7 +54,7 @@ input Value imm;
 input CodeAddress ca;
 input CodeAddress lr;
 input [9:0] asid;
-input [63:0] ptbr;
+input [63:0] hmask;
 input Value csr_res;
 input [2:0] ilvl;
 output Value res;
@@ -85,8 +85,7 @@ Thor2022_ipt_hash uhash1
 	.clk(clk),
 	.asid(asid),
 	.adr(xa),
-//	.mask(ptbr[127:96]),
-	.mask(32'hFFFFF),
+	.mask(hmask),
 	.hash(hash)
 );
 
