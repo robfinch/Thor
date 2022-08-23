@@ -155,6 +155,7 @@ typedef struct {
 #define RI6			48
 #define RI64		49
 #define R3R			50
+#define RI48		51
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)

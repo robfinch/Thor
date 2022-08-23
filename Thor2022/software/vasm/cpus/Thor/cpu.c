@@ -648,9 +648,9 @@ static int is_reg6(char *p, char **ep, int* typ)
 	if (ep)
 		*ep = p;
 	for (nn = 0; nn < 64; nn++) {
-		if (p[0] == regname[nn][0] && p[1]== regname[nn][1]) {
+		if (p[0] == regnames[nn][0] && p[1]== regnames[nn][1]) {
 			if (!ISIDCHAR((unsigned char)p[2])) {
-				if (regname[nn][2]=='\0') {
+				if (regnames[nn][2]=='\0') {
 					if (ep)
 						*ep = &p[2];
 					*typ = regop[nn];
@@ -658,11 +658,11 @@ static int is_reg6(char *p, char **ep, int* typ)
 				}
 				return (-1);
 			}
-			if (regname[nn][2]=='\0')
+			if (regnames[nn][2]=='\0')
 				return (-1);
-			if (regname[nn][2]==p[2]) {
+			if (regnames[nn][2]==p[2]) {
 				if (!ISIDCHAR((unsigned char)p[3])) {
-					if (regname[nn][3]=='\0') {
+					if (regnames[nn][3]=='\0') {
 						*typ = regop[nn];
 						if (ep)
 							*ep = &p[3];
@@ -670,11 +670,11 @@ static int is_reg6(char *p, char **ep, int* typ)
 					}
 					return (-1);
 				}
-				if (regname[nn][3]=='\0')
+				if (regnames[nn][3]=='\0')
 					return (-1);
-				if (regname[nn][3]==p[3]) {
+				if (regnames[nn][3]==p[3]) {
 					if (!ISIDCHAR((unsigned char)p[4])) {
-						if (regname[nn][4]=='\0') {
+						if (regnames[nn][4]=='\0') {
 							if (ep)
 								*ep = &p[4];
 							*typ = regop[nn];
@@ -904,6 +904,7 @@ int parse_operand(char *p,int len,operand *op,int requires)
 	int rg, nrg, rg2, nrg2;
 	int rv = PO_NOMATCH;
 	char ch;
+	int dmm;
 
 	TRACE("P");
 	op->attr = REL_NONE;
@@ -972,12 +973,12 @@ int parse_operand(char *p,int len,operand *op,int requires)
     }
     p=skip(p);
     if(parent){
-    	if ((rg = is_reg(p, &p)) >= 0 || rg2 = is_reg6(p, &p, 0)) {
+    	if (((rg = is_reg(p, &p)) >= 0) || (rg2 = is_reg6(p, &p, &dmm))) {
     		op->basereg = rg >= 0 ? rg : rg2;
     		p = skip(p);
     		if (*p=='+') {
     			p = skip(p+1);
-    			if ((nrg = is_reg(p, &p)) >= 0 || nrg2 = is_reg6(p,&p,0)) {
+    			if (((nrg = is_reg(p, &p)) >= 0) || (nrg2 = is_reg6(p,&p, &dmm))) {
     				op->ndxreg = nrg >= 0 ? nrg : nrg2;
 		    		p = skip(p);
 		    		op->type = OP_SCNDX;
