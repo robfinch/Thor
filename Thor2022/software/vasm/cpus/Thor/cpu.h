@@ -48,7 +48,7 @@ typedef struct {
 #define OP_IMM46					0x00000010L
 #define OP_IMM64					0x00000020L
 #define OP_IMM78					0x00000040L
-#define OP_REGT						0x00000100L
+#define OP_REG6						0x00000100L
 #define OP_VMREG					0x00000200L
 #define OP_UIMM6					0x00000400L
 #define OP_REGIND13				0x00000800L
@@ -153,6 +153,8 @@ typedef struct {
 #define BFR3RI	46
 #define BFR3II	47
 #define RI6			48
+#define RI64		49
+#define R3R			50
 
 #define RT(x)		(((x) & 0x1fLL) << 9LL)
 #define RA(x)		(((x) & 0x1fLL) << 14LL)
@@ -163,6 +165,13 @@ typedef struct {
 #define TC(x)		(((x) & 1LL) << 30LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
 #define CAB(x)		(((x) & 7LL) << 24LL)
+
+#define RT6(x)		(((x) & 0x3fLL) << 9LL)
+#define RA6(x)		(((x) & 0x3fLL) << 15LL)
+#define RB6(x)		(((x) & 0x3fLL) << 21LL)
+#define TB6(x)		(((x) & 1LL) << 27LL)
+#define RC6(x)		(((x) & 0x3fLL) << 28LL)
+#define TC6(x)		(((x) & 1LL) << 34LL)
 
 /* special data operand types: */
 #define OP_D8  0x40001001

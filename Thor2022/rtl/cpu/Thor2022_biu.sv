@@ -246,22 +246,6 @@ wire fifoToCtrl_v;
 wire pev;
 edge_det ued1 (.rst(rst), .clk(clk), .ce(1'b1), .i(fifoToCtrl_v), .pe(pev), .ne(), .ee());
 
-/*
-any1_mem_fifo #(.WID($bits(MemoryRequest))) uififo1
-(
-	.clk(clk),
-	.rst(rst),
-	.wr(fifoToCtrl_i.fifo_wr),
-	.rd(memreq_rd & ~pev),
-	.din(fifoToCtrl_i),
-	.dout(imemreq),
-	.ctr(),
-	.full(fifoToCtrl_full),
-	.empty(fifoToCtrl_empty)
-);
-assign fifoToCtrl_v = TRUE;
-*/
-
 Thor2022_mem_req_queue umreqq
 (
 	.rst(rst),
@@ -282,36 +266,6 @@ Thor2022_mem_req_queue umreqq
 	.found1(),
   .full(fifoToCtrl_full_o)
 );
-
-/*
-assign fifoToCtrl_wack = 1'b1;
-// 236 wide
-MemoryRequestFifo uififo1
-(
-  .clk(clk),      // input wire clk
-  .srst(rst),    // input wire srst
-  .din(fifoToCtrl_i),      // input wire [197 : 0] din
-  .wr_en(fifoToCtrl_i.wr),  // input wire wr_en
-  .rd_en(memreq_rd & ~pev),  // input wire rd_en
-  .dout(imemreq),    // output wire [197 : 0] dout
-  .full(fifoToCtrl_full_o),  // output wire full
-  .empty(fifoToCtrl_empty),  // output wire empty
-  .valid(fifoToCtrl_v)  // output wire valid
-);
-*/
-
-/*
-bc_fifo16X #(.WID($bits(MemoryRequest))) uififo1
-(
-	.clk(clk),
-	.reset(rst),
-	.wr(fifoToCtrl_i.fifo_wr),
-	.rd(memreq_rd),
-	.di(fifoToCtrl_i),
-	.dout(memreq),
-	.ctr(ififo_cnt)
-);
-*/
 
 wire memresp_full;
 MemoryResponseFifo uofifo1
@@ -1226,7 +1180,7 @@ else begin
 	KEYCHK_ERR:
 		begin
 			memresp.step <= memreq.step;
-	    memresp.cause <= {8'h80,FLT_KEY};	// KEY fault
+	    memresp.cause <= {4'h8,FLT_KEY};	// KEY fault
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 		  memresp.badAddr <= ea;
@@ -1310,7 +1264,7 @@ else begin
 		goto (TLB3);	// Give time for MR_TLB to process
 	TLB3:
 		begin
-			memresp.cause <= 16'h0;
+			memresp.cause <= 12'h0;
 			memresp.step <= memreq.step;
 	    memresp.res <= {432'd0,tlbdato};
 	    memresp.cmt <= TRUE;
@@ -2223,7 +2177,7 @@ task tMemoryDispatch;
 begin
 	dfetch2 <= 1'b0;
 	strips <= 2'd0;
-	memresp.cause <= 16'h0;
+	memresp.cause <= 12'h0;
 	memresp.ip <= memreq.ip;
 	memresp.badAddr <= memreq.adr;	// Handy for debugging
 	memresp.func <= memreq.func;
@@ -2273,7 +2227,7 @@ begin
 			ic_invall	<= memreq.dat[1:0]==3'd2;
 			dc_invline <= memreq.dat[4:2]==3'd3;
 			dc_invall	<= memreq.dat[4:2]==3'd4;
-			memresp.cause <= 16'h0;
+			memresp.cause <= 12'h0;
 			memresp.step <= memreq.step;
 			if (memreq.dat[4:2]==3'd1)
 				dce <= TRUE;
@@ -2430,7 +2384,7 @@ begin
   			case(1'b1)
   			rgn_en:
   				begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2441,7 +2395,7 @@ begin
   				end
   			ptgram_en:
   				begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2452,7 +2406,7 @@ begin
   				end
   			pmtram_ena:
   				begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2463,7 +2417,7 @@ begin
 					end
 				tlb_access:
 					begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2565,7 +2519,7 @@ begin
 			  else begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
 			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
-	  					memresp.cause <= 16'h0;
+	  					memresp.cause <= 12'h0;
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
   						memresp.tid <= memreq.tid;
@@ -2586,7 +2540,7 @@ begin
 			    	end
 	    		end
 	    		else begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 			    	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2695,7 +2649,7 @@ begin
 	    	begin
 	    		if (memreq.func2==MR_STPTR) begin	// STPTR
 			    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
-	  					memresp.cause <= 16'h0;
+	  					memresp.cause <= 12'h0;
 			  			memresp.step <= memreq.step;
 			    	 	memresp.cmt <= TRUE;
 			  			memresp.tid <= memreq.tid;
@@ -2715,7 +2669,7 @@ begin
 			    	end
 	    		end
 	    		else begin
-  					memresp.cause <= 16'h0;
+  					memresp.cause <= 12'h0;
 		  			memresp.step <= memreq.step;
 		    	 	memresp.cmt <= TRUE;
 		  			memresp.tid <= memreq.tid;
@@ -2745,7 +2699,7 @@ begin
 	end
 	else if (!memresp_full)
   	ret();
-	memresp.cause <= 16'h0;
+	memresp.cause <= 12'h0;
 	if (memreq.func2==MR_LDG) begin
 		if (memreq.step == NLANES-1) begin
 			memresp.wr <= TRUE;
@@ -2821,7 +2775,7 @@ begin
 	if (ptbr[4]) begin
 		memresp.step <= memreq.step;
 		memresp.cmt <= TRUE;
-	  memresp.cause <= {8'h80,FLT_TLBMISS};
+	  memresp.cause <= {4'h8,FLT_TLBMISS};
 		memresp.tid <= memreq.tid;
 	  memresp.badAddr <= ba;
 	  memresp.wr <= TRUE;
@@ -2848,7 +2802,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= {8'h80,typ};
+  memresp.cause <= {4'h8,typ};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2864,7 +2818,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= {8'h80,FLT_WRV};
+  memresp.cause <= {4'h8,FLT_WRV};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2880,7 +2834,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= {8'h80,FLT_RDV};
+  memresp.cause <= {4'h8,FLT_RDV};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2896,7 +2850,7 @@ input Address ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
-  memresp.cause <= {8'h80,FLT_KEY};
+  memresp.cause <= {4'h8,FLT_KEY};
 	memresp.tid <= memreq.tid;
   memresp.badAddr <= ba;
   memresp.wr <= TRUE;
@@ -2922,7 +2876,7 @@ begin
 	if (memreq.func==MR_CACHE)
   	tPMAEA();
   if (adr_o[31:16]==IO_KEY_ADR) begin
-		memresp.cause <= 16'h0;
+		memresp.cause <= 12'h0;
   	memresp.step <= memreq.step;
   	memresp.cmt <= TRUE;
   	memresp.res <= io_keys[adr_o[12:2]];
@@ -2971,7 +2925,7 @@ begin
   	tWriteViolation(dadr);
   else if (~wr && !region.at[2])
     tReadViolation(dadr);
-//	memresp.cause <= {8'h80,FLT_PMA};
+//	memresp.cause <= {4'h8,FLT_PMA};
 	dcachable <= dcachable & region.at[3];
 end
 endtask
@@ -2981,7 +2935,7 @@ begin
   // PMA Check
   // Abort cycle that has already started.
   if (!region.at[0]) begin
-    memresp.cause <= {8'h80,FLT_PMA};
+    memresp.cause <= {4'h8,FLT_PMA};
     tDeactivateBus();
 	end
 end

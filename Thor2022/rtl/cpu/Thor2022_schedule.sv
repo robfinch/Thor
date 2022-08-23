@@ -39,37 +39,27 @@
 import const_pkg::*;
 import Thor2022_pkg::*;
 
-module Thor2022_schedule(clk, reb, stomp, 
-	fetch0, queued0, exec0, memo, next_fetch0, next_fetch1,
-	next_decompress0, next_decompress1, next_decode0, next_decode1,
-	next_regfetch0, next_regfetch1,
-	next_execute, next_retire0, next_retire1,
+module Thor2022_schedule(clk, strict, reb, stomp, 
+	queued0, exec0, memo,
+	next_execute, next_retire,
 	open_buf, next_open_buf);
 input clk;	
+input strict;
 input sReorderEntry [7:0] reb;
 input [7:0] stomp;
-input [2:0] fetch0;
 input [2:0] queued0;
 input [2:0] exec0;
-input [2:0] memo [0:7];
-output [2:0] next_fetch0;
-output [2:0] next_fetch1;
-output reg [2:0] next_decompress0;
-output reg [2:0] next_decompress1;
-output reg [2:0] next_decode0;
-output reg [2:0] next_decode1;
-output reg [2:0] next_regfetch0;
-output reg [2:0] next_regfetch1;
-output reg [2:0] next_execute;
-output reg [2:0] next_retire0;
-output reg [2:0] next_retire1;
+input sOrderBufEntry [7:0] memo;
+output[2:0] next_execute;
+output reg [2:0] next_retire;
 output reg open_buf;
 output [2:0] next_open_buf;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Instruction fetch scheduler
+// Queue scheduler
 //
-// Chooses the next bucket to queue an instruction.
+// Chooses the next bucket to queue an instruction. Prevents choosing the
+// same queue entry two clock cycles in a row.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 reg [5:0] lov;		// lock-out v
@@ -93,175 +83,26 @@ ffz6 uffoq2 (
 always_ff @(posedge clk)
 	lov2 <= lov;
 
-reg [5:0] vv1;
-wire [5:0] ev = {
-		reb[5].executed,
-		reb[4].executed,
-		reb[3].executed,
-		reb[2].executed,
-		reb[1].executed,
-		reb[0].executed
-	};
-wire [5:0] ol = {
-		reb[5].out,
-		reb[4].out,
-		reb[3].out,
-		reb[2].out,
-		reb[1].out,
-		reb[0].out
-	};
-ffz6 uffoq (
-	.i(vv | lov | ev | stomp | ol),
-	.o(next_fetch0)
-);
+ex_sched uexsched1(.strict(strict), .reb(reb), .memo(memo), .exec(next_execute));
+wb_sched uwbsched1(.reb(reb), .next_retire(next_retire));
 
-always_comb
-if (next_fetch0 != 3'd7)
-	vv1 = vv | (6'd1 << next_fetch0);
-else
-	vv1 = 6'b111111;
+endmodule
 
-ffz6 uffoq1 (
-	.i(vv1),
-	.o(next_fetch1)
-);
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Decode scheduler
-//
-// Chooses the next bucket to decode, essentially in any order.
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-wire [5:0] fd = {
-		reb[5].fetched,
-		reb[4].fetched,
-		reb[3].fetched,
-		reb[2].fetched,
-		reb[1].fetched,
-		reb[0].fetched
-	};
-reg [5:0] fd1;
-wire [2:0] next_decompress0a;
-wire [2:0] next_decompress1a;
-always_comb
-if (next_decompress0a != 3'd7)
-	fd1 = fd & ~(6'd1 << next_decompress0a);
-else
-	fd1 = 6'b000000;
-
-ffo6 uffodecompress0 (
-	.i(fd|stomp),
-	.o(next_decompress0a)
-);
-
-ffo6 uffodecompress1 (
-	.i(fd1),
-	.o(next_decompress1a)
-);
-
-always_comb// @(posedge clk)
-	next_decompress0 <= next_decompress0a;
-always_comb// @(posedge clk)
-	next_decompress1 <= next_decompress1a;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Decode scheduler
-//
-// Chooses the next bucket to decode, essentially in any order.
-// Decodes are processed in order, all prior decodes must have been done
-// before the newly choosen one.
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-function fnPriorsDecoded;
-input [2:0] kk;
-integer n;
-begin
-	fnPriorsDecoded = 1'b1;
-	for (n = 0; n < REB_ENTRIES; n = n + 1)
-		if (reb[n].sns < reb[kk].sns && !(reb[n].decoded || reb[n].rfetched || reb[n].executed || reb[n].out) && reb[n].v)
-			fnPriorsDecoded = 1'b0;
-end
-endfunction
-
-integer mm;
-always_comb// @(posedge clk)
-begin
-	next_decode0 = 3'd7;
-	next_decode1 = 3'd7;
-	for (mm = 0; mm < REB_ENTRIES; mm = mm + 1) begin
-		if ((reb[mm].sns < reb[next_decode0].sns || next_decode0==3'd7) && reb[mm].decompressed && !stomp[mm]) begin
-			if (fnPriorsDecoded(mm))
-				next_decode0 = mm;
-		end
-	end
-	for (mm = 0; mm < REB_ENTRIES; mm = mm + 1) begin
-		if ((reb[mm].sns < reb[next_decode0].sns || next_decode1==3'd7) && next_decode0 != 3'd7 && reb[mm].decompressed) begin
-			if (fnPriorsDecoded(mm))
-				next_decode1 = mm;
-		end
-	end
-end
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Regfetch scheduler (not used)
-//
-// Chooses the next bucket to regfetch.
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-/*
-wire [5:0] rfd = {
-		reb[5].decoded,
-		reb[4].decoded,
-		reb[3].decoded,
-		reb[2].decoded,
-		reb[1].decoded,
-		reb[0].decoded
-	};
-reg [5:0] rfd1;
-wire [2:0] next_regfetch0a;
-wire [2:0] next_regfetch1a;
-always_comb
-if (next_regfetch0a != 3'd7)
-	rfd1 = ~vv & ~(6'd1 << next_regfetch0a);
-else
-	rfd1 = 6'b000000;
-
-ffo6 ufforegfetch0 (
-	.i(rfd),
-	.o(next_regfetch0a)
-);
-
-ffo6 ufforegfetch1 (
-	.i(rfd1),
-	.o(next_regfetch1a)
-);
-
-reg [2:0] rr;
-always_comb// @(posedge clk)
-begin
-/*
-	next_regfetch0 = 3'd7;
-	for (rr = 0; rr < REB_ENTRIES; rr = rr + 1)
-		if (next_regfetch0==3'd7 && reb[rr].decoded)
-			next_regfetch0 = rr;
-		else if (reb[rr].sns < reb[next_regfetch0].sns && reb[rr].decoded)
-			next_regfetch0 = rr;
-*/
-always_comb
-begin
-	next_regfetch0 <= 3'd7;//next_regfetch0a;
-end
-
-always_comb// @(posedge clk)
-	next_regfetch1 <= 3'd7;//next_regfetch1a;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// ============================================================================
 // Execute scheduler
 //
 // Picks instructions in any order except:
 // a) memory instructions are executed in strict order
-// b) preference is given to executing earlier instructions over later ones
+// --b) preference is given to executing earlier instructions over later ones
 // c) prior instructions must at least have been decoded (for arg dependency)
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// ============================================================================
+
+module ex_sched(strict, reb, memo, exec);
+input strict;
+input sReorderEntry [7:0] reb;
+input sOrderBufEntry [7:0] memo;
+output reg [2:0] exec;
+
 
 function fnPriorFc;
 input [2:0] kk;
@@ -274,86 +115,117 @@ begin
 end
 endfunction
 
+function fnAddressCollision;
+input [2:0] ld;
+integer jj;
+begin
+	fnAddressCollision = 1'b0;
+	for (jj = 0; jj < 8; jj = jj + 1)
+		if (jj > ld)
+			if ((reb[memo[ld].ndx].badAddr[31:6] == reb[memo[jj].ndx].badAddr[31:6] || !reb[memo[jj].ndx].agen) && reb[memo[jj].ndx].dec.store)
+				fnAddressCollision = 1'b1;
+end
+endfunction
+
+function fnStoresAgened;
+integer jk;
+input [2:0] sg;
+begin
+	fnStoresAgened = 1'b1;
+	for (jk = 0; jk < 6; jk = jk + 1)
+		if (jk > sg)
+			if (!(reb[memo[jk].ndx].agen || !reb[memo[jk].ndx].dec.store))
+				fnStoresAgened = 1'b0;
+end
+endfunction
+
 function fnArgsValid;
 input [2:0] kk;
 fnArgsValid = (reb[kk].iav && reb[kk].ibv && reb[kk].icv && reb[kk].itv);// && reb[kk].idv);
 endfunction
 
-function fnPriorMem;
-input [2:0] kk;
-integer kh;
-begin
-	fnPriorMem = 1'b0;
-	for (kh = 0; kh < REB_ENTRIES; kh = kh + 1)
-		if (reb[kh].dec.mem && reb[kh].sns < reb[kk].sns && !reb[kh].executed && reb[kh].v && kk != 3'd7);
-			fnPriorMem = 1'b1;
-end
-endfunction
-
 reg [2:0] next_execute_comb;
-reg picked_mem;
-reg [2:0] older_mem;
+reg later_store;
+reg later_mem;
+reg exec_sel;
 integer kk;
 always_comb
 begin
+later_store = 1'b0;
+later_mem = 1'b0;
 next_execute_comb = 3'd7;
-picked_mem = 1'b0;
-older_mem = 3'd7;
+exec_sel = 1'b0;
 // Try and pick a memory operation first giving precedence to the oldest operation.
-for (kk = 7; kk >= 0; kk = kk - 1)
-	if (memo[kk] != 3'd7) begin
-		if (reb[memo[kk]].v && !reb[memo[kk]].executed && !reb[memo[kk]].out &&
-			fnArgsValid(memo[kk]) && !fnPriorFc(memo[kk]) && older_mem==3'd7) begin
-			next_execute_comb = memo[kk];
-			picked_mem = 1'b1;
-			older_mem = memo[kk];
+for (kk = REB_ENTRIES-1; kk >= 0; kk = kk - 1)
+if (memo[kk].v) begin
+	if (reb[memo[kk].ndx].v && !reb[memo[kk].ndx].executed && !reb[memo[kk].ndx].out && fnArgsValid(memo[kk].ndx)) begin
+		if (!exec_sel) begin
+			// Stores can only execute from tail
+			if (reb[memo[kk].ndx].dec.store && !later_store) begin
+				if (reb[memo[kk].ndx].agen) begin
+					next_execute_comb = memo[kk].ndx;
+					exec_sel = 1'b1;
+				end
+				later_store = 1'b1;
+				later_mem = 1'b1;
+			end
+			// Loads may go if they are ready and there is no address conflict.
+			if (reb[memo[kk].ndx].dec.load && !(later_store || (strict & later_mem)) && !exec_sel) begin
+				if (!fnAddressCollision(kk) && reb[memo[kk].ndx].agen && fnStoresAgened(kk)) begin
+					next_execute_comb = memo[kk].ndx;
+					exec_sel = 1'b1;
+				end
+				later_mem = 1'b1;
+			end
+			// Other operations may go ahead.
+			if (!(reb[memo[kk].ndx].dec.load|reb[memo[kk].ndx].dec.store) && (!strict || !later_mem)) begin
+				next_execute_comb = memo[kk].ndx;
+				exec_sel = 1'b1;
+			end
 		end
-		else if (reb[memo[kk]].v && !reb[memo[kk]].executed && !reb[memo[kk]].out && older_mem==3'd7)
-			older_mem = memo[kk];
 	end
-for (kk = REB_ENTRIES - 1; kk >= 0; kk = kk - 1)
-	if (reb[kk].decoded && reb[kk].v && !reb[kk].dec.mem && fnArgsValid(kk) && !picked_mem) begin
-		begin
-			if (next_execute_comb > REB_ENTRIES)
-				next_execute_comb = kk;
-			// Prefer executing earlier instructions over later ones.
-			else if (reb[kk].sns <= reb[next_execute_comb].sns)
-				next_execute_comb = kk;
+end
+// Now pick other operations.
+for (kk = 0; kk < REB_ENTRIES; kk = kk + 1)
+	if (reb[kk].decoded && reb[kk].v && !reb[kk].dec.mem && !reb[kk].dec.can_chgflow && fnArgsValid(kk)) begin
+		if (!exec_sel) begin
+			next_execute_comb = kk;
+			exec_sel = 1'b1;
 		end
 	end
 end
 always_comb//ff @(posedge clk)
-	next_execute <= next_execute_comb;
+	exec <= next_execute_comb;
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+endmodule
+
+// ============================================================================
 // Writeback scheduler
 //
-// Wait for the next instruction to become executed before retiring it.
-// Choose the instruction with the lowest sequence number as the head.
+// Wait for instruction to become executed before retiring it.
 // Skip over constant prefixes.
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// ============================================================================
+
+module wb_sched(reb, next_retire);
+input sReorderEntry [7:0] reb;
+output reg [2:0] next_retire;
 
 reg [2:0] next_retire0a;
-reg [2:0] next_retire1a;
-
+reg ret_sel;
 integer n8;
 always_comb
 begin
 	next_retire0a = 3'd7;
-	next_retire1a = 3'd7;
+	ret_sel = 1'b0;
 	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-		if ((reb[n8].sns < reb[next_retire0a].sns || next_retire0a > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
-			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM)
+		if (!ret_sel && reb[n8].v && reb[n8].executed && !reb[n8].dec.isExi) begin
+			ret_sel = 1'b1;
 			next_retire0a = n8;
-	for (n8 = 0; n8 < REB_ENTRIES; n8 = n8 + 1)
-		if ((reb[n8].sns < reb[next_retire1a].sns || next_retire1a > REB_ENTRIES) && reb[n8].v && reb[n8].executed &&
-			!reb[n8].dec.isExi && reb[n8].ir.any.opcode!=EXIM && n8 != next_retire0a)
-			next_retire1a = n8;
+		end
 end
 
-always_comb//_ff @(posedge clk)
-	next_retire0 <= next_retire0a;
-always_comb//_ff @(posedge clk)
-	next_retire1 <= next_retire1a;
+always_comb
+	next_retire <= next_retire0a;
 	
 endmodule
+

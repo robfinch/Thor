@@ -42,7 +42,7 @@ input clk;
 input Instruction ir;
 output reg [3:0] o;
 
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 casez(ir.any.opcode)
 BRK:		o = 4'd2;
 R1:			o = 4'd4;

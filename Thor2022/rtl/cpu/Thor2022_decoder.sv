@@ -301,9 +301,7 @@ R2,R3:
 	endcase
 OSR2:
 	case(ir.r3.func)
-	TLBRW:		deco.multi_cycle = `TRUE;
 	RGNRW:		deco.multi_cycle = `TRUE;
-	MTSEL:		deco.multi_cycle = `TRUE;
 	default:	deco.multi_cycle = `FALSE;
 	endcase
 MULI,MULIL:		deco.multi_cycle = `TRUE;
@@ -445,6 +443,8 @@ deco.enter = ir.any.opcode==ENTER;
 deco.push = ir.any.opcode==PUSH || ir.any.opcode==PUSH4R;
 deco.flowchg = deco.rti || deco.rex || deco.jmp || deco.bra || deco.jxx || deco.jxz || deco.rts;
 deco.store = deco.storer|deco.storen|deco.stset|deco.stmov|deco.stfnd|deco.stcmp;
+
+deco.can_chgflow = deco.flowchg | deco.mulall | deco.divall;
 
 if (deco.mflk)
 	deco.Ca = {2'd0,ir[15:14]};

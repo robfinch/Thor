@@ -54,7 +54,7 @@ parameter NLANES = 2;
 `define RENTRIES	8	// number of reorder buffer entries
 `define OVERLAPPED_PIPELINE	1
 parameter REB_ENTRIES = 6;
-parameter NREGS = 56;
+parameter NREGS = 64;
 
 // The following adds support for hardware page table walking. If not used
 // software must load the TLB on a miss.
@@ -612,6 +612,7 @@ parameter pL1ICacheLines = 512;
 parameter pL1ICacheLineSize = 640;
 localparam pL1Imsb = $clog2(pL1ICacheLines-1)-1+6;
 
+typedef logic [11:0] CauseCode;
 typedef logic [63:0] Value;
 typedef Value [0:NLANES-1] VecValue;
 typedef logic [NLANES-1:0] VMValue;
@@ -993,7 +994,7 @@ parameter MR_STPTR	= 4'd9;
 typedef struct packed
 {
 	logic [7:0] tid;		// tran id
-	CodeAddress ip;
+	CodeAddress ip;			// Debubgging aid
 	logic [5:0] step;		// vector operation step
 	logic [5:0] count;	// vector operation count
 	logic wr;
@@ -1008,20 +1009,18 @@ typedef struct packed
 typedef struct packed
 {
 	logic [7:0] tid;		// tran id
-	CodeAddress ip;
+	CodeAddress ip;			// Debugging aid
 	logic [5:0] step;
 	logic wr;
 	logic [3:0] func;		// function to perform
 	logic [3:0] func2;	// more resolution to function
 	logic v;
 	logic empty;
-	logic [15:0] cause;
+	CauseCode cause;
 	Address badAddr;
 	VecValue res;
 	logic cmt;
-	logic ldcs;
-	logic mtsel;
-} MemoryResponse;	// 660
+} MemoryResponse;	// 654
 
 typedef struct packed
 {
@@ -1170,6 +1169,7 @@ typedef struct packed
 	logic enter;
 	logic push;
 	logic flowchg;
+	logic can_chgflow;
 	logic [3:0] Ca;
 	logic [3:0] Ct;
 	logic [2:0] rm;
@@ -1207,7 +1207,7 @@ typedef struct packed
 	logic rfetched;				// registers have been fetched
 	logic out;						// instruction is out being executed
 	logic executed;
-	logic nxt_rfetched;
+	logic agen;						// address generated
 	logic stomp;
 	logic cmt;						// commit, clears as soon as committed
 	logic cmt2;						// sticky commit, clears when entry reassigned
@@ -1227,7 +1227,7 @@ typedef struct packed
 	CodeAddress jmptgt;
 	logic [5:0] step;			// vector step
 	logic step_v;
-	logic [15:0] cause;
+	CauseCode cause;
 	VecValue ia;
 	VecValue ib;
 	VecValue ic;
@@ -1284,6 +1284,11 @@ typedef struct packed
 	logic wr_fu;				// write to functional unit
 	logic [47:0] sn;
 } sReorderEntry;
+
+typedef struct packed {
+	logic [2:0] ndx;
+	logic v;
+} sOrderBufEntry;
 
 function Value fnAbs;
 input Value jj;
