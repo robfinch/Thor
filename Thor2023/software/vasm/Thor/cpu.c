@@ -65,10 +65,17 @@ mnemonic mnemonics[]={
 	"andn", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VMREG,0}, {R2M,CPU_ALL,0,FUNC(8LL)|SB(1)|OPC(2LL),5},
 	"andn", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(8LL)|SB(1)|OPC(2LL),5},	
 	
+	"bcc",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(11LL)|OPC(28LL),5},
+
 	"bcdadd", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0000000000F5LL,6},	
 	"bcdmul", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0400000000F5LL,6},	
 	"bcdsub", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0200000000F5LL,6},	
+
+	"bcs",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(3LL)|OPC(28LL),5},
 	
+	"beq",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(0LL)|OPC(28LL),5},
+	"beven",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(13LL)|OPC(28LL),5},
+
 	"bfalign",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0000000000AALL,6},
 	"bfchg",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x1400000000AALL,6},
 	"bfchg",	{OP_REG,OP_REG,OP_IMM,OP_REG,0}, {BFR3IR,CPU_ALL,0,0x1400200000AALL,6},
@@ -83,25 +90,22 @@ mnemonic mnemonics[]={
 	"bfffo",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x0201200000AALL,6},
 	"bfset",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,0x1801200000AALL,6},
 
-	"bmap", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x00000000004CLL,6},	
-	"bmm", 	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x600000000002LL,6},	
-
-	"bcc",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(11LL)|OPC(28LL),5},
-	"bcs",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(3LL)|OPC(28LL),5},
-	"beq",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(0LL)|OPC(28LL),5},
-	"beven",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(13LL)|OPC(28LL),5},
 	"bge",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(9LL)|OPC(28LL),5},
-	"bgt",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(10LL)|OPC(28LL),5},
-	"ble",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(2LL)|OPC(28LL),5},
-	"blo",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(3LL)|OPC(28LL),5},
-	"blt",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(1LL)|OPC(28LL),5},
 	"bgeu",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(11LL)|OPC(28LL),5},
+	"bgt",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(10LL)|OPC(28LL),5},
 	"bgtu",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(12LL)|OPC(28LL),5},
 	"bhi",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(12LL)|OPC(28LL),5},
 	"bhs",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(11LL)|OPC(28LL),5},
+	"ble",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(2LL)|OPC(28LL),5},
 	"bleu",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(4LL)|OPC(28LL),5},
+	"blo",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(3LL)|OPC(28LL),5},
 	"bls",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(4LL)|OPC(28LL),5},
+	"blt",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(1LL)|OPC(28LL),5},
 	"bltu",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(3LL)|OPC(28LL),5},
+
+	"bmap", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x00000000004CLL,6},	
+	"bmm", 	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x600000000002LL,6},	
+
 	"bne",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(8LL)|OPC(28LL),5},
 	"bnz",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(14LL)|OPC(28LL),5},
 	"bodd",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(5LL)|OPC(28LL),5},
@@ -319,7 +323,28 @@ mnemonic mnemonics[]={
 	"peekq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	
 	"peekq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x140000000007LL,6},	
 
+	"pcc",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(11LL)|OPC(2LL),5},
+	"pcs",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(3LL)|OPC(2LL),5},
+	"peq",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(0LL)|OPC(2LL),5},
+	"peven",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(13LL)|OPC(2LL),5},
+
 	"pfi",	{OP_REG,0,0,0,0},{R3RR,CPU_ALL,0,0x220000000007LL,6},	
+
+	"pge",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(9LL)|OPC(2LL),5},
+	"pgt",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(10LL)|OPC(2LL),5},
+	"pgeu",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(11LL)|OPC(2LL),5},
+	"pgtu",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(12LL)|OPC(2LL),5},
+	"phi",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(12LL)|OPC(2LL),5},
+	"phs",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(11LL)|OPC(2LL),5},
+	"ple",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(2LL)|OPC(2LL),5},
+	"pleu",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(4LL)|OPC(2LL),5},
+	"plo",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(3LL)|OPC(2LL),5},
+	"pls",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(4LL)|OPC(2LL),5},
+	"plt",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(1LL)|OPC(2LL),5},
+	"pltu",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(3LL)|OPC(2LL),5},
+	"pne",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(8LL)|OPC(2LL),5},
+	"pnz",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(14LL)|OPC(2LL),5},
+	"podd",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(5LL)|OPC(2LL),5},
 
 	"pop",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x800000BELL,4},	
 	"pop",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x600000BELL,4},	
@@ -341,6 +366,8 @@ mnemonic mnemonics[]={
 
 	"pushq",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	
 	"pushq",	{OP_NEXTREG,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	
+
+	"pz",	{OP_REG,OP_PREDSTR,0,0,0}, {PRED,CPU_ALL,0,FUNC(32)|COND(6LL)|OPC(2LL),5},
 
 //	"rem", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x200000000102LL,6},	
 //	"rem", {OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x200000000002LL,6},	
@@ -821,6 +848,39 @@ static int is_vmreg(char *p, char **ep)
 	return (-1);
 }
 
+static int is_predstr(char *p, char **ep)
+{
+	int nn;
+	int val = 0;
+
+	if (p[0]!='"')
+		return (-1);
+	for (nn = 1; nn < 10; nn++) {
+		switch(p[nn]) {
+		case 0:
+			if (ep)
+				*ep = &p[nn];
+			return (-1);
+		case '"':
+			if (ep)
+				*ep = &p[nn+1];
+			return (val);
+		case 'I':
+		case 'i':
+			break;
+		case 'T':
+		case 't':
+			val |= 1 << (nn-1)*2;
+			break;
+		case 'F':
+		case 'f':
+			val |= 2 << (nn-1)*2;
+			break;
+		}
+	}
+	return (val);	
+}
+
 static int is_branch(mnemonic* mnemo)
 {
 	switch(mnemo->ext.format) {
@@ -892,6 +952,10 @@ int parse_operand(char *p,int len,operand *op,int requires)
     op->type=OP_LK;
     op->basereg=rg;
     op->value = number_expr((taddr)rg);
+  }
+  else if ((rg = is_predstr(p, &p)) >= 0) {
+  	op->type = OP_PREDSTR;
+  	op->value = number_expr((taddr)rg);
   }
   else if(p[0]=='#'){
     op->type=OP_IMM;
@@ -1514,11 +1578,14 @@ illreloc:
     }
   }
   else {
-     if (reloctype == REL_PC) {
-       /* a relative reference to an absolute label */
+  	val.lo = val.hi = 0;
+		eval_expr_huge(op->value,&val);
+  	
+		if (reloctype == REL_PC) {
+			/* a relative reference to an absolute label */
 			TRACE("n");
-       return hsub(val,huge_from_int(pc));
-     }
+			return hsub(val,huge_from_int(pc));
+		}
   }
 
 	TRACE("m");
@@ -1530,6 +1597,9 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 {
 	if (insn) {
 		switch(mnemo->ext.format) {
+		case PRED:
+			*insn = *insn | RN(op->basereg);
+			break;
 		case RI:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
@@ -1578,6 +1648,9 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 				*insn = *insn| (RC(op->basereg & regmask));
 			break;
 		case B:
+			if (i==0)
+				*insn = *insn| (RN(op->basereg));
+			break;			
 		case J:
 			if (i==0)
 				*insn = *insn| (RA(op->basereg & regmask));
@@ -1985,6 +2058,17 @@ j2:
 		}
 	}
 	return (isize);
+}
+
+static int encode_pred(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t val, int* isize, int i)
+{
+	*isize = 5;
+
+	if (op->type==OP_PREDSTR) {
+		if (insn) {
+			*insn |= ((val & 0x7ffLL) << 16LL) | (((val >> 11LL) & 0x1fLL) << 29LL);
+		}
+	}	
 }
 
 /* Evaluate branch operands excepting GPRs which are handled earlier.
@@ -2397,6 +2481,9 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
     else if (encode_branch(insn, mnemo, &op, val.lo, &isize, i)) {
 			TRACE("Etho4:");
     	;
+    }
+    else if (mnemo->operand_type[i]==OP_PREDSTR) {
+    	isize = encode_pred(insn, mnemo, &op, val.lo, &isize, i);
     }
     else if ((mnemo->operand_type[i]&OP_REGIND) && op.type==OP_REGIND) {
 			TRACE("Etho5:");
