@@ -17,8 +17,6 @@
 typedef int64_t taddr;
 typedef uint64_t utaddr;
 
-//#include "expr.h"
-
 /* minimum instruction alignment */
 #define INST_ALIGN 1
 
@@ -195,8 +193,10 @@ typedef struct {
 #define OP_D16 0x40001002
 #define OP_D32 0x40001003
 #define OP_D64 0x40001004
-#define OP_F32 0x40001005
-#define OP_F64 0x40001006
+#define OP_D96 0x40001005
+#define OP_F32 0x40001006
+#define OP_F64 0x40001007
+#define OP_F96 0x40001008
 
 #define OP_DATAM(t) (t >= OP_D8)
 #define OP_FLOAT(t) (t >= OP_F32)
