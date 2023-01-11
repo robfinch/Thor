@@ -38,7 +38,7 @@
 module Thor2023_cmp(a, b, o);
 input [95:0] a;
 input [95:0] b;
-output [31:0] o;
+output reg [31:0] o;
 
 wire [15:0] fcmpo;
 wire nan;
@@ -64,7 +64,7 @@ begin
 	o[6] = a=='d0;
 	o[7] = a[95];
 	o[8] = a!=b;
-	o[9] = $signed(a) >= $signef(b);
+	o[9] = $signed(a) >= $signed(b);
 	o[10] = $signed(a) > $signed(b);
 	o[11] = a >= b;
 	o[12] = a > b;

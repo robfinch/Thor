@@ -46,14 +46,14 @@ parameter LOBIT=6;
 localparam HIBIT=$clog2(LINES)-1+LOBIT;
 input clk;
 input wr;
-input Address adr;
+input address_t adr;
 input [1:0] way;
 input rclk;
 input [6:0] ndx;
 (* ram_style="block" *)
-output reg [$bits(Address)-1:TAGBIT] tag [3:0];
+output reg [$bits(address_t)-1:TAGBIT] tag [3:0];
 
-reg [$bits(Address)-1:TAGBIT] tags [0:WAYS *LINES-1];
+reg [$bits(address_t)-1:TAGBIT] tags [0:WAYS *LINES-1];
 reg [$clog2(LINES)-1:0] rndx;
 
 integer g;
@@ -69,7 +69,7 @@ end
 always_ff @(posedge clk)
 begin
 	if (wr)
-		tags[way * LINES + adr[HIBIT:LOBIT]] <= adr[$bits(Address)-1:TAGBIT];
+		tags[way * LINES + adr[HIBIT:LOBIT]] <= adr[$bits(address_t)-1:TAGBIT];
 end
 always_ff @(posedge rclk)
 	rndx <= ndx;

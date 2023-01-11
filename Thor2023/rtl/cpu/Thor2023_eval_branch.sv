@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_dcvalid.sv
+//	Thor2023_eval_branch.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -36,51 +36,46 @@
 // ============================================================================
 
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
 
-module Thor2023_dcvalid(rst, clk, invce, dadr, adr, wr, way, invline, invall, valid);
-parameter LINES=256;
-parameter WAYS=4;
-parameter LOBIT=6;
-localparam HIBIT=$clog2(LINES)-1+LOBIT;
-input rst;
-input clk;
-input invce;
-input [$bits(address_t)-1:0] dadr;
-input [$bits(address_t)-1:0] adr;		// physical address
-input wr;
-input [1:0] way;
-input invline;
-input invall;
-output reg [LINES-1:0] valid [0:WAYS-1];
+module Thor2023_eval_branch(inst, fdm, a, takb);
+input instruction_t inst;
+input fdm;
+input value_t a;
+output reg takb;
 
-integer n, m;
-integer g;
+wire [15:0] fco, dfco, fpco;
+wire nan;
+fpCompare96 u1 (.a(a), .b(b), .o(fpco), .nan(nan), .snan());
+DFPCompare96 u2 (.a(a), .b(b), .o(dfco));
+assign fco = fdm ? dfco : fpco;
 
-initial begin
-for (m = 0; m < WAYS; m = m + 1) begin
-  for (n = 0; n < LINES; n = n + 1)
-    valid[m][n] = 1'b0;
-end
-end
-
-always_ff @(posedge clk)
-if (rst) begin
-	for (g = 0; g < WAYS; g = g + 1)
-		valid[g] <= 'd0;
-end
-else begin
-	if (wr)
-		valid[way][dadr[HIBIT:LOBIT]] <= 1'b1;
-	else if (invce) begin
-		for (g = 0; g < WAYS; g = g + 1) begin
-			if (invline)
-				valid[g][adr[HIBIT:LOBIT]] <= 1'b0;
-			else if (invall)
-				valid[g] <= 'd0;
-		end
-	end
-end
+always_comb
+case(inst.br.cnd)
+EQ:	takb = a[0];
+LT: takb = a[1];
+LE:	takb = a[2];
+LO:	takb = a[3];
+LS:	takb = a[4];
+ODD:	takb = a[5];
+Z:	takb = a=='d0;
+MI:	takb = a[95];
+NE:	takb = a[8];
+GE:	takb = a[9];
+GT:	takb = a[10];
+HS:	takb = a[11];
+HI:	takb = a[12];
+EVEN:	takb = a[13];
+NZ:	takb = a!='d0;
+SR:	takb = 1'b1;
+FEQ:	takb = fco[0];
+FNE:	takb = fco[5];
+FLT:	takb = fco[1];
+FGE:	takb = fco[6];
+FLE:	takb = fco[2];
+FGT:	takb = fco[7];
+FORD:	takb = fco[9];
+FUN:	takb = fco[4];
+default:	takb = 1'b1;
+endcase
 
 endmodule
-

@@ -36,7 +36,7 @@
 //                                                                          
 // ============================================================================
 
-import Thor2023_pkg::*;
+import Thor2023Pkg::*;
 
 module Thor2023_decode_imm(ir, ir2, ir3, ir4, imm, inc);
 input instruction_t ir;
@@ -44,77 +44,75 @@ input instruction_t ir2;
 input instruction_t ir3;
 input instruction_t ir4;
 output value_t imm;
-output [4:0] inc;					// How much PC should increment by
+output reg [4:0] inc;					// How much PC should increment by
+
+wire [95:0] imm16x96, imm32x96, imm64x96;
+fpCvt16To96 ucvt16x96({ir[39:32],ir[30:23]}, imm16x96);
+fpCvt32To96 ucvt32x96(ir2[39:8], imm32x96);
+fpCvt64To96 ucvt64x96({ir3[39:8],ir2[39:8]}, imm64x96);
+
+reg fpAddi;
+always_comb
+case(ir.any.opcode)
+OP_FADDI,OP_FCMPI,OP_FMULI,OP_FDIVI:
+	fpAddi = 1'b1;
+default:	fpAddi = 1'b0;
 
 always_comb
 begin
 // Computing immediate constant
 case(ir.any.opcode)
-R2:
-	case(ir.r3.func)
-	SLL,SRL,SRA,ROL,ROR: imm = {57'd0,ir[34:28]};
-	default:
-		if (ir.r3i.imm[13:7]==7'h40)
-			imm = 'd0;
-		else
-			imm = {{57{ir.r3i.imm[13]}},ir.r3i.imm};
+OP_SHIFT:
+	case(ir.r2.func)
+	OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:
+		imm <= ir.r2.Rb[6:0];
+	default:	imm <= 'd0;
 	endcase
-ADDI,SUBFI,CMPI,SEQI,SNEI,SLTI,SLEI,SGTI,SGEI,MULI,DIVI,LDI:
-	imm = {{51{ir.ri.imm[12]}},ir.ri.imm};
-ANDI:	// Pad with ones to the left
-	imm = {{51{1'b1}},ir.ri.imm};
-ORI,XORI,SLTUI,SGTUI,MULUI,DIVUI:	// Pad with zeros to the left
-	imm = {{51{1'b0}},ir.ri.imm};
-CHKI:	imm = {{106{ir[47]}},ir[47:29],ir[11:9]};
-ADDIL,SUBFIL,CMPIL,SEQIL,SNEIL,SLTIL,SLEIL,SGTIL,SGEIL,MULIL,DIVIL,LDIL:
-	imm = ir.any.v ? {{103{ir.ril.imm[24]}},ir.rilv.imm} : {{99{ir.ril.imm[28]}},ir.ril.imm};
-SLTUIL,SLEUIL,SGTUIL,SGEUIL,MULUIL:
-	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
-ANDIL:	imm = ir.any.v ? {{103{1'b1}},ir.rilv.imm} : {{99{1'b1}},ir.ril.imm};
-ORIL,XORIL:	imm = ir.any.v ? {{103{1'b0}},ir.rilv.imm} : {{99{1'b0}},ir.ril.imm};
-LDBS,LDBUS,LDWS,LDWUS,LDTS,LDTUS,LDOS,LDOUS:
-	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
-LDB,LDBU,LDW,LDWU,LDT,LDTU,LDO,LDOU,LDV,LDHP,LDHQ:
-	imm = ir.any.v ? {{104{ir.ld.disp[23]}},ir.ld.disp} : {{99{ir.ld.disp[28]}},ir.ld.disp};
-LDBX,LDBUX,LDWX,LDWUX,LDTX,LDTUX,LDOX,LDOUX,LDVX,LDHPX,LDHQX:
-	imm = 'd0;
-STB,STW,STT,STO,STV,STHP,STHC,STPTR:
-	imm = ir.any.v ? {{104{ir.st.disp[23]}},ir.st.disp} : {{99{ir.st.disp[28]}},ir.st.disp};
-STBX,STWX,STTX,STOX,STVX,STHPX,STHCX,STPTRX:
-	imm = 'd0;
-LDHS:	imm = {{115{ir.lds.disp[12]}},ir.lds.disp};
-STBS,STWS,STTS,STOS,STHS:
-	imm = {{115{ir.sts.disp[12]}},ir.sts.disp};
-LDSP,STSP:	imm = {{122{1'b0}},ir[15:14],4'h0};
-SLLI,SRLI,SRAI:	imm = {122'd0,ir[24:19]};
+OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI:
+	imm = {{81{ir.ri.immhi[6]}},ir.ri.immhi,ir.ri.immlo};
+OP_ANDI:	// Pad with ones to the left
+	imm = {{81{1'b1}},ir.ri.immhi,ir.ri.immlo};
+OP_ORI,OP_EORI:	// Pad with zeros to the left
+	imm = {{81{1'b0}},ir.ri.immhi,ir.ri.immlo};
+OP_LOAD,OP_LOADZ,OP_STORE:
+	imm = {{88{ir.ls.immlo[7]}},ir.ls.immlo};
+OP_FADDI,OP_FCMPI,OP_FMULI,OP_FDIVI:
+	imm = imm16x96;
 default:
 	imm = 'd0;
 endcase
 
 inc <= 5'd5;
-if (ir2.any.opcode==OP_PFX0) begin
-	imm[95:18] <= {{46{ir2[39]}},ir2[39:8]};
+if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd0) begin
+	if (fpAddi)
+		imm <= imm32x96;
+	else
+		imm <= {{64{ir2[39]}},ir2[39:8]};
 	inc <= 5'd10;
-	if (ir3.any.opcode==OP_PFX1) begin
-		imm[95:50] <= {{14{ir3[39]}},ir3[39:8]};
+	if (ir3.any.opcode==OP_PFX && ir3.any.sz==3'd1) begin
+		if (fpAddi)
+			imm <= imm64x96;
+		else
+			imm[95:32] <= {{32{ir3[39]}},ir3[39:8]};
 		inc <= 5'd15;
-		if (ir4.any.opcode==OP_PFX2) begin
-			imm[95:82] <= ir4[21:8];
+		if (ir4.any.opcode==OP_PFX && ir4.any.sz==3'd2) begin
+			imm[95:64] <= ir4[39:8];
 			inc <= 5'd20;
 		end
 	end
 end
-else if (ir2.any.opcode==OP_PFX1) begin
-	imm[95:50] <= {{14{ir2[39]}},ir2[39:8]};
+else if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd1) begin
+	imm <= {{32{ir2[39]}},ir2[39:8],32'd0};
 	inc <= 5'd10;
-	if (ir3.any.opcode==OP_PFX2) begin
-		imm[95:82] <= ir3[21:8];
+	if (ir3.any.opcode==OP_PFX && ir3.any.sz==3'd2) begin
+		imm[95:64] <= ir3[39:8];
 		inc <= 5'd15;
 	end
 end
-else if (ir2.any.opcode==OP_PFX2) begin
-	imm[95:82] <= ir2[21:8];
+else if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd2) begin
+	imm[95:64] <= {ir2[39:8],64'd0};
 	inc <= 5'd10;
+end
 end
 
 endmodule

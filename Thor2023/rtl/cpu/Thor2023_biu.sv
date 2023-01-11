@@ -40,7 +40,7 @@ import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_biu(rst,clk,tlbclk,clock,UserMode,MUserMode,omode,bounds_chk,pe,
+module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
 	ip,ip_o,ihit,ihite,ihito,ifStall,ic_line,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
@@ -52,8 +52,8 @@ input rst;
 input clk;
 input tlbclk;
 input clock;							// clock for clock algorithm
-input UserMode;
-input MUserMode;
+input AppMode;
+input MAppMode;
 input [1:0] omode;
 input bounds_chk;
 input pe;									// protected mode enable
@@ -65,8 +65,8 @@ output ihito;
 input ifStall;
 output [$bits(ICacheLine)*2-1:0] ic_line;
 output ic_valid;
-output [$bits(Address)-1:6] ic_tage;
-output [$bits(Address)-1:6] ic_tago;
+output [$bits(address_t)-1:6] ic_tage;
+output [$bits(address_t)-1:6] ic_tago;
 // Fifo controls
 output fifoToCtrl_wack;
 input memory_arg_t fifoToCtrl_i;
@@ -165,9 +165,9 @@ reg cyc_stk;
 reg stb_stk;
 reg we_stk;
 reg [15:0] sel_stk;
-Address adro_stk;
-Address dadr_stk;
-Address iadr_stk;
+address_t adro_stk;
+address_t dadr_stk;
+address_t iadr_stk;
 reg [127:0] dato_stk;
 reg [7:0] last_tid;
 reg [1:0] waycnt;
@@ -175,7 +175,7 @@ reg iaccess;
 reg daccess;
 reg [4:0] icnt;
 reg [4:0] dcnt;
-Address iadr;
+address_t iadr;
 reg keyViolation = 1'b0;
 reg xlaten;
 wire memq_v;
@@ -220,9 +220,9 @@ reg [1023:0] memr_res;
 // 15: trigger read / write
 reg [63:0] tlb_bucket [0:15];
 
-Address cta;		// card table address
-Address ea;
-Address afilt;
+address_t cta;		// card table address
+address_t ea;
+address_t afilt;
 
 always_comb
 	afilt = (memreq.func==MR_MOVST) ? memreq.res : memreq.adr;
@@ -482,7 +482,7 @@ always_ff @(posedge clk)
 	tlbacrd <= tlbacr;
 
 reg [2:0] dwait;		// wait state counter for dcache
-Address dadr;
+address_t dadr;
 DCacheLine dci [0:1];
 DCacheLine dci1,dci2;
 DCacheLine dc_eline, dc_oline;
@@ -527,11 +527,11 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
 	dc_line_mod = {dc_oline.m,dc_eline.m};
 
-wire [$bits(Address)-1:14] dc_etag [3:0];
+wire [$bits(address_t)-1:14] dc_etag [3:0];
 wire [255:0] dc_evalid [0:3];
 wire [3:0] dhit1e;	// debugging
 wire [3:0] dhit1o;
-wire [$bits(Address)-1:14] dc_otag [3:0];
+wire [$bits(address_t)-1:14] dc_otag [3:0];
 wire [255:0] dc_ovalid [0:3];
 wire dhito,dhite;
 reg [7:0] vadr2e;
@@ -735,11 +735,11 @@ reg [31:0] tlb_ia;
 TLBE tlb_ib;
 wire tlb_cyc;
 wire [127:0] tlb_dat;
-Address tlb_adr;
+address_t tlb_adr;
 reg tlb_ack;
 reg inext;
-VirtualAddress tlbmiss_adr;
-VirtualAddress miss_adr;
+virtual_address_t tlbmiss_adr;
+virtual_address_t miss_adr;
 reg wr_ptg;
 /*
 always_comb
@@ -761,7 +761,7 @@ Thor2023_tlb utlb
   .clock(clock),
   .rdy_o(tlbrdy),
   .asid_i(mem_resp[0].asid),
-  .sys_mode_i(seg_o==wishbone_pkg::CODE ? ~UserMode : ~MUserMode),
+  .sys_mode_i(seg_o==wishbone_pkg::CODE ? ~AppMode : ~MAppMode),
   .xlaten_i(xlaten),
   .we_i(we_o),
   .dadr_i(dadr),
@@ -849,7 +849,7 @@ wire [127:0] ptgram_dato;
 reg ptgram_web = 1'b0;
 reg [11:0] ptgram_adrb = 'd0;
 PTG ptgram_datib;
-Address ptg_lookup_address;
+address_t ptg_lookup_address;
 reg [3:0] ptgacr = 4'd15;
 wire pe_clock;
 reg clock_r = 1'b0;
@@ -857,7 +857,7 @@ reg [11:0] clock_count = 'd0;
 
 // SIM debugging
 reg [5:0] ptg_lac = 'd0;
-Address [63:0] ptg_last_adr;
+address_t [63:0] ptg_last_adr;
 
 `ifdef SUPPORT_HASHPT
 
@@ -911,7 +911,7 @@ Thor2023_ptg_search uptgs
 // the PTG RAM to complete without changes. A PTG write cycle will bounce
 // back to the memory IDLE state almost immediately, this leaves the address
 // to be maintained.
-Address idadr, prev_idadr;
+address_t idadr, prev_idadr;
 always_comb
 	case(1'b1)
 	daccess: idadr <= dadr;
@@ -1292,8 +1292,8 @@ begin
 	end
 	shr_ma <= 6'd0;
 	tlben <= TRUE;
-	iadr <= RSTIP;
-	dadr <= RSTIP;	// prevents MR_TLB miss at startup
+	iadr <= RSTPC;
+	dadr <= RSTPC;	// prevents MR_TLB miss at startup
 	tDeactivateBus();
 	adr_o <= 'd0;
 	dat <= 'd0;
@@ -1520,7 +1520,7 @@ else begin
 				if (ivcnt>=3'd4)
 					ivcnt <= 3'd0;
 				ivcache[ivcnt] <= memr.res;
-				ivtag[ivcnt] <= memr.vcadr[$bits(Address)-1:5];
+				ivtag[ivcnt] <= memr.vcadr[$bits(address_t)-1:5];
 				ivvalid[ivcnt] <= TRUE;
 //				if (ic_line=='d0)
 //					$stop;
@@ -1540,20 +1540,20 @@ else begin
 	    2'b00:		// need both even and odd cache lines (start with even)
 	    	begin
 			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(Address)-1:6]+memr.adr[5],1'b0,5'h0};
-					ipo <= {memr.adr[$bits(Address)-1:6]+memr.adr[5],1'b0,5'h0};
+					adr_o <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
+					ipo <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
 				end
 	    2'b01:		// If got a hit on the even address, the odd one must be missing
 	    	begin
 			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(Address)-1:6],1'b1,5'h0};
-					ipo <= {memr.adr[$bits(Address)-1:6],1'b1,5'h0};
+					adr_o <= {memr.adr[$bits(address_t)-1:6],1'b1,5'h0};
+					ipo <= {memr.adr[$bits(address_t)-1:6],1'b1,5'h0};
 				end
 			2'b10:		// Otherwise the even one must be missing
 				begin
 			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(Address)-1:6]+memr.adr[5],1'b0,5'h0};
-					ipo <= {memr.adr[$bits(Address)-1:6]+memr.adr[5],1'b0,5'h0};
+					adr_o <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
+					ipo <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
 				end
 			2'b11:		// not missing lines, finished
 				begin
@@ -1613,7 +1613,7 @@ else begin
 		begin
 			if (memr.sz!=nul) begin
 				ivcache[vcn] <= memr.res;
-				ivtag[vcn] <= memr.vcadr[$bits(Address)-1:5];
+				ivtag[vcn] <= memr.vcadr[$bits(address_t)-1:5];
 				ivvalid[vcn] <= 1'b1;
 				if (ic_line=='d0)
 					$stop;
@@ -2352,8 +2352,8 @@ else begin
 end
 
 task tInvalidatePtgc;
-input Address adrlo;
-input Address adrhi;
+input address_t adrlo;
+input address_t adrhi;
 integer n5;
 begin
 `ifdef SUPPORT_MMU_CACHE
@@ -2700,10 +2700,10 @@ begin
 			  MR_LOAD,MR_MOVLD:
 		    	case(memreq.sz)
 		    	nul:	memresp.res <= 'h0;
-		    	byt:	memresp.res <= {{56{datis[7]}},datis[7:0]};
-		    	wyde:	memresp.res <= {{48{datis[15]}},datis[15:0]};
+		    	Thor2023Pkg::byt:	memresp.res <= {{56{datis[7]}},datis[7:0]};
+		    	Thor2023Pkg::wyde:	memresp.res <= {{48{datis[15]}},datis[15:0]};
 //		    	tetra:	memresp.res[mem_resp[PADR_SET].step] <= {{32{datis[31]}},datis[31:0]};
-		    	tetra:	memresp.res <= {{32{datis[31]}},datis[31:0]};
+		    	Thor2023Pkg::tetra:	memresp.res <= {{32{datis[31]}},datis[31:0]};
 		//    	octa:	begin memresp.res[mem_resp[5].step] <= {{64{datis[63]}},datis[63:0]}; end
 		//    	hexi:	begin memresp.res <= datis[127:0]; end
 		//    	hexipair:	memresp.res <= dati;
@@ -2714,9 +2714,9 @@ begin
 			  MR_LOADZ:
 		    	case(mem_resp[PADR_SET].sz)
 		    	nul:	memresp.res <= 'h0;
-		    	byt:	begin memresp.res <= {56'd0,datis[7:0]}; end
-		    	wyde:	begin memresp.res <= {48'd0,datis[15:0]}; end
-		    	tetra:	begin memresp.res <= {32'd0,datis[31:0]}; end
+		    	Thor2023Pkg::byt:	begin memresp.res <= {56'd0,datis[7:0]}; end
+		    	Thor2023Pkg::wyde:	begin memresp.res <= {48'd0,datis[15:0]}; end
+		    	Thor2023Pkg::tetra:	begin memresp.res <= {32'd0,datis[31:0]}; end
 		//    	octa:	begin memresp.res[mem_resp[5].step] <= {64'd0,datis[63:0]}; end
 		//    	hexi:	begin memresp.res <= datis[127:0]; end
 		//    	hexipair:	memresp.res <= dati;
@@ -2753,10 +2753,10 @@ task tBeginIFetch;
 begin
   ic_wway <= waycnt;
 	waycnt <= waycnt + 2'd1;
-	ipo <= {memr.adr[$bits(Address)-1:5],5'b0};
+	ipo <= {memr.adr[$bits(address_t)-1:5],5'b0};
 	goto (IFETCH1);
 	for (n = 0; n < 5; n = n + 1) begin
-		if (ivtag[n]==memr.adr[$bits(Address)-1:5] && ivvalid[n]) begin
+		if (ivtag[n]==memr.adr[$bits(address_t)-1:5] && ivvalid[n]) begin
 			vcn <= n;
     	goto (IFETCH4);
   	end
@@ -2822,7 +2822,7 @@ begin
   		adr_o <= {memr.adr[31:4],4'd0};
   	else
   		adr_o <= adr_o + 5'd16;
-		csr_o <= memr.func2==MR_LDR;
+//		csr_o <= memr.func2==MR_LDR;
     tid_o <= {tid_cnt[7:3] + 2'd1,3'd0};
   	tid_cnt[7:3] <= tid_cnt[7:3] + 2'd1;
   	tid_cnt[2:0] <= 'd0;
@@ -3054,10 +3054,10 @@ begin
   		else
 	    	case(memr.sz)
 	    	nul:	memresp2.res <= 'h0;
-	    	byt:	begin memresp2.res <= {{56{datis2[7]}},datis2[7:0]}; end
-	    	wyde:	begin memresp2.res <= {{48{datis2[15]}},datis2[15:0]}; end
-	    	tetra:	begin memresp2.res <= {{32{datis2[31]}},datis2[31:0]}; end
-	    	octa:	begin memresp2.res <= {{64{datis2[63]}},datis2[63:0]}; end
+	    	Thor2023Pkg::byt:	begin memresp2.res <= {{56{datis2[7]}},datis2[7:0]}; end
+	    	Thor2023Pkg::wyde:	begin memresp2.res <= {{48{datis2[15]}},datis2[15:0]}; end
+	    	Thor2023Pkg::tetra:	begin memresp2.res <= {{32{datis2[31]}},datis2[31:0]}; end
+	    	Thor2023Pkg::octa:	begin memresp2.res <= {{64{datis2[63]}},datis2[63:0]}; end
 	//    	hexi:	begin memresp.res <= datis[127:0]; end
 	//    	hexipair:	memresp.res <= dati;
 	//    	hexiquad:	begin memresp.res <= dati512; end
@@ -3071,10 +3071,10 @@ begin
   		else
 	    	case(memr.sz)
 	    	nul:	memresp2.res <= 'h0;
-	    	byt:	begin memresp2.res <= {56'd0,datis2[7:0]}; end
-	    	wyde:	begin memresp2.res <= {48'd0,datis2[15:0]}; end
-	    	tetra:	begin memresp2.res <= {32'd0,datis2[31:0]}; end
-	    	octa:	begin memresp2.res <= {64'd0,datis2[63:0]}; end
+	    	Thor2023Pkg::byt:	begin memresp2.res <= {56'd0,datis2[7:0]}; end
+	    	Thor2023Pkg::wyde:	begin memresp2.res <= {48'd0,datis2[15:0]}; end
+	    	Thor2023Pkg::tetra:	begin memresp2.res <= {32'd0,datis2[31:0]}; end
+	    	Thor2023Pkg::octa:	begin memresp2.res <= {64'd0,datis2[63:0]}; end
 	//    	hexi:	begin memresp.res <= datis[127:0]; end
 	//    	hexipair:	memresp.res <= dati;
 	//    	hexiquad:	begin memresp.res <= dati512; end
@@ -3102,7 +3102,7 @@ endtask
 
 task tPageFault;
 input cause_code_t typ;
-input Address ba;
+input address_t ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
@@ -3118,7 +3118,7 @@ end
 endtask
 
 task tKeyViolation;
-input Address ba;
+input address_t ba;
 begin
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;

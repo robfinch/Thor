@@ -86,10 +86,10 @@ reg [31:0] i0_sel, i1_sel;
 function [31:0] fnSel;
 input [2:0] sz;
 case(sz)
-byt:	fnSel = 32'h00000001;
-wyde:	fnSel = 32'h00000003;
-tetra:	fnSel = 32'h0000000F;
-octa:	fnSel = 32'h000000FF;
+Thor2023Pkg::byt:	fnSel = 32'h00000001;
+Thor2023Pkg::wyde:	fnSel = 32'h00000003;
+Thor2023Pkg::tetra:	fnSel = 32'h0000000F;
+Thor2023Pkg::octa:	fnSel = 32'h000000FF;
 //hexi:	fnSel = 32'h0000FFFF;
 //hexipair:	fnSel = 32'hFFFFFFFF;
 default:	fnSel = 32'h000000FF;
@@ -176,9 +176,9 @@ begin
 					if (i.func==MR_LOAD) begin
 						ldo.res = /*|sx ? (dat1 & imask) | ~imask :*/ (dat1 & imask);
 						case(i.sz)
-						byt:	ldo.res = {{32{ldo.res[7]}},ldo.res[7:0]};
-						wyde:	ldo.res = {{16{ldo.res[15]}},ldo.res[15:0]};
-						tetra:ldo.res = ldo.res[31:0];
+						Thor2023Pkg::byt:	ldo.res = {{32{ldo.res[7]}},ldo.res[7:0]};
+						Thor2023Pkg::wyde:	ldo.res = {{16{ldo.res[15]}},ldo.res[15:0]};
+						Thor2023Pkg::tetra:ldo.res = ldo.res[31:0];
 						default:	ldo.res = ldo.res[31:0];
 						endcase
 					end
