@@ -44,7 +44,7 @@ module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
 	ip,ip_o,ihit,ihite,ihito,ifStall,ic_line,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
-	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i,
+	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
 	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps);
 parameter AWID=32;
@@ -98,6 +98,7 @@ input [127:0] dat_i;
 output reg [127:0] dat_o;
 output reg csr_o;
 input rb_i;
+input wb_address_t adr_i;
 
 output reg dce;							// data cache enable
 input [23:0] keys [0:7];
@@ -416,6 +417,7 @@ reg [1:0] ic_wway;
 reg [2:0] vcn;
 reg ic_invline,ic_invall;
 wire ihit2e, ihit2o;
+wire icache_wre, icache_wro;
 
 Thor2023_icache uic1
 (
@@ -431,11 +433,12 @@ Thor2023_icache uic1
 	.ic_valid(ic_valid),
 	.ic_tage(ic_tage),
 	.ic_tago(ic_tago),
-	.upd_adr(upd_adr),
 	.ici(ici),
 	.ic_wway(ic_wway),
 	.wr_ic1(wr_ic1),
-	.wr_ic2(wr_ic2)
+	.wr_ic2(wr_ic2),
+	.icache_wre(icache_wre),
+	.icache_wro(icache_wro)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1114,6 +1117,7 @@ reg wr_pte;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Capture data and address
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+reg acki1, acki2, cs1;
 
 typedef struct packed
 {
@@ -1132,6 +1136,9 @@ req_table_t req;
 always_ff @(posedge clk)
 	if (wr_reqtbl)
 		reqtbl[tid_o] <= {blen_o,we_o,adr_o,seg_o};
+reg [7:0] tid_id;
+always_ff @(posedge clk)
+	tid_id <= tid_i;
 assign req = reqtbl[tid_i];
 
 always_ff @(posedge clk)
@@ -1143,7 +1150,7 @@ else begin
 	if (state==DFETCH5 && next_i && dcnt[4:2]==blen_o[2:0])
 		count <= 'd0;
 	if (ack_i) begin
-		if (tid_i[7:3]!=prev_tid[7:3]) begin
+		if (tid_i[7:3]!=prev_tid[7:3] && tid_i[2:0]=='d0) begin
 			count <= 'd0;
 			prev_tid <= tid_i;
 		end
@@ -1152,29 +1159,32 @@ else begin
 	end
 end
 
+always_comb
+	req_done = req.blen==count;
+
 always_ff @(posedge clk)
 if (rst) begin
-	req_done <= 'd1;
+//	req_done <= 'd1;
 	upd_adr <= 'd0;
 end
 else begin
 	if (ack_i) begin
 		if (tid_i[7:3]!=prev_tid[7:3]) begin
-			if (req.blen>3'd0)
-				req_done <= 1'b0;
+//			if (req.blen>3'd0)
+//				req_done <= 1'b0;
 		end
 	end
 
 	if (ack_i && req.seg==wishbone_pkg::CODE) begin
-		if (req.blen==count)
-			req_done <= 1'b1;
-		if (count=='d0)
+//		if (req.blen==count)
+//			req_done <= 1'b1;
+		if (count[2:0]=='d0)
 			upd_adr <= {req.adr[$bits(wb_address_t)-1:5],5'h0};
 	end
 	else if (ack_i && req.seg==wishbone_pkg::DATA && !req.we) begin
-		if (req.blen==count)
-			req_done <= 1'b1;
-		if (count=='d0)
+//		if (req.blen==count)
+//			req_done <= 1'b1;
+		if (count[2:0]=='d0)
 			upd_adr <= {req.adr[$bits(wb_address_t)-1:5],5'h0};
 	end
 	if (state==MEMORY_UPD1 || state==MEMORY_UPD2)
@@ -1182,18 +1192,33 @@ else begin
 end
 
 always_ff @(posedge clk)
-if (rst)
+if (rst) begin
 	ici.data <= 'd0;
+	ici.v <= 2'b00;
+end
 else begin
-	if (state==IFETCH4)
+	if (icache_wre|icache_wro)
+		ici.v <= 2'b00;
+	if (state==IFETCH4) begin
 		ici.data <= ivcache[vcn];
-	else if (ack_i && req.seg==wishbone_pkg::CODE) begin
-		case(tid_i[0])
-		1'd0:	ici.data[127:  0] <= dat_i;
-		1'd1: ici.data[255:128] <= dat_i;
+		ici.v <= 2'b11;
+	end
+	else if (acki1 && req.seg==wishbone_pkg::CODE) begin
+		case(req.adr[4])
+		1'd0:	begin ici.data[127:  0] <= dat_i; ici.v[0] <= 1'b1; end
+		1'd1: begin ici.data[255:128] <= dat_i; ici.v[1] <= 1'b1; end
 		default:	;
 		endcase
 	end
+end
+always_ff @(posedge clk)
+if (rst)
+	ici.adr <= 'd0;
+else begin
+	if (state==IFETCH4)
+		ici.adr <= ivcache[vcn].adr;
+	else if (ack_i && req.seg==wishbone_pkg::CODE)
+		ici.adr <= {adr_i[31:5],5'h0};
 end
 always_ff @(posedge clk)
 if (rst) begin
@@ -1295,6 +1320,7 @@ begin
 	iadr <= RSTPC;
 	dadr <= RSTPC;	// prevents MR_TLB miss at startup
 	tDeactivateBus();
+	seg_o <= wishbone_pkg::CODE;
 	adr_o <= 'd0;
 	dat <= 'd0;
 	csr_o <= LOW;
@@ -1331,6 +1357,7 @@ begin
 	mem_resp[6] <= 'd0;
 	last_tid <= 'd0;
 	last_cadr <= 'd0;
+	tid_o <= 'd0;
 	for (n = 0; n < NTHREADS; n = n + 1)
 		rb_bitmaps2[n] <= 'd0;
 	goto (MEMORY_INIT);
@@ -1345,6 +1372,18 @@ begin
 	memr_fed <= FALSE;
 end
 endtask
+
+reg [5:0] blen1;
+always_ff @(posedge clk)
+	acki1 <= ack_i;
+always_ff @(posedge clk)
+	acki2 <= acki1;
+always_comb// @(posedge clk)
+	cs1 <= req.seg==wishbone_pkg::CODE;
+always_ff @(posedge clk)
+	blen1 <= req.blen;
+always_comb
+	wr_ic2 <= wr_ic1;
 
 always_ff @(posedge clk)
 if (rst) begin
@@ -1368,8 +1407,8 @@ else begin
 	if (clr_itlbmiss)
 		itlbmiss <= 1'b0;
 	wr_ic1 <= FALSE;
-	wr_ic2 <= wr_ic1;
-	if (ack_i && count==req.blen && req.seg==wishbone_pkg::CODE)
+//	wr_ic2 <= wr_ic1;
+	if (acki2 && ici.v==2'b11 && cs1)
 		wr_ic1 <= TRUE;
 	wr_dc1 <= FALSE;
 //	wr_dc2 <= wr_dc1;
@@ -3185,7 +3224,7 @@ endtask
 
 task tDeactivateBus;
 begin
-	seg_o <= wishbone_pkg::DATA;
+//	seg_o <= wishbone_pkg::DATA;
 	bte_o <= wishbone_pkg::LINEAR;
 	blen_o <= 'd0;
 	cti_o <= wishbone_pkg::CLASSIC;	// Normal cycles again

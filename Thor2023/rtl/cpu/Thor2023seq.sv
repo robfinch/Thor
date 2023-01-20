@@ -105,13 +105,13 @@ Thor2023_regfile urf1
 	.gwa('d0),
 	.gi('d0),
 	.wr(rfwr),
-	.wa(Rt), 
+	.wa(Rt.num), 
 	.i(res),
 	.gra('d0),
 	.go(),
-	.ra0(Ra),
-	.ra1(Rb),
-	.ra2(Rc), 
+	.ra0(Ra.num),
+	.ra1(Rb.num),
+	.ra2(Rc.num), 
 	.ra3(predreg),
 	.o0(rfoa),
 	.o1(rfob),
@@ -170,7 +170,7 @@ Thor2023_biu ubiu
 //	.bok_i(bok_i),
 	.bte_o(wbm_req.bte),
 	.blen_o(wbm_req.blen),
-	.tid_o(),
+	.tid_o(wbm_req.tid),
 	.cti_o(wbm_req.cti),
 	.seg_o(wbm_req.seg),
 //	.vpa_o(vpa_o),
@@ -189,6 +189,7 @@ Thor2023_biu ubiu
 	.dat_i(wbm_resp.dat),
 	.dat_o(wbm_req.data1),
 	.csr_o(wbm_req.csr),
+	.adr_i(wbm_resp.adr),
 	.dce(dce),
 	.keys(keys),
 	.arange(),
@@ -262,42 +263,43 @@ else begin
 				goto (DECODE);
 			end
 			else begin
-				memreq.tid <= tid;
-				memreq.tag <= 'd0;
-				memreq.thread <= 'd0;
-				memreq.omode <= om;
-				memreq.ip <= pc;
-				memreq.step <= 'd0;
-				memreq.count <= 'd0;
-				memreq.wr <= 1'b1;
-				memreq.adr <= {pc[31:5],5'd0};
-				memreq.func <= MR_ICACHE_LOAD;
-				memreq.func2 <= MR_LDN;
-				memreq.load <= 1'b0;
-				memreq.store <= 1'b0;
-				memreq.need_steps <= 1'b0;
-				memreq.v <= 1'b1;
-				memreq.empty <= 1'b0;
-				memreq.cause <= FLT_NONE;
-				memreq.sel <= 16'hFFFF;
-				memreq.asid <= asid;
-				memreq.vcadr <= {pc[31:5],5'd0};
-				memreq.res <= 'd0;
-				memreq.dchit <= 'd0;
-				memreq.cmt <= 'd0;
-				memreq.sz <= Thor2023Pkg::n96;
-				memreq.hit <= {ihito,ihite};
-				memreq.mod <= 2'b00;
-				memreq.acr <= 4'hF;
-				memreq.tlb_access <= 1'b0;
-				memreq.ptgram_en <= 1'b0;
-				memreq.rgn_en <= 1'b0;
-				memreq.pde_en <= 1'b0;
-				memreq.pmtram_ena <= 1'b0;
-				memreq.wr_tgt <= 1'b0;
-				memreq.tgt <= 'd0;
-				tid <= tid + 2'd1;
-				goto (MEMORY);
+				if (memreq.adr!={pc[31:5],5'h0}) begin
+					memreq.tid <= tid;
+					memreq.tag <= 'd0;
+					memreq.thread <= 'd0;
+					memreq.omode <= om;
+					memreq.ip <= pc;
+					memreq.step <= 'd0;
+					memreq.count <= 'd0;
+					memreq.wr <= 1'b1;
+					memreq.adr <= {pc[31:5],5'd0};
+					memreq.func <= MR_ICACHE_LOAD;
+					memreq.func2 <= MR_LDN;
+					memreq.load <= 1'b0;
+					memreq.store <= 1'b0;
+					memreq.need_steps <= 1'b0;
+					memreq.v <= 1'b1;
+					memreq.empty <= 1'b0;
+					memreq.cause <= FLT_NONE;
+					memreq.sel <= 16'hFFFF;
+					memreq.asid <= asid;
+					memreq.vcadr <= {pc[31:5],5'd0};
+					memreq.res <= 'd0;
+					memreq.dchit <= 'd0;
+					memreq.cmt <= 'd0;
+					memreq.sz <= Thor2023Pkg::penta;
+					memreq.hit <= {ihito,ihite};
+					memreq.mod <= 2'b00;
+					memreq.acr <= 4'hF;
+					memreq.tlb_access <= 1'b0;
+					memreq.ptgram_en <= 1'b0;
+					memreq.rgn_en <= 1'b0;
+					memreq.pde_en <= 1'b0;
+					memreq.pmtram_ena <= 1'b0;
+					memreq.wr_tgt <= 1'b0;
+					memreq.tgt <= 'd0;
+					tid <= tid + 2'd1;
+				end
 			end
 		end
 	DECODE:
@@ -359,7 +361,7 @@ else begin
 			OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_ANDI,OP_ORI,OP_EORI:
 				b <= imm;
 			OP_CSR:
-				b <= {ir[38:33],ir[31:24]};
+				b <= {ir[37:32],ir[30:23]};
 			default:
 				b <= Rb.sign ? -rfob : rfob;
 			endcase
@@ -402,11 +404,13 @@ else begin
 			OP_ORI:		begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= 1'b1; goto (IFETCH); end
 			OP_EORI:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= 1'b1; goto (IFETCH); end
 			OP_CSR:
-				if (omode >= b[13:12])
+				if (omode >= b[13:12]) begin
+					goto (IFETCH);
 					case(b[11:0])
 					12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; rfwr <= 1'b1; goto (IFETCH); end
 					default:	res <= 'd0;
 					endcase
+				end
 				else begin
 					res <= 'd0;
 					// tPrivilege();
@@ -579,6 +583,11 @@ else begin
 			goto (IFETCH);
 		end
 	endcase
+	$display("===================================================================");
+	$display("%d", $time);
+	$display("===================================================================");
+	$display("pc = %h", pc);
+	$display("pfx2:%h pfx1:%h ir: %h", postfix2,postfix1,ir);
 end
 
 task tReset;
@@ -590,6 +599,14 @@ begin
 	predreg <= 'd0;
 	predact <= 'd0;
 	memreq <= 'd0;
+	Ra <= 'd0;
+	Rb <= 'd0;
+	Rc <= 'd0;
+	Rt <= 'd0;
+	a <= 'd0;
+	b <= 'd0;
+	c <= 'd0;
+	imm <= 'd0;
 	goto (IFETCH);
 end
 endtask

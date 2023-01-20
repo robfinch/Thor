@@ -1,0 +1,72 @@
+Sections:
+00: ".bss" (0-A)
+01: ".data" (0-A)
+02: ".text" (0-100)
+
+
+Source: "fibonacci.asm"
+                                    	     1: # Fibonacci calculator rfPhoenix asm
+                                    	     2: # r1 in the end will hold the Nth fibonacci number
+                                    	     3: 
+                                    	     4: 	.bss
+00:0000000000000000 00              	     5: 	.space	10
+00:0000000000000001 *
+                                    	     6: 
+                                    	     7: 	.data
+01:0000000000000000 00              	     8: 	.space	10
+01:0000000000000001 *
+                                    	     9: 
+                                    	    10: #	.org	0xFFFFFFFFFFFD0000
+                                    	    11: 	.text
+                                    	    12: #	.align	0
+                                    	    13: start:
+02:0000000000000000 0302000160      	    14: 	CSRRD	r2,r0,0x3001	# get the thread number
+02:0000000000000005 0802020F00      	    15: 	AND		r2,r2,15				# 0 to 3
+02:000000000000000A DC09820000      	    16: 	BNZ		r2,stall			# Allow only thread 0 to work
+                                    	    17: 
+02:000000000000000F 040200FD00      	    18: 	LDI		r2,0xFD
+02:0000000000000014 0402000100      	    19: 	LDI		r2,0x01		# x = 1
+02:0000000000000019 52000000001F00FC	    20: 	STT		r2,0xFFFC0000
+02:0000000000000021 FF00
+                                    	    21: 
+02:0000000000000023 0403001000      	    22: 	LDI		r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
+02:0000000000000028 0201030024      	    23: 	OR		r1,r3,r0	# transfer y register to accumulator
+02:000000000000002D 040303FDFE      	    24: 	ADD		r3,r3,-3	# handles the algorithm iteration counting
+                                    	    25: 
+02:0000000000000032 0401000200      	    26: 	LDI		r1,2		# a = 2
+02:0000000000000037 52040000001F00FC	    27: 	STT		r1,0xFFFC0004		# stores a
+02:000000000000003F FF00
+                                    	    28: 
+                                    	    29: floop: 
+02:0000000000000041 50040000001F00FC	    30: 	LDT		r2,0xFFFC0004		# x = a
+02:0000000000000049 FF00
+02:000000000000004B 0201010210      	    31: 	ADD		r1,r1,r2				# a += x
+02:0000000000000050 52040000001F00FC	    32: 	STT		r1,0xFFFC0004		# stores a
+02:0000000000000058 FF00
+02:000000000000005A 52000000001F00FC	    33: 	STT		r2,0xFFFC0000		# stores x
+02:0000000000000062 FF00
+02:0000000000000064 040303FFFE      	    34: 	ADD		r3,r3,-1				# y -= 1
+02:0000000000000069 DC0DD8FFFF      	    35:   BNZ 	r3,floop		# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
+02:000000000000006E 9F00000000      	    36:   NOP
+02:0000000000000073 9F00000000      	    37:   NOP
+02:0000000000000078 9F00000000      	    38:   NOP
+02:000000000000007D 9F00000000      	    39:   NOP
+02:0000000000000082 9F00000000      	    40:   NOP
+02:0000000000000087 9F00000000      	    41: 	NOP  
+                                    	    42: stall:
+02:000000000000008C DC00000000      	    43: 	BRA	stall
+                                    	    44: 
+                                    	    45: 	.balign	0x100,0x0B
+                                    	    46: 
+                                    	    47: 
+
+
+Symbols by name:
+floop                           02:0000000000000041
+stall                           02:000000000000008C
+start                           02:0000000000000000
+
+Symbols by value:
+0000000000000000 start
+0000000000000041 floop
+000000000000008C stall

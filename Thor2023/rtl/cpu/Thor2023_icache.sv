@@ -42,7 +42,7 @@ import Thor2023Mmupkg::*;
 
 module Thor2023_icache(rst,clk,state,
 	ip,ip_o,ihit,ihite,ihito,ic_line,ic_valid,ic_tage,ic_tago,
-	upd_adr,ici,ic_wway,wr_ic1,wr_ic2);
+	ici,ic_wway,wr_ic1,wr_ic2,icache_wre,icache_wro);
 input rst;
 input clk;
 input [6:0] state;
@@ -55,19 +55,19 @@ output reg [$bits(ICacheLine)*2-1:0] ic_line;
 output reg ic_valid;
 output reg [$bits(address_t)-1:7] ic_tage;
 output reg [$bits(address_t)-1:7] ic_tago;
-input wb_address_t upd_adr;
 input ICacheLine ici;
 input [1:0] ic_wway;
 input wr_ic1;
 input wr_ic2;
+output reg icache_wre;
+output reg icache_wro;
 
 parameter FALSE = 1'b0;
 
 ICacheLine ic_eline, ic_oline;
 reg [1:0] ic_rwaye,ic_rwayo,ic_wway;
-reg icache_wre, icache_wro;
-always_comb icache_wre = wr_ic2 && !upd_adr[5];
-always_comb icache_wro = wr_ic2 &&  upd_adr[5];
+always_comb icache_wre = wr_ic2 && !ici.adr[5];
+always_comb icache_wro = wr_ic2 &&  ici.adr[5];
 reg ic_invline,ic_invall;
 code_address_t ip2,ip3,ip4,ip5;
 wire [$bits(code_address_t)-1:14] ictage [0:3];
@@ -155,7 +155,7 @@ sram_256x1024_1r1w uicme
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.wadr({ic_wway,upd_adr[13:6]}),//+upd_adr[5]}),
+	.wadr({ic_wway,ici.adr[13:6]}),//+upd_adr[5]}),
 	.radr({ic_rwaye,ip2[13:6]+ip2[5]}),
 	.i(ici),
 	.o(ic_eline)
@@ -166,7 +166,7 @@ sram_256x1024_1r1w uicmo
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.wadr({ic_wway,upd_adr[13:6]}),
+	.wadr({ic_wway,ici.adr[13:6]}),
 	.radr({ic_rwayo,ip2[13:6]}),
 	.i(ici),
 	.o(ic_oline)
@@ -189,7 +189,7 @@ uictage
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.ipo(upd_adr),
+	.ipo(ici.adr),
 	.way(ic_wway),
 	.rclk(clk),
 	.ndx(ip2[13:6]+ip2[5]),	// virtual index (same bits as physical address)
@@ -207,7 +207,7 @@ uictago
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.ipo(upd_adr),
+	.ipo(ici.adr),
 	.way(ic_wway),
 	.rclk(clk),
 	.ndx(ip2[13:6]),		// virtual index (same bits as physical address)
@@ -261,8 +261,8 @@ uicvale
 	.rst(rst),
 	.clk(clk),
 	.invce(state==MEMORY4),
-	.ip(upd_adr),
-	.adr(upd_adr),
+	.ip(ici.adr),
+	.adr(ici.adr),
 	.wr(icache_wre),
 	.way(ic_wway),
 	.invline(ic_invline),
@@ -281,8 +281,8 @@ uicvalo
 	.rst(rst),
 	.clk(clk),
 	.invce(state==MEMORY4),
-	.ip(upd_adr),
-	.adr(upd_adr),
+	.ip(ici.adr),
+	.adr(ici.adr),
 	.wr(icache_wro),
 	.way(ic_wway),
 	.invline(ic_invline),

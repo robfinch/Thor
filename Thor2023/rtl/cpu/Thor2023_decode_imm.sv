@@ -57,6 +57,7 @@ case(ir.any.opcode)
 OP_FADDI,OP_FCMPI,OP_FMULI,OP_FDIVI:
 	fpAddi = 1'b1;
 default:	fpAddi = 1'b0;
+endcase
 
 always_comb
 begin
@@ -69,11 +70,11 @@ OP_SHIFT:
 	default:	imm <= 'd0;
 	endcase
 OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI:
-	imm = {{81{ir.ri.immhi[6]}},ir.ri.immhi,ir.ri.immlo};
+	imm = {{80{ir.ri.immhi[7]}},ir.ri.immhi,ir.ri.immlo};
 OP_ANDI:	// Pad with ones to the left
-	imm = {{81{1'b1}},ir.ri.immhi,ir.ri.immlo};
+	imm = {{80{1'b1}},ir.ri.immhi,ir.ri.immlo};
 OP_ORI,OP_EORI:	// Pad with zeros to the left
-	imm = {{81{1'b0}},ir.ri.immhi,ir.ri.immlo};
+	imm = {{80{1'b0}},ir.ri.immhi,ir.ri.immlo};
 OP_LOAD,OP_LOADZ,OP_STORE:
 	imm = {{88{ir.ls.immlo[7]}},ir.ls.immlo};
 OP_FADDI,OP_FCMPI,OP_FMULI,OP_FDIVI:
@@ -96,7 +97,10 @@ if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd0) begin
 			imm[95:32] <= {{32{ir3[39]}},ir3[39:8]};
 		inc <= 5'd15;
 		if (ir4.any.opcode==OP_PFX && ir4.any.sz==3'd2) begin
-			imm[95:64] <= ir4[39:8];
+			if (fpAddi)
+				imm <= {ir4[39:8],ir3[39:8],ir2[39:8]};
+			else
+				imm[95:64] <= ir4[39:8];
 			inc <= 5'd20;
 		end
 	end

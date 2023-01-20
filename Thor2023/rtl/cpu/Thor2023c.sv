@@ -1,7 +1,8 @@
 import Thor2023Pkg::*;
 import Thor2023MmuPkg::*;
 
-module Thor2023(rst_i, clk_i, wbm_req, wbm_resp);
+module Thor2023seq(coreno_i, rst_i, clk_i, wbm_req, wbm_resp);
+input [95:0] coreno_i;
 input rst_i;
 input clk_i;
 input bok_i;
@@ -92,6 +93,7 @@ reg [15:0] predbuf;
 reg [4:0] predcond;
 reg [5:0] predreg;
 reg predt;
+wire takb;
 
 Thor2023_regfile urf1 
 (
@@ -232,6 +234,25 @@ Thor2023_agen uagen1 (
 	.adr(ea)
 )
 
+Thor2023_eval_branch ube1
+(
+	.inst(ir),
+	.fdm(1'b0),
+	.a(a),
+	.takb(takb)
+);
+
+wire [95:0] shl = a << b[6:0];
+wire [95:0] shli = a << Rb[6:0];
+wire [95:0] shr = a >> b[6:0];
+wire [95:0] shri = a >> Rb[6:0];
+wire [95:0] asr = {{95{a[95]}},a} >> b[6:0];
+wire [95:0] asri = {{95{a[95]}},a} >> Rb[6:0];
+wire [191:0] rol = {a,a} << b[6:0];
+wire [191:0] roli = {a,a} << Rb[6:0];
+wire [191:0] ror = {a,a} >> b[6:0];
+wire [191:0] rori = {a,a} >> Rb[6:0];
+
 always_ff @(posedge clk_g)
 if (rst_i)
 	tReset();
@@ -244,21 +265,75 @@ else begin
 			if (ihit) begin
 				goto (DECODE);
 			end
+			else begin
+				memreq.tid <= tid;
+				memreq.tag <= 'd0;
+				memreq.thread <= 'd0;
+				memreq.omode <= om;
+				memreq.ip <= pc;
+				memreq.step <= 'd0;
+				memreq.count <= 'd0;
+				memreq.wr <= 1'b1;
+				memreq.adr <= {pc[31:5],5'd0};
+				memreq.func <= MR_ICACHE_LOAD;
+				memreq.func2 <= MR_LDN;
+				memreq.load <= 1'b0;
+				memreq.store <= 1'b0;
+				memreq.need_steps <= 1'b0;
+				memreq.v <= 1'b1;
+				memreq.empty <= 1'b0;
+				memreq.cause <= 'd0;
+				memreq.sel <= 16'hFFFF;
+				memreq.asid <= asid;
+				memreq.vcadr <= 'd0;
+				memreq.res <= 'd0;
+				memreq.dchit <= 'd0;
+				memreq.cmt <= 'd0;
+				memreq.sz <= n96;
+				memreq.hit <= 2'b00;
+				memreq.mod <= 2'b00;
+				memreq.acr <= 4'hF;
+				memreq.tlb_access <= 1'b0;
+				memreq.ptgram_en <= 1'b0;
+				memreq.rgn_en <= 1'b0;
+				memreq.pde_en <= 1'b0;
+				memreq.pmtram_ena <= 1'b0;
+				memreq.wr_tgt <= 1'b0;
+				memreq.tgt <= 'd0;
+				tid <= tid + 2'd1;
+				goto (MEMORY);
+			end
 		end
 	DECODE:
 		begin
 			pc <= pc + imm_inc;
 			case(ir.any.opcode)
 			R2:
-				case(ir.any.func)
-				OP_PRED:
+				case(ir.r2.func)
+				OP_ADD,OP_CMP,OP_AND,OP_OR,_OP_EOR,OP_MUL,OP_DIV:
 					begin
-						predbuf <= {ir[33:29],ir[26:16]};
-						predreg <= ir[15:10];
-						predcond <= ir[9:5];
+						Ra <= ir.r2.Ra;
+						Rb <= ir.r2.Rb;
+						Rt <= ir.r2.Rt;
+					end	
+				endcase
+			OP_SHIFT:
+				case(ir.r2.func)
+				OP_ASL,OP_LSR,OP_LSL,OP_ASR,OP_ROL,OP_ROR:
+					begin
+						Ra <= ir.r2.Ra;
+						Rb <= ir.r2.Rb;
+						Rt <= ir.r2.Rt;
+					end
+				OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:
+					begin
+						Ra <= ir.r2.Ra;
+						Rb <= ir.r2.Rb;
+						Rt <= ir.r2.Rt;
 					end
 				endcase
-			OP_ADD,OP_CMP,OP_AND,OP_OR,_OP_EOR,OP_MUL,OP_DIV:
+			OP_ADDI,OP_CMPI,OP_ANDI,OP_ORI,_OP_EORI,OP_MULI,OP_DIVI,
+			OP_CSR:
 				begin
 					Ra <= ir.r2.Ra;
 					Rb <= ir.r2.Rb;
@@ -285,8 +360,10 @@ else begin
 						goto (IFETCH);
 					end
 				endcase
-			OP_ADD,OP_CMP,OP_MUL,OP_DIV,OP_AND,OP_OR,OP_EOR:
+			OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_ANDI,OP_ORI,OP_EORI:
 				b <= imm;
+			OP_CSR:
+				b <= {ir[38:33],ir[31:24]};
 			default:
 				b <= Rb.sign ? -rfob : rfob;
 			endcase
@@ -309,19 +386,50 @@ else begin
 				OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= 1'b1; goto (IFETCH); end
 				default:	;
 				endcase
-			OP_ADD:	res <= begin Rt.sign ? -(a + b) : a + b; rfwr <= 1'b1; goto (IFETCH); end
-			OP_CMP:	res <= begin {64'd0,cmpo}; rfwr <= 1'b1; goto (IFETCH); end
-			OP_AND:	res <= begin Rt.sign ? ~(a & b) : a & b; rfwr <= 1'b1; goto (IFETCH); end
-			OP_OR:	res <= begin Rt.sign ? ~(a | b) : a | b; rfwr <= 1'b1; goto (IFETCH); end
-			OP_EOR:	res <= begin Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= 1'b1; goto (IFETCH); end
+			OP_SHIFT:
+				case(ir.r2.func)
+				OP_ASL,OP_LSL:	begin res <= Rt.sign ? ~shl : shl; rfwr <= 1'b1; goto (IFETCH); end
+				OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; goto (IFETCH); end
+				OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; goto (IFETCH); end
+				OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; goto (IFETCH); end
+				OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; goto (IFETCH); end
+				default:				begin res <= 'd0; goto (IFETCH); end	 //tUnimp();
+				endcase
+			OP_ADDI:	res <= begin Rt.sign ? -(a + b) : a + b; rfwr <= 1'b1; goto (IFETCH); end
+			OP_CMPI:	res <= begin {64'd0,cmpo}; rfwr <= 1'b1; goto (IFETCH); end
+			OP_ANDI:	res <= begin Rt.sign ? ~(a & b) : a & b; rfwr <= 1'b1; goto (IFETCH); end
+			OP_ORI:		res <= begin Rt.sign ? ~(a | b) : a | b; rfwr <= 1'b1; goto (IFETCH); end
+			OP_EORI:	res <= begin Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= 1'b1; goto (IFETCH); end
+			OP_CSR:
+				if (omode >= b[13:12])
+					case(b[11:0])
+					12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; rfwr <= 1'b1; goto (IFETCH); end
+					default:	res <= 'd0;
+					endcase
+				else begin
+					res <= 'd0;
+					// tPrivilege();
+					goto (IFETCH);
+				end
 			OP_Bcc:
 				begin
-					if (takb) begin
+					if (ir.br.cnd==SR) begin
+						rfwr <= 1'b1;
+						Rt <= ir.br.Rn;
+						res <= opc;
+						pc <= opc + {{{40{ir[39]}},ir[39:16]};
+					end
+					else if (takb) begin
 						pc <= opc + {{{40{ir[39]}},ir[39:16]};
 					end
 					goto (IFETCH);
 				end				
-			OP_LOAD:
+			OP_LOAD,OP_LOADZ:
 				begin
 					memreq.tid <= tid;
 					memreq.tag <= 'd0;
@@ -332,7 +440,7 @@ else begin
 					memreq.count <= 'd0;
 					memreq.wr <= 1'b1;
 					memreq.adr <= ea; 
-					memreq.func <= MR_LOAD;
+					memreq.func <= ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD;
 					case(ir.ls.sz)
 					PRC8:		memreq.func2 <= MR_LDB;
 					PRC16:	memreq.func2 <= MR_LDW;
@@ -479,6 +587,7 @@ end
 
 task tReset;
 begin
+	sr.om <= 2'b11;
 	pc <= RSTPC;
 	tid <= 'd0;
 	predbuf <= 16'hFFFF;
