@@ -284,6 +284,7 @@ wire [2:0] region_num;
 reg rgn_wr;
 reg rgn_en;
 reg [6:0] rgn_adr;
+wire [7:0] region_sel;
 value_t rgn_dat;
 value_t rgn_dat_o;
 physical_address_t padr;
@@ -298,6 +299,7 @@ Thor2023_active_region uargn
 	.adr(padr),
 	.region_num(),
 	.region(region),
+	.sel(region_sel),
 	.err()
 );
 

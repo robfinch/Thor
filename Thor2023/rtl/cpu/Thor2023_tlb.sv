@@ -32,7 +32,8 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
+// 1521 LUTs / 1891 FFs / 15 BRAMs
 // ============================================================================
 
 import Thor2023Pkg::*;
@@ -64,7 +65,7 @@ output physical_address_t padr_o;
 output reg [3:0] acr_o;
 input tlben_i;
 input wrtlb_i;
-input [15:0] tlbadr_i;
+input [31:0] tlbadr_i;
 input TLBE tlbdat_i;
 output TLBE tlbdat_o;
 output reg tlbmiss_o;
@@ -158,8 +159,9 @@ always_ff @(posedge clk_g)
 begin
 	dumped_entry <= 'd0;
 	for (n3 = 0; n3 < ASSOC; n3 = n3 + 1)
-		if (wrtlbd[n3])
+		if (wrtlbd[n3]) begin
 			dumped_entry <= tlbdato[n3];
+		end
 end
 
 wire pe_xlat, ne_xlat;
@@ -175,19 +177,19 @@ edge_det u5 (
 
 // Detect a change in the page number
 wire cd_dadr, cd_iadr;
-change_det #(.WID($bits(address_t)-14)) ucd1 (
+change_det #(.WID($bits(address_t)-16)) ucd1 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(dadr_i[$bits(address_t)-1:14]),
+	.i(dadr_i[$bits(address_t)-1:16]),
 	.cd(cd_dadr)
 );
 
-change_det #(.WID($bits(address_t)-14)) ucd2 (
+change_det #(.WID($bits(address_t)-16)) ucd2 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(iadr_i[$bits(address_t)-1:14]),
+	.i(iadr_i[$bits(address_t)-1:16]),
 	.cd(cd_iadr)
 );
 
@@ -261,15 +263,15 @@ ST_RST:
 				tlbwrr[ASSOC-1] <= 1'b1; 
 				tlbdat_rst <= 'd0;
 				tlbdat_rst.asid <= 'd0;
-				tlbdat_rst.pte.g <= 1'b1;
+				//tlbdat_rst.pte.g <= 1'b1;
 				tlbdat_rst.pte.m <= 1'b1;
 				tlbdat_rst.pte.rwx <= 3'd7;
-				tlbdat_rst.pte.c <= 1'b1;
+				//tlbdat_rst.pte.c <= 1'b1;
 				// FFFC0000
 				// 1111_1111_1111_1100_00 00_0000_0000_0000
 				tlbdat_rst.vpn <= 8'hFF;
-				tlbdat_rst.pte.ppn <= {18'h03FFF,count[3:0]};
-				tlbdat_rst.ppnx <= 12'h000;
+				tlbdat_rst.pte.ppn <= {14'h3FFF,count[3:0]};
+				//tlbdat_rst.ppnx <= 12'h000;
 				rcount <= {6'h3F,count[3:0]};
 			end // Map 16MB ROM/IO area
 		1'b1: begin state <= ST_RUN; tlbwrr[ASSOC-1] <= 1'd1; end
@@ -283,7 +285,7 @@ ST_RUN:
 		if (|next_wrtlb) begin
 			;
 		end
-		else if (dumped_entry.pte.m && |dumped_entry.adr) begin
+		else if (dumped_entry.pte.m && |dumped_entry.pte_adr) begin
 			wrtlb <= 'd0;
 			state <= ST_WRITE_PTE;
 		end
@@ -316,9 +318,9 @@ ST_AGE4:
 		state <= ST_RUN;
 	end
 ST_WRITE_PTE:
-	if (|dumped_entry.adr) begin
+	if (|dumped_entry.pte_adr) begin
 		m_cyc_o <= 1'b1;
-		m_adr_o <= dumped_entry.adr;
+		m_adr_o <= dumped_entry.pte_adr;
 		m_dat_o <= dumped_entry;
 		m_dat_o[55] <= 1'b0;	// modified bit
 		if (m_ack_i) begin
@@ -344,14 +346,16 @@ begin
 			tlbadri_r <= 'd0;
 			tlbdati_r <= 'd0;
 			tlbadri <= rcount;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
 				tlbdati[n2] <= tlbdat_rst;
+			end
 		end
 	ST_RUN:
 		begin
 			tlbadri <= tlbadr_i[15:5];
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
 				tlbdati[n2] <= tlbdat_i;
+			end
 			tlbwr_r <= next_wrtlb;
 			tlbadri_r <= tlbadr_i[14:5];
 			tlbdati_r <= tlbdat_i;
@@ -359,8 +363,9 @@ begin
 	ST_AGE1,ST_AGE2,ST_AGE3:
 		begin
 			tlbadri <= rcount;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
 				tlbdati[n2] <= tlbdat_i;
+			end
 		end
 	ST_AGE4:
 		begin
@@ -372,8 +377,9 @@ begin
 	default:
 		begin
 			tlbadri <= tlbadr_i[14:5];
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
+			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
 				tlbdati[n2] <= tlbdat_i;
+			end
 		end
 	endcase
 	if (tlbdati[4].pte.ppn=='d0 && tlbdati[4].vpn != 'd0) begin
@@ -405,16 +411,18 @@ begin
   						tentryi[j1] <= tentryo2[j1];
   				end
 	  			tentryi[0] <= tentryo2[n1];
-	  			if (wed)
+	  			if (wed) begin
 	  				tentryi[0].pte.m <= 1'b1;
+	  			end
 	  			//tentryi[0].a <= 1'b1;
 //					if (stptr)
 //						tentryo[0].cards[(tentryo[n1].vpn >> ({tentryo[n1].lvl-2'd1,3'd0} + 2'd3)) & 5'h1F] <= 1'b1;
   			end
   			else begin
 	  			tentryi[n1] <= tentryo2[n1];
-	  			if (wed)
+	  			if (wed) begin
 	  				tentryi[n1].pte.m <= 1'b1;
+	  			end
 	  			//tentryi[n1].a <= 1'b1;
 //					if (stptr)
 //						tentryo[n1].cards[(tentryo[n1].vpn >> ({tentryo[n1].lvl-2'd1,3'd0} + 2'd3)) & 5'h1F] <= 1'b1;
@@ -427,7 +435,7 @@ end
 
 genvar g;
 generate begin : gTlbRAM
-for (g = 0; g < ASSOC; g = g + 1)
+for (g = 0; g < ASSOC; g = g + 1) begin : gLvls
 	Thor2023_TLBRam u1 (
 	  .clka(clk_g),    // input wire clka
 	  .ena(tlben_i|tlbeni),      // input wire ena
@@ -438,10 +446,11 @@ for (g = 0; g < ASSOC; g = g + 1)
 	  .clkb(clk_g),    // input wire clkb
 	  .enb(xlaten_i),      // input wire enb
 	  .web(wr[g]),      // input wire [0 : 0] web
-	  .addrb(adr_i[23:14]),  // input wire [9 : 0] addrb
+	  .addrb(adr_i[25:16]),  // input wire [9 : 0] addrb
 	  .dinb(tentryi[g]),    // input wire [63 : 0] dinb
 	  .doutb(tentryo[g])  // output wire [63 : 0] doutb
 	);
+end
 end
 endgenerate
 
@@ -458,8 +467,9 @@ if (rst_i) begin
 end
 else begin
  	padr_o <= padr_o;
-  if (pe_xlat)
+  if (pe_xlat) begin
   	hit <= 4'd15;
+  end
 	if (next_i)
 		padr_o <= padr_o + 6'd32;
   else begin
@@ -475,14 +485,18 @@ else begin
 			acr_o <= 4'h0;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				tentryo2[n] <= tentryo[n];
-				if (tentryo[n].vpn==iadrd[31:24] && (tentryo[n].asid==asid_i || tentryo[n].pte.g) && |tentryo[n].pte.rwx) begin
-			  	padr_o[13:0] <= iadrd[13:0];
-					padr_o[35:14] <= tentryo[n].pte.ppn[21:0];
-					padr_o[47:36] <= tentryo[n].ppnx[11:0];
-					acr_o <= {tentryo[n].pte.ppn < 18'h03FFF || tentryo[n].pte.ppn > 18'h3FFF0,tentryo[n].pte.rwx};
-					tlbmiss_o <= FALSE;
-					hit <= n;
-				end
+				if (tentryo[n].asid==asid_i || tentryo[n].g) begin
+					if (|tentryo[n].pte.rwx) begin
+						if (tentryo[n].vpn=={{2{&iadrd[31:28]}},iadrd[31:26]}) begin
+					  	padr_o[15:0] <= iadrd[15:0];
+							padr_o[31:16] <= tentryo[n].pte.ppn[15:0];
+							padr_o[47:32] <= {16{&tentryo[n].pte.ppn[15:12]}};
+							acr_o <= {tentryo[n].pte.ppn < 18'h01FFF || tentryo[n].pte.ppn > 18'h3FFF0,tentryo[n].pte.rwx};
+							tlbmiss_o <= FALSE;
+							hit <= n;
+						end
+					end
+				end				
 			end
 		end
 	end

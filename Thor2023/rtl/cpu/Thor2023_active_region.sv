@@ -38,7 +38,7 @@
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_active_region(clk, wr, rwa, i, o, adr, region_num, region, err);
+module Thor2023_active_region(clk, wr, rwa, i, o, adr, region_num, region, sel, err);
 input clk;
 input wr;
 input [6:0] rwa;
@@ -47,6 +47,7 @@ output value_t o;
 input physical_address_t adr;
 output reg [3:0] region_num;
 output REGION region;
+output reg [7:0] sel;
 output reg err;
 
 integer n;
@@ -69,12 +70,12 @@ initial begin
 	pma_regions[6].at = 20'h00206;		// io, (screen) byte address table, read-write
 	pma_regions[6].lock = "LOCK";
 
-	// Vacant
-	pma_regions[5].start = 48'hFFFFFFFF;
-	pma_regions[5].nd = 48'hFFFFFFFF;
+	// Config space
+	pma_regions[5].start = 48'hD0000000;
+	pma_regions[5].nd = 48'hDFFFFFFF;
 	pma_regions[5].pmt	 = 48'h00000000;
 	pma_regions[5].cta	= 48'h00000000;
-	pma_regions[5].at = 20'h0FF00;		// no access
+	pma_regions[5].at = 20'h00206;		// config space, byte address, read-write 
 	pma_regions[5].lock = "LOCK";
 
 	// Scratchpad RAM
@@ -155,10 +156,12 @@ begin
 	err = 1'b1;
 	region_num = 4'd0;
 	region = pma_regions[0];
+	sel <= 'd0;
   for (n = 0; n < 8; n = n + 1)
     if (adr[47:4] >= pma_regions[n].start[47:4] && adr[47:4] <= pma_regions[n].nd[47:4]) begin
     	region = pma_regions[n];
     	region_num = n;
+    	sel[n] <= 1'b1;
     	err = 1'b0;
   	end
 end    	
