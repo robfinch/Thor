@@ -82,8 +82,6 @@
 //						bit 24 to 29 target core
 //=============================================================================
 
-`define PIC_ADDR	32'hFEE20000
-
 module Thor2023_pic
 (
 	input rst_i,		// reset
@@ -110,6 +108,8 @@ module Thor2023_pic
 	output reg [7:0] causeo,
 	output reg [5:0] core_o
 );
+parameter PIC_ADDR = 32'hFEE20001;
+parameter PIC_ADDR_MASK = 32'h00FF0000;
 
 parameter CFG_BUS = 8'd0;
 parameter CFG_DEVICE = 5'd6;
@@ -134,7 +134,7 @@ localparam CFG_HEADER_TYPE = 8'h00;			// 00 = a general device
 parameter MSIX = 1'b0;
 
 wire clk;
-reg [31:0] pic_addr;
+wire cs_pic;
 wire [31:0] cfg_out;
 wire irq_en;
 reg [31:0] trig;
@@ -158,9 +158,7 @@ wire cs_config = cyc_i & stb_i & cs_config_i &&
 	adr_i[19:15]==CFG_DEVICE &&
 	adr_i[14:12]==CFG_FUNC
 	;
-wire cs_io = cyc_i & stb_i & cs_io_i &&
-	adr_i[23:16]==pic_addr[23:16]
-	;
+wire cs_io = cyc_i & stb_i & cs_io_i && cs_pic;
 wire cs = cs_config|cs_io;
 wire cs_inta = cyc_i && stb_i && adr_i[31:4]=={28{1'b1}} && cti_i==3'b110;
 assign vol_o = cs_io|cs_config|cs_inta;
@@ -178,7 +176,8 @@ pci32_config #(
 	.CFG_FUNC(CFG_FUNC),
 	.CFG_VENDOR_ID(CFG_VENDOR_ID),
 	.CFG_DEVICE_ID(CFG_DEVICE_ID),
-	.CFG_BAR0(`PIC_ADDR),
+	.CFG_BAR0(PIC_ADDR),
+	.CFG_BAR0_MASK(PIC_ADDR_MASK),
 	.CFG_SUBSYSTEM_VENDOR_ID(CFG_SUBSYSTEM_VENDOR_ID),
 	.CFG_SUBSYSTEM_ID(CFG_SUBSYSTEM_ID),
 	.CFG_ROM_ADDR(CFG_ROM_ADDR),
@@ -203,9 +202,9 @@ ucfg1
 	.adr_i(adr_i),
 	.dat_i(dat_i),
 	.dat_o(cfg_out),
-	.bar0_o(pic_addr),
-	.bar1_o(),
-	.bar2_o(),
+	.cs_bar0_o(cs_pic),
+	.cs_bar1_o(),
+	.cs_bar2_o(),
 	.irq_en_o(irq_en)
 );
 

@@ -59,23 +59,25 @@
 //	068	max count 3
 //	070	on time 3
 //	...
-//	400	underflow status
-//  408 synchronization register
-//  410 interrupt enable
-//	418 temporary register
-//	420 output status
-//	428 internal gate
+//	800	underflow status
+//  808 synchronization register
+//  810 interrupt enable
+//	818 temporary register
+//	820 output status
+//	828 internal gate
+//	830 internal gate on
+//	838 internal gate off
 //
 //	- all counter controls can be written at the same time with a
 //    single instruction allowing synchronization of the counters.
 //
-// Timer block supports up to 32 64-bit timers
+// Timer block supports up to 64 64-bit timers
 //
 // 8k556 LUTs 10k730 FF's (32x64 bit timers)
-// 1756 LUTs / 2120 FFs (8x48 bit timers)
+// 8430 LUTs 16472 FF's (64x48 bit timers)
+// 1255 LUTs / 2120 FFs (8x48 bit timers)
 // ============================================================================
 //
-`define PIT_ADDR	32'hFEE40000
 
 module Thor2023_pit(rst_i, clk_i, cs_config_i, cs_io_i,
 	cyc_i, stb_i, ack_o, sel_i, we_i, adr_i, dat_i, dat_o,
@@ -110,6 +112,9 @@ input gate3;
 output out3;
 output [31:0] irq_o;
 
+parameter PIT_ADDR = 32'hFEE40001;
+parameter PIT_ADDR_MASK = 32'h00FF0000;
+
 parameter CFG_BUS = 8'd0;
 parameter CFG_DEVICE = 5'd4;
 parameter CFG_FUNC = 3'd0;
@@ -134,7 +139,7 @@ parameter MSIX = 1'b0;
 
 integer n;
 wire irq;
-reg [31:0] pit_addr;
+wire cs_pit;
 wire [63:0] cfg_out;
 wire irq_en;
 reg [BITS-1:0] maxcounth [0:NTIMER-1];
@@ -167,9 +172,8 @@ wire cs_config = cyc_i & stb_i & cs_config_i &&
 	adr_i[19:15]==CFG_DEVICE &&
 	adr_i[14:12]==CFG_FUNC
 	;
-wire cs_io = cyc_i & stb_i & cs_io_i &&
-	adr_i[23:16]==pit_addr[23:16]
-	;
+wire cs_pit;
+wire cs_io = cyc_i & stb_i & cs_io_i && cs_pit;
 reg rdy;
 always @(posedge clk_i)
 	rdy <= cs_config|cs_io;
@@ -181,7 +185,8 @@ pci64_config #(
 	.CFG_FUNC(CFG_FUNC),
 	.CFG_VENDOR_ID(CFG_VENDOR_ID),
 	.CFG_DEVICE_ID(CFG_DEVICE_ID),
-	.CFG_BAR0(`PIT_ADDR),
+	.CFG_BAR0(PIT_ADDR),
+	.CFG_BAR0_MASK(PIT_ADDR_MASK),
 	.CFG_SUBSYSTEM_VENDOR_ID(CFG_SUBSYSTEM_VENDOR_ID),
 	.CFG_SUBSYSTEM_ID(CFG_SUBSYSTEM_ID),
 	.CFG_ROM_ADDR(CFG_ROM_ADDR),
@@ -206,9 +211,9 @@ ucfg1
 	.adr_i(adr_i),
 	.dat_i(dat_i),
 	.dat_o(cfg_out),
-	.bar0_o(pit_addr),
-	.bar1_o(),
-	.bar2_o(),
+	.cs_bar0_o(cs_pit),
+	.cs_bar1_o(),
+	.cs_bar2_o(),
 	.irq_en_o(irq_en)
 );
 
@@ -257,7 +262,7 @@ initial begin
 	end
 end
 
-always @(posedge clk_i)
+always_ff @(posedge clk_i)
 if (rst_i) begin
 	ie <= 'd0;
 	for (n = 0; n < NTIMER; n = n + 1) begin
@@ -282,7 +287,7 @@ end
 else begin
 	for (n = 0; n < NTIMER; n = n + 1) begin
 		ld[n] <= 1'b0;
-		if (cs_io && we_i && adr_i[10:5]==n)
+		if (cs_io && we_i && adr_i[11:5]==n)
 		case(adr_i[4:3])
 		2'd1:	maxcounth[n] <= dat_i;
 		2'd2:	onth[n] <= dat_i;
@@ -309,7 +314,7 @@ else begin
 		// Interrupt processing should read the underflow register to determine
 		// which timers underflowed, then write back the value to the underflow
 		// register.
-		if (cs_io && we_i && adr_i[10:3]==8'h80) begin
+		if (cs_io && we_i && adr_i[11:3]==9'h100) begin
 			if (dat_i[n]) begin
 				ie[n] <= 1'b0;
 				underflow[n] <= 1'b0;
@@ -318,7 +323,7 @@ else begin
 		end
 		// The timer synchronization register indicates which timer's registers to
 		// update. All timers may have their registers updated synchronously.
-		if (cs_io && we_i && adr_i[10:3]==8'h81)
+		if (cs_io && we_i && adr_i[11:3]==9'h101)
 			if (dat_i[n]) begin
 				ld[n] <= ldh[n];
 				ce[n] <= ceh[n];
@@ -329,34 +334,41 @@ else begin
 				maxcount[n] <= maxcounth[n];
 				ont[n] <= onth[n];
 			end
-		if (cs_io && we_i && adr_i[10:3]==8'h82)
-			ie <= dat_i;
-		if (cs_io && we_i && adr_i[10:3]==8'h83)
-			tmp <= dat_i;
-		if (cs_io && we_i && adr_i[10:3]==8'h85)
-			igate <= (igate & ~dat_i[63:32]) | dat_i[31:0];
+		if (cs_io & we_i)
+			case(adr_i[11:3])
+			9'h102:	ie <= dat_i;
+			9'h103:	tmp <= dat_i;
+			9'h105:	igate <= dat_i;
+			9'h106:	igate <= igate | dat_i;
+			9'h107:	igate <= igate & ~dat_i;
+			default:	;
+			endcase
 		if (cs_config)
 			dat_o <= cfg_out;
 		else if (cs_io) begin
-			case(adr_i[10:3])
-			8'h80:	dat_o <= underflow;
-			8'h81:	dat_o <= 'd0;
-			8'h82:	dat_o <= ie;
-			8'h83:	dat_o <= tmp;
-			8'h84:	dat_o <= out;
-			8'h85:	dat_o <= igate;
+			case(adr_i[11:3])
+			9'h100:	dat_o <= underflow;
+			9'h101:	dat_o <= 'd0;
+			9'h102:	dat_o <= ie;
+			9'h103:	dat_o <= tmp;
+			9'h104:	dat_o <= out;
+			9'h105:	dat_o <= igate;
+			9'h106:	dat_o <= 'd0;
+			9'h107:	dat_o <= 'd0;
 			default:
-				if (adr_i[10:5]==n)
+				if (adr_i[11:5]==n)
 					case(adr_i[4:3])
 					2'd0:	dat_o <= count[n];
 					2'd1:	dat_o <= maxcount[n];
 					2'd2:	dat_o <= ont[n];
 					2'd3:	dat_o <= {56'd0,3'b0,ge[n],xc[n],ar[n],ce[n],1'b0};
 					endcase
+				else
+					dat_o <= 'd0;
 			endcase
 		end
 		else
-			dat_o <= 32'd0;
+			dat_o <= 'd0;
 		
 		if (ld[n]) begin
 			count[n] <= maxcount[n];
