@@ -1,12 +1,12 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
 //	Thor2023_icache.sv
-//	- instruction cache
+//	- instruction cache 64kB, 16kB 4 way
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -33,29 +33,32 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
+// 6427 LUTs / 2548 FFs / 15 BRAMs                                                                          
 // ============================================================================
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_icache(rst,clk,state,
-	ip,ip_o,ihit,ihite,ihito,ic_line,ic_valid,ic_tage,ic_tago,
-	ici,ic_wway,wr_ic1,wr_ic2,icache_wre,icache_wro);
+module Thor2023_icache(rst,clk,state,snoop_adr,snoop_v,
+	ip,ip_o,ihit,ihite,ihito,ic_line_o,ic_valid,ic_tage,ic_tago,
+	ic_line_i,ic_wway,wr_ic1,wr_ic2,icache_wre,icache_wro);
 input rst;
 input clk;
 input [6:0] state;
+input code_address_t snoop_adr;
+input snoop_v;
 input code_address_t ip;
 output code_address_t ip_o;
 output reg ihit;
 output reg ihite;
 output reg ihito;
-output reg [$bits(ICacheLine)*2-1:0] ic_line;
+output reg [$bits(ICacheLine)*2-1:0] ic_line_o;
 output reg ic_valid;
 output reg [$bits(address_t)-1:7] ic_tage;
 output reg [$bits(address_t)-1:7] ic_tago;
-input ICacheLine ici;
+input ICacheLine ic_line_i;
 input [1:0] ic_wway;
 input wr_ic1;
 input wr_ic2;
@@ -66,14 +69,17 @@ parameter FALSE = 1'b0;
 
 ICacheLine ic_eline, ic_oline;
 reg [1:0] ic_rwaye,ic_rwayo,ic_wway;
-always_comb icache_wre = wr_ic2 && !ici.adr[5];
-always_comb icache_wro = wr_ic2 &&  ici.adr[5];
+always_comb icache_wre = wr_ic2 && !ic_line_i.adr[5];
+always_comb icache_wro = wr_ic2 &&  ic_line_i.adr[5];
 reg ic_invline,ic_invall;
-code_address_t ip2,ip3,ip4,ip5;
-wire [$bits(code_address_t)-1:14] ictage [0:3];
-wire [$bits(code_address_t)-1:14] ictago [0:3];
+code_address_t ip2,ip3,snoop_ip2;
+cache_tag_t [3:0] victage;
+cache_tag_t [3:0] victago;
+cache_tag_t [3:0] pictage;
+cache_tag_t [3:0] pictago;
 wire [1024/4-1:0] icvalide [0:3];
 wire [1024/4-1:0] icvalido [0:3];
+wire [1:0] snoop_waye, snoop_wayo;
 
 wire ihit2;
 reg ihit3;
@@ -86,11 +92,9 @@ reg [$bits(code_address_t)-7:0] ic_tag3e, ic_tag3o;
 always_ff @(posedge clk)
 	ip2 <= ip;
 always_ff @(posedge clk)
+	snoop_ip2 <= snoop_adr;
+always_ff @(posedge clk)
 	ip3 <= ip2;
-always_ff @(posedge clk)
-	ip4 <= ip3;
-always_ff @(posedge clk)
-	ip5 <= ip4;
 // line up ihit output with cache line output.
 always_ff @(posedge clk)
 	ihit3 <= ihit2;
@@ -155,9 +159,9 @@ sram_256x1024_1r1w uicme
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.wadr({ic_wway,ici.adr[13:6]}),//+upd_adr[5]}),
+	.wadr({ic_wway,ic_line_i.adr[13:6]}),//+upd_adr[5]}),
 	.radr({ic_rwaye,ip2[13:6]+ip2[5]}),
-	.i(ici),
+	.i(ic_line_i),
 	.o(ic_eline)
 );
 
@@ -166,19 +170,19 @@ sram_256x1024_1r1w uicmo
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.wadr({ic_wway,ici.adr[13:6]}),
+	.wadr({ic_wway,ic_line_i.adr[13:6]}),
 	.radr({ic_rwayo,ip2[13:6]}),
-	.i(ici),
+	.i(ic_line_i),
 	.o(ic_oline)
 );
 
 always_comb
 	case(ip3[5])
-	1'b0:	ic_line = {ic_oline.data,ic_eline.data};
-	1'b1:	ic_line = {ic_eline.data,ic_oline.data};
+	1'b0:	ic_line_o = {ic_oline.data,ic_eline.data};
+	1'b1:	ic_line_o = {ic_eline.data,ic_oline.data};
 	endcase
 
-Thor2023_ictag 
+Thor2023_cache_tag 
 #(
 	.LINES(256),
 	.WAYS(4),
@@ -189,14 +193,14 @@ uictage
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.ipo(ici.adr),
+	.adr_i(ip2),
 	.way(ic_wway),
 	.rclk(clk),
 	.ndx(ip2[13:6]+ip2[5]),	// virtual index (same bits as physical address)
-	.tag(ictage)
+	.tag(victage)
 );
 
-Thor2023_ictag 
+Thor2023_cache_tag 
 #(
 	.LINES(256),
 	.WAYS(4),
@@ -207,14 +211,50 @@ uictago
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.ipo(ici.adr),
+	.adr_i(ip2),
 	.way(ic_wway),
 	.rclk(clk),
 	.ndx(ip2[13:6]),		// virtual index (same bits as physical address)
-	.tag(ictago)
+	.tag(victago)
 );
 
-Thor2023_ichit
+Thor2023_cache_tag 
+#(
+	.LINES(256),
+	.WAYS(4),
+	.LOBIT(6)
+)
+uictagse
+(
+	.rst(rst),
+	.clk(clk),
+	.wr(icache_wre),
+	.adr_i(ic_line_i.adr),
+	.way(ic_wway),
+	.rclk(clk),
+	.ndx(snoop_ip2[13:6]+snoop_ip2[5]),
+	.tag(pictage)
+);
+
+Thor2023_cache_tag 
+#(
+	.LINES(256),
+	.WAYS(4),
+	.LOBIT(6)
+)
+uictagso
+(
+	.rst(rst),
+	.clk(clk),
+	.wr(icache_wro),
+	.adr_i(ic_line_i.adr),
+	.way(ic_wway),
+	.rclk(clk),
+	.ndx(snoop_ip2[13:6]),
+	.tag(pictago)
+);
+
+Thor2023_cache_hit
 #(
 	.LINES(256),
 	.WAYS(4)
@@ -222,17 +262,17 @@ Thor2023_ichit
 uichite
 (
 	.clk(clk),
-	.ip(ip),
+	.adr(ip),
 	.ndx(ip[13:6]+ip[5]),
-	.tag(ictage),
+	.tag(victage),
 	.valid(icvalide),
-	.ihit(ihit2e),
+	.hit(ihit2e),
 	.rway(ic_rwaye),
-	.vtag(ic_tag2e),
-	.icv(ic_valid2e)
+	.victag(ic_tag2e),
+	.cv(ic_valid2e)
 );
 
-Thor2023_ichit
+Thor2023_cache_hit
 #(
 	.LINES(256),
 	.WAYS(4)
@@ -240,17 +280,53 @@ Thor2023_ichit
 uichito
 (
 	.clk(clk),
-	.ip(ip),
+	.adr(ip),
 	.ndx(ip[13:6]),
-	.tag(ictago),
+	.tag(victago),
 	.valid(icvalido),
-	.ihit(ihit2o),
+	.hit(ihit2o),
 	.rway(ic_rwayo),
-	.vtag(ic_tag2o),
-	.icv(ic_valid2o)
+	.victag(ic_tag2o),
+	.cv(ic_valid2o)
 );
 
-Thor2023_icvalid 
+Thor2023_cache_hit
+#(
+	.LINES(256),
+	.WAYS(4)
+)
+uichitse
+(
+	.clk(clk),
+	.adr(snoop_adr),
+	.ndx(snoop_adr[13:6]+snoop_adr[5]),
+	.hit(snoop_hite),
+	.rway(snoop_waye),
+	.tag(pictage),
+	.valid(icvalide),
+	.victag(),
+	.cv()
+);
+
+Thor2023_cache_hit
+#(
+	.LINES(256),
+	.WAYS(4)
+)
+uichitso
+(
+	.clk(clk),
+	.adr(snoop_adr),
+	.ndx(snoop_adr[13:6]),
+	.hit(snoop_hito),
+	.rway(snoop_wayo),
+	.tag(pictago),
+	.valid(icvalido),
+	.victag(),
+	.cv()
+);
+
+Thor2023_cache_valid 
 #(
 	.LINES(256),
 	.WAYS(4),
@@ -261,8 +337,11 @@ uicvale
 	.rst(rst),
 	.clk(clk),
 	.invce(state==MEMORY4),
-	.ip(ici.adr),
-	.adr(ici.adr),
+	.snoop_adr(snoop_adr),
+	.snoop_hit(snoop_hite & snoop_v),
+	.snoop_way(snoop_waye),
+	.adr(ic_line_i.adr),
+	.inv_adr(ic_line_i.adr),
 	.wr(icache_wre),
 	.way(ic_wway),
 	.invline(ic_invline),
@@ -270,7 +349,7 @@ uicvale
 	.valid(icvalide)
 );
 
-Thor2023_icvalid 
+Thor2023_cache_valid 
 #(
 	.LINES(256),
 	.WAYS(4),
@@ -281,8 +360,11 @@ uicvalo
 	.rst(rst),
 	.clk(clk),
 	.invce(state==MEMORY4),
-	.ip(ici.adr),
-	.adr(ici.adr),
+	.snoop_adr(snoop_adr),
+	.snoop_hit(snoop_hito & snoop_v),
+	.snoop_way(snoop_wayo),
+	.adr(ic_line_i.adr),
+	.inv_adr(ic_line_i.adr),
 	.wr(icache_wro),
 	.way(ic_wway),
 	.invline(ic_invline),

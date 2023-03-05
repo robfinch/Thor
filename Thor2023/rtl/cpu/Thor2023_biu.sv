@@ -46,7 +46,7 @@ module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
 	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
-	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps);
+	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps, snoop_adr, snoop_v);
 parameter AWID=32;
 input rst;
 input clk;
@@ -110,6 +110,8 @@ output reg itlbmiss;
 input clr_itlbmiss;
 input [NTHREADS-1:0] rollback;
 output reg [127:0] rollback_bitmaps [0:NTHREADS-1];
+input address_t snoop_adr;
+input snoop_v;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -426,6 +428,8 @@ Thor2023_icache uic1
 	.rst(rst),
 	.clk(clk),
 	.state(state),
+	.snoop_adr(snoop_adr),
+	.snoop_v(snoop_v),
 	.ip(ip),
 	.ip_o(ip_o),
 	.ihit(ihit),
@@ -481,249 +485,47 @@ always_comb
 // Data Cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 reg wr_dc1, wr_dc2;
+wire dhit, dhite, dhito;
+wire dhit_d1, dhite_d1, dhito_d1;
 wire [3:0] tlbacr;
-reg [3:0] tlbacrd;
-always_ff @(posedge clk)
-	tlbacrd <= tlbacr;
-
 reg [2:0] dwait;		// wait state counter for dcache
 address_t dadr;
 DCacheLine dci [0:1];
 DCacheLine dci1,dci2;
-DCacheLine dc_eline, dc_oline;
-DCacheLine dc_elin, dc_olin;
 reg [1023:0] datil;
 reg dcachable;
-reg [1:0] dc_erway,prev_dc_erway;
-reg [1:0] dc_orway,prev_dc_orway;
-wire [1:0] dc_ewway;
-wire [1:0] dc_owway;
-reg [pL1DCacheWays-1:0] dcache_ewr, dcache_owr;
-wire dc_ewr, dc_owr;
 reg dc_invline,dc_invall;
 
-sram_257x1024_1r1w udcme
+Thor2023_dcache udc1
 (
 	.rst(rst),
 	.clk(clk),
-	.wr(dc_ewr),
-	.wadr({dc_ewway,upd_adr[13:6]+upd_adr[5]}),
-	.radr({dc_erway,padrd1[13:6]+padrd1[5]}),
-	.i(dci2),
-	.o(dc_eline)
-);
-
-sram_257x1024_1r1w udcmo
-(
-	.rst(rst),
-	.clk(clk),
-	.wr(dc_owr),
-	.wadr({dc_owway,upd_adr[13:6]}),
-	.radr({dc_orway,padrd1[13:6]}),
-	.i(dci2),
-	.o(dc_oline)
-);
-
-always_ff @(posedge clk)
-	case(padrd1[5])
-	1'b0:	dc_line = {dc_oline.data,dc_eline.data};
-	1'b1:	dc_line = {dc_eline.data,dc_oline.data};
-	endcase
-always_ff @(posedge clk)
-	dc_line_mod = {dc_oline.m,dc_eline.m};
-
-wire [$bits(address_t)-1:14] dc_etag [3:0];
-wire [255:0] dc_evalid [0:3];
-wire [3:0] dhit1e;	// debugging
-wire [3:0] dhit1o;
-wire [$bits(address_t)-1:14] dc_otag [3:0];
-wire [255:0] dc_ovalid [0:3];
-wire dhito,dhite;
-reg [7:0] vadr2e;
-always_comb
-	vadr2e <= padr[13:6]+padr[5];
-	
-Thor2023_dchit #(.LINES(256)) udchite
-(
-	.rst(rst),
-	.clk(clk),
-	.tags(dc_etag),
-	.ndx(vadr2e),
-	.adr(padr),
-	.valid(dc_evalid),
-	.hits(dhit1e),
-	.hit(dhite),
-	.rway(dc_erway)
-);
-
-Thor2023_dchit #(.LINES(256)) udchito
-(
-	.rst(rst),
-	.clk(clk),
-	.tags(dc_otag),
-	.ndx(padr[13:6]),
-	.adr(padr),
-	.valid(dc_ovalid),
-	.hits(dhit1o),
-	.hit(dhito),
-	.rway(dc_orway)
-);
-
-reg dhit, dhit_d1;
-always_ff @(posedge clk)
-	dhit = (dhite & dhito) || (adr_o[5] ? (dhito && padrd1[4:0] < 5'd23) : (dhite && padrd1[4:0] < 5'd23));
-reg dhite_d1, dhito_d1;
-always_ff @(posedge clk)
-	dhit_d1 <= dhit;
-always_ff @(posedge clk)
-	dhite_d1 <= dhite;
-always_ff @(posedge clk)
-	dhito_d1 <= dhito;
-
-Thor2023_dctag
-#(
-	.LINES(256),
-	.WAYS(4),
-	.LOBIT(6)
-)
-udcotag
-(
-	.clk(clk),
-	.wr(wr_dc2 && upd_adr[5]),
-	.adr(upd_adr),
-	.way(lfsr_o[1:0]),
-	.rclk(tlbclk),
-	.ndx(padrd1[13:6]),
-	.tag(dc_otag)
-);
-
-Thor2023_dctag
-#(
-	.LINES(256),
-	.WAYS(4),
-	.LOBIT(6)
-)
-udcetag
-(
-	.clk(clk),
-	.wr(wr_dc2 && ~upd_adr[5]),
-	.adr(upd_adr),
-	.way(lfsr_o[1:0]),
-	.rclk(tlbclk),
-	.ndx(padrd1[13:6]+padrd1[5]),
-	.tag(dc_etag)
-);
-
-Thor2023_dcvalid
-#(
-	.LINES(256),
-	.WAYS(4),
-	.LOBIT(6)
-)
-udcovalid
-(
-	.rst(rst),
-	.clk(clk),
-	.invce(state==MEMORY4 && adr_o[5]),
-	.dadr(adr_o),
-	.adr(upd_adr),
-	.wr(wr_dc2 && upd_adr[5]),
-	.way(lfsr_o[1:0]),
-	.invline(dc_invline),
-	.invall(dc_invall),
-	.valid(dc_ovalid)
-);
-
-Thor2023_dcvalid
-#(
-	.LINES(256),
-	.WAYS(4),
-	.LOBIT(6)
-)
-udcevalid
-(
-	.rst(rst),
-	.clk(clk),
-	.invce(state==MEMORY4 && ~adr_o[5]),
-	.dadr(adr_o),
-	.adr(upd_adr),
-	.wr(wr_dc2 && ~upd_adr[5]),
-	.way(lfsr_o[1:0]),
-	.invline(dc_invline),
-	.invall(dc_invall),
-	.valid(dc_evalid)
-);
-
-Thor2023_dcache_wr udcwre
-(
-	.clk(clk),
-	.state(state),
-	.wr_dc(wr_dc2),
-	.ack(ack_i),
-	.func(memreq.func),
 	.dce(dce),
-	.hit(|memr.hit),
-	.hit2(memr.dchit),
-	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
-	.acr(memr.acr),
-	.eaeo(~memr.adr[5]),
-	.daeo(~upd_adr[5]),
-	.wr(dc_ewr)
-);
-
-Thor2023_dcache_wr udcwro
-(
-	.clk(clk),
-	.state(state),
-	.wr_dc(wr_dc2),
-	.ack(ack_i),
-	.func(memreq.func),
-	.dce(dce),
-	.hit(|memr.hit),
-	.hit2(memr.dchit),
-	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
-	.acr(memr.acr),
-	.eaeo(memr.adr[5]),
-	.daeo(upd_adr[5]),
-	.wr(dc_owr)
-);
-
-Thor2023_dcache_way udcwaye
-(
-	.rst(rst),
-	.clk(clk),
-	.state(state),
-	.wr_dc(wr_dc2),
-	.ack(ack_i),
-	.func(memreq.func),
-	.dce(dce),
+	.snoop_adr(snoop_adr),
+	.snoop_v(snoop_v),
+	.update_adr(upd_adr),
 	.hit(dhit),
-	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
-	.acr(tlbacr),
-	.eaeo(~memr.adr[5]),
-	.daeo(~adr_o[5]),
-	.lfsr(lfsr_o[1:0]),
-	.rway(dc_erway),
-	.wway(dc_ewway)
-);
-
-Thor2023_dcache_way udcwayo
-(
-	.rst(rst),
-	.clk(clk),
+	.hit_d1(dhit_d1),
+	.hite(dhite),
+	.hite_d1(dhite_d1),
+	.hito(dhito),
+	.hito_d1(dhito_d1),
+	.dci(dci2),
+	.adr_i(adr_o),
+	.ack_i(ack_i),
+	.memreq(memreq),
+	.memr(memr),
 	.state(state),
-	.wr_dc(wr_dc2),
-	.ack(ack_i),
-	.func(memreq.func),
-	.dce(dce),
-	.hit(dhit),
-	.inv(ic_invline|ic_invall|dc_invline|dc_invall),
-	.acr(tlbacr),
-	.eaeo(memr.adr[5]),
-	.daeo(adr_o[5]),
-	.lfsr(lfsr_o[1:0]),
-	.rway(dc_orway),
-	.wway(dc_owway)
+	.wr_dc2(wr_dc2),
+	.tlbacr(tlbacr),
+	.ic_invline(ic_invline),
+	.ic_invall(ic_invall),
+	.dc_invline(dc_invline),
+	.dc_invall(dc_invall),
+	.read_adr(padr),
+	.read_adr_delayed(padrd),
+	.dc_line(dc_line),
+	.dc_line_mod(dc_line_mod)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
