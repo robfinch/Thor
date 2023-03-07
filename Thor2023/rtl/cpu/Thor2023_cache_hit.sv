@@ -39,12 +39,13 @@
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_cache_hit(clk, adr, ndx, tag, valid, hit, rway, victag, cv);
+module Thor2023_cache_hit(clk, asid, adr, ndx, tag, valid, hit, rway, victag, cv);
 parameter LINES=256;
 parameter WAYS=4;
 parameter AWID=32;
 parameter TAGBIT=14;
 input clk;
+input asid_t asid;
 input address_t adr;
 input [$clog2(LINES)-1:0] ndx;
 input cache_tag_t [3:0] tag;
@@ -65,7 +66,8 @@ integer k,ks;
 always_comb//ff @(posedge clk)
 begin
 	for (k = 0; k < WAYS; k = k + 1)
-	  hit1[k] = tag[k[1:0]]==adr[$bits(address_t)-1:TAGBIT] && valid[k][ndx]==1'b1;
+	  hit1[k] = tag[k[1:0]]=={asid,adr[$bits(address_t)-1:TAGBIT]} && 
+	  					valid[k][ndx]==1'b1;
 end
 
 integer k1;

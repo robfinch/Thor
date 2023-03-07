@@ -41,10 +41,10 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
-	ip,ip_o,ihit,ihite,ihito,ifStall,ic_line,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
+	ip,ip_o,ihit,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
-	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i,
+	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i, asid_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
 	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps, snoop_adr, snoop_v);
 parameter AWID=32;
@@ -63,7 +63,8 @@ output ihit;
 output ihite;
 output ihito;
 input ifStall;
-output [$bits(ICacheLine)*2-1:0] ic_line;
+output ICacheLine ic_line_hi;
+output ICacheLine ic_line_lo;
 output ic_valid;
 output [$bits(address_t)-1:6] ic_tage;
 output [$bits(address_t)-1:6] ic_tago;
@@ -99,6 +100,7 @@ output reg [127:0] dat_o;
 output reg csr_o;
 input rb_i;
 input wb_address_t adr_i;
+input asid_t asid_i;
 
 output reg dce;							// data cache enable
 input [23:0] keys [0:7];
@@ -409,6 +411,10 @@ Thor2023_mem_resp_fifo uofifo2
 // Instruction cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+wire itlbrdy, itlbmiss;
+reg itlben, itlbwr;
+TLBE itlbdato;
+code_address_t phys_ip;
 code_address_t ipo;
 wb_address_t upd_adr = 'd0;
 reg wr_ic1, wr_ic2;
@@ -430,21 +436,53 @@ Thor2023_icache uic1
 	.state(state),
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
-	.ip(ip),
+	.ip(phys_ip),
 	.ip_o(ip_o),
 	.ihit(ihit),
 	.ihite(ihite),
 	.ihito(ihito),
-	.ic_line(ic_line),
+	.ic_line_hi_o(ic_line_hi),
+	.ic_line_lo_o(ic_line_lo),
 	.ic_valid(ic_valid),
 	.ic_tage(ic_tage),
 	.ic_tago(ic_tago),
-	.ici(ici),
+	.ic_line_i(ici),
 	.ic_wway(ic_wway),
 	.wr_ic1(wr_ic1),
 	.wr_ic2(wr_ic2),
 	.icache_wre(icache_wre),
 	.icache_wro(icache_wro)
+);
+
+Thor2023_tlb_L1 uitlb
+(
+	.rst_i(rst),
+	.clk_i(clk),
+	.clock(clock),
+	.al_i(ptbr[7:6]),
+	.rdy_o(itlbrdy),
+	.asid_i(asid_i),
+	.sys_mode_i(seg_o==wishbone_pkg::CODE ? ~AppMode : ~MAppMode),
+	.xlaten_i(xlaten),
+	.we_i(1'b0),
+	.stptr_i(1'b0),
+	.next_i(inext),
+	.adr_i(ip),
+	.padr_o(),
+	.acr_o(),
+	.tlben_i(itlben),
+	.wrtlb_i(itlbwr),
+	.tlbadr_i(tlb_ia[15:0]),
+	.tlbdat_i(tlb_ib),
+	.tlbdat_o(itlbdato),
+	.tlbmiss_o(),
+	.tlbmiss_adr_o(),
+	.phys_adr(phys_ip),
+	.tlbmiss(itlbmiss),
+	.m_cyc_o(),
+	.m_ack_i('b0),
+	.m_adr_o(),
+	.m_dat_o()
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -484,6 +522,10 @@ always_comb
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Data Cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+wire dtlbrdy, dtlbmiss;
+reg dtlben, dtlbwr;
+TLBE dtlbdato;
+address_t phys_dadr, phys_dadrd1;
 reg wr_dc1, wr_dc2;
 wire dhit, dhite, dhito;
 wire dhit_d1, dhite_d1, dhito_d1;
@@ -522,10 +564,41 @@ Thor2023_dcache udc1
 	.ic_invall(ic_invall),
 	.dc_invline(dc_invline),
 	.dc_invall(dc_invall),
-	.read_adr(padr),
-	.read_adr_delayed(padrd),
+	.read_adr(phys_dadr),
+	.read_adr_delayed(phys_dadrd1),
 	.dc_line(dc_line),
 	.dc_line_mod(dc_line_mod)
+);
+
+Thor2023_tlb_L1 udtlb
+(
+	.rst_i(rst),
+	.clk_i(clk),
+	.clock(clock),
+	.al_i(ptbr[7:6]),
+	.rdy_o(dtlbrdy),
+	.asid_i(asid_i),
+	.sys_mode_i(seg_o==wishbone_pkg::CODE ? ~AppMode : ~MAppMode),
+	.xlaten_i(xlaten),
+	.we_i(1'b0),
+	.stptr_i(1'b0),
+	.next_i(dnext),
+	.adr_i(dadr),
+	.padr_o(),
+	.acr_o(),
+	.tlben_i(dtlben),
+	.wrtlb_i(dtlbwr),
+	.tlbadr_i(tlb_ia[15:0]),
+	.tlbdat_i(tlb_ib),
+	.tlbdat_o(dtlbdato),
+	.tlbmiss_o(),
+	.tlbmiss_adr_o(),
+	.phys_adr(phys_dadr),
+	.tlbmiss(dtlbmiss),
+	.m_cyc_o(),
+	.m_ack_i('b0),
+	.m_adr_o(),
+	.m_dat_o()
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -560,6 +633,7 @@ begin
 	tlb_ia <= tlb_bucket[6][31:0];
 end
 */
+/*
 Thor2023_tlb utlb
 (
   .rst_i(rst),
@@ -590,16 +664,16 @@ Thor2023_tlb utlb
   .m_adr_o(tlb_adr),
   .m_dat_o(tlb_dat)
 );
-
+*/
 reg [4:0] mp_delay;
 wire [3:0] region_at;
-vtdl #(.WID($bits(physical_address_t)), .DEP(32)) umpd1 (.clk(clk), .ce(1'b1), .a(mp_delay), .d(padr), .q(padrd1));
+vtdl #(.WID($bits(physical_address_t)), .DEP(32)) umpd1 (.clk(clk), .ce(1'b1), .a(mp_delay), .d(phys_dadr), .q(phys_dadrd1));
 vtdl #(.WID(4), .DEP(32)) umpd2 (.clk(clk), .ce(1'b1), .a(mp_delay), .d(region.at[3:0]), .q(region_at));
 
 //always_ff @(posedge clk)	// delay for data tag lookup
 //	padrd1 <= padr;
 always_ff @(posedge clk)	// two cycle delay for data fetch
-	padrd2 <= padrd1;
+	padrd2 <= phys_dadrd1;
 always_ff @(posedge clk)
 	padrd3 <= padrd2;
 
@@ -1120,7 +1194,8 @@ begin
 		ivcache[n] <= {16{NOP_INSN}};
 	end
 	shr_ma <= 6'd0;
-	tlben <= TRUE;
+	itlben <= TRUE;
+	dtlben <= TRUE;
 	iadr <= RSTPC;
 	dadr <= RSTPC;	// prevents MR_TLB miss at startup
 	tDeactivateBus();
@@ -1145,7 +1220,7 @@ begin
   ptg_fault <= 1'b0;
 	clr_ptg_fault <= 1'b0;
 	ipage_fault <= 1'b0;
-	itlbmiss <= 1'b0;
+//	itlbmiss <= 1'b0;
 	ptgram_en <= 1'b0;
 	rgn_en <= 1'b0;
 	tlb_access <= 1'b0;
@@ -1202,14 +1277,15 @@ else begin
 //	memreq_rd <= FALSE;
 	memresp.wr <= FALSE;
 	memresp2.wr <= FALSE;
-	tlbwr <= FALSE;
+	itlbwr <= FALSE;
+	dtlbwr <= FALSE;
 	tlb_ack <= FALSE;
 	ptgram_wr <= FALSE;
 	clr_ptg_fault <= 1'b0;
 	if (clr_ipage_fault)
 		ipage_fault <= 1'b0;
-	if (clr_itlbmiss)
-		itlbmiss <= 1'b0;
+//	if (clr_itlbmiss)
+//		itlbmiss <= 1'b0;
 	wr_ic1 <= FALSE;
 //	wr_ic2 <= wr_ic1;
 	if (acki2 && ici.v==2'b11 && cs1)
@@ -1222,7 +1298,8 @@ else begin
 	clr_req_done <= 'd0;
 
 	mem_resp[DATA_ALN].wr <= FALSE;
-	tlbwr <= FALSE;
+	itlbwr <= FALSE;
+	dtlbwr <= FALSE;
 	tlb_ack <= FALSE;
 	ptgram_wr <= FALSE;
 	tStage0();
@@ -1343,7 +1420,7 @@ else begin
 		begin
 			memresp.cause <= FLT_NONE;
 			memresp.step <= memreq.step;
-	    memresp.res <= {432'd0,tlbdato};
+	    memresp.res <= {432'd0,itlbdato};
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 			memresp.wr <= TRUE;
@@ -1458,7 +1535,7 @@ else begin
 				ivcache[vcn] <= memr.res;
 				ivtag[vcn] <= memr.vcadr[$bits(address_t)-1:5];
 				ivvalid[vcn] <= 1'b1;
-				if (ic_line=='d0)
+				if (ic_line_hi=='d0 && ic_line_lo=='d0)
 					$stop;
 			end
 			goto (IFETCH3);
@@ -1654,7 +1731,7 @@ else begin
 		end
 	IPT_FETCH2:
 		begin
-			tlbwr <= 1'b1;
+//			tlbwr <= 1'b1;
 			tlb_ia <= 'd0;
 			tlb_ia[31:20] <= 2'b10;	// write a random way
 			tlb_ia[19:15] <= 5'h0;
@@ -1672,7 +1749,7 @@ else begin
 	// Delay a couple of cycles to allow TLB update
 	IPT_FETCH3:
 		begin
-			tlbwr <= 1'b0;
+//			tlbwr <= 1'b0;
 			wr_ptg <= 1'b0;
 			if (fault_code==FLT_DPF) begin
 				xlaten <= xlaten_stk;
@@ -2015,7 +2092,7 @@ else begin
 	  end
 	PT_FETCH3:
 		begin
-			tlbwr <= 1'b1;
+//			tlbwr <= 1'b1;
 			tlb_ia <= 'd0;
 			tlb_ib <= 'd0;
 			tlb_ia[31] <= 1'b1;	// write to tlb
@@ -2051,7 +2128,7 @@ else begin
 		end
 	PT_FETCH4:
 		begin
-			tlbwr <= 1'b0;
+//			tlbwr <= 1'b0;
 			wr_pte <= 1'b0;
 			xlaten <= xlaten_stk;
 			if (fault_code==FLT_DPF) begin
@@ -2245,7 +2322,7 @@ begin
 	mem_resp[0] <= 'd0;
 	if (wasrd) begin
 		if (mem_pipe_adv) begin
-			if (tlbrdy) begin
+			if (itlbrdy&dtlbrdy) begin
 				if (tlb_cyc) begin
 					mem_resp[0].func <= MR_TLB;
 					mem_resp[0].adr <= {tlb_adr[AWID-1:5],5'h0} + 5'd16;
@@ -2273,7 +2350,7 @@ begin
 	// missed on a data cache read.
 	else begin
 		if (mem_pipe_adv) begin
-			if (tlbrdy) begin
+			if (itlbrdy&dtlbrdy) begin
 				if (memr_v) begin
 					xlaten <= memr.omode != 2'd3;
 					mem_resp[0] <= memr_hold;
@@ -2367,7 +2444,8 @@ begin
 				end
 			32'hFFE0????:
 				begin
-					tlbwr <= mem_resp[0].func==MR_TLBRW;
+					itlbwr <= mem_resp[0].func==MR_TLBRW && ~mem_resp[0].adr[4];
+					dtlbwr <= mem_resp[0].func==MR_TLBRW &&  mem_resp[0].adr[4];
 					mem_resp[1].tlb_access <= 1'b1;
 					tlb_access <= 1'b1;
 					tlb_ia <= mem_resp[0].adr[15:0];
@@ -2403,7 +2481,7 @@ begin
 		// VLOOKUP1 is in line with the output of the TLB
 		mem_resp[VLOOKUP1] <= mem_resp[1];				// tag lookup
 		if (mem_resp[VLOOKUP1].func==MR_TLBRW || mem_resp[VLOOKUP1].func==MR_TLBRD)
-			mem_resp[VLOOKUP1].res <= tlbdato;
+			mem_resp[VLOOKUP1].res <= mem_resp[1].adr[4] ? dtlbdato : itlbdato;
 		mem_resp[VLOOKUP1].acr <= tlbacr;
 		mem_resp[VLOOKUP3] <= mem_resp[VLOOKUP1];	// data tag lookup
 	//	mem_resp[VLOOKUP3] <= mem_resp[VLOOKUP2];	// data fetch 1
@@ -2467,7 +2545,7 @@ begin
 			mem_resp[PADR_SET].wr <= TRUE;
 		MR_LOAD,MR_LOADZ:
 			case(1'b1)
-			mem_resp[VLOOKUP3].tlb_access:	begin mem_resp[PADR_SET].res <= tlbdato; mem_resp[PADR_SET].wr <= TRUE; end
+			mem_resp[VLOOKUP3].tlb_access:	begin mem_resp[PADR_SET].res <= mem_resp[PADR_SET].adr[4] ? dtlbdato : itlbdato; mem_resp[PADR_SET].wr <= TRUE; end
 			mem_resp[VLOOKUP3].ptgram_en:		begin mem_resp[PADR_SET].res <= ptgram_dato; mem_resp[PADR_SET].wr <= TRUE; end
 			mem_resp[VLOOKUP3].rgn_en:			begin mem_resp[PADR_SET].res <= rgn_dat_o; mem_resp[PADR_SET].wr <= TRUE; end
 			mem_resp[VLOOKUP3].pde_en:			begin mem_resp[PADR_SET].res <= pde_o; mem_resp[PADR_SET].wr <= TRUE; end

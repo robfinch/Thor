@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_cache_tag.sv
+//	Thor2023_cache_tag_ex.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -33,46 +33,61 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// 736 LUTs                                                                          
+// 352 LUTs / 4096 FFs                                                                          
 // ============================================================================
 
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_cache_tag(rst, clk, wr, asid_i, adr_i, way, rclk, ndx, tag);
-parameter LINES=256;
+module Thor2023_cache_tag_ex(rst, clk, wr, vadr_i, padr_i, way, rclk, ndx, tag,
+	ptags0, ptags1, ptags2, ptags3);
+parameter LINES=64;
 parameter WAYS=4;
-parameter TAGBIT=14;
+parameter TAGBIT=12;
 parameter LOBIT=6;
 localparam HIBIT=$clog2(LINES)-1+LOBIT;
 input rst;
 input clk;
 input wr;
-input asid_t asid_i;
-input address_t adr_i;
+input address_t vadr_i;
+input address_t padr_i;
 input [1:0] way;
 input rclk;
 input [$clog2(LINES)-1:0] ndx;
 (* ram_style="distributed" *)
-output cache_tag_t [3:0] tag;
+output cache_tag_ex_t [3:0] tag;
+output cache_tag_ex_t ptags0 [0:LINES-1];
+output cache_tag_ex_t ptags1 [0:LINES-1];
+output cache_tag_ex_t ptags2 [0:LINES-1];
+output cache_tag_ex_t ptags3 [0:LINES-1];
+
 
 //typedef logic [$bits(code_address_t)-1:TAGBIT] tag_t;
 
 (* ram_style="distributed" *)
-cache_tag_t tags0 [0:LINES-1];
-cache_tag_t tags1 [0:LINES-1];
-cache_tag_t tags2 [0:LINES-1];
-cache_tag_t tags3 [0:LINES-1];
+cache_tag_ex_t vtags0 [0:LINES-1];
+(* ram_style="distributed" *)
+cache_tag_ex_t vtags1 [0:LINES-1];
+(* ram_style="distributed" *)
+cache_tag_ex_t vtags2 [0:LINES-1];
+(* ram_style="distributed" *)
+cache_tag_ex_t vtags3 [0:LINES-1];
 
+/*
+cache_tag_ex_t [LINES-1:0] ptags0;
+cache_tag_ex_t [LINES-1:0] ptags1;
+cache_tag_ex_t [LINES-1:0] ptags2;
+cache_tag_ex_t [LINES-1:0] ptags3;
+*/
 integer g,g1;
 integer n,n1;
 
 initial begin
-for (n = 0; n < WAYS * LINES; n = n + 1) begin
-	tags0[n] <= 'd1;
-	tags1[n] <= 'd1;
-	tags2[n] <= 'd1;
-	tags3[n] <= 'd1;
+for (n = 0; n < LINES; n = n + 1) begin
+	vtags0[n] <= 'd1;
+	vtags1[n] <= 'd1;
+	vtags2[n] <= 'd1;
+	vtags3[n] <= 'd1;
 end
 end
 
@@ -82,24 +97,32 @@ always_ff @(posedge clk)
 `ifdef IS_SIM
 if (rst) begin
 	for (n1 = 0; n1 < LINES; n1 = n1 + 1) begin
-		tags0[n1] <= 'd1;
-		tags1[n1] <= 'd1;
-		tags2[n1] <= 'd1;
-		tags3[n1] <= 'd1;
+		vtags0[n1] <= 'd1;
+		vtags1[n1] <= 'd1;
+		vtags2[n1] <= 'd1;
+		vtags3[n1] <= 'd1;
 	end
 end
 else
 `endif
 begin
-	if (wr && way==2'd0) tags0[adr_i[HIBIT:LOBIT]] <= {asid_i,adr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd1) tags1[adr_i[HIBIT:LOBIT]] <= {asid_i,adr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd2) tags2[adr_i[HIBIT:LOBIT]] <= {asid_i,adr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd3) tags3[adr_i[HIBIT:LOBIT]] <= {asid_i,adr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd0) vtags0[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd1) vtags1[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd2) vtags2[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd3) vtags3[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
 end
 
-assign tag[0] = tags0[ndx];
-assign tag[1] = tags1[ndx];
-assign tag[2] = tags2[ndx];
-assign tag[3] = tags3[ndx];
+always_ff @(posedge clk)
+begin
+	if (wr && way==2'd0) ptags0[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd1) ptags1[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd2) ptags2[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd3) ptags3[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
+end
+
+assign tag[0] = vtags0[ndx];
+assign tag[1] = vtags1[ndx];
+assign tag[2] = vtags2[ndx];
+assign tag[3] = vtags3[ndx];
 
 endmodule
