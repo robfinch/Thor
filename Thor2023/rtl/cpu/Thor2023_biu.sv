@@ -33,7 +33,8 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
+// 32373 LUTs / 35147 FFs / 31 BRAMs                                                                          
 // ============================================================================
 
 import wishbone_pkg::*;
@@ -41,12 +42,13 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
-	ip,ip_o,ihit,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
+	ip,ip_o,ihit_o,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
 	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
 	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i, asid_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
-	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps, snoop_adr, snoop_v);
+	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp, tlbacr,
+	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps, snoop_adr, snoop_v, snoop_cid);
 parameter AWID=32;
 input rst;
 input clk;
@@ -59,7 +61,7 @@ input bounds_chk;
 input pe;									// protected mode enable
 input code_address_t ip;
 output code_address_t ip_o;
-output ihit;
+output ihit_o;
 output ihite;
 output ihito;
 input ifStall;
@@ -114,6 +116,12 @@ input [NTHREADS-1:0] rollback;
 output reg [127:0] rollback_bitmaps [0:NTHREADS-1];
 input address_t snoop_adr;
 input snoop_v;
+input [3:0] snoop_cid;
+output wb_cmd_request128_t iwbm_req;
+input wb_cmd_response128_t iwbm_resp;
+output wb_cmd_request128_t dwbm_req;
+input wb_cmd_response128_t dwbm_resp;
+input [3:0] tlbacr;
 
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
@@ -155,7 +163,10 @@ reg [6:0] state;
 // PT_FETCH <on a tlbmiss>
 // READ_PDE/PTE
 // 
+wb_address_t imiss_padr, imiss_vadr;
+wb_address_t vadr;	// virtual address associated with a request
 wb_address_t next_adr_o;
+reg first_ifetch;
 reg [6:0] stk_state [0:15];
 reg [3:0] stk_dep;
 memory_arg_t memq_o, memr, memr_hold;
@@ -413,31 +424,33 @@ Thor2023_mem_resp_fifo uofifo2
 
 wire itlbrdy, itlbmiss;
 reg itlben, itlbwr;
+wire ihit;
 TLBE itlbdato;
 code_address_t phys_ip;
-code_address_t ipo;
+code_address_t original_ip;
 wb_address_t upd_adr = 'd0;
 reg wr_ic1, wr_ic2;
-ICacheLine ici;		// Must be a multiple of 128 bits wide for shifting.
-reg [2:0] ivcnt;
-ICacheLine [4:0] ivcache;
-reg [$bits(code_address_t)-1:14] ivtag [0:4];
-reg [4:0] ivvalid;
+ICacheLine ic_input;		// Must be a multiple of 128 bits wide for shifting.
+reg [2:0] ivictim_count;
+ICacheLine [4:0] ivictim_cache;
+ICacheLine ivictim_line;
+wire ivictim_wr;
 reg [1:0] ic_wway;
 reg [2:0] vcn;
 reg ic_invline,ic_invall;
 wire ihit2e, ihit2o;
 wire icache_wre, icache_wro;
 
-Thor2023_icache uic1
+Thor2023_icache_ex uic1
 (
 	.rst(rst),
 	.clk(clk),
 	.state(state),
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
-	.ip(phys_ip),
+	.ip(ip),
 	.ip_o(ip_o),
+	.ihit_o(ihit_o),
 	.ihit(ihit),
 	.ihite(ihite),
 	.ihito(ihito),
@@ -446,14 +459,31 @@ Thor2023_icache uic1
 	.ic_valid(ic_valid),
 	.ic_tage(ic_tage),
 	.ic_tago(ic_tago),
-	.ic_line_i(ici),
-	.ic_wway(ic_wway),
-	.wr_ic1(wr_ic1),
-	.wr_ic2(wr_ic2),
+	.ic_line_i(ic_input),
+	.wway(ic_wway),
+	.wr_ic(wr_ic2),
 	.icache_wre(icache_wre),
-	.icache_wro(icache_wro)
+	.icache_wro(icache_wro),
+	.victim_wr(ivictim_wr),
+	.victim_line(ivictim_line)
 );
 
+Thor2023_icache_ctrl uictrl
+(
+	.rst_i(rst),
+	.clk_i(clk),
+	.wbm_req(iwbm_req),
+	.wbm_resp(iwbm_resp),
+	.hit(ihit),
+	.miss_adr(ip_o),
+	.wr_ic(wr_ic2),
+	.way(ic_wway),
+	.line_o(ic_input),
+	.snoop_adr(snoop_adr),
+	.snoop_v(snoop_v)
+);
+
+/*
 Thor2023_tlb_L1 uitlb
 (
 	.rst_i(rst),
@@ -484,6 +514,7 @@ Thor2023_tlb_L1 uitlb
 	.m_adr_o(),
 	.m_dat_o()
 );
+*/
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Key Cache
@@ -526,79 +557,88 @@ wire dtlbrdy, dtlbmiss;
 reg dtlben, dtlbwr;
 TLBE dtlbdato;
 address_t phys_dadr, phys_dadrd1;
-reg wr_dc1, wr_dc2;
-wire dhit, dhite, dhito;
-wire dhit_d1, dhite_d1, dhito_d1;
-wire [3:0] tlbacr;
-reg [2:0] dwait;		// wait state counter for dcache
+reg dc_wr;
+wire dhit;
 address_t dadr;
 DCacheLine dci [0:1];
 DCacheLine dci1,dci2;
 reg [1023:0] datil;
 reg dcachable;
 reg dc_invline,dc_invall;
+wire dcache_load;
+wire [1:0] dc_uway, dc_way;
+wb_cmd_request256_t cpu_req;
+wb_cmd_response256_t cpu_resp1, cpu_resp2;
+wire dc_dump, dc_dump_ack;
+DCacheLine dc_dump_o;
 
-Thor2023_dcache udc1
+always_comb
+begin
+	cpu_req.cmd = memreq.load ? wishbone_pkg::CMD_LOAD : wishbone_pkg::CMD_STORE;
+	cpu_req.seg <= wishbone_pkg::DATA;
+	cpu_req.bte <= wishbone_pkg::LINEAR;
+	cpu_req.cti <= wishbone_pkg::CLASSIC;
+	cpu_req.cyc = memq_o.tid != last_tid;
+	cpu_req.stb = 1'b1;
+	cpu_req.we = memreq.wr;
+	cpu_req.sel = memreq.sel;
+	cpu_req.vadr = memreq.adr;
+	cpu_req.dat = memreq.res;
+	cpu_req.cache = wb_cache_t'(memreq.cache_type);
+	
+	memresp.tid = cpu_resp1.tid;
+	memresp.cmt = 1'b1;
+	memresp.wr = cpu_resp1.ack;
+	memresp.sel = cpu_req.sel;
+	memresp.res = cpu_resp1.dat;
+end
+
+Thor2023_dcache_ex3 udc1
 (
 	.rst(rst),
 	.clk(clk),
 	.dce(dce),
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
-	.update_adr(upd_adr),
+	.snoop_cid(snoop_cid),
+	.cache_load(dcache_load),
 	.hit(dhit),
-	.hit_d1(dhit_d1),
-	.hite(dhite),
-	.hite_d1(dhite_d1),
-	.hito(dhito),
-	.hito_d1(dhito_d1),
-	.dci(dci2),
-	.adr_i(adr_o),
-	.ack_i(ack_i),
-	.memreq(memreq),
-	.memr(memr),
-	.state(state),
-	.wr_dc2(wr_dc2),
-	.tlbacr(tlbacr),
-	.ic_invline(ic_invline),
-	.ic_invall(ic_invall),
+	.uway(dc_uway),
+	.cpu_req_i(cpu_req),
+	.cpu_resp_o(cpu_resp1),
+	.cpu_resp_i(cpu_resp2),
+	.dump(dc_dump),
+	.dump_o(dc_dump_o),
+	.dump_ack_i(dc_dump_ack),
+	.wr(dc_wr),
+	.way(dc_way),
+	.invce(state==MEMORY4),
 	.dc_invline(dc_invline),
-	.dc_invall(dc_invall),
-	.read_adr(phys_dadr),
-	.read_adr_delayed(phys_dadrd1),
-	.dc_line(dc_line),
-	.dc_line_mod(dc_line_mod)
+	.dc_invall(dc_invall)
 );
 
-Thor2023_tlb_L1 udtlb
+Thor2023_dcache_ctrl udcctrl
 (
 	.rst_i(rst),
 	.clk_i(clk),
-	.clock(clock),
-	.al_i(ptbr[7:6]),
-	.rdy_o(dtlbrdy),
-	.asid_i(asid_i),
-	.sys_mode_i(seg_o==wishbone_pkg::CODE ? ~AppMode : ~MAppMode),
-	.xlaten_i(xlaten),
-	.we_i(1'b0),
-	.stptr_i(1'b0),
-	.next_i(dnext),
-	.adr_i(dadr),
-	.padr_o(),
-	.acr_o(),
-	.tlben_i(dtlben),
-	.wrtlb_i(dtlbwr),
-	.tlbadr_i(tlb_ia[15:0]),
-	.tlbdat_i(tlb_ib),
-	.tlbdat_o(dtlbdato),
-	.tlbmiss_o(),
-	.tlbmiss_adr_o(),
-	.phys_adr(phys_dadr),
-	.tlbmiss(dtlbmiss),
-	.m_cyc_o(),
-	.m_ack_i('b0),
-	.m_adr_o(),
-	.m_dat_o()
+	.dce(dce),
+	.wbm_req(dwbm_req),
+	.wbm_resp(dwbm_resp),
+	.acr(tlbacr),
+	.hit(dhit),
+	.cache_load(dcache_load),
+	.cpu_request_i(cpu_req),
+	.cpu_response_o(cpu_resp2),
+	.cpu_response_i(cpu_resp1),
+	.wr(dc_wr),
+	.uway(dc_uway),
+	.way(dc_way),
+	.dump(dc_dump),
+	.dump_i(dc_dump_o),
+	.dump_ack(dc_dump_ack),
+	.snoop_adr(snoop_adr),
+	.snoop_v(snoop_v),
+	.snoop_cid(snoop_cid)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -1001,6 +1041,7 @@ typedef struct packed
 {
 	wb_burst_len_t blen;
 	logic we;
+	wb_address_t vadr;
 	wb_address_t adr;
 	wb_segment_t seg;
 } req_table_t;
@@ -1013,7 +1054,7 @@ req_table_t [255:0] reqtbl;
 req_table_t req;
 always_ff @(posedge clk)
 	if (wr_reqtbl)
-		reqtbl[tid_o] <= {blen_o,we_o,adr_o,seg_o};
+		reqtbl[tid_o] <= {blen_o,we_o,vadr,adr_o,seg_o};
 reg [7:0] tid_id;
 always_ff @(posedge clk)
 	tid_id <= tid_i;
@@ -1067,45 +1108,6 @@ else begin
 	end
 	if (state==MEMORY_UPD1 || state==MEMORY_UPD2)
 		upd_adr <= memr.adr;
-end
-
-always_ff @(posedge clk)
-if (rst) begin
-	ici.data <= 'd0;
-	ici.v <= 2'b00;
-end
-else begin
-	if (icache_wre|icache_wro)
-		ici.v <= 2'b00;
-	if (state==IFETCH4) begin
-		ici.data <= ivcache[vcn];
-		ici.v <= 2'b11;
-	end
-	else if (acki1 && req.seg==wishbone_pkg::CODE) begin
-		case(req.adr[4])
-		1'd0:	begin ici.data[127:  0] <= dat_i; ici.v[0] <= 1'b1; end
-		1'd1: begin ici.data[255:128] <= dat_i; ici.v[1] <= 1'b1; end
-		default:	;
-		endcase
-	end
-end
-always_ff @(posedge clk)
-if (rst)
-	ici.adr <= 'd0;
-else begin
-	if (state==IFETCH4)
-		ici.adr <= ivcache[vcn].adr;
-	else if (ack_i && req.seg==wishbone_pkg::CODE)
-		ici.adr <= {adr_i[31:5],5'h0};
-end
-always_ff @(posedge clk)
-if (rst) begin
-	dci1 <= 'd0;
-	dci2 <= 'd0;
-end
-else begin
-	dci1 <= dci[0];
-	dci2 <= dci1;
 end
 
 always_ff @(posedge clk)
@@ -1172,9 +1174,6 @@ else begin
 	endcase
 end
 
-always_ff @(posedge clk)
-	wr_dc2 = ack_i && count==req.blen && req.seg==wishbone_pkg::DATA && !req.we;
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // State Machine
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1185,14 +1184,9 @@ begin
 	dce <= TRUE;
 	zero_data <= FALSE;
 	dcachable <= TRUE;
-	ivvalid <= 5'h00;
-	ivcnt <= 3'd0;
+	ivictim_count <= 3'd0;
 	icnt <= 'd0;
 	vcn <= 3'd0;
-	for (n = 0; n < 5; n = n + 1) begin
-		ivtag[n] <= 32'd1;
-		ivcache[n] <= {16{NOP_INSN}};
-	end
 	shr_ma <= 6'd0;
 	itlben <= TRUE;
 	dtlben <= TRUE;
@@ -1205,11 +1199,9 @@ begin
 	csr_o <= LOW;
 	waycnt <= 2'd0;
 	ic_wway <= 2'b00;
-	dwait <= 3'd0;
 	iaccess <= FALSE;
 	daccess <= FALSE;
 //	memreq_rd <= FALSE;
-	memresp <= 'd0;
 	memresp2 <= 'd0;
   xlaten <= FALSE;
   tmptlbe <= 'd0;
@@ -1249,6 +1241,7 @@ begin
 	clr_req_done <= 'd0;
 	memr_v <= FALSE;
 	memr_fed <= FALSE;
+	first_ifetch <= FALSE;
 end
 endtask
 
@@ -1275,7 +1268,6 @@ else begin
 	dcachable <= TRUE;
 	inext <= FALSE;
 //	memreq_rd <= FALSE;
-	memresp.wr <= FALSE;
 	memresp2.wr <= FALSE;
 	itlbwr <= FALSE;
 	dtlbwr <= FALSE;
@@ -1286,11 +1278,7 @@ else begin
 		ipage_fault <= 1'b0;
 //	if (clr_itlbmiss)
 //		itlbmiss <= 1'b0;
-	wr_ic1 <= FALSE;
 //	wr_ic2 <= wr_ic1;
-	if (acki2 && ici.v==2'b11 && cs1)
-		wr_ic1 <= TRUE;
-	wr_dc1 <= FALSE;
 //	wr_dc2 <= wr_dc1;
 //	if (ack_i && count==req.blen && req.seg==wishbone_pkg::DATA)	// && !req.we)
 //		wr_dc1 <= TRUE;
@@ -1343,6 +1331,12 @@ else begin
 					gosub (MEMORY_ACTIVATE);
 				end
 			end
+			else if (!ihit) begin
+				push();		// return to MEMORY1
+				imiss_padr <= phys_ip;
+				imiss_vadr <= ip;
+				tBeginIFetch();	// Goes to IFETCH state
+			end
 		end
 
 	// The following two states for MR_TLB translation lookup
@@ -1367,6 +1361,7 @@ else begin
 		tKeyCheck(MEMORY5);
 	KEYCHK_ERR:
 		begin
+		/*
 			memresp.step <= memreq.step;
 	    memresp.cause <= {4'h8,FLT_KEY};	// KEY fault
 	    memresp.cmt <= TRUE;
@@ -1374,6 +1369,7 @@ else begin
 		  memresp.adr <= ea;
 		  memresp.wr <= TRUE;
 			memresp.res <= 128'd0;
+		*/
 		  ret(0);
 		end
 `endif
@@ -1418,135 +1414,15 @@ else begin
 		goto (TLB3);	// Give time for MR_TLB to process
 	TLB3:
 		begin
+			/*
 			memresp.cause <= FLT_NONE;
 			memresp.step <= memreq.step;
 	    memresp.res <= {432'd0,itlbdato};
 	    memresp.cmt <= TRUE;
 			memresp.tid <= memreq.tid;
 			memresp.wr <= TRUE;
-	   	ret(0);
-		end
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to load an instruction cache line.
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	// Hardware subroutine to fetch instruction cache line
-	IFETCH1:
-	  if (!next_i) begin
-	  	// Cache miss, select an entry in the victim cache to
-	  	// update.
-	  	if (memr.sz!=nul) begin	// ic_valid flag
-				ivcnt <= ivcnt + 2'd1;
-				if (ivcnt>=3'd4)
-					ivcnt <= 3'd0;
-				ivcache[ivcnt] <= memr.res;
-				ivtag[ivcnt] <= memr.vcadr[$bits(address_t)-1:5];
-				ivvalid[ivcnt] <= TRUE;
-//				if (ic_line=='d0)
-//					$stop;
-			end
-			icnt <= 'd0;
-			seg_o <= wishbone_pkg::CODE;
-			last_seg <= wishbone_pkg::CODE;
-	  	bte_o <= wishbone_pkg::LINEAR;
-	  	cti_o <= wishbone_pkg::INCR;
-	    cyc_o <= HIGH;
-			stb_o <= HIGH;
-	    sel_o <= 16'hFFFF;
-	    tid_o <= tid_cnt;
-    	tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
-    	wr_reqtbl <= 1'b1;
-	    case(memr.hit)
-	    2'b00:		// need both even and odd cache lines (start with even)
-	    	begin
-			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
-					ipo <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
-				end
-	    2'b01:		// If got a hit on the even address, the odd one must be missing
-	    	begin
-			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(address_t)-1:6],1'b1,5'h0};
-					ipo <= {memr.adr[$bits(address_t)-1:6],1'b1,5'h0};
-				end
-			2'b10:		// Otherwise the even one must be missing
-				begin
-			  	blen_o <= 8'd1;
-					adr_o <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
-					ipo <= {memr.adr[$bits(address_t)-1:6]+memr.adr[5],1'b0,5'h0};
-				end
-			2'b11:		// not missing lines, finished
-				begin
-					tDeactivateBus();
-					ret(0);
-				end
-			endcase
-  		goto (IFETCH2);
-		end
-	IFETCH2:
-	  begin
-	  	stb_o <= HIGH;
-	    if (next_i) begin
-	    	wr_reqtbl <= 1'b1;
-	    	adr_o <= adr_o + 5'd16;
-				seg_o <= wishbone_pkg::CODE;
-	    	tid_o <= tid_cnt;
-	    	tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
-	      icnt <= icnt + 4'd4;					// increment word count
-	      if (icnt[4:2]==blen_o-1)
-	      	cti_o <= wishbone_pkg::EOB;
-	      if (icnt[4:2]==blen_o) begin		// Are we done?
-	      	case(memr.hit)
-	      	2'b00:	memr.hit <= 2'b01;
-	      	2'b01:	memr.hit <= 2'b11;
-	      	2'b10:	memr.hit <= 2'b11;
-	      	2'b11:	memr.hit <= 2'b11;
-	      	endcase
-	      	tDeactivateBus();
-	      	goto (IFETCH3);
-	    	end
-	    end
-	    /*
-		  // PMA Check
-		  // Abort cycle that has already started.
-		  for (n = 0; n < 8; n = n + 1)
-		    if (adr_o[31:4] >= PMA_LB[n] && adr_o[31:4] <= PMA_UB[n]) begin
-		      if (!PMA_AT[n][0]) begin
-		        //memresp.cause <= 16'h803D;
-		        tDeactivateBus();
-		    	end
-		    end
 			*/
-		end
-	IFETCH3:
-		begin
-		  if (memr.hit==2'b11)
-		  	ret(0);
-	  	else begin
-	    	tid_cnt[7:3] <= tid_cnt[7:3] + 2'd1;
-  	  	tid_cnt[2:0] <= 'd0;
-	  		goto (IFETCH1);
-	  	end
-		end
-	
-	IFETCH4:
-		begin
-			if (memr.sz!=nul) begin
-				ivcache[vcn] <= memr.res;
-				ivtag[vcn] <= memr.vcadr[$bits(address_t)-1:5];
-				ivvalid[vcn] <= 1'b1;
-				if (ic_line_hi=='d0 && ic_line_lo=='d0)
-					$stop;
-			end
-			goto (IFETCH3);
-		end
-
-	IFETCH6:
-		begin
-			stb_o <= LOW;
-			if (!ack_i)	begin							// wait till consumer ready
-				goto (IFETCH2);
-			end
+	   	ret(0);
 		end
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2537,7 +2413,7 @@ begin
 				mem_resp[PADR_SET].cause <= {4'h8,FLT_DPF};
 		end
 `endif
-		mem_resp[PADR_SET].dchit <= dhit_d1 & mem_resp[VLOOKUP3].acr[3];	// hit and cachable data
+//		mem_resp[PADR_SET].dchit <= dhit_d1 & mem_resp[VLOOKUP3].acr[3];	// hit and cachable data
 		case(mem_resp[VLOOKUP3].func)
 		MR_TLBRW,MR_TLBRD:
 			mem_resp[PADR_SET].wr <= TRUE;
@@ -2552,13 +2428,13 @@ begin
 			default:		
 				begin
 					mem_resp[PADR_SET].res <= dc_line;
-					mem_resp[PADR_SET].wr <= ~(dce & dhit_d1 & mem_resp[VLOOKUP3].acr[3]);
+//					mem_resp[PADR_SET].wr <= ~(dce & dhit_d1 & mem_resp[VLOOKUP3].acr[3]);
 					// Allow cache hit to set hit to one, but not zero. hit may have been
 					// one coming in if the cache line is not needed.
-					if (dhite_d1)
-						mem_resp[PADR_SET].hit[0] <= 1'b1;
-					if (dhito_d1)
-						mem_resp[PADR_SET].hit[1] <= 1'b1;
+//					if (dhite_d1)
+//						mem_resp[PADR_SET].hit[0] <= 1'b1;
+//					if (dhito_d1)
+//						mem_resp[PADR_SET].hit[1] <= 1'b1;
 					mem_resp[PADR_SET].mod <= dc_line_mod;
 					//if (!(dce & dhit & mem_resp[VLOOKUP3].acr[3]))
 					//	mem_resp[PADR_SET].cause <= FLT_DCM;
@@ -2576,7 +2452,7 @@ begin
 				endcase
 				*/
 	 			mem_resp[PADR_SET].res <= dc_linein;	// Calculated above
-	 			mem_resp[PADR_SET].mod <= {dhito_d1,dhite_d1};	// Only the lines that were hit are being modified.
+//	 			mem_resp[PADR_SET].mod <= {dhito_d1,dhite_d1};	// Only the lines that were hit are being modified.
 			end
 		default:	;
 		endcase
@@ -2601,15 +2477,15 @@ begin
 		if (mem_resp[PADR_SET].v) begin
 			// A response will be sent back here only on a load when there is a cache hit.
 			// Otherwise the memory sequencer is needed.
-			memresp <= mem_resp[PADR_SET];
+//			memresp <= mem_resp[PADR_SET];
 			case(mem_resp[PADR_SET].func)
 			// For now, always use sequencer on a store. At some point the sequencer may
 			// not be needed if there was a cache hit on a store and policy is writeback.
-			MR_STORE:					memresp.wr <= FALSE;
-			MR_LOAD,MR_LOADZ:	memresp.wr <= mem_resp[PADR_SET].wr;
-			MR_TLBRW,MR_TLBRD:	memresp.wr <= TRUE;
-			MR_ICACHE_LOAD:		memresp.wr <= TRUE;
-			default:	memresp.wr <= FALSE;
+//			MR_STORE:					memresp.wr <= FALSE;
+//			MR_LOAD,MR_LOADZ:	memresp.wr <= mem_resp[PADR_SET].wr;
+//			MR_TLBRW,MR_TLBRD:	memresp.wr <= TRUE;
+//			MR_ICACHE_LOAD:		memresp.wr <= TRUE;
+//			default:	memresp.wr <= FALSE;
 			endcase
 			case(1'b1)
 			mem_resp[PADR_SET].tlb_access:	;
@@ -2620,30 +2496,30 @@ begin
 			  case(mem_resp[PADR_SET].func)
 			  MR_LOAD,MR_MOVLD:
 		    	case(memreq.sz)
-		    	nul:	memresp.res <= 'h0;
-		    	Thor2023Pkg::byt:	memresp.res <= {{56{datis[7]}},datis[7:0]};
-		    	Thor2023Pkg::wyde:	memresp.res <= {{48{datis[15]}},datis[15:0]};
+//		    	nul:	memresp.res <= 'h0;
+//		    	Thor2023Pkg::byt:	memresp.res <= {{56{datis[7]}},datis[7:0]};
+//		    	Thor2023Pkg::wyde:	memresp.res <= {{48{datis[15]}},datis[15:0]};
 //		    	tetra:	memresp.res[mem_resp[PADR_SET].step] <= {{32{datis[31]}},datis[31:0]};
-		    	Thor2023Pkg::tetra:	memresp.res <= {{32{datis[31]}},datis[31:0]};
+//		    	Thor2023Pkg::tetra:	memresp.res <= {{32{datis[31]}},datis[31:0]};
 		//    	octa:	begin memresp.res[mem_resp[5].step] <= {{64{datis[63]}},datis[63:0]}; end
 		//    	hexi:	begin memresp.res <= datis[127:0]; end
 		//    	hexipair:	memresp.res <= dati;
 		//    	hexiquad:	begin memresp.res <= dati512; end
 					// vector, return entire result
-		    	default:	memresp.res <= mem_resp[PADR_SET].res;
+//		    	default:	memresp.res <= mem_resp[PADR_SET].res;
 		    	endcase
 			  MR_LOADZ:
 		    	case(mem_resp[PADR_SET].sz)
-		    	nul:	memresp.res <= 'h0;
-		    	Thor2023Pkg::byt:	begin memresp.res <= {56'd0,datis[7:0]}; end
-		    	Thor2023Pkg::wyde:	begin memresp.res <= {48'd0,datis[15:0]}; end
-		    	Thor2023Pkg::tetra:	begin memresp.res <= {32'd0,datis[31:0]}; end
+//		    	nul:	memresp.res <= 'h0;
+//		    	Thor2023Pkg::byt:	begin memresp.res <= {56'd0,datis[7:0]}; end
+//		    	Thor2023Pkg::wyde:	begin memresp.res <= {48'd0,datis[15:0]}; end
+//		    	Thor2023Pkg::tetra:	begin memresp.res <= {32'd0,datis[31:0]}; end
 		//    	octa:	begin memresp.res[mem_resp[5].step] <= {64'd0,datis[63:0]}; end
 		//    	hexi:	begin memresp.res <= datis[127:0]; end
 		//    	hexipair:	memresp.res <= dati;
 		//    	hexiquad:	begin memresp.res <= dati512; end
 					// vector, return entire result
-		    	default:	memresp.res <= mem_resp[PADR_SET].res;
+//		    	default:	memresp.res <= mem_resp[PADR_SET].res;
 		    	endcase
 			  default:  ;
 			  endcase
@@ -2665,7 +2541,7 @@ endtask
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 
-// Use ipo to hold onto the original ip value. The ip value might
+// Use original_ip to hold onto the original ip value. The ip value might
 // change during a cache load due to a branch. We also want the start
 // of the cache line identified as the access will span into the next
 // cache line.
@@ -2674,14 +2550,9 @@ task tBeginIFetch;
 begin
   ic_wway <= waycnt;
 	waycnt <= waycnt + 2'd1;
-	ipo <= {memr.adr[$bits(address_t)-1:5],5'b0};
+	original_ip <= {memr.adr[$bits(address_t)-1:5],5'b0};
+	first_ifetch <= TRUE;
 	goto (IFETCH1);
-	for (n = 0; n < 5; n = n + 1) begin
-		if (ivtag[n]==memr.adr[$bits(address_t)-1:5] && ivvalid[n]) begin
-			vcn <= n;
-    	goto (IFETCH4);
-  	end
-	end
 	tid_cnt[7:3] <= tid_cnt[7:3] + 2'd1;
 	tid_cnt[2:0] <= 'd0;
 end
@@ -3025,6 +2896,7 @@ task tPageFault;
 input cause_code_t typ;
 input address_t ba;
 begin
+	/*
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
   memresp.cause <= typ;
@@ -3032,6 +2904,7 @@ begin
   memresp.adr <= ba;
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
+	*/
 	tDeactivateBus();
 	if (!memresp_full)
 		goto (MEMORY_IDLE);
@@ -3041,6 +2914,7 @@ endtask
 task tKeyViolation;
 input address_t ba;
 begin
+	/*
 	memresp.step <= memreq.step;
 	memresp.cmt <= TRUE;
   memresp.cause <= FLT_KEY;
@@ -3048,6 +2922,7 @@ begin
   memresp.adr <= ba;
   memresp.wr <= TRUE;
 	memresp.res <= 128'd0;
+	*/
 	tDeactivateBus();
 	if (!memresp_full)
 		goto (MEMORY_IDLE);
@@ -3069,6 +2944,7 @@ begin
 	if (memreq.func==MR_CACHE)
   	tPMAEA();
   if (adr_o[31:16]==IO_KEY_ADR) begin
+  	/*
 		memresp.cause <= FLT_NONE;
   	memresp.step <= memreq.step;
   	memresp.cmt <= TRUE;
@@ -3077,6 +2953,7 @@ begin
   	if (memreq.func==MR_STORE) begin
   		io_keys[adr_o[12:2]] <= memreq.res[19:0];
   	end
+  	*/
 		if (!memresp_full)
 	  	ret(0);
 	end
@@ -3170,11 +3047,17 @@ begin
 end
 endtask
 
-task gosub;
-input [6:0] nst;
+task push;
 begin
 	stk_state[stk_dep] <= state;
 	stk_dep <= stk_dep+2'd1;
+end
+endtask
+
+task gosub;
+input [6:0] nst;
+begin
+	push();
 	state <= nst;
 end
 endtask

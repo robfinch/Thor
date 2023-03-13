@@ -34,55 +34,65 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// 6463 LUTs / 11244 FFs / 8 BRAMs   16kB cache                                                                       
-// 6938 LUTs / 11469 FFs / 15 BRAMs  32kB cache                                                                         
+//  5624 LUTs / 11213 FFs / 8 BRAMs   16kB cache
+//  6136 LUTs / 11469 FFs / 15 BRAMs  32kB cache
+// 10373 LUTs / 21699 FFs / 15 BRAMs  64kB cache
+//
+//  7720 LUTs / 14511 FFs / 29 BRAMs  32kB cache + victim cache
 // ============================================================================
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_icache_ex(rst,clk,state,snoop_adr,snoop_v,invall,invline,
-	asid_i, ip,ip_o,ihit,ihite,ihito,ic_line_hi_o,ic_line_lo_o,ic_valid,ic_tage,ic_tago,
-	ic_line_i,ic_wway,wr_ic1,wr_ic2,icache_wre,icache_wro);
+module Thor2023_icache_ex(rst,clk,state,snoop_adr,snoop_v,snoop_cid,invall,invline,
+	ip,ip_o,ihit_o,ihit,ihite,ihito,ic_line_hi_o,ic_line_lo_o,ic_valid,ic_tage,ic_tago,
+	ic_line_i,wway,wr_ic,icache_wre,icache_wro,
+	victim_wr,victim_line
+	);
+parameter CID = 4'd2;
+parameter FALSE = 1'b0;
+parameter WAYS = 4;
+parameter LINES = 128;
+parameter LOBIT = 6;
+parameter HIBIT = 12;
+parameter TAGBIT = 13;
+parameter NVICTIM = 0;
+
 input rst;
 input clk;
 input [6:0] state;
 input address_t snoop_adr;
 input snoop_v;
+input [3:0] snoop_cid;
 input invall;
 input invline;
-input asid_t asid_i;
 input code_address_t ip;
 output code_address_t ip_o;
+output reg ihit_o;
 output reg ihit;
 output reg ihite;
 output reg ihito;
 output ICacheLine ic_line_hi_o;
 output ICacheLine ic_line_lo_o;
 output reg ic_valid;
-output reg [$bits(address_t)-1:6] ic_tage;
-output reg [$bits(address_t)-1:6] ic_tago;
+output reg [$bits(address_t)-1:LOBIT] ic_tage;
+output reg [$bits(address_t)-1:LOBIT] ic_tago;
 input ICacheLine ic_line_i;
-input [1:0] ic_wway;
-input wr_ic1;
-input wr_ic2;
+input [1:0] wway;
+input wr_ic;
 output reg icache_wre;
 output reg icache_wro;
+output reg victim_wr;
+output ICacheLine victim_line;
 
-parameter FALSE = 1'b0;
-parameter WAYS = 4;
-parameter LINES = 64;
-parameter LOBIT = 7;
-parameter HIBIT = 12;
-parameter TAGBIT = 13;
 integer n;
 
 ICacheLine ic_eline, ic_oline;
-reg [1:0] ic_rwaye,ic_rwayo,ic_wway;
-always_comb icache_wre = wr_ic2 && !ic_line_i.vadr[6];
-always_comb icache_wro = wr_ic2 &&  ic_line_i.vadr[6];
-code_address_t ip2,ip3;
+reg [1:0] ic_rwaye,ic_rwayo,wway;
+always_comb icache_wre = wr_ic && !ic_line_i.vtag[LOBIT];
+always_comb icache_wro = wr_ic &&  ic_line_i.vtag[LOBIT];
+code_address_t ip2;
 cache_tag_t [3:0] victage;
 cache_tag_t [3:0] victago;
 cache_tag_t [3:0] pictage;
@@ -98,6 +108,13 @@ cache_tag_ex_t ptags0o [0:LINES-1];
 cache_tag_ex_t ptags1o [0:LINES-1];
 cache_tag_ex_t ptags2o [0:LINES-1];
 cache_tag_ex_t ptags3o [0:LINES-1];
+reg [2:0] victim_count, vcne, vcno;
+ICacheLine [NVICTIM-1:0] victim_cache;
+ICacheLine victim_eline, victim_oline;
+ICacheLine victim_cache_eline, victim_cache_oline;
+reg icache_we2;
+reg icache_wre2;
+reg vce,vco;
 
 wire ihit1e, ihit1o;
 reg ihit2e, ihit2o;
@@ -110,11 +127,11 @@ cache_tag_ex_t ic_tag3e, ic_tag3o;
 
 always_ff @(posedge clk)
 	ip2 <= ip;
-always_ff @(posedge clk)
-	ip3 <= ip2;
 // line up ihit output with cache line output.
 always_ff @(posedge clk)
 	ihit3 <= ihit2;
+always_comb
+	ihit = ihit1e&ihit1o;
 always_ff @(posedge clk)
 	ihit2e <= ihit1e;
 always_ff @(posedge clk)
@@ -124,10 +141,10 @@ always_comb
 	//     and miss.
 	// If cannot cross cache line can match on either odd or even.
 	if (FALSE && ip2[5:0] < 6'd54)
-		ihit <= ip2[LOBIT-1] ? ihit2o : ihit2e;
+		ihit_o <= ip2[LOBIT-1] ? ihit2o : ihit2e;
 	// Might span lines, need hit on both even and odd lines
 	else
-		ihit <= ihit2e&ihit2o;
+		ihit_o <= ihit2e&ihit2o;
 always_comb
 	// *** The following causes the hit to tend to oscillate between hit
 	//     and miss.
@@ -153,7 +170,7 @@ always_ff @(posedge clk)
 	ic_valide <= valid2e;
 always_ff @(posedge clk)
 	ic_valido <= valid2o;
-assign ip_o = ip3;
+assign ip_o = ip2;
 always_ff @(posedge clk)
 	ic_tag3o <= ic_tag2o;
 always_ff @(posedge clk)
@@ -170,50 +187,163 @@ always_ff @(posedge clk)
 	else
 		ic_valid <= valid2o & valid2e;
 
+generate begin : gCacheRam
+if (NVICTIM > 0) begin
 // 512 wide x 256 deep, 1 cycle read latency.
-sram_512x256_1r1w uicme
+sram_512x256_1rw1r uicme
 (
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.wadr({ic_wway,ic_line_i.vadr[HIBIT:LOBIT]}),
+	.wadr({wway,ic_line_i.vadr[HIBIT:LOBIT]}),
+	.radr({ic_rwaye,ip[HIBIT:LOBIT]+ip[LOBIT-1]}),
+	.i(ic_line_i.data),
+	.o(ic_eline.data),
+	.wo(victim_eline.data)
+);
+
+sram_512x256_1rw1r uicmo
+(
+	.rst(rst),
+	.clk(clk),
+	.wr(icache_wro),
+	.wadr({wway,ic_line_i.vadr[HIBIT:LOBIT]}),
+	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
+	.i(ic_line_i.data),
+	.o(ic_oline.data),
+	.wo(victim_oline.data)
+);
+end
+else begin
+sram_1r1w
+#(
+	.WID(ICacheLineWidth),
+	.DEP(LINES*WAYS)
+)
+uicme
+(
+	.rst(rst),
+	.clk(clk),
+	.wr(icache_wre),
+	.wadr({wway,ic_line_i.vtag[HIBIT:LOBIT]}),
 	.radr({ic_rwaye,ip[HIBIT:LOBIT]+ip[LOBIT-1]}),
 	.i(ic_line_i.data),
 	.o(ic_eline.data)
 );
 
-sram_512x256_1r1w uicmo
+sram_1r1w
+#(
+	.WID(ICacheLineWidth),
+	.DEP(LINES*WAYS)
+)
+uicmo
 (
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.wadr({ic_wway,ic_line_i.vadr[HIBIT:LOBIT]}),
+	.wadr({wway,ic_line_i.vtag[HIBIT:LOBIT]}),
 	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
 	.i(ic_line_i.data),
 	.o(ic_oline.data)
 );
+end
+end
+endgenerate
+
+always_ff @(posedge clk)
+	icache_wre2 <= icache_wre;
+
+// Address of the victim line is the address of the update line.
+// Write the victim cache if updating the cache and the victim line is valid.
+always_ff @(posedge clk)
+if ((icache_wre|icache_wro) && NVICTIM > 0) begin
+	victim_line.vtag <= ic_line_i.vtag;
+	victim_line.ptag <= ic_line_i.ptag;
+	if (icache_wre) begin
+		victim_line.v <= {4{valide[{wway,ic_line_i.vtag[HIBIT:LOBIT]}]}};
+		victim_wr <= valide[{wway,ic_line_i.vtag[HIBIT:LOBIT]}];
+	end
+	else begin
+		victim_line.v <= {4{valido[{wway,ic_line_i.vtag[HIBIT:LOBIT]}]}};
+		victim_wr <= valido[{wway,ic_line_i.vtag[HIBIT:LOBIT]}];
+	end
+end
+else
+	victim_wr <= 'd0;
+
+// Victim data comes from old data in the line that is being updated.
+always_ff @(posedge clk)
+if (NVICTIM > 0) begin
+	if (icache_wre2)
+		victim_line.data <= victim_eline.data;
+	else
+		victim_line.data <= victim_oline.data;
+end
+
+// Search the victim cache for the requested cache line.
+always_comb
+begin
+	vcne = NVICTIM;
+	vcno = NVICTIM;
+	for (n = 0; n < NVICTIM; n = n + 1) begin
+		if (victim_cache[n].vadr[$bits(address_t)-1:LOBIT-1]=={ip[$bits(address_t)-1:LOBIT]+ip[LOBIT-1],1'b0} && victim_cache[n].v==4'hF)
+			vcne = n;
+		if (victim_cache[n].vadr[$bits(address_t)-1:LOBIT-1]=={ip[$bits(address_t)-1:LOBIT],1'b1} && victim_cache[n].v==4'hF)
+			vcno = n;
+	end
+end
+always_ff @(posedge clk)
+	vce <= vcne < NVICTIM;
+always_ff @(posedge clk)
+	vco <= vcno < NVICTIM;
+always_ff @(posedge clk)
+	victim_cache_eline <= victim_cache[vce];
+always_ff @(posedge clk)
+	victim_cache_oline <= victim_cache[vco];
 
 always_comb
 	case(ip2[LOBIT-1])
 	1'b0:	
 		begin
-			ic_line_hi_o.v = {2{ihit2o}};
-			ic_line_hi_o.vadr = {ip2[$bits(address_t)-1:LOBIT],1'b1,6'd0};
-			ic_line_hi_o.data = ic_oline.data;
-			
-			ic_line_lo_o.v = {2{ihit2e}};
-			ic_line_lo_o.vadr = {ip2[$bits(address_t)-1:LOBIT],1'b0,6'd0};
-			ic_line_lo_o.data = ic_eline.data;
+			if (vco) begin
+				ic_line_hi_o = victim_cache_oline;
+				ic_line_hi_o.v = 4'hF;
+			end
+			else begin
+				ic_line_hi_o.v = {4{ihit2o}};
+				ic_line_hi_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b1};
+				ic_line_hi_o.data = ic_oline.data;
+			end
+			if (vce) begin
+				ic_line_lo_o = victim_cache_eline;
+				ic_line_lo_o.v = 4'hF;
+			end
+			else begin
+				ic_line_lo_o.v = {4{ihit2e}};
+				ic_line_lo_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b0};
+				ic_line_lo_o.data = ic_eline.data;
+			end
 		end
 	1'b1:
 		begin
-			ic_line_hi_o.v = {2{ihit2e}};
-			ic_line_hi_o.vadr = {ip2[$bits(address_t)-1:LOBIT]+1'b1,1'b0,6'd0};
-			ic_line_hi_o.data = ic_eline.data;
-
-			ic_line_lo_o.v = {2{ihit2o}};
-			ic_line_lo_o.vadr = {ip2[$bits(address_t)-1:LOBIT],1'b1,6'd0};
-			ic_line_lo_o.data = ic_oline.data;
+			if (vce) begin
+				ic_line_hi_o.v = 4'hF;
+				ic_line_hi_o = victim_cache_eline;
+			end
+			else begin
+				ic_line_hi_o.v = {4{ihit2e}};
+				ic_line_hi_o.vtag = {ip2[$bits(address_t)-1:LOBIT]+1'b1,1'b0};
+				ic_line_hi_o.data = ic_eline.data;
+			end
+			if (vco) begin
+				ic_line_lo_o = victim_cache_oline;
+				ic_line_lo_o.v = 4'hF;
+			end
+			else begin
+				ic_line_lo_o.v = {4{ihit2o}};
+				ic_line_lo_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b1};
+				ic_line_lo_o.data = ic_oline.data;
+			end
 		end
 	endcase
 
@@ -228,9 +358,9 @@ uictage
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.vadr_i(ic_line_i.vadr),
-	.padr_i(ic_line_i.padr),
-	.way(ic_wway),
+	.vadr_i(ic_line_i.vtag),
+	.padr_i(ic_line_i.ptag),
+	.way(wway),
 	.rclk(clk),
 	.ndx(ip[TAGBIT-1:LOBIT]+ip[LOBIT-1]),	// virtual index (same bits as physical address)
 	.tag(victage),
@@ -251,9 +381,9 @@ uictago
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.vadr_i(ic_line_i.vadr),
-	.padr_i(ic_line_i.padr),
-	.way(ic_wway),
+	.vadr_i(ic_line_i.vtag),
+	.padr_i(ic_line_i.ptag),
+	.way(wway),
 	.rclk(clk),
 	.ndx(ip[TAGBIT-1:LOBIT]),		// virtual index (same bits as physical address)
 	.tag(victago),
@@ -315,51 +445,66 @@ wire invce = state==MEMORY4;
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
+	victim_count <= 'd0;
 	for (g = 0; g < WAYS; g = g + 1) begin
 		valide[g] <= 'd0;
 		valido[g] <= 'd0;
 	end
 end
 else begin
+	if (victim_wr) begin
+		victim_count <= victim_count + 2'd1;
+		if (victim_count>=NVICTIM-1)
+			victim_count <= 3'd0;
+		victim_cache[victim_count] <= victim_line;
+	end
 	if (icache_wre)
-		valide[ic_wway][ic_line_i.vadr[HIBIT:LOBIT]] <= 1'b1;
+		valide[wway][ic_line_i.vtag[HIBIT:LOBIT]] <= 1'b1;
 	else if (invce) begin
 		for (g = 0; g < WAYS; g = g + 1) begin
 			if (invline)
-				valide[g][ic_line_i.vadr[HIBIT:LOBIT]] <= 1'b0;
+				valide[g][ic_line_i.vtag[HIBIT:LOBIT]] <= 1'b0;
 			else if (invall)
 				valide[g] <= 'd0;
 		end
 	end
 	if (icache_wro)
-		valido[ic_wway][ic_line_i.vadr[HIBIT:LOBIT]] <= 1'b1;
+		valido[wway][ic_line_i.vtag[HIBIT:LOBIT]] <= 1'b1;
 	else if (invce) begin
 		for (g = 0; g < WAYS; g = g + 1) begin
 			if (invline)
-				valido[g][ic_line_i.vadr[HIBIT:LOBIT]] <= 1'b0;
+				valido[g][ic_line_i.vtag[HIBIT:LOBIT]] <= 1'b0;
 			else if (invall)
 				valido[g] <= 'd0;
 		end
 	end
-	for (j = 0; j < LINES; j = j + 1) begin
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags0e[j])
-			valide[0][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags1e[j])
-			valide[1][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags2e[j])
-			valide[2][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags3e[j])
-			valide[3][j] <= 1'b0;
-	end
-	for (j = 0; j < LINES; j = j + 1) begin
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags0o[j])
-			valido[0][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags1o[j])
-			valido[1][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags2o[j])
-			valido[2][j] <= 1'b0;
-		if (snoop_v && snoop_adr[$bits(address_t)-1:TAGBIT]==ptags3o[j])
-			valido[3][j] <= 1'b0;
+	// Two different virtual addresses pointing to the same physical address will
+	// end up in the same set as long as the cache is smaller than a memory page
+	// in size. So, there is no need to compare every physical address, just every
+	// address in a set will do.
+	if (snoop_v && snoop_cid != CID) begin
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags0e[snoop_adr[HIBIT:LOBIT]])
+			valide[0][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags1e[snoop_adr[HIBIT:LOBIT]])
+			valide[1][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags2e[snoop_adr[HIBIT:LOBIT]])
+			valide[2][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags3e[snoop_adr[HIBIT:LOBIT]])
+			valide[3][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags0o[snoop_adr[HIBIT:LOBIT]])
+			valido[0][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags1o[snoop_adr[HIBIT:LOBIT]])
+			valido[1][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags2o[snoop_adr[HIBIT:LOBIT]])
+			valido[2][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+		if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags3o[snoop_adr[HIBIT:LOBIT]])
+			valido[3][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
+	// Invalidate victim cache entries matching the snoop address
+		for (g = 0; g < NVICTIM; g = g + 1) begin
+			if (snoop_adr[$bits(address_t)-1:LOBIT]==victim_cache[g].padr[$bits(address_t)-1:LOBIT])
+				victim_cache[g].v <= 4'h0;
+		end
 	end
 end
 

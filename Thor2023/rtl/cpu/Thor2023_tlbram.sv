@@ -37,28 +37,31 @@
 
 module Thor2023_TLBRam (clka, ena, wea, addra, dina, douta,
 	clkb, enb, web, addrb, dinb, doutb);
+parameter ENTRIES=1024;
+parameter WIDTH=128;
+localparam LOG_ENTRIES = $clog2(ENTRIES);
 input clka;
 input ena;
 input wea;
-input [9:0] addra;
-input [127:0] dina;
-output [127:0] douta;
+input [LOG_ENTRIES-1:0] addra;
+input [WIDTH-1:0] dina;
+output [WIDTH-1:0] douta;
 input clkb;
 input enb;
 input web;
-input [9:0] addrb;
-input [127:0] dinb;
-output [127:0] doutb;
+input [LOG_ENTRIES-1:0] addrb;
+input [WIDTH-1:0] dinb;
+output [WIDTH-1:0] doutb;
 
    // xpm_memory_tdpram: True Dual Port RAM
    // Xilinx Parameterized Macro, version 2022.2
 
    xpm_memory_tdpram #(
-      .ADDR_WIDTH_A(10),               // DECIMAL
-      .ADDR_WIDTH_B(10),               // DECIMAL
-      .AUTO_SLEEP_TIME(0),            // DECIMAL
-      .BYTE_WRITE_WIDTH_A(128),        // DECIMAL
-      .BYTE_WRITE_WIDTH_B(128),        // DECIMAL
+      .ADDR_WIDTH_A(LOG_ENTRIES),
+      .ADDR_WIDTH_B(LOG_ENTRIES),
+      .AUTO_SLEEP_TIME(0),
+      .BYTE_WRITE_WIDTH_A(WIDTH),
+      .BYTE_WRITE_WIDTH_B(WIDTH),
       .CASCADE_HEIGHT(0),             // DECIMAL
       .CLOCKING_MODE("common_clock"), // String
       .ECC_MODE("no_ecc"),            // String
@@ -66,10 +69,10 @@ output [127:0] doutb;
       .MEMORY_INIT_PARAM("0"),        // String
       .MEMORY_OPTIMIZATION("true"),   // String
       .MEMORY_PRIMITIVE("block"),      // String
-      .MEMORY_SIZE(128*1024),         // DECIMAL
-      .MESSAGE_CONTROL(0),            // DECIMAL
-      .READ_DATA_WIDTH_A(128),         // DECIMAL
-      .READ_DATA_WIDTH_B(128),         // DECIMAL
+      .MEMORY_SIZE(WIDTH*ENTRIES),
+      .MESSAGE_CONTROL(0),
+      .READ_DATA_WIDTH_A(WIDTH),
+      .READ_DATA_WIDTH_B(WIDTH),
       .READ_LATENCY_A(1),             // DECIMAL
       .READ_LATENCY_B(1),             // DECIMAL
       .READ_RESET_VALUE_A("0"),       // String
@@ -81,8 +84,8 @@ output [127:0] doutb;
       .USE_MEM_INIT(1),               // DECIMAL
       .USE_MEM_INIT_MMI(0),           // DECIMAL
       .WAKEUP_TIME("disable_sleep"),  // String
-      .WRITE_DATA_WIDTH_A(128),        // DECIMAL
-      .WRITE_DATA_WIDTH_B(128),        // DECIMAL
+      .WRITE_DATA_WIDTH_A(WIDTH),
+      .WRITE_DATA_WIDTH_B(WIDTH),
       .WRITE_MODE_A("no_change"),     // String
       .WRITE_MODE_B("no_change"),     // String
       .WRITE_PROTECT(1)               // DECIMAL
