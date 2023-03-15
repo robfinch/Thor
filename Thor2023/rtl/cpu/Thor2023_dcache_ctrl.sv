@@ -45,6 +45,7 @@ module Thor2023_dcache_ctrl(rst_i, clk_i, dce, wbm_req, wbm_resp, acr, hit,
 	dump, dump_i, dump_ack, snoop_adr, snoop_v, snoop_cid);
 parameter CID = 2;
 parameter WAYS = 4;
+parameter NSEL = 32;
 localparam LOG_WAYS = $clog2(WAYS)-1;
 input rst_i;
 input clk_i;
@@ -67,19 +68,23 @@ input wb_address_t snoop_adr;
 input snoop_v;
 input [3:0] snoop_cid;
 
+genvar g;
+
 typedef enum logic [2:0] {
 	RESET = 0,
 	STATE1,STATE2,STATE3,STATE4,STATE5,STATE6
 } state_t;
 state_t req_state, resp_state;
 
-reg [1:0] iway;
+reg [LOG_WAYS:0] iway;
 wb_cmd_response256_t response_o;
 reg cache_dump;
 reg [10:0] to_cnt;
 wb_tranid_t tid_cnt;
 wire [16:0] lfsr_o;
 reg [1:0] v;
+reg [255:0] upd_dat;
+
 
 lfsr17 #(.WID(17)) ulfsr1
 (
@@ -119,6 +124,25 @@ always_comb
 		cpu_response_o = response_o;
 		cpu_response_o.ack = response_o.ack;
 	end
+
+// Selection of data used to update cache.
+// For a write request the data includes data from the CPU.
+// Otherwise it is just a cache line load, all data comes from the response.
+// Note data is passed in 128-bit chunks.
+generate begin : gCacheLineUpdate
+	for (g = 0; g < 16; g = g + 1) begin : gFor
+		always_comb
+			if (cpu_request_i.we && cpu_request_i.sel[wbm_resp.adr[4]*16+g]) begin
+				if (wbm_resp.adr[4])
+					upd_dat[g*8+7:g*8] <= cpu_request_i.dat[128+g*8+7:128+g*8];
+				else
+					upd_dat[g*8+7:g*8] <= cpu_request_i.dat[g*8+7:g*8];
+			end
+			else
+				upd_dat[g*8+7:g*8] <= wbm_resp.dat[g*8+7:g*8];
+	end
+end
+endgenerate				
 	
 always_ff @(posedge clk_i)
 if (rst_i) begin
@@ -215,7 +239,7 @@ else begin
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
 			wbm_req.asid <= cpu_request_i.asid;
-			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:ICacheTagLoBit],v[0],{ICacheTagLoBit-2{1'h0}}};
+			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
 			to_cnt <= 'd0;
 			req_state <= STATE5;
 		end
@@ -260,7 +284,7 @@ else begin
 				response_o.tid <= wbm_resp.tid;
 				response_o.pri <= wbm_resp.pri;
 				response_o.adr <= wbm_resp.adr;
-				response_o.dat[255:128] <= wbm_resp.dat;
+				response_o.dat[255:128] <= upd_dat;
 			end
 			else begin
 				v[0] <= 1'b1;
@@ -268,16 +292,16 @@ else begin
 				response_o.tid <= wbm_resp.tid;
 				response_o.pri <= wbm_resp.pri;
 				response_o.adr <= wbm_resp.adr;
-				response_o.dat[127:0] <= wbm_resp.dat;
+				response_o.dat[127:0] <= upd_dat;
 			end
 			// Line load complete or cpu access complete, pulse appropriate ack line.
-			if (v==2'b11) begin
+			if (v==2'b01 || v==2'b10) begin
 				if (cache_dump)
 					req_state <= STATE4;
 				dump_ack <= cache_dump;
 				response_o.ack <= !cache_dump;
 				v <= 2'b00;
-				iway <= lfsr_o[1:0];
+				iway <= lfsr_o[LOG_WAYS:0];
 				// Write to cache only if response from TLB indicates a cacheable
 				// address.
 				wr <= acr[3] & dce;

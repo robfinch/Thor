@@ -41,7 +41,10 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
 module Thor2023_icache_ctrl(rst_i, clk_i, wbm_req, wbm_resp, hit, miss_adr,
-	wr_ic, way, line_o, snoop_adr, snoop_v);
+	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
+parameter WAYS = 4;
+parameter CID = 4'd2;
+localparam LOG_WAYS = $clog2(WAYS)-1;
 input rst_i;
 input clk_i;
 output wb_cmd_request128_t wbm_req;
@@ -49,10 +52,11 @@ input wb_cmd_response128_t wbm_resp;
 input hit;
 input wb_address_t miss_adr;
 output reg wr_ic;
-output reg [1:0] way;
+output reg [LOG_WAYS:0] way;
 output ICacheLine line_o;
 input wb_address_t snoop_adr;
 input snoop_v;
+input [3:0] snoop_cid;
 parameter CORENO = 1;
 
 typedef enum logic [2:0] {
@@ -191,7 +195,7 @@ else begin
 			if (v==2'b11) begin
 				v <= 2'b00;
 				wr_ic <= 1'b1;
-				way <= lfsr_o[1:0];
+				way <= lfsr_o[LOG_WAYS:0];
 			end
 			req_state <= STATE1;
 			resp_state <= STATE1;
@@ -199,7 +203,8 @@ else begin
 	default:	resp_state <= STATE1;
 	endcase
 	// Only the cache index need be compared for snoop hit.
-	if (snoop_v && snoop_adr[ITAG_BIT:ICacheTagLoBit]==miss_adr[ITAG_BIT:ICacheTagLoBit]) begin
+	if (snoop_v && snoop_adr[ITAG_BIT:ICacheTagLoBit]==miss_adr[ITAG_BIT:ICacheTagLoBit] &&
+		snoop_cid != CID) begin
 		wbm_req.cyc <= 1'b0;
 		wbm_req.stb <= 1'b0;
 		wbm_req.sel <= 16'h0000;

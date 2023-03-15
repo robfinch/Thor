@@ -58,6 +58,7 @@ parameter LOBIT = 6;
 parameter HIBIT = 12;
 parameter TAGBIT = 13;
 parameter NVICTIM = 0;
+localparam LOG_WAYS = $clog2(WAYS)-1;
 
 input rst;
 input clk;
@@ -79,7 +80,7 @@ output reg ic_valid;
 output reg [$bits(address_t)-1:LOBIT] ic_tage;
 output reg [$bits(address_t)-1:LOBIT] ic_tago;
 input ICacheLine ic_line_i;
-input [1:0] wway;
+input [LOG_WAYS:0] wway;
 input wr_ic;
 output reg icache_wre;
 output reg icache_wro;
@@ -112,7 +113,6 @@ reg [2:0] victim_count, vcne, vcno;
 ICacheLine [NVICTIM-1:0] victim_cache;
 ICacheLine victim_eline, victim_oline;
 ICacheLine victim_cache_eline, victim_cache_oline;
-reg icache_we2;
 reg icache_wre2;
 reg vce,vco;
 

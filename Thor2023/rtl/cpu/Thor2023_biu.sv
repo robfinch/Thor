@@ -44,6 +44,7 @@ import Thor2023Mmupkg::*;
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
 	ip,ip_o,ihit_o,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago,
 	fifoToCtrl_wack, fifoToCtrl_i,fifoToCtrl_full_o,
+	fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
 	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i, asid_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
@@ -75,6 +76,10 @@ output [$bits(address_t)-1:6] ic_tago;
 output fifoToCtrl_wack;
 input memory_arg_t fifoToCtrl_i;
 output fifoToCtrl_full_o;
+output memory_arg_t fifoFromCtrl_o;
+input fifoFromCtrl_rd;
+output fifoFromCtrl_empty;
+output fifoFromCtrl_v;
 // Bus controls
 //output wb_write_request128_t wbm_req;
 //input wb_read_response128_t wbm_resp;
@@ -191,7 +196,7 @@ wire tlbrdy;
 // pipeline is being filled.
 reg memreq_rd;
 always_comb
-	memreq_rd = !fifoToCtrl_empty && !memr_v;
+	memreq_rd = !fifoToCtrl_empty;// && !memr_v;
 
 memory_arg_t memresp, memresp2;
 memory_arg_t [6:0] mem_resp;	// memory pipeline
@@ -296,7 +301,11 @@ wire fifoToCtrl_v;
 wire pev;
 edge_det ued1 (.rst(rst), .clk(clk), .ce(1'b1), .i(fifoToCtrl_v), .pe(pev), .ne(), .ee());
 
-Thor2023_mem_req_queue umreqq
+Thor2023_mem_req_queue 
+#(
+	.MERGE_STORES(1'b0)
+)
+umreqq
 (
 	.rst(rst),
 	.clk(clk),
@@ -306,7 +315,7 @@ Thor2023_mem_req_queue umreqq
 	.wr1(1'b0),
 	.wr_ack1(),
 	.i1('d0),
-	.rd(memreq_rd & ~pev),
+	.rd(memreq_rd),// & ~pev),
 	.o(imemreq),
 	.valid(fifoToCtrl_v),
 	.empty(fifoToCtrl_empty),
@@ -320,6 +329,29 @@ Thor2023_mem_req_queue umreqq
 );
 
 wire memresp_full;
+wire [3:0] fifoFromCtrl_cnt;
+assign fifoFromCtrl_empty = fifoFromCtrl_cnt=='d0;
+
+// This fifo is at the output of the external bus to the mainline execution.
+// There are two places this fifo is loaded from.
+// 1) at the end of an external bus access when required
+// 2) at the end of the memory access pipeline if the cache was hit
+// Responses from the memory access pipeline take precedence.
+
+Thor2023_mem_resp_fifo uofifo1
+(
+	.rst(rst),
+	.clk(clk),
+	.wr(memresp.wr),
+	.di(memresp),
+	.rd(fifoFromCtrl_rd),
+	.dout(fifoFromCtrl_o),
+	.cnt(fifoFromCtrl_cnt),
+	.full(memresp_full),
+	.v(fifoFromCtrl_v),
+	.rollback(rollback),
+	.rollback_bitmaps(rb_bitmaps3)
+);
 
 // This fifo sits between the output of the data cache lookup memory pipe and
 // the external bus sequencer. 
@@ -358,6 +390,8 @@ Thor2023_mem_resp_fifo uofifo2
 // Instruction cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+parameter IWAYS = 4;
+localparam LOG_IWAYS = $clog2(IWAYS)-1;
 wire itlbrdy;
 reg itlben, itlbwr;
 wire ihit;
@@ -371,19 +405,25 @@ reg [2:0] ivictim_count;
 ICacheLine [4:0] ivictim_cache;
 ICacheLine ivictim_line;
 wire ivictim_wr;
-reg [1:0] ic_wway;
+reg [LOG_IWAYS:0] ic_wway;
 reg [2:0] vcn;
 reg ic_invline,ic_invall;
 wire ihit2e, ihit2o;
 wire icache_wre, icache_wro;
 
-Thor2023_icache_ex uic1
+Thor2023_icache_ex
+#(
+	.CID({CID,1'b0}),
+	.WAYS(IWAYS)
+) 
+uic1
 (
 	.rst(rst),
 	.clk(clk),
 	.state(state),
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
+	.snoop_cid(snoop_cid),
 	.ip(ip),
 	.ip_o(ip_o),
 	.ihit_o(ihit_o),
@@ -404,7 +444,12 @@ Thor2023_icache_ex uic1
 	.victim_line(ivictim_line)
 );
 
-Thor2023_icache_ctrl uictrl
+Thor2023_icache_ctrl 
+#(
+	.CID({CID,1'b0}),
+	.WAYS(IWAYS)
+) 
+uictrl
 (
 	.rst_i(rst),
 	.clk_i(clk),
@@ -416,46 +461,15 @@ Thor2023_icache_ctrl uictrl
 	.way(ic_wway),
 	.line_o(ic_input),
 	.snoop_adr(snoop_adr),
-	.snoop_v(snoop_v)
+	.snoop_v(snoop_v),
+	.snoop_cid(snoop_cid)
 );
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Key Cache
-// - the key cache is direct mapped, 64 lines of 512 bits.
-// - keys are stored in the low order 20 bits of a 32-bit memory cell
-// - 16 keys per 512 bit cache line
-// - one cache line is enough to cover 256kB of memory
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-`ifdef SUPPORT_KEYCHK
-reg [19:0] io_keys [0:511];
-initial begin
-	for (n = 0; n < 512; n = n + 1)
-		io_keys[n] = 20'h0;
-reg [511:0] kyline [0:63];
-reg [AWID-19:0] kytag;
-reg [63:0] kyv;
-reg kyhit;
-reg io_adr;
-always_comb
-	io_adr <= adr_o[31:23]==9'b1111_1111_1;
-always_comb
-	kyhit <= kytag[adr_o[23:18]]==adr_o[AWID-1:18] && kyv[adr_o[23:18]] || io_adr;
-initial begin
-	kyv = 64'd0;
-	for (n = 0; n < 64; n = n + 1) begin
-		kyline[n] = 512'd0;
-		kytag[n] = 32'd1;
-	end
-end
-reg [19:0] kyut;
-always_comb
-	kyut <= io_adr ? io_keys[adr_o[31:23]] : kyline[adr_o[23:18]] >> {adr_o[17:14],5'd0};
-`endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Data Cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+parameter DWAYS = 4;
+localparam LOG_DWAYS = $clog2(DWAYS)-1;
 wire dtlbrdy, dtlbmiss;
 reg dtlben, dtlbwr;
 TLBE dtlbdato;
@@ -484,7 +498,12 @@ begin
 	tDataAlign(cpu_req,memresp);
 end
 
-Thor2023_dcache_ex3 udc1
+Thor2023_dcache_ex3
+#(
+	.CID({CID,1'b1}),
+	.WAYS(DWAYS)
+)
+udc1
 (
 	.rst(rst),
 	.clk(clk),
@@ -508,7 +527,12 @@ Thor2023_dcache_ex3 udc1
 	.dc_invall(dc_invall)
 );
 
-Thor2023_dcache_ctrl udcctrl
+Thor2023_dcache_ctrl
+#(
+	.CID({CID,1'b1}),
+	.WAYS(DWAYS)
+)
+udcctrl
 (
 	.rst_i(rst),
 	.clk_i(clk),
@@ -1044,7 +1068,6 @@ begin
 	dat <= 'd0;
 	csr_o <= LOW;
 	waycnt <= 2'd0;
-	ic_wway <= 2'b00;
 	iaccess <= FALSE;
 	daccess <= FALSE;
 //	memreq_rd <= FALSE;
@@ -2170,7 +2193,6 @@ endtask
 
 task tBeginIFetch;
 begin
-  ic_wway <= waycnt;
 	waycnt <= waycnt + 2'd1;
 	original_ip <= {memr.adr[$bits(address_t)-1:5],5'b0};
 	first_ifetch <= TRUE;
