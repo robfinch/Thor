@@ -81,6 +81,7 @@ if (rst_i) begin
 	resp_state <= RESET;
 	to_cnt <= 'd0;
 	tid_cnt <= 'd0;
+	wbm_req <= 'd0;
 end
 else begin
 	wr_ic <= 1'b0;

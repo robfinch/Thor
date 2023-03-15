@@ -51,7 +51,7 @@ parameter LINES = 512;
 parameter LOBIT = 5;
 parameter HIBIT = 13;
 parameter TAGBIT = 14;
-localparam LOG_WAYS = $clog2(WAYS);
+localparam LOG_WAYS = $clog2(WAYS)-1;
 
 input rst;
 input clk;
@@ -83,6 +83,7 @@ typedef struct packed
 {
 	logic v;
 	logic m;
+	Thor2023Pkg::asid_t asid;
 	cache_tag_t tag;
 	logic [DCacheLineWidth-1:0] data;
 } cache_line_t;
@@ -165,6 +166,7 @@ always_comb
 begin
 	cline_in.v <= 1'b1;					// Whether updating the line or loading a new one, always valid.
 	cline_in.m <= ~cache_load;	// It is not modified if it is a fresh load.
+	cline_in.asid <= cpu_req_i.asid;
 	cline_in.tag <= cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:TAGBIT];
 end
 
@@ -215,12 +217,25 @@ end
 end
 endgenerate
 
+wire non_cacheable =
+	cache_type==NC_NB ||
+	cache_type==NON_CACHEABLE
+	;
+wire read_allocate =
+	cache_type==CACHEABLE_NB ||
+	cache_type==CACHEABLE ||
+	cache_type==WT_READ_ALLOCATE ||
+	cache_type==WT_READWRITE_ALLOCATE ||
+	cache_type==WB_READ_ALLOCATE ||
+	cache_type==WB_READWRITE_ALLOCATE
+	;
+
 // Pass through the incoming line back to the CPU when data cache is not enabled.
 // If a cache hit, the update way is the hit way.
 always_comb
 	if (non_cacheable|~read_allocate|~dce) begin
 		cpu_resp_o = cpu_resp_i;
-		uway <= 'd0;
+		uway = 'd0;
 	end
 	else
 		casez (hits)
@@ -317,29 +332,18 @@ else begin
 	if (dump1 & ~dump) begin
 		dump_o.v = 1'b1;
 		dump_o.m = 1'b0;
+		dump_o.asid = lines[way].asid;
 		dump_o.vtag = lines[way].tag;
 		dump_o.ptag = ptags[way];
 		dump_o.data = lines[way].data;
 	end
 end
 
-wire non_cacheable =
-	cache_type==NC_NB ||
-	cache_type==NON_CACHEABLE
-	;
-wire read_allocate =
-	cache_type==CACHEABLE_NB ||
-	cache_type==CACHEABLE ||
-	cache_type==WT_READ_ALLOCATE ||
-	cache_type==WT_READWRITE_ALLOCATE ||
-	cache_type==WB_READ_ALLOCATE ||
-	cache_type==WB_READWRITE_ALLOCATE
-	;
-
 always_comb
 begin
 	for (k = 0; k < WAYS; k = k + 1) begin
 	  hits[k] = lines[k[LOG_WAYS:0]].tag==cpu_req_i.vadr[$bits(address_t)-1:TAGBIT] && 
+	  					lines[k[LOG_WAYS:0]].asid==cpu_req_i.asid &&
 	  					lines[k[LOG_WAYS:0]].v==1'b1;
 	end
 end

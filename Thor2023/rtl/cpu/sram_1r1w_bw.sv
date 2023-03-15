@@ -166,7 +166,7 @@ for (g = 0; g < NSEL; g = g + 1) begin : gByteSel
 				o[g*8+7:g*8] = o1[g*8+7:g*8];
 		end
 		else
-			o = o1;
+			o[g*8+7:g*8] = o1[g*8+7:g*8];
 	end
 end
 endgenerate

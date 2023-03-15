@@ -42,14 +42,15 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
-	ip,ip_o,ihit_o,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago, fifoToCtrl_wack,
-	fifoToCtrl_i,fifoToCtrl_full_o,fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
+	ip,ip_o,ihit_o,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago,
+	fifoToCtrl_wack, fifoToCtrl_i,fifoToCtrl_full_o,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
 	stall_i, next_i, rty_i, ack_i, err_i, tid_i, dat_i, rb_i, adr_i, asid_i,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
 	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp, tlbacr,
-	itlbmiss, clr_itlbmiss, rollback, rollback_bitmaps, snoop_adr, snoop_v, snoop_cid);
+	rollback, rollback_bitmaps, snoop_adr, snoop_v, snoop_cid);
 parameter AWID=32;
+parameter CID = 4'd1;
 input rst;
 input clk;
 input tlbclk;
@@ -74,10 +75,6 @@ output [$bits(address_t)-1:6] ic_tago;
 output fifoToCtrl_wack;
 input memory_arg_t fifoToCtrl_i;
 output fifoToCtrl_full_o;
-output memory_arg_t fifoFromCtrl_o;
-input fifoFromCtrl_rd;
-output fifoFromCtrl_empty;
-output fifoFromCtrl_v;
 // Bus controls
 //output wb_write_request128_t wbm_req;
 //input wb_read_response128_t wbm_resp;
@@ -110,8 +107,6 @@ input [2:0] arange;
 input [127:0] ptbr;
 output reg ipage_fault;
 input clr_ipage_fault;
-output reg itlbmiss;
-input clr_itlbmiss;
 input [NTHREADS-1:0] rollback;
 output reg [127:0] rollback_bitmaps [0:NTHREADS-1];
 input address_t snoop_adr;
@@ -139,19 +134,6 @@ parameter IO_KEY_ADR	= 16'hFF88;
 integer m,n,k;
 integer n4,n5,n7,n10,n11;
 genvar g;
-
-/*
-always_comb
-begin
-	wbm_req.bte = bte_o;
-	wbm_req.cti = cti_o;
-	wbm_req.bndx = bndx_o;
-	wbm_req.seg = seg_o;
-	wbm_req.cyc = cyc_o;
-	wbm_req.stb = stb_o;
-	
-end
-*/
 
 reg mem_pipe_adv;
 reg [5:0] shr_ma;
@@ -208,9 +190,8 @@ wire tlbrdy;
 // In this case back-toback reads of the fifo are allowed as a memory
 // pipeline is being filled.
 reg memreq_rd;
-reg overlapping_address;
 always_comb
-	memreq_rd = !fifoToCtrl_empty && tlbrdy && !memr_v && !overlapping_address;
+	memreq_rd = !fifoToCtrl_empty && !memr_v;
 
 memory_arg_t memresp, memresp2;
 memory_arg_t [6:0] mem_resp;	// memory pipeline
@@ -222,7 +203,6 @@ reg [127:0] rb_bitmaps2 [0:NTHREADS-1];
 reg [127:0] rb_bitmaps3 [0:NTHREADS-1];
 reg [127:0] rb_bitmaps4 [0:NTHREADS-1];
 reg [1023:0] dc_line;
-reg [1023:0] dc_linein;
 reg [1:0] dc_line_mod;
 wire [1023:0] stmask;
 reg [127:0] memr_sel;
@@ -252,39 +232,18 @@ reg [1:0] strips;
 reg [127:0] sel;
 reg [127:0] nsel;
 reg [1023:0] dat, dati;
-wire [127:0] datis,datis2;
+wire [127:0] datis;
 
 biu_dati_align uda1
 (
-	.dati(mem_resp[PADR_SET].res),
+	.dati(cpu_resp1.dat),
 	.datis(datis), 
-	.amt({mem_resp[PADR_SET].adr[6:0],3'b0})
+	.amt({cpu_resp1.adr[6:0],3'b0})
 );
-
-biu_dati_align uda2
-(
-	.dati(dati),
-	.datis(datis2), 
-	.amt({memr.adr[6:0],3'b0})
-//	.amt({adr_o[6:0],3'b0})
-);
-
-`ifdef CPU_B64
-reg [15:0] sel;
-reg [127:0] dat, dati;
-wire [63:0] datis = dati >> {ealow[2:0],3'b0};
-`endif
-`ifdef CPU_B32
-reg [7:0] sel;
-reg [63:0] dat, dati;
-wire [63:0] datis = dati >> {ealow[1:0],3'b0};
-`endif
 
 // Build an insert mask for data cache store operations.
 
 Thor2023_stmask ustmsk1 (mem_resp[VLOOKUP3].sel, mem_resp[VLOOKUP3].adr[5:0], stmask);
-always_comb
-	dc_linein = (dc_line & ~stmask) | ((mem_resp[VLOOKUP3].res << {mem_resp[VLOOKUP3].adr[5:0],3'b0}) & stmask);
 
 always_comb
 	for (n10 = 0; n10 < NTHREADS; n10 = n10 + 1)
@@ -361,29 +320,6 @@ Thor2023_mem_req_queue umreqq
 );
 
 wire memresp_full;
-wire [3:0] fifoFromCtrl_cnt;
-assign fifoFromCtrl_empty = fifoFromCtrl_cnt=='d0;
-
-// This fifo is at the output of the external bus to the mainline execution.
-// There are two places this fifo is loaded from.
-// 1) at the end of an external bus access when required
-// 2) at the end of the memory access pipeline if the cache was hit
-// Responses from the memory access pipeline take precedence.
-
-Thor2023_mem_resp_fifo uofifo1
-(
-	.rst(rst),
-	.clk(clk),
-	.wr(memresp.wr|memresp2.wr),
-	.di(memresp.wr ? memresp : memresp2),
-	.rd(fifoFromCtrl_rd),
-	.dout(fifoFromCtrl_o),
-	.cnt(fifoFromCtrl_cnt),
-	.full(memresp_full),
-	.v(fifoFromCtrl_v),
-	.rollback(rollback),
-	.rollback_bitmaps(rb_bitmaps3)
-);
 
 // This fifo sits between the output of the data cache lookup memory pipe and
 // the external bus sequencer. 
@@ -422,7 +358,7 @@ Thor2023_mem_resp_fifo uofifo2
 // Instruction cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-wire itlbrdy, itlbmiss;
+wire itlbrdy;
 reg itlben, itlbwr;
 wire ihit;
 TLBE itlbdato;
@@ -483,39 +419,6 @@ Thor2023_icache_ctrl uictrl
 	.snoop_v(snoop_v)
 );
 
-/*
-Thor2023_tlb_L1 uitlb
-(
-	.rst_i(rst),
-	.clk_i(clk),
-	.clock(clock),
-	.al_i(ptbr[7:6]),
-	.rdy_o(itlbrdy),
-	.asid_i(asid_i),
-	.sys_mode_i(seg_o==wishbone_pkg::CODE ? ~AppMode : ~MAppMode),
-	.xlaten_i(xlaten),
-	.we_i(1'b0),
-	.stptr_i(1'b0),
-	.next_i(inext),
-	.adr_i(ip),
-	.padr_o(),
-	.acr_o(),
-	.tlben_i(itlben),
-	.wrtlb_i(itlbwr),
-	.tlbadr_i(tlb_ia[15:0]),
-	.tlbdat_i(tlb_ib),
-	.tlbdat_o(itlbdato),
-	.tlbmiss_o(),
-	.tlbmiss_adr_o(),
-	.phys_adr(phys_ip),
-	.tlbmiss(itlbmiss),
-	.m_cyc_o(),
-	.m_ack_i('b0),
-	.m_adr_o(),
-	.m_dat_o()
-);
-*/
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Key Cache
 // - the key cache is direct mapped, 64 lines of 512 bits.
@@ -574,23 +477,11 @@ DCacheLine dc_dump_o;
 
 always_comb
 begin
-	cpu_req.cmd = memreq.load ? wishbone_pkg::CMD_LOAD : wishbone_pkg::CMD_STORE;
-	cpu_req.seg <= wishbone_pkg::DATA;
-	cpu_req.bte <= wishbone_pkg::LINEAR;
-	cpu_req.cti <= wishbone_pkg::CLASSIC;
-	cpu_req.cyc = memq_o.tid != last_tid;
-	cpu_req.stb = 1'b1;
-	cpu_req.we = memreq.wr;
-	cpu_req.sel = memreq.sel;
-	cpu_req.vadr = memreq.adr;
-	cpu_req.dat = memreq.res;
-	cpu_req.cache = wb_cache_t'(memreq.cache_type);
-	
 	memresp.tid = cpu_resp1.tid;
 	memresp.cmt = 1'b1;
 	memresp.wr = cpu_resp1.ack;
 	memresp.sel = cpu_req.sel;
-	memresp.res = cpu_resp1.dat;
+	tDataAlign(cpu_req,memresp);
 end
 
 Thor2023_dcache_ex3 udc1
@@ -1048,7 +939,6 @@ typedef struct packed
 
 wb_tranid_t prev_tid;
 reg req_done, clr_req_done;
-reg [7:0] count;
 reg wr_reqtbl;
 req_table_t [255:0] reqtbl;
 req_table_t req;
@@ -1062,116 +952,72 @@ assign req = reqtbl[tid_i];
 
 always_ff @(posedge clk)
 if (rst) begin
-	count <= 'd0;
 	prev_tid <= 'd0;
 end
 else begin
-	if (state==DFETCH5 && next_i && dcnt[4:2]==blen_o[2:0])
-		count <= 'd0;
 	if (ack_i) begin
 		if (tid_i[7:3]!=prev_tid[7:3] && tid_i[2:0]=='d0) begin
-			count <= 'd0;
 			prev_tid <= tid_i;
 		end
-		else if (count < req.blen)
-			count <= count + 2'd1;
 	end
-end
-
-always_comb
-	req_done = req.blen==count;
-
-always_ff @(posedge clk)
-if (rst) begin
-//	req_done <= 'd1;
-	upd_adr <= 'd0;
-end
-else begin
-	if (ack_i) begin
-		if (tid_i[7:3]!=prev_tid[7:3]) begin
-//			if (req.blen>3'd0)
-//				req_done <= 1'b0;
-		end
-	end
-
-	if (ack_i && req.seg==wishbone_pkg::CODE) begin
-//		if (req.blen==count)
-//			req_done <= 1'b1;
-		if (count[2:0]=='d0)
-			upd_adr <= {req.adr[$bits(wb_address_t)-1:5],5'h0};
-	end
-	else if (ack_i && req.seg==wishbone_pkg::DATA && !req.we) begin
-//		if (req.blen==count)
-//			req_done <= 1'b1;
-		if (count[2:0]=='d0)
-			upd_adr <= {req.adr[$bits(wb_address_t)-1:5],5'h0};
-	end
-	if (state==MEMORY_UPD1 || state==MEMORY_UPD2)
-		upd_adr <= memr.adr;
 end
 
 always_ff @(posedge clk)
 if (rst)
-	dci[0].data <= 'd0;
+	last_tid <= 'd0;
 else begin
-	// Data cache load cycle.
-	if (ack_i && req.seg==wishbone_pkg::DATA && !req.we) begin
-  	case(tid_i[2:0])
-  	3'd0:	begin dci[0].data[127:  0] <= dat_i; dci[0].m <= 1'b0; end
-  	3'd1: dci[0].data[255:128] <= dat_i;
-  	default:	;
-  	endcase
-  	/*
-		case(req.adr[4])
-		1'd0:	dci[0].data[127:  0] <= dat_i;
-		1'd1: dci[0].data[255:128] <= dat_i;
-		default:	;
-		endcase
-		*/
+	if (memreq_rd) begin
+		if (imemreq.tid != last_tid)
+			last_tid <= imemreq.tid;
 	end
-	case(state)
-	// In case of a write cycle which needs to update the cache, copy the
-	// incoming data for later reference.
-	MEMORY1:
-		begin
-			if (rd_memq1) begin
-				if (memq_o.tid != last_tid) begin
-					dci[0].data <= memq_o.res[255:0];
-					dci[1].data <= memq_o.res[511:256];
-					dci[0].m <= 1'b1;
-					dci[1].m <= 1'b1;
-				end
-			end
-		end
-	MEMORY_NACK:
-		if (~ack_i) begin
-			case(memr.func)
-			MR_STORE,MR_MOVST:
-				if (~|memr_sel[31:16]) begin
-					if (memr_sel[127:16]=='d0) begin
-						if (memr.func2 != MR_STPTR) begin
-							if (!memresp_full) begin
-								if (|memr.hit[1:0])
-									// Write odd then even if request line was odd.
-									if (memr.adr[5])
-										dci <= {dci[0],dci[1]};
-							end
-						end
-					end
-				end
+end
+
+always_ff @(posedge clk)
+if (rst) begin
+	cpu_req.blen <= 'd0;
+	cpu_req.cyc <= 'd0;
+	cpu_req.stb <= 'd0;
+	cpu_req.we <= 'd0;
+	cpu_req.sel <= 'd0;
+	cpu_req.padr <= 'd0;
+	cpu_req.csr <= 'd0;
+	cpu_req.pl <= 'd0;
+	cpu_req.pri <= 4'd7;
+	cpu_req.dat <= 'd0;
+	cpu_req.cid <= {CID,1'b1};
+end
+else begin
+	if (1'b1 || memreq_rd) begin
+		if (1'b1 || imemreq.tid != last_tid) begin
+			case(imemreq.func)
+			MR_LOAD:	cpu_req.cmd <= CMD_LOAD;
+			MR_LOADZ:	cpu_req.cmd <= CMD_LOADZ;
+			MR_STORE:	cpu_req.cmd <= CMD_STORE;
+			default:	cpu_req.cmd <= CMD_LOAD;
 			endcase
+			cpu_req.tid <= imemreq.tid;
+			cpu_req.seg <= wishbone_pkg::DATA;
+			cpu_req.bte <= wishbone_pkg::LINEAR;
+			cpu_req.cti <= wishbone_pkg::CLASSIC;
+			cpu_req.dat <= imemreq.res[255:0];
+			cpu_req.cyc <= 1'b1;
+			cpu_req.stb <= 1'b1;
+			cpu_req.we <= imemreq.store;
+			cpu_req.sel <= imemreq.sel;
+			cpu_req.asid <= imemreq.asid;
+			cpu_req.vadr <= imemreq.adr;
+			cpu_req.dat <= imemreq.res;
+			cpu_req.sz <= wb_size_t'(imemreq.sz);
+			cpu_req.cache <= wb_cache_t'(imemreq.cache_type);
 		end
-	// For a write hit on the data cache.
-	// Only dci[0] is written to the data cache. Transfer the buffer in case a 
-	// write of dci[1] is needed. It will be written in a second update cycle.
-	MEMORY_UPD1:
-		begin
-			dci[0].data <= dci[1].data;
-			dci[0].m <= 1'b1;
+		else begin
+			cpu_req.cmd <= CMD_NONE;
+			cpu_req.cyc <= 1'b0;
+			cpu_req.stb <= 1'b0;
+			cpu_req.we <= 1'b0;
+			cpu_req.sel <= 'd0;
 		end
-	MEMORY_UPD2:
-		;
-	endcase
+	end
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1212,7 +1058,6 @@ begin
   ptg_fault <= 1'b0;
 	clr_ptg_fault <= 1'b0;
 	ipage_fault <= 1'b0;
-//	itlbmiss <= 1'b0;
 	ptgram_en <= 1'b0;
 	rgn_en <= 1'b0;
 	tlb_access <= 1'b0;
@@ -1226,7 +1071,6 @@ begin
 	mem_resp[4] <= 'd0;
 	mem_resp[5] <= 'd0;
 	mem_resp[6] <= 'd0;
-	last_tid <= 'd0;
 	last_cadr <= 'd0;
 	tid_o <= 'd0;
 	for (n = 0; n < NTHREADS; n = n + 1)
@@ -1276,8 +1120,6 @@ else begin
 	clr_ptg_fault <= 1'b0;
 	if (clr_ipage_fault)
 		ipage_fault <= 1'b0;
-//	if (clr_itlbmiss)
-//		itlbmiss <= 1'b0;
 //	wr_ic2 <= wr_ic1;
 //	wr_dc2 <= wr_dc1;
 //	if (ack_i && count==req.blen && req.seg==wishbone_pkg::DATA)	// && !req.we)
@@ -1292,9 +1134,6 @@ else begin
 	ptgram_wr <= FALSE;
 	tStage0();
 	tStage1();
-	tAddressXlat();
-	tCacheAccess();
-	tCacheDataAlign();
 
 		for (n5 = 0; n5 < 7; n5 = n5 + 1)
 			if (rollback[mem_resp[n5].thread]) begin
@@ -1313,30 +1152,6 @@ else begin
 
 	MEMORY1:
 		begin
-//			if (!memq_empty)
-//				rd_memq <= TRUE;
-			if (rd_memq1) begin
-				if (memq_o.tid != last_tid) begin
-//					rd_memq <= FALSE;
-					last_tid <= memq_o.tid;
-					memr_hold <= memq_o;
-					memr <= memq_o;
-					memr_sel <= memq_o.sel;
-					memr_res <= memq_o.res;
-					memreq <= memq_o;
-					//dci[0].data <= memq_o.res[255:0];
-					//dci[1].data <= memq_o.res[511:256];
-					//dci[0].m <= 1'b0;
-					//dci[1].m <= 1'b0;
-					gosub (MEMORY_ACTIVATE);
-				end
-			end
-			else if (!ihit) begin
-				push();		// return to MEMORY1
-				imiss_padr <= phys_ip;
-				imiss_vadr <= ip;
-				tBeginIFetch();	// Goes to IFETCH state
-			end
 		end
 
 	// The following two states for MR_TLB translation lookup
@@ -1399,11 +1214,6 @@ else begin
 		end
 	MEMORY_UPD2:
 		ret(0);
-
-	DATA_ALIGN:
-		if (mem_pipe_adv) begin
-			tDataAlign();
-		end
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Complete TLB access cycle
@@ -2168,13 +1978,6 @@ endtask
 // -----------------------------------------------------------------------------
 always_comb
 	mem_pipe_adv = !memresp_full;
-always_comb
-begin
-	overlapping_address = 1'b0;
-	for (n11 = 0; n11 < 7; n11 = n11 + 1)
-		if (imemreq.adr[31:5]==mem_resp[n11].adr[31:5])
-			overlapping_address = 1'b1;
-end
 
 // memreq_rd cannot be used to signal the start of pipeline loading of mem_resp
 // as it must pulse only once for each read of the fifo. If it is held the fifo
@@ -2343,187 +2146,6 @@ begin
 			ptgram_adr <= mem_resp[0].adr[18:4];
 			ptgram_dati <= mem_resp[0].res;
 `endif
-		end
-	end
-end
-endtask
-
-// Perform virtual to physical translation.
-// Perform PMA checks on physical address
-
-task tAddressXlat;
-begin
-	if (mem_pipe_adv) begin
-		// VLOOKUP1 is in line with the output of the TLB
-		mem_resp[VLOOKUP1] <= mem_resp[1];				// tag lookup
-		if (mem_resp[VLOOKUP1].func==MR_TLBRW || mem_resp[VLOOKUP1].func==MR_TLBRD)
-			mem_resp[VLOOKUP1].res <= mem_resp[1].adr[4] ? dtlbdato : itlbdato;
-		mem_resp[VLOOKUP1].acr <= tlbacr;
-		mem_resp[VLOOKUP3] <= mem_resp[VLOOKUP1];	// data tag lookup
-	//	mem_resp[VLOOKUP3] <= mem_resp[VLOOKUP2];	// data fetch 1
-		mem_resp[PADR_SET] <= mem_resp[VLOOKUP3];	// data fetch 2
-		if (mem_resp[VLOOKUP3].func == MR_STORE && mem_resp[VLOOKUP3].sel[0])
-    	mem_resp[PADR_SET].sel <= {32'h0,mem_resp[VLOOKUP3].sel} << mem_resp[VLOOKUP3].adr[4:0];
-		// No address translations for machine mode, this is checked in the TLB so
-		// this condition statement may not be necessary.
-		if (mem_resp[VLOOKUP3].omode!=2'd3)
-			mem_resp[PADR_SET].adr <= padrd1[31:0];
-		// Always check the PMA, for sure when not in machine mode.
-		mem_resp[PADR_SET].acr <= region_at[3:0];
-		// TLB access rights enable everything in machine mode. acr=Fh
-		if (mem_resp[VLOOKUP3].v) begin
-		  if (!(region_at[0]&tlbacr[0]) && mem_resp[VLOOKUP3].func==MR_ICACHE_LOAD)
-		    mem_resp[PADR_SET].cause <= FLT_EXV;
-		 	//we_o <= wr & tlbwr & region.at[1];
-		  if (mem_resp[VLOOKUP3].func==MR_STORE && !(region_at[1] & tlbacr[1]))
-			  mem_resp[PADR_SET].cause <= FLT_WRV;
-//		  else if (mem_resp[VLOOKUP3].func!=MR_STORE && !(region_at[2] & tlbacr[2]))
-//			  mem_resp[PADR_SET].cause <= FLT_RDV;
-		   // TLB miss has higher precedence than PMA
-		   // No TLB miss in machine mode
-			if (tlbmiss && mem_resp[VLOOKUP3].omode!=2'd3)
-				mem_resp[PADR_SET].cause <= FLT_TLBMISS;
-		 	if (!(tlbacr[2] & region_at[2]) && (mem_resp[VLOOKUP3].func==MR_LOAD || mem_resp[VLOOKUP3].func==MR_LOADZ)) begin
-		 		mem_resp[PADR_SET].cause <= FLT_RDV;
-		 		//tReadViolation(mem_resp[4].adr);
-	//		if (tlbacr[3])
-	//			mem_resp[PADR_SET].func2 <= MR_CACHE;
-		 	end
-		end
-	end
-//	memresp.cause <= {4'h8,FLT_PMA};
-	//dcachable <= dcachable & region.at[3];
-end
-endtask
-
-// Access cached data
-// Determine whether a memory access is required.
-// Load read data from special memory mapped components
-
-task tCacheAccess;
-begin
-	if (mem_pipe_adv) begin
-		if (mem_resp[VLOOKUP3].v) begin
-`ifdef SUPPORT_HASHPT
-		if (ptg_fault) begin
-			clr_ptg_fault <= 1'b1;
-			if (mem_resp[VLOOKUP3].func==MR_ICACHE_LOAD)
-				mem_resp[PADR_SET].cause <= {4'h8,FLT_CPF};
-			else
-				mem_resp[PADR_SET].cause <= {4'h8,FLT_DPF};
-		end
-`endif
-//		mem_resp[PADR_SET].dchit <= dhit_d1 & mem_resp[VLOOKUP3].acr[3];	// hit and cachable data
-		case(mem_resp[VLOOKUP3].func)
-		MR_TLBRW,MR_TLBRD:
-			mem_resp[PADR_SET].wr <= TRUE;
-		MR_ICACHE_LOAD:
-			mem_resp[PADR_SET].wr <= TRUE;
-		MR_LOAD,MR_LOADZ:
-			case(1'b1)
-			mem_resp[VLOOKUP3].tlb_access:	begin mem_resp[PADR_SET].res <= mem_resp[PADR_SET].adr[4] ? dtlbdato : itlbdato; mem_resp[PADR_SET].wr <= TRUE; end
-			mem_resp[VLOOKUP3].ptgram_en:		begin mem_resp[PADR_SET].res <= ptgram_dato; mem_resp[PADR_SET].wr <= TRUE; end
-			mem_resp[VLOOKUP3].rgn_en:			begin mem_resp[PADR_SET].res <= rgn_dat_o; mem_resp[PADR_SET].wr <= TRUE; end
-			mem_resp[VLOOKUP3].pde_en:			begin mem_resp[PADR_SET].res <= pde_o; mem_resp[PADR_SET].wr <= TRUE; end
-			default:		
-				begin
-					mem_resp[PADR_SET].res <= dc_line;
-//					mem_resp[PADR_SET].wr <= ~(dce & dhit_d1 & mem_resp[VLOOKUP3].acr[3]);
-					// Allow cache hit to set hit to one, but not zero. hit may have been
-					// one coming in if the cache line is not needed.
-//					if (dhite_d1)
-//						mem_resp[PADR_SET].hit[0] <= 1'b1;
-//					if (dhito_d1)
-//						mem_resp[PADR_SET].hit[1] <= 1'b1;
-					mem_resp[PADR_SET].mod <= dc_line_mod;
-					//if (!(dce & dhit & mem_resp[VLOOKUP3].acr[3]))
-					//	mem_resp[PADR_SET].cause <= FLT_DCM;
-				end
-		  endcase
-		MR_STORE:	
-			begin
-				mem_resp[PADR_SET].wr <= TRUE;
-				/* Might want this check at some point.
-				case(mem_resp[VLOOKUP3].sz)
-				byt:	;	// Cant be unaligned
-				wyde:	if (mem_resp[VLOOKUP3].adr[5:0] > 6'd62)	mem_resp[PADR_SET].cause <= FLT_ALN;
-				tetra:if (mem_resp[VLOOKUP3].adr[5:0] > 6'd60)	mem_resp[PADR_SET].cause <= FLT_ALN;
-				default:	if (mem_resp[VLOOKUP3].adr[5:0] > 6'd60)	mem_resp[PADR_SET].cause <= FLT_ALN;
-				endcase
-				*/
-	 			mem_resp[PADR_SET].res <= dc_linein;	// Calculated above
-//	 			mem_resp[PADR_SET].mod <= {dhito_d1,dhite_d1};	// Only the lines that were hit are being modified.
-			end
-		default:	;
-		endcase
-		end
-	end
-end
-endtask
-
-// Align the data and send it back
-task tCacheDataAlign;
-begin
-	if (mem_pipe_adv) begin
-		rb_bitmaps2[mem_resp[DATA_ALN].thread][mem_resp[DATA_ALN].tgt] <= 1'b0;
-		mem_resp[DATA_ALN] <= mem_resp[PADR_SET];
-		if (mem_resp[PADR_SET].func!=MR_ICACHE_LOAD || last_cadr != mem_resp[PADR_SET].adr) begin
-			if (mem_resp[PADR_SET].func==MR_ICACHE_LOAD)
-				last_cadr <= mem_resp[PADR_SET].adr;
-			mem_resp[DATA_ALN].wr <= mem_resp[PADR_SET].wr & mem_resp[PADR_SET].v;
-		end
-		else
-			mem_resp[DATA_ALN].wr <= 1'b0;
-		if (mem_resp[PADR_SET].v) begin
-			// A response will be sent back here only on a load when there is a cache hit.
-			// Otherwise the memory sequencer is needed.
-//			memresp <= mem_resp[PADR_SET];
-			case(mem_resp[PADR_SET].func)
-			// For now, always use sequencer on a store. At some point the sequencer may
-			// not be needed if there was a cache hit on a store and policy is writeback.
-//			MR_STORE:					memresp.wr <= FALSE;
-//			MR_LOAD,MR_LOADZ:	memresp.wr <= mem_resp[PADR_SET].wr;
-//			MR_TLBRW,MR_TLBRD:	memresp.wr <= TRUE;
-//			MR_ICACHE_LOAD:		memresp.wr <= TRUE;
-//			default:	memresp.wr <= FALSE;
-			endcase
-			case(1'b1)
-			mem_resp[PADR_SET].tlb_access:	;
-			mem_resp[PADR_SET].ptgram_en:		;
-			mem_resp[PADR_SET].rgn_en:			;
-			mem_resp[PADR_SET].pde_en:			;
-			default:		
-			  case(mem_resp[PADR_SET].func)
-			  MR_LOAD,MR_MOVLD:
-		    	case(memreq.sz)
-//		    	nul:	memresp.res <= 'h0;
-//		    	Thor2023Pkg::byt:	memresp.res <= {{56{datis[7]}},datis[7:0]};
-//		    	Thor2023Pkg::wyde:	memresp.res <= {{48{datis[15]}},datis[15:0]};
-//		    	tetra:	memresp.res[mem_resp[PADR_SET].step] <= {{32{datis[31]}},datis[31:0]};
-//		    	Thor2023Pkg::tetra:	memresp.res <= {{32{datis[31]}},datis[31:0]};
-		//    	octa:	begin memresp.res[mem_resp[5].step] <= {{64{datis[63]}},datis[63:0]}; end
-		//    	hexi:	begin memresp.res <= datis[127:0]; end
-		//    	hexipair:	memresp.res <= dati;
-		//    	hexiquad:	begin memresp.res <= dati512; end
-					// vector, return entire result
-//		    	default:	memresp.res <= mem_resp[PADR_SET].res;
-		    	endcase
-			  MR_LOADZ:
-		    	case(mem_resp[PADR_SET].sz)
-//		    	nul:	memresp.res <= 'h0;
-//		    	Thor2023Pkg::byt:	begin memresp.res <= {56'd0,datis[7:0]}; end
-//		    	Thor2023Pkg::wyde:	begin memresp.res <= {48'd0,datis[15:0]}; end
-//		    	Thor2023Pkg::tetra:	begin memresp.res <= {32'd0,datis[31:0]}; end
-		//    	octa:	begin memresp.res[mem_resp[5].step] <= {64'd0,datis[63:0]}; end
-		//    	hexi:	begin memresp.res <= datis[127:0]; end
-		//    	hexipair:	memresp.res <= dati;
-		//    	hexiquad:	begin memresp.res <= dati512; end
-					// vector, return entire result
-//		    	default:	memresp.res <= mem_resp[PADR_SET].res;
-		    	endcase
-			  default:  ;
-			  endcase
-			endcase
 		end
 	end
 end
@@ -2749,131 +2371,59 @@ begin
 end
 endtask
 
-/*
-task tMemoryActivateHi;
+task tAlignFaultDetect;
+input wb_cmd_request256_t req;
+output cause_code_t code;
 begin
-`ifndef SUPPORT_HASHPT
-  dwait <= 3'd0;
-  memr.adr[6] <= ~memr.adr[6];
-//    dadr <= adr_o;
-  goto (MEMORY_ACKHI);
-  begin
-`else 		
-	if (ptg_fault) begin
-		clr_ptg_fault <= 1'b1;
-		tPageFault(FLT_DPF,dadr);
-	end
-	if (pte_found || !ptg_en) begin
-	  dwait <= 3'd0;
-  	goto (MEMORY_ACKHI);
-`endif
-		if (dhit && (memreq.func==MR_LOAD ||
-			memreq.func==MR_LOADZ || memreq.func==MR_MOVLD || memreq.func==RTS2) && dce && tlbacr[3])
- 			tDeactivateBus();
-		else begin
-			seg_o <= wishbone_pkg::DATA;
-			cyc_o <= HIGH;
-    	stb_o <= HIGH;
-      for (n = 0; n < 16; n = n + 1)
-      	sel_o[n] <= sel[n+16];
-//	      	sel_o <= sel[31:16];
-    	dat_o <= dat[255:128];
-   		// Invalidate PTCEs when a store occurs to the PDE
-`ifdef SUPPORT_HWWALK
-    	if (memreq.func==MR_STORE) begin
-				tInvalidatePtgc(adr_o,adr_o + 12'd224);
-				for (n4 = 0; n4 < 12; n4 = n4 + 1)
-					if (ptc[n4].pde.padr[AWID-1:4]==adr_o[AWID-1:4])
-						ptc[n4].v <= 1'b0;
-			end
-`endif
-			//tPMAEA((memreq.func==MR_STORE || memreq.func==MR_MOVST),tlbacr[1]);
-  	end
-  end
+	code <= FLT_NONE;
+	case(req.sz)
+	Thor2023Pkg::nul:		;		
+	Thor2023Pkg::byt:		;
+	Thor2023Pkg::wyde: 	if (req.vadr[4:0]==5'h1F) code <= FLT_ALN;
+	Thor2023Pkg::tetra:	if (req.vadr[4:0] >5'h1C) code <= FLT_ALN;
+	Thor2023Pkg::octa:	if (req.vadr[4:0] >5'h18) code <= FLT_ALN;
+	Thor2023Pkg::hexi:	if (req.vadr[4:0] >5'h10) code <= FLT_ALN;
+	default:	if (req.vadr[4:0]!=5'h00) code <= FLT_ALN;
+	endcase
 end
 endtask
-*/
 
 // This data align is for non-cached data.
 
 task tDataAlign;
+input wb_cmd_request256_t req;
+output memory_arg_t resp;
 begin
-	memresp2.cause <= FLT_NONE;
-	tDeactivateBus();
-	// Do we not always want to return?
-	ret(0);
-	/*
-	if ((memr.func==MR_LOAD || memr.func==MR_LOADZ || memr.func==MR_MOVLD) & memr.sz!=2'b11 & dcachable & memr.acr[3] & dce &
-	 	~memr.ptgram_en & ~memr.rgn_en & ~memr.tlb_access) begin
-		memresp2.cause <= FLT_DCM;
-	end
-	else if (memr.func==MR_MOVLD) begin
-		ret(0);
-	end
-	else if (mem_pipe_adv) begin
-		ret(0);
-		// Not sure what this code was doing, but mem_resp[] is not available here.
-		// Find an open spot
-		case(mem_resp[PADR_SET].func)
-		MR_STORE:					ret(0);
-		MR_LOAD,MR_LOADZ:	if (!mem_resp[PADR_SET].v) ret(0);
-		MR_TLBRW,MR_TLBRD:	ret(0);
-		MR_ICACHE_LOAD:		ret(0);
-		default:	if (!mem_resp[PADR_SET].v) ret(0);
-		endcase
-	end
-	*/
-	if (memr.func2==MR_LDG) begin
-		if (memr.step == NLANES-1) begin
-			memresp2.wr <= TRUE;
-		end
-		memresp2.res <= datis2[63:0];
-		memresp2.step <= memr.step;
-		memresp2.tid <= memr.tid;
-	end
-	else begin
-		memresp2.step <= memr.step;
-	  memresp2.cmt <= TRUE;
-		memresp2.tid <= memr.tid;
-		memresp2.wr <= TRUE;
-	end
-	csr_o <= LOW;
-  case(memr.func)
-  MR_LOAD,MR_MOVLD:
+	tAlignFaultDetect(req,resp.cause);
+//	resp.step <= req.step;
+  resp.cmt <= TRUE;
+	resp.tid <= req.tid;
+	resp.wr <= TRUE;
+  case(req.cmd)
+  CMD_LOAD:
   	begin
-  		if (memr.func2==MR_LDV)
-  			memresp2.res <= dati >> {memr.adr[6:0],3'b0};
-  		else
-	    	case(memr.sz)
-	    	nul:	memresp2.res <= 'h0;
-	    	Thor2023Pkg::byt:	begin memresp2.res <= {{56{datis2[7]}},datis2[7:0]}; end
-	    	Thor2023Pkg::wyde:	begin memresp2.res <= {{48{datis2[15]}},datis2[15:0]}; end
-	    	Thor2023Pkg::tetra:	begin memresp2.res <= {{32{datis2[31]}},datis2[31:0]}; end
-	    	Thor2023Pkg::octa:	begin memresp2.res <= {{64{datis2[63]}},datis2[63:0]}; end
-	//    	hexi:	begin memresp.res <= datis[127:0]; end
-	//    	hexipair:	memresp.res <= dati;
-	//    	hexiquad:	begin memresp.res <= dati512; end
-	    	default:	memresp2.res <= memr.res;
-	    	endcase
-  	end
-  MR_LOADZ:
+			case(req.sz)
+			Thor2023Pkg::nul:	resp.res <= 'h0;
+			Thor2023Pkg::byt:	begin resp.res <= {{56{datis[7]}},datis[7:0]}; end
+			Thor2023Pkg::wyde:	begin resp.res <= {{48{datis[15]}},datis[15:0]}; end
+			Thor2023Pkg::tetra:	begin resp.res <= {{32{datis[31]}},datis[31:0]}; end
+			Thor2023Pkg::octa:	begin resp.res <= {{64{datis[63]}},datis[63:0]}; end
+			Thor2023Pkg::hexi:	begin resp.res <= datis[127:0]; end
+			default:	resp.res <= req.dat;
+			endcase
+	end
+  CMD_LOADZ:
   	begin
-  		if (memr.func2==MR_LDV)
-  			memresp2.res <= dati >> {memr.adr[6:0],3'b0};
-  		else
-	    	case(memr.sz)
-	    	nul:	memresp2.res <= 'h0;
-	    	Thor2023Pkg::byt:	begin memresp2.res <= {56'd0,datis2[7:0]}; end
-	    	Thor2023Pkg::wyde:	begin memresp2.res <= {48'd0,datis2[15:0]}; end
-	    	Thor2023Pkg::tetra:	begin memresp2.res <= {32'd0,datis2[31:0]}; end
-	    	Thor2023Pkg::octa:	begin memresp2.res <= {64'd0,datis2[63:0]}; end
-	//    	hexi:	begin memresp.res <= datis[127:0]; end
-	//    	hexipair:	memresp.res <= dati;
-	//    	hexiquad:	begin memresp.res <= dati512; end
-	    	default:	memresp2.res <= memr.res;
-	    	endcase
-  	end
-//    	RTS2:	begin memresp.res <= datis[63:0]; memresp.ret <= TRUE; end
+			case(req.sz)
+			Thor2023Pkg::nul:	resp.res <= 'h0;
+			Thor2023Pkg::byt:	begin resp.res <= {56'd0,datis[7:0]}; end
+			Thor2023Pkg::wyde:	begin resp.res <= {48'd0,datis[15:0]}; end
+			Thor2023Pkg::tetra:	begin resp.res <= {32'd0,datis[31:0]}; end
+			Thor2023Pkg::octa:	begin resp.res <= {64'd0,datis[63:0]}; end
+			Thor2023Pkg::hexi:	begin resp.res <= datis[127:0]; end
+			default:	resp.res <= req.dat;
+			endcase
+	end
   default:  ;
   endcase
 end

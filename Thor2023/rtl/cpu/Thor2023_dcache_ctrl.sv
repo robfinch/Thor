@@ -129,10 +129,14 @@ if (rst_i) begin
 	dump_ack <= 1'd0;
 	wr <= 1'b0;
 	response_o <= 'd0;
+	wbm_req <= 'd0;
 end
 else begin
 	dump_ack <= 1'd0;
+	response_o.stall <= 1'b0;
+	response_o.next <= 1'b0;
 	response_o.ack <= 1'b0;
+	response_o.pri <= 4'd7;
 	wr <= 1'b0;
 	case(req_state)
 	RESET:
@@ -166,6 +170,7 @@ else begin
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b1;
+			wbm_req.asid <= dump_i.asid;
 			wbm_req.vadr <= {dump_i.vtag[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
 			wbm_req.data1 <= v[0] ? dump_i.data[255:128] : dump_i.data[127:0];
 			to_cnt <= 'd0;
@@ -182,6 +187,7 @@ else begin
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
+			wbm_req.asid <= cpu_request_i.asid;
 			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
 			to_cnt <= 'd0;
 			req_state <= STATE5;
@@ -208,6 +214,7 @@ else begin
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
+			wbm_req.asid <= cpu_request_i.asid;
 			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:ICacheTagLoBit],v[0],{ICacheTagLoBit-2{1'h0}}};
 			to_cnt <= 'd0;
 			req_state <= STATE5;
@@ -249,11 +256,17 @@ else begin
 			wbm_req.we <= 1'b0;
 			if (wbm_resp.adr[4]) begin
 				v[1] <= 1'b1;
+				response_o.cid <= wbm_resp.cid;
+				response_o.tid <= wbm_resp.tid;
+				response_o.pri <= wbm_resp.pri;
 				response_o.adr <= wbm_resp.adr;
 				response_o.dat[255:128] <= wbm_resp.dat;
 			end
 			else begin
 				v[0] <= 1'b1;
+				response_o.cid <= wbm_resp.cid;
+				response_o.tid <= wbm_resp.tid;
+				response_o.pri <= wbm_resp.pri;
 				response_o.adr <= wbm_resp.adr;
 				response_o.dat[127:0] <= wbm_resp.dat;
 			end
@@ -275,6 +288,9 @@ else begin
 			wbm_req.stb <= 1'b0;
 			wbm_req.sel <= 16'h0000;
 			wbm_req.we <= 1'b0;
+			response_o.rty <= wbm_resp.rty;
+			response_o.err <= wbm_resp.err;
+			response_o.ack <= 1'b0;
 			v <= 2'b00;
 			req_state <= STATE6;
 		end

@@ -481,7 +481,7 @@ else begin
 					PRC24:	memreq.sz <= Thor2023Pkg::char;
 					PRC40:	memreq.sz <= Thor2023Pkg::penta;
 					PRC96:	memreq.sz <= Thor2023Pkg::n96;
-					default:	memreq.sz <= nul;
+					default:	memreq.sz <= Thor2023Pkg::nul;
 					endcase
 					memreq.hit <= 2'b00;
 					memreq.mod <= 2'b00;
@@ -548,7 +548,7 @@ else begin
 					PRC24:	memreq.sz <= Thor2023Pkg::char;
 					PRC40:	memreq.sz <= Thor2023Pkg::penta;
 					PRC96:	memreq.sz <= Thor2023Pkg::n96;
-					default:	memreq.sz <= nul;
+					default:	memreq.sz <= Thor2023Pkg::nul;
 					endcase
 					memreq.hit <= 2'b00;
 					memreq.mod <= 2'b00;

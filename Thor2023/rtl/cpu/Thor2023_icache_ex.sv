@@ -119,17 +119,12 @@ reg vce,vco;
 wire ihit1e, ihit1o;
 reg ihit2e, ihit2o;
 wire ihit2;
-reg ihit3;
 wire valid2e, valid2o;
-reg ic_valide, ic_valido;
 cache_tag_ex_t ic_tag2e, ic_tag2o;
 cache_tag_ex_t ic_tag3e, ic_tag3o;
 
 always_ff @(posedge clk)
 	ip2 <= ip;
-// line up ihit output with cache line output.
-always_ff @(posedge clk)
-	ihit3 <= ihit2;
 always_comb
 	ihit = ihit1e&ihit1o;
 always_ff @(posedge clk)
@@ -166,10 +161,6 @@ always_comb
 	else
 		ihito <= ihit2o;
 
-always_ff @(posedge clk)
-	ic_valide <= valid2e;
-always_ff @(posedge clk)
-	ic_valido <= valid2o;
 assign ip_o = ip2;
 always_ff @(posedge clk)
 	ic_tag3o <= ic_tag2o;
@@ -310,6 +301,7 @@ always_comb
 				ic_line_hi_o.v = 4'hF;
 			end
 			else begin
+				ic_line_hi_o = 'd0;
 				ic_line_hi_o.v = {4{ihit2o}};
 				ic_line_hi_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b1};
 				ic_line_hi_o.data = ic_oline.data;
@@ -319,6 +311,7 @@ always_comb
 				ic_line_lo_o.v = 4'hF;
 			end
 			else begin
+				ic_line_lo_o = 'd0;
 				ic_line_lo_o.v = {4{ihit2e}};
 				ic_line_lo_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b0};
 				ic_line_lo_o.data = ic_eline.data;
@@ -331,6 +324,7 @@ always_comb
 				ic_line_hi_o = victim_cache_eline;
 			end
 			else begin
+				ic_line_hi_o = 'd0;
 				ic_line_hi_o.v = {4{ihit2e}};
 				ic_line_hi_o.vtag = {ip2[$bits(address_t)-1:LOBIT]+1'b1,1'b0};
 				ic_line_hi_o.data = ic_eline.data;
@@ -340,6 +334,7 @@ always_comb
 				ic_line_lo_o.v = 4'hF;
 			end
 			else begin
+				ic_line_lo_o = 'd0;
 				ic_line_lo_o.v = {4{ihit2o}};
 				ic_line_lo_o.vtag = {ip2[$bits(address_t)-1:LOBIT],1'b1};
 				ic_line_lo_o.data = ic_oline.data;
