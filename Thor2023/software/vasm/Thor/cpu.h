@@ -48,7 +48,7 @@ typedef struct {
 #define OP_IMM30					0x00000008L
 #define OP_IMM46					0x00000010L
 #define OP_IMM64					0x00000020L
-#define OP_IMM78					0x00000040L
+#define OP_VMSTR					0x00000040L
 #define OP_PREDSTR				0x00000080L
 #define OP_REG6						0x00000100L
 #define OP_VMREG					0x00000200L
@@ -111,6 +111,7 @@ typedef struct {
 #define	R3		1
 #define B			2
 #define B2		3
+#define BZ		4
 #define J2		5
 #define LS		6
 #define MV		7
@@ -132,7 +133,7 @@ typedef struct {
 #define VR3		23
 #define INT		24
 #define BITS16	25
-#define BITS32	26
+#define BITS40	26
 #define REX		27
 #define RTE		28
 #define R1		29
@@ -161,12 +162,16 @@ typedef struct {
 #define R2M			52
 #define RIM			53
 #define PRED		54
+#define VMASK		55
+#define CSRI		56
 
 #define OPC(x)	(((x) & 0x1fLL))
 #define COND(x)	(((x) & 0x1fLL) << 5LL)
 #define RN(x)		(((x) & 0x3fLL) << 10LL)
 #define SZ(x)		(((x) & 7LL) << 5LL)
 #define FUNC(x)	(((x) & 0x3fLL) << 34LL)
+#define FUNC2(x)	(((x) & 0x3LL) << 38LL)
+#define FUNC3(x)	(((x) & 0x7LL) << 37LL)
 #define RT(x)		(((x) & 0x3fLL) << 8LL)
 #define ST(x)		(((x) & 1LL) << 14LL)
 #define VT(x)		(((x) & 1LL) << 15LL)
@@ -182,6 +187,8 @@ typedef struct {
 #define RCB(x)		(((x) & 0x1fLL) << 24LL)
 #define CA(x)		(((x) & 7LL) << 29LL)
 #define CAB(x)		(((x) & 7LL) << 24LL)
+#define BFOFFS(x)	(((x) & 0x7fLL) << 23LL)
+#define BFWID(x)	(((x) & 0x7fLL) << 30LL)
 
 #define RT6(x)		(((x) & 0x3fLL) << 9LL)
 #define RA6(x)		(((x) & 0x3fLL) << 15LL)

@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_active_region.sv
+//	Thor2023_active_region_ex.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_active_region(rst, clk, wbs_req, wbs_resp, region_num, region, sel, err);
+module Thor2023_active_region_ex(rst, clk, wbs_req, wbs_resp, region_num, region, sel, err);
 input rst;
 input clk;
 input wb_cmd_request128_t wbs_req;

@@ -17,6 +17,7 @@ BIOS:
 #	cc64 $(CFLAGS) os_stub.c
 
 	vasmThor_std_win32.exe -Fvobj -L fibonacci.lst fibonacci.asm -o fibonacci.o
+	vasmThor_mot_win32.exe -Fvobj -L tlbmiss34.lst tlbmiss34.asm -o tlbmiss34.o
 #	vasmThor_std_win32.exe -Fvobj -L LEDTest.lst LEDTest.asm -o LEDTest.o
 #	vasmrf68000_mot_win32.exe -Fvobj -L cputest.lst cputest.asm -o cputest.o
 #	vasmrf68000_mot_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o -m68010

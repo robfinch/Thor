@@ -156,7 +156,7 @@ wb_address_t next_adr_o;
 reg first_ifetch;
 reg [6:0] stk_state [0:15];
 reg [3:0] stk_dep;
-memory_arg_t memq_o, memr, memr_hold;
+memory_arg_t memr, memr_hold;
 
 wb_segment_t last_seg;
 reg xlaten_stk;
@@ -332,11 +332,8 @@ wire memresp_full;
 wire [3:0] fifoFromCtrl_cnt;
 assign fifoFromCtrl_empty = fifoFromCtrl_cnt=='d0;
 
-// This fifo is at the output of the external bus to the mainline execution.
-// There are two places this fifo is loaded from.
-// 1) at the end of an external bus access when required
-// 2) at the end of the memory access pipeline if the cache was hit
-// Responses from the memory access pipeline take precedence.
+// This fifo sits between the output of the data cache module and the CPU. It
+// may return either cached data to the CPU or uncached data.
 
 Thor2023_mem_resp_fifo uofifo1
 (
@@ -351,39 +348,6 @@ Thor2023_mem_resp_fifo uofifo1
 	.v(fifoFromCtrl_v),
 	.rollback(rollback),
 	.rollback_bitmaps(rb_bitmaps3)
-);
-
-// This fifo sits between the output of the data cache lookup memory pipe and
-// the external bus sequencer. 
-// This bit of logic ensures that back-to-back reads of the fifo do not occur.
-// It takes a clock cycle for the state machine to move out of the MEMORY1
-// state, and two reads of the fifo were happening when only one was desired.
-reg rd_memq, rd_memq1;
-wire memq_empty;
-always_comb
-	rd_memq = !memq_empty && state==MEMORY1 && !rd_memq1;
-always_ff @(posedge clk)
-if (rst)
-	rd_memq1 <= FALSE;
-else
-	rd_memq1 <= rd_memq;
-
-wire [3:0] memq_cnt;
-
-Thor2023_mem_resp_fifo uofifo2
-(
-	.rst(rst),
-	.clk(clk),
-	.wr(mem_resp[DATA_ALN].wr),
-	.di(mem_resp[DATA_ALN]),
-	.rd(rd_memq),
-	.dout(memq_o),
-	.cnt(memq_cnt),
-	.full(),
-	.empty(memq_empty),
-	.v(memq_v),
-	.rollback(rollback),
-	.rollback_bitmaps(rb_bitmaps4)
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2356,7 +2320,7 @@ begin
 				    		if (shr_ma=='d0) begin
 				    			cta <= region.cta;
 				    			// Turn request address into an index into region
-				    			memreq.adr <= memreq.adr - region.start;
+//				    			memreq.adr <= memreq.adr - region.start;
 				    		end
 				    		shr_ma <= shr_ma + 4'd8;
 				    		zero_data <= TRUE;

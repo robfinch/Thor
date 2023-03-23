@@ -22,7 +22,7 @@ Source: "fibonacci.asm"
                                     	    13: start:
 02:0000000000000000 0302000160      	    14: 	CSRRD	r2,r0,0x3001	# get the thread number
 02:0000000000000005 0802020F00      	    15: 	AND		r2,r2,15				# 0 to 3
-02:000000000000000A DC09820000      	    16: 	BNZ		r2,stall			# Allow only thread 0 to work
+02:000000000000000A 0100000000      	    16: 	BNZ		r2,stall			# Allow only thread 0 to work
                                     	    17: 
 02:000000000000000F 040200FD00      	    18: 	LDI		r2,0xFD
 02:0000000000000014 0402000100      	    19: 	LDI		r2,0x01		# x = 1
@@ -46,7 +46,7 @@ Source: "fibonacci.asm"
 02:000000000000005A 52000000001F00FC	    33: 	STT		r2,0xFFFC0000		# stores x
 02:0000000000000062 FF00
 02:0000000000000064 040303FFFE      	    34: 	ADD		r3,r3,-1				# y -= 1
-02:0000000000000069 DC0DD8FFFF      	    35:   BNZ 	r3,floop		# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
+02:0000000000000069 0100000000      	    35:   BNZ 	r3,floop		# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
 02:000000000000006E 9F00000000      	    36:   NOP
 02:0000000000000073 9F00000000      	    37:   NOP
 02:0000000000000078 9F00000000      	    38:   NOP

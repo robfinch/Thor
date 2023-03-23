@@ -1,0 +1,114 @@
+Sections:
+00: "CODE" (0-11D)
+
+
+Source: "tlbmiss34.asm"
+                                    	     1: ; shared TLB miss handler
+                                    	     2: ; Handles a 34-bit virtual address
+                                    	     3: ; Slightly more complex than an unshared TLB as the TLB registers need to be
+                                    	     4: ; protected via a semaphore. Updates must be restricted to one core at a time.
+                                    	     5: ; The TLB device needs to be permanently mapped into the system's address space
+                                    	     6: ; since it is MMIO and uses the TLB.
+                                    	     7: ; The stack must be mapped into a global address space.
+                                    	     8: ; 
+                                    	     9: ;
+                                    	    10: S_ASID equ $101F
+                                    	    11: M_IE equ $3004
+                                    	    12: M_SEMA equ $300C
+                                    	    13: PTE_T equ 21
+                                    	    14: 
+                                    	    15: 
+                                    	    16: tlb_miss_irq34:
+00:0000000000000000 D2033F0000      	    17: 	st96 t0,[sp]										; save working registers
+00:0000000000000005 D2047F0000      	    18: 	st96 t1,12[sp]
+00:000000000000000A D205FF0000      	    19: 	st96 t2,24[sp]
+00:000000000000000F D2063F0100      	    20: 	st96 t3,36[sp]
+00:0000000000000014 D207BF0100      	    21: 	st96 t4,48[sp]
+00:0000000000000019 D208FF0100      	    22: 	st96 t5,60[sp]
+00:000000000000001E D0000000001F0000	    23: 	ld96 t0,TLB_MISS_ADR						; t0 = miss address, reading miss address clears interrupt
+00:0000000000000026 0000
+00:0000000000000028 4300030260      	    24: 	csrrs	r0,3,M_IE									; enable interrupts
+00:000000000000002D 0100000000      	    25: 	csrrd	t1,r0,S_PTBR							; t1 = page table base
+00:0000000000000032 0D04044003      	    26: 	clr	t1,t1,0,13									; clear 14 LSBs, address is page aligned
+00:0000000000000037 0D05034C82      	    27: 	extu t2,t0,24,9									; get miss address bits 24 to 33, index into top level page table
+00:000000000000003C D006040500      	    28: 	ld96 t3,[t1+t2*]								; get PTP from top level table
+00:0000000000000041 BB1800B400      	    29: 	bbc	t3,PTE_V,.noL1PTE						; check that entry is valid
+                                    	    30: 	extu t5,t3,PTE_T,0							; get PTE.T bit
+                                    	     ^-ERROR:0001
+00:0000000000000046 BB18CF1E00      	    31: 	bbc	t3,PTE_T,.L1superPage				; check for 16MB superpage
+00:000000000000004B 0D0406C08F      	    32: 	extu t1,t3,PTE_PPN,63						; get PTP pointer
+00:0000000000000050 0E04040E20      	    33: 	asl	t1,t1,14										; convert PPN to table address
+00:0000000000000055 0D05034782      	    34: 	extu t2,t0,14,9									; get miss address bits 14 to 23
+00:000000000000005A D006040500      	    35: 	ld96 t3,[t1+t2*]								; get MPP
+00:000000000000005F BB18009600      	    36: 	bbc	t3,PTE_V,.noL0PTE						; check that entry is valid
+00:0000000000000064 DB18B19100      	    37: 	bbs	t3,PTE_T,.corrupt						; should be a PTE, otherwise table corrupt
+                                    	    38: .L1superPage:
+00:0000000000000069 0D0403CA92      	    39: 	extu t1,t0,20,75								; VPN bits 6 to 83 = miss address bits 20 to 95
+00:000000000000006E 0305001F20      	    40: 	csrrd	t2,r0,S_ASID							; add ASID to miss address
+00:0000000000000073 0E05055020      	    41: 	asl	t2,t2,80
+00:0000000000000078 0204040524      	    42: 	or t1,t1,t2											; t1 = VPN+ASID
+00:000000000000007D 0D05034782      	    43: 	extu t2,t0,14,9									; t2 = address bits 14 to 23 = TLB entry number
+00:0000000000000082 0E05050520      	    44: 	asl t2,t2,5											; shift into position
+00:0000000000000087 0300000040      	    45: 	csrrd t4,0,S_LFSR								; choose a random way to replace
+00:000000000000008C 0221290080      	    46: 	pne t5,"TFFIIIII"								; way depends on page level
+00:0000000000000091 0807070300      	    47: 	and t4,t4,3											; way 0 to 3	; normal page
+00:0000000000000096 0807070100      	    48: 	and	t4,t4,1											; way 0 or 1	; superpage
+00:000000000000009B 0407070400      	    49: 	add	t4,t4,4											; way 4 or 5	; superpage
+00:00000000000000A0 0205050724      	    50: 	or t2,t2,t4											; bump out
+00:00000000000000A5 6300030260      	    51: 	csrrc	r0,3,M_IE									; disable interrupts
+                                    	    52: .lock:
+00:00000000000000AA 2300010660      	    53: 	csrwr t4,1,M_SEMA								; try and set semaphore
+00:00000000000000AF 0300000660      	    54: 	csrrd t4,0,M_SEMA								; check and see if set, zero returned if set
+00:00000000000000B4 DB1C4CF1FF      	    55: 	bbs	t4,0,.lock									; must have been clear
+00:00000000000000B9 D2000000001F0000	    56: 	st96 t1,TLB_PTE									; do quick stores to memory
+00:00000000000000C1 0000
+00:00000000000000C3 D2000000001F0000	    57: 	st96 t3,TLB_VPN
+00:00000000000000CB 0000
+00:00000000000000CD D2000000001F0000	    58: 	st96 t2,TBL_CTRL
+00:00000000000000D5 0000
+00:00000000000000D7 12000000001F0000	    59: 	st8 r0,TLB_WTRIG								; trigger update
+00:00000000000000DF 0000
+00:00000000000000E1 6300010660      	    60: 	csrrc r0,1,M_SEMA								; release semaphore
+00:00000000000000E6 4300030260      	    61: 	csrrs	r0,3,M_IE									; enable interrupts
+00:00000000000000EB D0033F0000      	    62: 	ld96 t0,[sp]										; restore working registers
+00:00000000000000F0 D0047F0000      	    63: 	ld96 t1,12[sp]
+00:00000000000000F5 D005FF0000      	    64: 	ld96 t2,24[sp]
+00:00000000000000FA D0063F0100      	    65: 	ld96 t3,36[sp]
+00:00000000000000FF D007BF0100      	    66: 	ld96 t4,48[sp]
+00:0000000000000104 D008FF0100      	    67: 	ld96 t5,60[sp]
+00:0000000000000109 F000000000      	    68: 	rti
+                                    	    69: 	; Here, memory was not mapped to support the access. So, the program must be
+                                    	    70: 	; trying to read or write a random address. Abort the program.
+                                    	    71: .noL1PTE:
+                                    	    72: .noL0PTE:
+                                    	    73: .corrupt:
+00:000000000000010E 0100000000      	    74: 	ldi a0,ABORT_PROGRAM
+00:0000000000000113 0100000000      	    75: 	ldi	a1,ERR_TLBMISS
+00:0000000000000118 2000000000      	    76: 	syscall
+                                    	    77: 
+
+
+Symbols by name:
+ABORT_PROGRAM                   external
+ERR_TLBMISS                     external
+M_IE                             E:0000000000003004
+M_SEMA                           E:000000000000300C
+PTE_PPN                         external
+PTE_T                            E:0000000000000015
+PTE_V                           external
+S_ASID                           E:000000000000101F
+S_LFSR                          external
+S_PTBR                          external
+TBL_CTRL                        external
+TLB_MISS_ADR                    external
+TLB_PTE                         external
+TLB_VPN                         external
+TLB_WTRIG                       external
+tlb_miss_irq34                  00:0000000000000000
+
+Symbols by value:
+0000000000000000 tlb_miss_irq34
+0000000000000015 PTE_T
+000000000000101F S_ASID
+0000000000003004 M_IE
+000000000000300C M_SEMA
