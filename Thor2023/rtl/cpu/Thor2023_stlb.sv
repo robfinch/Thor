@@ -34,6 +34,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+// 4665 LUTs / 2771 FFs / 28 BRAMs	7 way assoc.	16kB pages, 9 channels
 // 4827 LUTs / 3142 FFs / 15 BRAMs  5 way assoc
 // 6250 LUTs / 4312 FFs / 27 BRAMs	1024 entries, 8kB pages, 13 channels
 // ============================================================================
@@ -131,8 +132,8 @@ reg [31:0] tlbadr_i;
 reg [2:0] rd_tlb;
 reg wr_tlb;
 reg wrtlb_i;
-TLBE tlbdat_i;
-TLBE tlbdat_o;
+STLBE tlbdat_i;
+STLBE tlbdat_o;
 reg [31:0] ctrl_reg;
 
 address_t last_ladr, last_iadr;
@@ -148,9 +149,9 @@ reg [1:0] al;
 reg LRU;
 code_address_t rstip = RSTIP;
 reg [3:0] randway;
-TLBE tentryi [0:ASSOC-1];
-TLBE tentryo [0:ASSOC-1];
-TLBE tentryo2 [0:ASSOC-1];
+STLBE tentryi [0:ASSOC-1];
+STLBE tentryo [0:ASSOC-1];
+STLBE tentryo2 [0:ASSOC-1];
 reg stptr;
 reg xlaten_i;
 reg xlatend;
@@ -161,12 +162,12 @@ address_t iadrd;
 reg next_i;
 wb_cmd_request128_t wbm_req;
 wb_cmd_response128_t wbm_resp;
-TLBE [ASSOC-1:0] tlbdato;
-TLBE dumped_entry;
+STLBE [ASSOC-1:0] tlbdato;
+STLBE dumped_entry;
 wire clk_g = clk_i;
 
-TLBE tlbdat_rst;
-TLBE [ASSOC-1:0] tlbdati;
+STLBE tlbdat_rst;
+STLBE [ASSOC-1:0] tlbdati;
 reg [4:0] count;
 reg [ASSOC-1:0] tlbwrr;
 reg tlbeni;
@@ -175,8 +176,8 @@ reg clock_r;
 reg [LOG_ENTRIES-1:0] rcount;
 wire pe_clock;
 
-PTE pte_reg;
-reg [95:0] vpn_reg;
+SPTE pte_reg;
+SVPN vpn_reg;
 reg [31:0] ctrl_req;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -264,9 +265,7 @@ upci
 always_ff @(posedge clk_g)
 if (rst_i) begin
 	pte_reg <= 'd0;
-	pmt_reg <= 'd0;
-	pte_adr <= 'd0;
-	pmt_adr <= 'd0;
+	vpn_reg <= 'd0;
 	ctrl_reg <= 'd0;
 	rd_tlb <= 'b0;
 	wr_tlb <= 1'b0;
@@ -280,22 +279,20 @@ else begin
 	wrtlb_i <= 1'b0;
 	if (cs_stlbq & wbs_req.we) begin
 		case(wbs_req.padr[5:4])
-		2'd0:	
-			begin
-				pte_reg <= wbs_req.data1;
-				vpn_reg <= wbs_req.data2;
-				wr_tlb <= 1'b1;
-			end
-		2'd1:	;
+		2'd0:	pte_reg <= wbs_req.data1;
+		2'd1:	vpn_reg <= wbs_req.data1;
 		2'd2:	;
 		2'd3:	
+			begin
 			case(wbs_req.sel)
 			16'h000F:	ctrl_reg <= wbs_req.data1[31:0];
-			16'hFF00:
-				begin
-					rd_tlb <= {2'b00,wbs_req.data1[64]};
-				end
+			default:	;
 			endcase
+			if (wbs_req.sel[13])
+				rd_tlb <= 1'b1;
+			if (wbs_req.sel[14])
+				wr_tlb <= 1'b1;
+			end
 		endcase
 	end
 	if (wr_tlb) begin
@@ -303,7 +300,7 @@ else begin
 		wrtlb_i <= 1'b1;
 		tlbdat_i.count <= master_count;
 		tlbdat_i.pte <= pte_reg;
-		tlbdat_i.pte_adr = pte_adr;
+//		tlbdat_i.pte_adr = pte_adr;
 		tlbadr_i <= ctrl_reg;
 	end
 	if (rd_tlb[0])
@@ -323,8 +320,8 @@ else begin
 	else if (cs_stlbq)
 		case(wbs_req.padr[5:4])
 		2'd0:	dato <= pte_reg;
-		2'd1:	dato <= pmt_reg;
-		2'd2:	dato <= {pmt_adr,pte_adr};
+		2'd1:	dato <= vpn_reg;
+		2'd2:	dato <= 'd0;
 		2'd3:	dato <= ctrl_reg;
 		endcase
 	else if (cs_rgnq)
@@ -598,16 +595,17 @@ ST_RST:
 				tlbwrr[ASSOC-1] <= 1'b1; 
 				tlbdat_rst <= 'd0;
 				tlbdat_rst.count <= 6'd1;
-				tlbdat_rst.asid <= 'd0;
 				//tlbdat_rst.pte.g <= 1'b1;
 				tlbdat_rst.pte.m <= 1'b1;
+				tlbdat_rst.pte.g <= 1'b1;
 				tlbdat_rst.pte.rwx <= 3'd7;
 				//tlbdat_rst.pte.c <= 1'b1;
 				// FFFC0000
 				// 1111_1111_1111_1100_00 00_0000_0000_0000
+				tlbdat_rst.vpn.asid <= 'd0;
 				tlbdat_rst.vpn <= 8'hFF;
 				tlbdat_rst.pte.ppn <= {14'h3FFF,count[3:0]};
-				tlbdat_rst.pmte.cache <= wishbone_pkg::CACHEABLE;
+				tlbdat_rst.pte.cache <= 'd0;//wishbone_pkg::CACHEABLE;
 				//tlbdat_rst.ppnx <= 12'h000;
 				rcount <= {6'h3F,count[3:0]};
 			end // Map 16MB ROM/IO area
@@ -632,7 +630,7 @@ ST_RUN:
 		if (|next_wrtlb) begin
 			;
 		end
-		else if (dumped_entry.pte.m && |dumped_entry.pte_adr) begin
+		else if (dumped_entry.pte.m) begin// && |dumped_entry.pte_adr) begin
 			wrtlb <= 'd0;
 			state <= ST_WRITE_PTE;
 		end
@@ -670,9 +668,10 @@ ST_AGE4:
 		state <= ST_RUN;
 	end
 ST_WRITE_PTE:
-	if (|dumped_entry.pte_adr) begin
+//	if (|dumped_entry.pte_adr)
+	begin
 		wbm_req.cyc <= 1'b1;
-		wbm_req.padr <= dumped_entry.pte_adr;
+//		wbm_req.padr <= dumped_entry.pte_adr;
 		wbm_req.sel <= 16'hFFFF;
 		wbm_req.data1 <= dumped_entry;
 		wbm_req.data1[55] <= 1'b0;	// modified bit
@@ -681,8 +680,8 @@ ST_WRITE_PTE:
 			state <= ST_RUN;
 		end
 	end
-	else
-		state <= ST_RUN;
+//	else
+//		state <= ST_RUN;
 ST_INVALL1:
 	begin
 		tlbeni <= 1'b1;
@@ -818,6 +817,46 @@ if (rst_i)
 else
 	req1 <= req;
 
+
+// Mask selecting between incoming address bits and address bits from the PPN.
+function address_t fnAmask;
+input [4:0] L;
+integer nn;
+begin
+for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+	if (nn < LOG_PAGE_SIZE + LOG_ENTRIES*L)
+		fnAmask[nn] = 1'b1;
+	else
+		fnAmask[nn] = 1'b0;
+end
+endfunction
+
+// Mask for virtual address bits that must match the incoming address.
+function address_t fnVmask1;
+input [4:0] L;
+integer nn;
+begin
+for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+	if (nn < LOG_PAGE_SIZE + LOG_ENTRIES*(L+1))
+		fnVmask1[nn] = 1'b0;
+	else
+		fnVmask1[nn] = 1'b1;
+end
+endfunction
+
+// Mask for virtual page number that must match incoming address's page number.
+function address_t fnVmask2;
+input [4:0] L;
+integer nn;
+begin
+	for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+		if (nn < LOG_ENTRIES * L)
+			fnVmask2 = 1'b0;
+		else
+			fnVmask2 = 1'b1;
+end
+endfunction
+
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
 	wb_req_o <= req1;
@@ -855,36 +894,18 @@ else begin
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				tentryo2[n] <= tentryo[n];
 				if (tentryo[n].count==master_count) begin
-					if (tentryo[n].asid[11:0]==asid_i[11:0] || tentryo[n].g) begin
+					if (tentryo[n].vpn.asid[11:0]==asid_i[11:0] || tentryo[n].pte.g) begin
 						if (tentryo[n].pte.v) begin
-							case(tentryo[n].pte.lvl)
-							3'd0:
-								if (tentryo[n].vpn[$bits(address_t)-1-LOG_PAGE_SIZE-LOG_ENTRIES:0]==
-									{{2{&iadrd[31:28]}},iadrd[$bits(address_t)-1:LOG_PAGE_SIZE+LOG_ENTRIES]}) begin
-									wb_req_o.padr[LOG_PAGE_SIZE-1:0] <= iadrd[LOG_PAGE_SIZE-1:0];
-									wb_req_o.padr[$bits(address_t)-1:LOG_PAGE_SIZE] <= tentryo[n].pte.ppn[$bits(address_t)-LOG_PAGE_SIZE-1:0];
-									//wb_req_o.adr[47:32] <= {16{&tentryo[n].pte.ppn[15:12]}};
-//									rwx <= {tentryo[n].pte.ppn < 18'h01FFF || tentryo[n].pte.ppn > 18'h3FFF0,tentryo[n].pte.rwx};
-									rwx <= tentryo[n].pte.rwx[om_i];
-									cache <= tentryo[n].pmte.cache;
-									tlbmiss_o <= FALSE;
-								  rgn <= tentryo[n].pte.rgn;
-									hit <= n;
-								end
-							3'd1:
-								begin
-									wb_req_o.padr[LOG_ENTRIES+LOG_PAGE_SIZE-1:0] <= iadrd[LOG_ENTRIES+LOG_PAGE_SIZE-1:0];
-									wb_req_o.padr[$bits(address_t)-1:LOG_ENTRIES+LOG_PAGE_SIZE] <= tentryo[n].pte.ppn[$bits(address_t)-LOG_PAGE_SIZE-1:LOG_ENTRIES];
-									//wb_req_o.adr[47:32] <= {16{&tentryo[n].pte.ppn[15:12]}};
-//									rwx <= {tentryo[n].pte.ppn < 18'h01FFF || tentryo[n].pte.ppn > 18'h3FFF0,tentryo[n].pte.rwx};
-									rwx <= tentryo[n].pte.rwx[om_i];
-									cache <= tentryo[n].pmte.cache;
-									tlbmiss_o <= FALSE;
-								  rgn <= tentryo[n].pte.rgn;
-									hit <= n;
-								end
-							default:	;
-							endcase
+							if (tentryo[n].vpn.vpn & fnVmask2(tentryo[n].pte.lvl) ==
+								{{2{&iadrd[31:28]}},iadrd} & fnVmask1(tentryo[n].pte.lvl)) begin
+								rwx <= tentryo[n].pte.rwx[om_i];
+								cache <= tentryo[n].pte.cache;
+								tlbmiss_o <= FALSE;
+							  rgn <= tentryo[n].pte.rgn;
+								hit <= n;
+								wb_req_o.padr <= (iadrd & fnAmask(tentryo[n].pte.lvl)) |
+																	({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.lvl));
+							end
 						end
 					end
 				end				
