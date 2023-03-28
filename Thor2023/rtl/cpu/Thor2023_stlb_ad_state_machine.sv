@@ -41,23 +41,21 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 import Thor2023_stlb_pkg::*;
 
-module Thor2023_stlb_ad_state_machine(rst, clk, state, rcount, tlbadr_i, tlbadro, 
-	tlbdat_rst, tlbdat_i, tlbdati, tlbdato,	master_count, inv_count);
+module Thor2023_stlb_ad_state_machine(clk, state, rcount, tlbadr_i, tlbadro, 
+	tlbdat_rst, tlbdat_i, tlbdato, master_count, inv_count);
 parameter ENTRIES = 1024;
 parameter PAGE_SIZE = 8192;
 parameter ASSOC = 9;
 localparam LOG_ENTRIES = $clog2(ENTRIES);
 localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
-input rst;
 input clk;
 input tlb_state_t state;
 input [LOG_ENTRIES-1:0] rcount;
-input [$bits(address_t)-1:0] tlbadr_i;
+input [31:0] tlbadr_i;
 output reg [LOG_ENTRIES-1:0] tlbadro;
-input TLBE tlbdat_rst;
-input TLBE tlbdat_i;
-input TLBE [ASSOC-1:0] tlbdati;
-output TLBE [ASSOC-1:0] tlbdato;
+input STLBE tlbdat_rst;
+input STLBE tlbdat_i;
+output STLBE tlbdato;
 input [5:0] master_count;
 input [LOG_ENTRIES-1:0] inv_count;
 
@@ -69,50 +67,29 @@ begin
 	ST_RST:	
 		begin
 			tlbadro <= rcount;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdato[n2] <= tlbdat_rst;
-			end
+			tlbdato <= tlbdat_rst;
 		end
 	ST_RUN:
 		begin
-			tlbadro <= tlbadr_i[LOG_PAGE_SIZE+LOG_ENTRIES-1:LOG_PAGE_SIZE];
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdato[n2] <= tlbdat_i;
-				tlbdato[n2].count <= master_count;
-			end
-		end
-	ST_AGE1,ST_AGE2,ST_AGE3:
-		begin
-			tlbadro <= rcount;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdato[n2] <= tlbdat_i;
-				tlbdato[n2].count <= master_count;
-			end
-		end
-	ST_AGE4:
-		begin
-			tlbadro <= rcount;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdato[n2] <= tlbdati[n2];
-				tlbdato[n2].count <= master_count;
-			end
+			tlbadro <= tlbadr_i[5+LOG_ENTRIES-1:5];
+			tlbdato <= tlbdat_i;
+			tlbdato.count <= master_count;
+			tlbdato.lru <= 'd0;
 		end
 	ST_INVALL1,ST_INVALL2,ST_INVALL3,ST_INVALL4:
 		begin
 			tlbadro <= inv_count;
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1)
-				tlbdato[n2] <= 'd0;
+			tlbdato <= 'd0;
 		end
 	default:
 		begin
-			tlbadro <= tlbadr_i[LOG_PAGE_SIZE+LOG_ENTRIES-1:LOG_PAGE_SIZE];
-			for (n2 = 0; n2 < ASSOC; n2 = n2 + 1) begin
-				tlbdato[n2] <= tlbdat_i;
-				tlbdato[n2].count <= master_count;
-			end
+			tlbadro <= tlbadr_i[5+LOG_ENTRIES-1:5];
+			tlbdato <= tlbdat_i;
+			tlbdato.count <= master_count;
+			tlbdato.lru <= 'd0;
 		end
 	endcase
-	if (tlbdato[ASSOC-1].pte.ppn=='d0 && tlbdato[ASSOC-1].vpn != 'd0) begin
+	if (tlbdato.pte.ppn=='d0 && tlbdato.vpn != 'd0) begin
 		$display("PPN zero");
 	end
 end

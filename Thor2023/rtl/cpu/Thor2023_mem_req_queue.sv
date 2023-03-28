@@ -299,8 +299,9 @@ if (rst) begin
 	qndx <= 'd0;
 	for (n3 = 0; n3 < NTHREADS; n3 = n3 + 1)
 		rollback_bitmaps[n3] <= 'd0;
-	for (n3 = 1; n3 < QDEP; n3 = n3 + 1)
-		que[n3] <= 'd0;
+//	for (n3 = 1; n3 < QDEP; n3 = n3 + 1)
+//		que[n3] <= 'd0;
+	que <= 'd0;
 end
 else begin
 	wr_ack0 <= 1'b0;

@@ -191,6 +191,9 @@ memory_arg_t memreq,imemreq;
 reg memr_v;
 reg memr_fed;
 wire tlbrdy;
+wire fifoToCtrl_empty;
+wire fifoToCtrl_v;
+
 
 // In this case back-toback reads of the fifo are allowed as a memory
 // pipeline is being filled.
@@ -198,7 +201,7 @@ reg memreq_rd;
 always_comb
 	memreq_rd = !fifoToCtrl_empty;// && !memr_v;
 
-memory_arg_t memresp, memresp2;
+memory_arg_t memresp;
 memory_arg_t [6:0] mem_resp;	// memory pipeline
 reg zero_data = 0;
 wb_tranid_t tid_cnt = 'd0;
@@ -255,35 +258,10 @@ always_comb
 		rollback_bitmaps[n10] = rb_bitmaps1[n10]|rb_bitmaps2[n10]|rb_bitmaps3[n10]|rb_bitmaps4[n10];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// PMA Checker
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-REGION region;
-wire [2:0] region_num;
-reg rgn_wr;
-reg rgn_en;
-reg [6:0] rgn_adr;
-wire [7:0] region_sel;
-value_t rgn_dat;
-value_t rgn_dat_o;
 physical_address_t padr;
-
-Thor2023_active_region uargn
-(
-	.clk(clk),
-	.wr(rgn_wr),
-	.rwa(rgn_adr),
-	.i(rgn_dat),
-	.o(rgn_dat_o),
-	.adr(padr),
-	.region_num(),
-	.region(region),
-	.sel(region_sel),
-	.err()
-);
-
 wire [3:0] ififo_cnt, ofifo_cnt;
-
 wire [16:0] lfsr_o;
 
 lfsr17 #(.WID(17)) ulfsr1
@@ -294,9 +272,6 @@ lfsr17 #(.WID(17)) ulfsr1
 	.cyc(1'b0),
 	.o(lfsr_o)
 );
-
-wire fifoToCtrl_empty;
-wire fifoToCtrl_v;
 
 wire pev;
 edge_det ued1 (.rst(rst), .clk(clk), .ce(1'b1), .i(fifoToCtrl_v), .pe(pev), .ne(), .ee());
@@ -384,7 +359,7 @@ uic1
 (
 	.rst(rst),
 	.clk(clk),
-	.state(state),
+	.invce(state==MEMORY4),
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
 	.snoop_cid(snoop_cid),
@@ -585,9 +560,7 @@ Thor2023_tlb utlb
 );
 */
 reg [4:0] mp_delay;
-wire [3:0] region_at;
 vtdl #(.WID($bits(physical_address_t)), .DEP(32)) umpd1 (.clk(clk), .ce(1'b1), .a(mp_delay), .d(phys_dadr), .q(phys_dadrd1));
-vtdl #(.WID(4), .DEP(32)) umpd2 (.clk(clk), .ce(1'b1), .a(mp_delay), .d(region.at[3:0]), .q(region_at));
 
 //always_ff @(posedge clk)	// delay for data tag lookup
 //	padrd1 <= padr;
@@ -814,7 +787,7 @@ change_det uchgdt1 (.rst(rst), .clk(tlbclk), .ce(1'b1), .i(idadr), .cd(cd_idadr)
 
 reg special_ram;
 always_comb
-	special_ram = ptgram_en || rgn_en || tlb_access;
+	special_ram = ptgram_en || tlb_access;
 
 reg [15:0] hash_r;
 `ifdef SUPPORT_HASHPT
@@ -1035,7 +1008,6 @@ begin
 	iaccess <= FALSE;
 	daccess <= FALSE;
 //	memreq_rd <= FALSE;
-	memresp2 <= 'd0;
   xlaten <= FALSE;
   tmptlbe <= 'd0;
   wr_pte <= 1'b0;
@@ -1046,7 +1018,6 @@ begin
 	clr_ptg_fault <= 1'b0;
 	ipage_fault <= 1'b0;
 	ptgram_en <= 1'b0;
-	rgn_en <= 1'b0;
 	tlb_access <= 1'b0;
 	sel <= 'd0;
 	dfetch2 <= 1'b0;
@@ -1099,7 +1070,6 @@ else begin
 	dcachable <= TRUE;
 	inext <= FALSE;
 //	memreq_rd <= FALSE;
-	memresp2.wr <= FALSE;
 	itlbwr <= FALSE;
 	dtlbwr <= FALSE;
 	tlb_ack <= FALSE;
@@ -2064,7 +2034,6 @@ task tStage1;
 begin
 	if (mem_pipe_adv) begin
 		tlb_access <= 1'b0;
-		rgn_en <= 1'b0;
 		ptgram_en <= 1'b0;
 		pde_en <= FALSE;
 		mem_resp[1] <= mem_resp[0];
@@ -2083,7 +2052,7 @@ begin
 			mem_resp[1].res <= 'd0;
 		end
 		else if ((mem_resp[0].func==MR_LOAD || mem_resp[0].func==MR_LOADZ || mem_resp[0].func==MR_STORE || 
-			mem_resp[0].func==MR_TLBRD || mem_resp[0].func==MR_TLBRW ||
+//			mem_resp[0].func==MR_TLBRD || mem_resp[0].func==MR_TLBRW ||
 			mem_resp[0].func==MR_ICACHE_LOAD) && mem_resp[0].v) begin
 			// For a store, select lines are shifted into position during data cache
 			// line masking. Do not shift them here.
@@ -2093,12 +2062,6 @@ begin
 			else if (mem_resp[0].sel[0])
 	    	mem_resp[1].sel <= {32'h0,mem_resp[0].sel} << mem_resp[0].adr[3:0];
 			casez(mem_resp[0].adr)
-			32'hFF9F????:
-				begin
-					mem_resp[1].rgn_en <= 1'b1;
-					rgn_en <= 1'b1;
-					rgn_wr <= mem_resp[0].func==MR_STORE;
-				end
 			32'hFFA?????:
 				begin
 					mem_resp[1].ptgram_en <= 1'b1;
@@ -2110,8 +2073,8 @@ begin
 				end
 			32'hFFE0????:
 				begin
-					itlbwr <= mem_resp[0].func==MR_TLBRW && ~mem_resp[0].adr[4];
-					dtlbwr <= mem_resp[0].func==MR_TLBRW &&  mem_resp[0].adr[4];
+//					itlbwr <= mem_resp[0].func==MR_TLBRW && ~mem_resp[0].adr[4];
+//					dtlbwr <= mem_resp[0].func==MR_TLBRW &&  mem_resp[0].adr[4];
 					mem_resp[1].tlb_access <= 1'b1;
 					tlb_access <= 1'b1;
 					tlb_ia <= mem_resp[0].adr[15:0];
@@ -2125,8 +2088,6 @@ begin
 				end
 			default:	;
 			endcase
-			rgn_adr <= mem_resp[0].adr[8:2];
-			rgn_dat <= mem_resp[0].res;
 			pde_adr <= {mem_resp[0].thread,mem_resp[0].adr[7:2]};
 			pde_dat <= mem_resp[0].res[$bits(PDE)-1:0];
 `ifdef SUPPORT_HASHPT
@@ -2306,22 +2267,16 @@ begin
 			  else begin
 			  	if (memr_sel[127:16]=='d0) begin
 		    		if (memr.func2==MR_STPTR) begin	// STPTR
-				    	if (~|ea[AWID-5:0] || shr_ma[5:3] >= region.at[18:16]) begin
-		  					memresp2.cause <= FLT_NONE;
-				  			memresp2.step <= memreq.step;
-				    	 	memresp2.cmt <= TRUE;
-	  						memresp2.tid <= memreq.tid;
-	  						memresp2.wr <= TRUE;
-								memresp2.res <= {127'd0,rb_i};
+				    	if (~|ea[AWID-5:0]) begin// || shr_ma[5:3] >= region.at[18:16]) begin
 								if (!memresp_full)
 									ret(0);
 				    	end
 				    	else begin
-				    		if (shr_ma=='d0) begin
-				    			cta <= region.cta;
+//				    		if (shr_ma=='d0) begin
+//				    			cta <= region.cta;
 				    			// Turn request address into an index into region
 //				    			memreq.adr <= memreq.adr - region.start;
-				    		end
+//				    		end
 				    		shr_ma <= shr_ma + 4'd8;
 				    		zero_data <= TRUE;
 				    		goto (MEMORY_DISPATCH);
@@ -2329,12 +2284,6 @@ begin
 		    		end
 		    		else begin
 		    			tDeactivateBus();
-	  					memresp2.cause <= FLT_NONE;
-			  			memresp2.step <= memreq.step;
-				    	memresp2.cmt <= TRUE;
-			  			memresp2.tid <= memreq.tid;
-			  			memresp2.wr <= TRUE;
-							memresp2.res <= 'd0;//{127'd0,rb_i};
 							if (!memresp_full) begin
 								if (|memr.hit[1:0]) begin
 									//if (memr.adr[5])

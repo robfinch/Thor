@@ -34,21 +34,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// 4665 LUTs / 2771 FFs / 28 BRAMs	7 way assoc.	16kB pages, 9 channels
-// 4827 LUTs / 3142 FFs / 15 BRAMs  5 way assoc
-// 6250 LUTs / 4312 FFs / 27 BRAMs	1024 entries, 8kB pages, 13 channels
+// 1649 LUTs / 1907 FFs / 12 BRAMs
 // ============================================================================
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_stlb(rst_i, clk_i, clock, al_i, rdy_o, om_i, sys_mode_i,
-	stptr_i, rwx_o, cache_o,
-	tlbmiss_o, tlbmiss_adr_o, tlbkey_o,
+module Thor2023_stlb(rst_i, clk_i, rdy_o,	rwx_o, tlbmiss_irq_o,
 	wbn_req_i, wbn_resp_o, wb_req_o, wb_resp_i, snoop_v, snoop_adr, snoop_cid);
-parameter ASSOC = 7;	// MAX assoc = 15
-parameter CHANNELS = 9;
+parameter ASSOC = 6;	// MAX assoc = 15
+parameter LVL1_ASSOC = 1;
+parameter CHANNELS = 5;
 parameter RSTIP = 32'hFFFD0000;
 localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 localparam LOG_ENTRIES = $clog2(ENTRIES);
@@ -79,17 +76,9 @@ localparam CFG_HEADER_TYPE = 8'h00;			// 00 = a general device
 
 input rst_i;
 input clk_i;
-input clock;
-input [1:0] al_i;
 output rdy_o;
-input [1:0] om_i;
-input sys_mode_i;
-input stptr_i;
 output reg [2:0] rwx_o;
-output reg [3:0] cache_o;
-output reg tlbmiss_o;
-output address_t tlbmiss_adr_o;
-output reg [31:0] tlbkey_o;
+output [31:0] tlbmiss_irq_o;
 input wb_cmd_request128_t [CHANNELS-1:0] wbn_req_i;
 output wb_cmd_response128_t [CHANNELS-1:0] wbn_resp_o;
 output wb_cmd_request128_t wb_req_o;
@@ -104,26 +93,28 @@ parameter FALSE = 1'b0;
 typedef enum logic [3:0] {
 	ST_RST = 4'd0,
 	ST_RUN = 4'd1,
-	ST_AGE1 = 4'd2,
-	ST_AGE2 = 4'd3,
-	ST_AGE3 = 4'd4,
-	ST_AGE4 = 4'd5,
-	ST_WRITE_PTE = 4'd6,
 	ST_INVALL1 = 4'd7,
 	ST_INVALL2 = 4'd8,
 	ST_INVALL3 = 4'd9,
-	ST_INVALL4 = 4'd10
+	ST_INVALL4 = 4'd10,
+	ST_UPD1 = 4'd11,
+	ST_UPD2 = 4'd12,
+	ST_UPD3 = 4'd13
 } tlb_state_t;
 tlb_state_t state = ST_RST;
 
 integer n;
 integer n1,j1;
 integer n2;
-integer n3, n4, n5, n7;
+integer n3, n4, n5, n6, n7;
 
+reg tlbmiss_irq;
+wire irq_en;
 reg [2:0] rgn;
 reg [3:0] cache;
+reg [3:0] cache_o;
 REGION region;
+wire [127:0] rgn_dato;
 reg [2:0] rwx;
 reg tlben_i;
 reg wrtlb_i;
@@ -131,28 +122,29 @@ reg [31:0] tlbadr_i;
 
 reg [2:0] rd_tlb;
 reg wr_tlb;
-reg wrtlb_i;
 STLBE tlbdat_i;
-STLBE tlbdat_o;
 reg [31:0] ctrl_reg;
 
 address_t last_ladr, last_iadr;
 address_t adrd;
+address_t tlbmiss_adr;
 reg invall;
 reg [LOG_ENTRIES-1:0] inv_count;
 
 tlb_count_t master_count;
-wb_cmd_request128_t req,req1,wbs_req;
+wb_cmd_request128_t req,req1,wbs_req,wb_req;
 wb_asid_t asid_i;
+wb_asid_t asidd;
+wb_asid_t tlbmiss_asid;
+wb_operating_mode_t om_i, omd, omd2;
 
 reg [1:0] al;
-reg LRU;
+reg LRU, RAND;
 code_address_t rstip = RSTIP;
 reg [3:0] randway;
 STLBE tentryi [0:ASSOC-1];
 STLBE tentryo [0:ASSOC-1];
 STLBE tentryo2 [0:ASSOC-1];
-reg stptr;
 reg xlaten_i;
 reg xlatend;
 reg we_i;
@@ -163,18 +155,17 @@ reg next_i;
 wb_cmd_request128_t wbm_req;
 wb_cmd_response128_t wbm_resp;
 STLBE [ASSOC-1:0] tlbdato;
-STLBE dumped_entry;
 wire clk_g = clk_i;
 
+reg [4:0] wway;
 STLBE tlbdat_rst;
-STLBE [ASSOC-1:0] tlbdati;
+STLBE tlbdati;
 reg [4:0] count;
 reg [ASSOC-1:0] tlbwrr;
 reg tlbeni;
 wire [LOG_ENTRIES-1:0] tlbadri;
 reg clock_r;
 reg [LOG_ENTRIES-1:0] rcount;
-wire pe_clock;
 
 SPTE pte_reg;
 SVPN vpn_reg;
@@ -191,7 +182,7 @@ wire cs_stlb, cs_rgn;
 wire [127:0] cfg_out;
 reg [127:0] dato;
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 	cs_config <= wbs_req.cyc && wbs_req.stb &&
 		wbs_req.padr[31:28]==4'hD &&
 		wbs_req.padr[27:20]==CFG_BUS &&
@@ -211,7 +202,7 @@ ack_gen #(
 ) uag1
 (
 	.rst_i(rst_i),
-	.clk_i(clk_i),
+	.clk_i(clk_g),
 	.ce_i(1'b1),
 	.rid_i('d0),
 	.wid_i('d0),
@@ -248,8 +239,8 @@ upci
 (
 	.rst_i(rst_i),
 	.clk_i(clk_g),
-	.irq_i(1'b0),
-	.irq_o(),
+	.irq_i(tlbmiss_irq & irq_en),
+	.irq_o(tlbmiss_irq_o),
 	.cs_config_i(cs_config),
 	.we_i(wbs_req.we),
 	.sel_i(wbs_req.sel),
@@ -259,10 +250,10 @@ upci
 	.cs_bar0_o(cs_stlb),
 	.cs_bar1_o(cs_rgn),
 	.cs_bar2_o(),
-	.irq_en_o()
+	.irq_en_o(irq_en)
 );
 
-always_ff @(posedge clk_g)
+always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
 	pte_reg <= 'd0;
 	vpn_reg <= 'd0;
@@ -271,43 +262,54 @@ if (rst_i) begin
 	wr_tlb <= 1'b0;
 	wrtlb_i <= 1'b0;
 	tlben_i <= 1'b0;
+	tlbadr_i <= 'd0;
+	tlbdat_i <= 'd0;
+	LRU <= 1'b1;
+	RAND <= 1'b0;
 end
 else begin
 	tlben_i <= |rd_tlb;
 	rd_tlb <= {rd_tlb[1:0],1'b0};
 	wr_tlb <= 1'b0;
-	wrtlb_i <= 1'b0;
+	if (state==ST_UPD3)
+		wrtlb_i <= 1'b0;
 	if (cs_stlbq & wbs_req.we) begin
-		case(wbs_req.padr[5:4])
-		2'd0:	pte_reg <= wbs_req.data1;
-		2'd1:	vpn_reg <= wbs_req.data1;
-		2'd2:	;
-		2'd3:	
+		case(wbs_req.padr[6:4])
+		3'd0:	pte_reg <= wbs_req.data1;
+		3'd1:	vpn_reg <= wbs_req.data1;
+		3'd7:	
 			begin
 			case(wbs_req.sel)
-			16'h000F:	ctrl_reg <= wbs_req.data1[31:0];
+			16'h000F:	
+				begin
+					ctrl_reg <= wbs_req.data1[31:0];
+					LRU <= wbs_req.data1[17:16]==2'b01;
+					RAND <= wbs_req.data1[17:16]==2'b10;
+				end
 			default:	;
 			endcase
 			if (wbs_req.sel[13])
-				rd_tlb <= 1'b1;
+				rd_tlb <= 3'b001;
 			if (wbs_req.sel[14])
 				wr_tlb <= 1'b1;
 			end
+		default:	;
 		endcase
 	end
 	if (wr_tlb) begin
 		tlben_i <= 1'b1;
 		wrtlb_i <= 1'b1;
 		tlbdat_i.count <= master_count;
+		tlbdat_i.lru <= 'd0;
 		tlbdat_i.pte <= pte_reg;
-//		tlbdat_i.pte_adr = pte_adr;
+		tlbdat_i.vpn <= vpn_reg;
 		tlbadr_i <= ctrl_reg;
 	end
 	if (rd_tlb[0])
 		tlbadr_i <= ctrl_reg;
 	if (rd_tlb[2]) begin
-		pte_reg <= tlbdato[ctrl_reg[3:0]].pte;
-		vpn_reg <= tlbdato[ctrl_reg[3:0]].vpn;
+		pte_reg <= tlbdato[tlbadr_i[3:0]].pte;
+		vpn_reg <= tlbdato[tlbadr_i[3:0]].vpn;
 	end
 end
 
@@ -318,11 +320,16 @@ else begin
 	if (cs_config)
 		dato <= cfg_out;
 	else if (cs_stlbq)
-		case(wbs_req.padr[5:4])
-		2'd0:	dato <= pte_reg;
-		2'd1:	dato <= vpn_reg;
-		2'd2:	dato <= 'd0;
-		2'd3:	dato <= ctrl_reg;
+		case(wbs_req.padr[6:4])
+		3'd0:	dato <= pte_reg;
+		3'd1:	dato <= vpn_reg;
+		3'd2:	
+			begin
+				dato <= tlbmiss_adr;
+				dato[123:112] <= tlbmiss_asid;
+			end
+		3'd7:	dato <= ctrl_reg;
+		default:	dato <= 'd0;
 		endcase
 	else if (cs_rgnq)
 		dato <= rgn_dato;
@@ -409,6 +416,8 @@ begin
 			wbm_resp = wb_resp_i;
 			wbm_resp.adr = wb_req_o.padr;
 		end
+		wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
+		wbn_resp_o[wb_resp_i.tid[7:4]].adr = wb_req_o.padr;
 	end
 	else begin
 		wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
@@ -418,6 +427,8 @@ end
 always_comb
 	xlaten_i = req.cyc;
 always_comb
+	om_i = req.om;
+always_comb
 	we_i = req.we;
 always_comb
 	asid_i = req.asid;
@@ -425,6 +436,7 @@ always_comb
 	adr_i = req.vadr;
 always_comb
 	next_i = wb_resp_i.next;
+
 always_ff @(posedge clk_i)
 if (rst_i)
 	rr_active <= 'd0;
@@ -433,18 +445,18 @@ else begin
 	if (wb_resp_i.ack|wb_resp_i.rty|wb_resp_i.err)
 		rr_active[wb_resp_i.tid[7:4]] <= 1'b0;
 end
-wire cache_type = wb_req_o.cache;
+wire [3:0] cache_type = wb_req_o.cache;
 
 wire non_cacheable =
 	cache_type==NC_NB ||
 	cache_type==NON_CACHEABLE
 	;
 always_comb
-	snoop_v = (wb_req_o.we|non_cacheable|~rwx_o[3]) & wb_req_o.cyc;
+	snoop_v = (wb_req_o.we|non_cacheable) & wb_req_o.cyc;
 always_comb
 	snoop_adr = wb_req_o.padr;
 always_comb
-	snoop_cid = (non_cacheable|~rwx_o[3]) ? 4'd15 : wb_req_o.tid[7:4];
+	snoop_cid = (non_cacheable) ? 4'd15 : wb_req_o.tid[7:4];
 
 roundRobin
 #(
@@ -464,6 +476,31 @@ urr1
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Select the least recently used entry.
+always_comb
+begin
+	wway = 5'd31;
+	for (n6 = 0; n6 < 4; n6 = n6 + 1)
+		if (wway==5'd31)
+			if (tlbdato[n6].lru==3'd7)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd6)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd5)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd4)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd3)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd2)
+				wway = n6;
+			else if (tlbdato[n6].lru==3'd1)
+				wway = n6;
+			else
+				wway = n6;
+end
+
+
 reg [ASSOC-1:0] wr;
 reg wed;
 reg [3:0] hit;
@@ -473,9 +510,9 @@ generate begin : gWrtlb
 	for (g1 = 0; g1 < ASSOC; g1 = g1 + 1) begin : gFor
 		always_comb begin
 			next_wrtlb[g1] <= 'd0;
-			if (state==ST_RUN) begin
-				if (LRU && tlbadr_i[3:0]!=ASSOC-1) begin
-					if (g1==ASSOC-2)
+			if (state==ST_UPD3) begin
+				if (LRU && tlbadr_i[3:0] < 4) begin
+					if (g1==wway)
 						next_wrtlb[g1] <= wrtlb_i;
 				end
 				else begin
@@ -483,8 +520,10 @@ generate begin : gWrtlb
 						if (g1==ASSOC-1)
 		 					next_wrtlb[g1] <= wrtlb_i;
 		 			end
-					else if (g1 < ASSOC-1)
-		 				next_wrtlb[g1] <= (al==2'b10 ? randway==g1 : tlbadr_i[3:0]==g1) && wrtlb_i;
+					else if (g1 < 4)
+		 				next_wrtlb[g1] <= (RAND ? randway==g1 : tlbadr_i[3:0]==g1) && wrtlb_i;
+		 			else
+		 				next_wrtlb[g1] <= tlbadr_i[3:0]==g1 && wrtlb_i;
 	 			end
  			end
  		end
@@ -496,27 +535,11 @@ endgenerate
 // These signals need to be matched
 always_ff @(posedge clk_g)
 	xlatend <= xlaten_i;
-
-always_comb
-	tlbdat_o <= tlbdato[tlbadr_i[3:0]];
-
 always_ff @(posedge clk_g)
-begin
-	al <= al_i;
-	LRU <= al_i==2'b01;
-end
+	iadrd <= req.vadr;
 
 wire [ASSOC-1:0] wrtlbd;
 ft_delay #(.WID(ASSOC), .DEP(3)) udlyw (.clk(clk_g), .ce(1'b1), .i(wrtlb), .o(wrtlbd));
-
-always_ff @(posedge clk_g)
-begin
-	dumped_entry <= 'd0;
-	for (n3 = 0; n3 < ASSOC; n3 = n3 + 1)
-		if (wrtlbd[n3]) begin
-			dumped_entry <= tlbdato[n3];
-		end
-end
 
 wire pe_xlat, ne_xlat;
 edge_det u5 (
@@ -548,6 +571,8 @@ always_ff @(posedge clk_g)
 
 always_ff @(posedge clk_g)
 	adrd <= adr_i;
+always_ff @(posedge clk_g)
+	asidd <= asid_i;
 
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
@@ -561,23 +586,24 @@ else begin
 	end
 end
 
-edge_det edclk (.rst(rst_i), .clk(clk_g), .ce(1'b1), .i(clock), .pe(pe_clock), .ne(), .ee());
-
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
 	state <= ST_RST;
+	tlbdat_rst <= 'd0;
 	master_count <= 6'd1;
 	tlbeni <= 1'b1;		// forces ready low
 	tlbwrr <= 'd0;
+	wrtlb <= 'd0;
 	count <= 'd0;		// Map only last 256kB
+	rcount <= 'd0;
+	inv_count <= 'd0;
+	invall <= 'd0;
 	clock_r <= 1'b0;
 	wbm_req <= 'd0;
 end
 else begin
 tlbeni  <= 1'b0;
 tlbwrr <= 'd0;
-if (pe_clock)
-	clock_r <= 1'b1;
 case(state)
 	
 // Setup the last 256kB/16 pages of memory to point to the ROM BIOS.
@@ -626,19 +652,9 @@ ST_RUN:
 			if (master_count == 6'd63)
 				master_count <= 6'd1;
 		end
-		wrtlb <= next_wrtlb;
-		if (|next_wrtlb) begin
-			;
-		end
-		else if (dumped_entry.pte.m) begin// && |dumped_entry.pte_adr) begin
-			wrtlb <= 'd0;
-			state <= ST_WRITE_PTE;
-		end
-		else if (clock_r) begin
-			wrtlb <= 'd0;
-			rcount <= rcount + 2'd1;
-			clock_r <= 1'b0;
-			state <= ST_AGE1;
+		if (wrtlb_i) begin
+			tlbeni <= 1'b1;
+			state <= ST_UPD1;
 		end
 		else if (inv_count != ENTRIES-1) begin
 			wrtlb <= 'd0;
@@ -646,42 +662,23 @@ ST_RUN:
 			state <= ST_INVALL1;
 		end
 	end
-ST_AGE1:
+ST_UPD1:
 	begin
 		tlbeni <= 1'b1;
-		state <= ST_AGE2;
+		state <= ST_UPD2;
 	end
-ST_AGE2:
+ST_UPD2:
 	begin
 		tlbeni <= 1'b1;
-		state <= ST_AGE3;
+		state <= ST_UPD3;
 	end
-ST_AGE3:
+ST_UPD3:
 	begin
 		tlbeni <= 1'b1;
-		state <= ST_AGE4;
-	end
-ST_AGE4:
-	begin
-		tlbeni <= 1'b1;
-		tlbwrr <= {ASSOC{1'b1}};
+		wrtlb <= next_wrtlb;
 		state <= ST_RUN;
 	end
-ST_WRITE_PTE:
-//	if (|dumped_entry.pte_adr)
-	begin
-		wbm_req.cyc <= 1'b1;
-//		wbm_req.padr <= dumped_entry.pte_adr;
-		wbm_req.sel <= 16'hFFFF;
-		wbm_req.data1 <= dumped_entry;
-		wbm_req.data1[55] <= 1'b0;	// modified bit
-		if (wbm_resp.ack|wbm_resp.err|wbm_resp.rty) begin
-			wbm_req.cyc <= 1'b0;
-			state <= ST_RUN;
-		end
-	end
-//	else
-//		state <= ST_RUN;
+
 ST_INVALL1:
 	begin
 		tlbeni <= 1'b1;
@@ -720,7 +717,6 @@ Thor2023_stlb_ad_state_machine
 )
 usm2
 (
-	.rst(rst_i),
 	.clk(clk_g),
 	.state(state),
 	.rcount(rcount),
@@ -728,7 +724,6 @@ usm2
 	.tlbadro(tlbadri), 
 	.tlbdat_rst(tlbdat_rst),
 	.tlbdat_i(tlbdat_i),
-	.tlbdati(tlbdato),
 	.tlbdato(tlbdati),
 	.master_count(master_count),
 	.inv_count(inv_count)
@@ -737,52 +732,42 @@ usm2
 // Dirty / Accessed bit write logic
 always_ff @(posedge clk_g)
   wed <= we_i;
-always_ff @(posedge clk_g)
-	stptr <= stptr_i;
 
 always_ff @(posedge clk_g)
 begin
 	wr <= 'd0;
   if (ne_xlat) begin
   	for (n1 = 0; n1 < ASSOC; n1 = n1 + 1) begin
-  		if (hit==n1) begin
-  			if (LRU && n1 < 4) begin
-	  			wr <= {ASSOC{1'b1}};
-  				for (j1 = 1; j1 < ASSOC; j1 = j1 + 1) begin
-  					if (j1 <= n1)
-  						tentryi[j1] <= tentryo2[j1-1];
-  					else
-  						tentryi[j1] <= tentryo2[j1];
-  				end
-	  			tentryi[0] <= tentryo2[n1];
-	  			if (wed) begin
-	  				tentryi[0].pte.m <= 1'b1;
-	  			end
-	  			//tentryi[0].a <= 1'b1;
-//					if (stptr)
-//						tentryo[0].cards[(tentryo[n1].vpn >> ({tentryo[n1].lvl-2'd1,3'd0} + 2'd3)) & 5'h1F] <= 1'b1;
-  			end
-  			else begin
-	  			tentryi[n1] <= tentryo2[n1];
-	  			if (wed) begin
-	  				tentryi[n1].pte.m <= 1'b1;
-	  			end
-	  			//tentryi[n1].a <= 1'b1;
-//					if (stptr)
-//						tentryo[n1].cards[(tentryo[n1].vpn >> ({tentryo[n1].lvl-2'd1,3'd0} + 2'd3)) & 5'h1F] <= 1'b1;
-	  			wr[n1] <= 1'b1;
-  			end
-  		end
+  		tentryi[n1] <= tentryo2[n1];
+  		case(hit)
+  		4'd0,4'd1,4'd2,4'd3:
+	  		if (n1 < 4) begin
+		  		if (tentryo2[n1].lru < tentryo2[hit].lru)
+		  			tentryi[n1].lru <= tentryo2[n1].lru + 2'd1;
+	  		end
+  		4'd5:
+	  		if (n1==4) begin
+		  		if (tentryo2[n1].lru < tentryo2[hit].lru)
+		  			tentryi[n1].lru <= tentryo2[n1].lru + 2'd1;
+	  		end
+  		default:	;
+  		endcase
   	end
+  	if (hit < 4'd15) begin
+			tentryi[hit].lru <= 'd0;
+			if (wed)
+				tentryi[hit].pte.m <= 1'b1;
+	 		wr <= {ASSOC{1'b1}};
+ 		end
   end
 end
 
 always_comb
 for (n7 = 0; n7 < ASSOC; n7 = n7 + 1)
-	case(n7)
-	default:	adr_i_slice[n7] = adr_i[LOG_PAGE_SIZE+LOG_ENTRIES-1:LOG_PAGE_SIZE];
-	ASSOC-2,ASSOC-3: adr_i_slice[n7] = adr_i[$bits(address_t)-1:LOG_ENTRIES+LOG_PAGE_SIZE];
-	endcase
+	if (n < ASSOC-LVL1_ASSOC-1 || n==ASSOC-1)
+		adr_i_slice[n7] = adr_i[LOG_PAGE_SIZE+LOG_ENTRIES-1:LOG_PAGE_SIZE];
+	else
+		adr_i_slice[n7] = adr_i[$bits(address_t)-1:LOG_ENTRIES+LOG_PAGE_SIZE];
 	
 genvar g;
 generate begin : gTlbRAM
@@ -790,14 +775,14 @@ for (g = 0; g < ASSOC; g = g + 1) begin : gLvls
 	Thor2023_TLBRam
 	# (
 		.ENTRIES(ENTRIES),
-		.WIDTH($bits(TLBE))
+		.WIDTH($bits(STLBE))
 	)
 	u1 (
 	  .clka(clk_g),
 	  .ena(tlben_i|tlbeni),
 	  .wea(wrtlb[g]|tlbwrr[g]),
 	  .addra(tlbadri),
-	  .dina(tlbdati[g]),
+	  .dina(tlbdati),
 	  .douta(tlbdato[g]),
 	  .clkb(clk_g),
 	  .enb(xlaten_i),
@@ -816,6 +801,16 @@ if (rst_i)
 	req1 <= 'd0;
 else
 	req1 <= req;
+always_ff @(posedge clk_g, posedge rst_i)
+if (rst_i)
+	omd <= wishbone_pkg::APP;
+else
+	omd <= om_i;
+always_ff @(posedge clk_g, posedge rst_i)
+if (rst_i)
+	omd2 <= wishbone_pkg::APP;
+else
+	omd2 <= omd;
 
 
 // Mask selecting between incoming address bits and address bits from the PPN.
@@ -859,52 +854,97 @@ endfunction
 
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
-	wb_req_o <= req1;
-	wb_req_o.padr <= 'd0;
-  wb_req_o.padr[LOG_PAGE_SIZE-1:0] <= rstip[LOG_PAGE_SIZE-1:0];
-  wb_req_o.padr[$bits(address_t)-1:LOG_PAGE_SIZE] <= rstip[$bits(address_t)-1:LOG_PAGE_SIZE];
+//	wb_req_o <= 'd0;
+//	wb_req_o <= req1;
+	wb_req.om <= wishbone_pkg::APP;
+	wb_req.cid <= 'd0;
+	wb_req.tid <= 'd0;
+	wb_req.cmd <= wishbone_pkg::CMD_NONE;
+	wb_req.bte <= wishbone_pkg::LINEAR;
+	wb_req.blen <= 'd0;
+	wb_req.sz <= wishbone_pkg::hexi;
+	wb_req.seg <= wishbone_pkg::DATA;
+	wb_req.cti <= wishbone_pkg::CLASSIC;
+	wb_req.cyc <= 1'b0;
+	wb_req.stb <= 1'b0;
+	wb_req.we <= 1'b0;
+	wb_req.sel <= 16'h0;
+	wb_req.asid <= 'd0;
+	wb_req.vadr <= rstip;
+ 	wb_req.padr[LOG_PAGE_SIZE-1:0] <= rstip[LOG_PAGE_SIZE-1:0];
+  wb_req.padr[$bits(address_t)-1:LOG_PAGE_SIZE] <= rstip[$bits(address_t)-1:LOG_PAGE_SIZE];
+  wb_req.data1 <= 'd0;
+  wb_req.data2 <= 'd0;
+  wb_req.csr <= 'd0;
+  wb_req.pl <= 'd0;
+  wb_req.pri <= 4'd7;
+  wb_req.cache <= wishbone_pkg::NC_NB;
   hit <= 4'd15;
-  tlbmiss_o <= FALSE;
-	tlbmiss_adr_o <= 'd0;
-	tlbkey_o <= 32'hFFFFFFFF;
+  tlbmiss_irq <= FALSE;
+	tlbmiss_adr <= 'd0;
+	tlbmiss_asid <= 'd0;
   rwx <= 3'd7;
   rgn <= 3'd7;	// select default ROM region
   cache <= wishbone_pkg::CACHEABLE;
+	for (n = 0; n < ASSOC; n = n + 1)
+		tentryo2[n] <= 'd0;
 end
 else begin
+	wb_req.om <= req1.om;
+	wb_req.cid <= req1.cid;
+	wb_req.tid <= req1.tid;
+	wb_req.seg <= req1.seg;
+	wb_req.cti <= req1.cti;
+	wb_req.cyc <= req1.cyc;
+	wb_req.stb <= req1.stb;
+	wb_req.we <= req1.we;
+	wb_req.sel <= req1.sel;
+	wb_req.asid <= req1.asid;
+	wb_req.vadr <= req1.vadr;
+	wb_req.padr <= wb_req_o.padr;
+	wb_req.data1 <= req1.data1;
+	wb_req.data2 <= req1.data2;
+	wb_req.cache <= req1.cache;
   rgn <= 3'd7;	// select default ROM region
-	wb_req_o <= req1;
- 	wb_req_o.padr <= wb_req_o.padr;
   if (pe_xlat) begin
   	hit <= 4'd15;
   end
-	if (next_i)
-		wb_req_o.padr <= wb_req_o.padr + 6'd16;
+	if (next_i) begin
+		hit <= hit;
+		rgn <= rgn;
+		cache <= cache;
+    tlbmiss_irq <= FALSE;
+		rwx <= rwx;
+		wb_req.padr <= wb_req.padr + 6'd16;
+	end
   else begin
 		if (!xlatend) begin
-	    tlbmiss_o <= FALSE;
-	  	wb_req_o.padr <= {16'h0000,iadrd[31:0]};
+	    tlbmiss_irq <= FALSE;
+	  	wb_req.padr <= {16'h0000,iadrd[$bits(address_t)-1:0]};
 	    rwx <= 4'hF;
 		end
 		else begin
-			tlbmiss_o <= dl[4] & ~cd_adr;
-			tlbmiss_adr_o <= adrd;
+			tlbmiss_irq <= dl[4] & ~cd_adr;
+			if (dl[4] & ~cd_adr) begin
+				tlbmiss_adr <= adrd;
+				tlbmiss_asid <= asidd;
+			end
 			hit <= 4'd15;
 			rwx <= 4'h0;
 			for (n = 0; n < ASSOC; n = n + 1) begin
 				tentryo2[n] <= tentryo[n];
 				if (tentryo[n].count==master_count) begin
-					if (tentryo[n].vpn.asid[11:0]==asid_i[11:0] || tentryo[n].pte.g) begin
+					if (tentryo[n].vpn.asid[11:0]==asidd[11:0] || tentryo[n].pte.g) begin
 						if (tentryo[n].pte.v) begin
 							if (tentryo[n].vpn.vpn & fnVmask2(tentryo[n].pte.lvl) ==
-								{{2{&iadrd[31:28]}},iadrd} & fnVmask1(tentryo[n].pte.lvl)) begin
-								rwx <= tentryo[n].pte.rwx[om_i];
+								{{2{&iadrd[$bits(address_t)-1:$bits(address_t)-4]}},iadrd} & fnVmask1(tentryo[n].pte.lvl)) begin
+								rwx <= tentryo[n].pte.rwx[omd];
 								cache <= tentryo[n].pte.cache;
-								tlbmiss_o <= FALSE;
+								tlbmiss_irq <= FALSE;
 							  rgn <= tentryo[n].pte.rgn;
 								hit <= n;
-								wb_req_o.padr <= (iadrd & fnAmask(tentryo[n].pte.lvl)) |
-																	({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.lvl));
+								wb_req.padr <= (iadrd & fnAmask(tentryo[n].pte.lvl)) |
+											  				({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.lvl));
 							end
 						end
 					end
@@ -915,11 +955,11 @@ else begin
 end
 
 always_comb
-	rwx_o = |rwx ? rwx : region.at[om_i].rwx;
+	rwx_o = |rwx ? rwx : region.at[omd2].rwx;
 
 // Cache-ability output. Region takes precedence.
 always_comb
-	case(wb_cache_t'(region.at[om_i].cache))
+	case(wb_cache_t'(region.at[omd2].cache))
 	NC_NB:					cache_o = NC_NB;
 	NON_CACHEABLE:	cache_o = NON_CACHEABLE;
 	CACHEABLE_NB:
@@ -942,9 +982,16 @@ always_comb
 		case(wb_cache_t'(cache))
 		NC_NB:					cache_o = NC_NB;
 		NON_CACHEABLE:	cache_o = NON_CACHEABLE;
-		default:				cache_o = region.at[om_i].cache;
+		default:				cache_o = region.at[omd2].cache;
 		endcase
 	default:	cache_o = NC_NB;
 	endcase
+
+always_comb
+begin
+	wb_req_o = wb_req;
+	wb_req_o.cache = wb_cache_t'(cache_o);
+	wb_req_o.we = wb_req.we & rwx_o[1];
+end
 
 endmodule

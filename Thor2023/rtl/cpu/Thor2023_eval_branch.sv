@@ -37,10 +37,11 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_eval_branch(inst, fdm, a, takb);
+module Thor2023_eval_branch(inst, fdm, a, b, takb);
 input instruction_t inst;
 input fdm;
 input value_t a;
+input value_t b;
 output reg takb;
 
 wire [15:0] fco, dfco, fpco;
@@ -51,20 +52,20 @@ assign fco = fdm ? dfco : fpco;
 
 always_comb
 case(inst.br.cnd)
-EQ:	takb = a[0];
-LT: takb = a[1];
-LE:	takb = a[2];
-LO:	takb = a[3];
-LS:	takb = a[4];
-ODD:	takb = a[5];
+EQ:	takb = a==b;
+LT: takb = $signed(a) < $signed(b);
+LE:	takb = $signed(a) <= $signed(b);
+LO:	takb = a < b;
+LS:	takb = a <= b;
+//ODD:	takb = a[5];
 Z:	takb = a=='d0;
 MI:	takb = a[95];
-NE:	takb = a[8];
-GE:	takb = a[9];
-GT:	takb = a[10];
-HS:	takb = a[11];
-HI:	takb = a[12];
-EVEN:	takb = a[13];
+NE:	takb = a != b;
+GE:	takb = $signed(a) >= $signed(b);
+GT:	takb = $signed(a) >  $signed(b);
+HS:	takb = a >= b;
+HI:	takb = a >  b;
+//EVEN:	takb = a[13];
 NZ:	takb = a!='d0;
 SR:	takb = 1'b1;
 FEQ:	takb = fco[0];

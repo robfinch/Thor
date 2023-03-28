@@ -94,6 +94,7 @@ module Thor2023_pic
 	output ack_o,       // controller is ready
 	output reg vp_o,	// vector pull
 	input wr_i,			// write
+	input [3:0] sel_i,
 	input [31:0] adr_i,	// address
 	input [31:0] dat_i,
 	output reg [31:0] dat_o,

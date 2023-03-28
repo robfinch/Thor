@@ -48,9 +48,9 @@ module Thor2023_dcache_ex3(rst, clk, dce, snoop_adr, snoop_v, snoop_cid,
 parameter CID = 4'd3;
 parameter WAYS = 4;
 parameter LINES = 512;
-parameter LOBIT = 5;
-parameter HIBIT = 13;
-parameter TAGBIT = 14;
+parameter LOBIT = 6;
+parameter HIBIT = 14;
+parameter TAGBIT = 15;
 localparam LOG_WAYS = $clog2(WAYS)-1;
 
 input rst;
@@ -90,9 +90,10 @@ typedef struct packed
 
 localparam CACHE_LINE_WIDTH = ($bits(cache_line_t)+7) & 32'hFFF8;	// Must be a multiple of eight
 
+integer n, m;
 integer k;
 
-reg dump,dump1;							// dump the cache line to memory
+reg dump1;							// dump the cache line to memory
 cache_line_t cline_in;
 reg [LINES-1:0] validr [0:WAYS-1];
 reg [WAYS-1:0] valid;
@@ -351,9 +352,6 @@ end
 
 always_ff @(posedge clk)
 	hit <= |hits;
-
-integer n, m;
-integer k;
 
 initial begin
 for (m = 0; m < WAYS; m = m + 1) begin

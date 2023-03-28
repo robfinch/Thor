@@ -82,7 +82,7 @@
 module Thor2023_pit(rst_i, clk_i, cs_config_i, cs_io_i,
 	cyc_i, stb_i, ack_o, sel_i, we_i, adr_i, dat_i, dat_o,
 	clk0, gate0, out0, clk1, gate1, out1, clk2, gate2, out2, clk3, gate3, out3,
-	irq_o,
+	irq_o
 	);
 parameter NTIMER=8;
 parameter BITS=48;
@@ -172,7 +172,6 @@ wire cs_config = cyc_i & stb_i & cs_config_i &&
 	adr_i[19:15]==CFG_DEVICE &&
 	adr_i[14:12]==CFG_FUNC
 	;
-wire cs_pit;
 wire cs_io = cyc_i & stb_i & cs_io_i && cs_pit;
 reg rdy;
 always @(posedge clk_i)

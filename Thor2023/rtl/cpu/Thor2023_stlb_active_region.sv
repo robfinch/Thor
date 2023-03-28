@@ -170,7 +170,7 @@ initial begin
 end
 
 always_ff @(posedge clk)
-	if (cs_rgn && wbs_req.we && wbs_req.cyc) begin
+	if (cs_rgn && wbs_req.we && wbs_req.cyc && wbs_req.stb) begin
 		if (pma_regions[wbs_req.padr[8:6]].lock=="UNLK" || wbs_req.padr[5:4]==2'h3) begin
 			case(wbs_req.padr[5:4])
 			2'd0:	pma_regions[wbs_req.padr[8:6]].pmt[ABITS-1: 0] <= wbs_req.data1[ABITS-1:0];
@@ -182,7 +182,7 @@ always_ff @(posedge clk)
 		end
 	end
 always_ff @(posedge clk)
-if (cs_rgn && wbs_req.cyc)
+if (cs_rgn && wbs_req.cyc && wbs_req.stb)
 	case(wbs_req.padr[5:4])
 	2'd0:	dato <= pma_regions[wbs_req.padr[8:6]].pmt;
 	2'd1:	dato <= pma_regions[wbs_req.padr[8:6]].cta;

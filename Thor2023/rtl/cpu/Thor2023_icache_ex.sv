@@ -45,7 +45,7 @@ import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_icache_ex(rst,clk,state,snoop_adr,snoop_v,snoop_cid,invall,invline,
+module Thor2023_icache_ex(rst,clk,invce,snoop_adr,snoop_v,snoop_cid,invall,invline,
 	ip,ip_o,ihit_o,ihit,ihite,ihito,ic_line_hi_o,ic_line_lo_o,ic_valid,ic_tage,ic_tago,
 	ic_line_i,wway,wr_ic,icache_wre,icache_wro,
 	victim_wr,victim_line
@@ -62,7 +62,7 @@ localparam LOG_WAYS = $clog2(WAYS)-1;
 
 input rst;
 input clk;
-input [6:0] state;
+input invce;
 input address_t snoop_adr;
 input snoop_v;
 input [3:0] snoop_cid;
@@ -87,7 +87,8 @@ output reg icache_wro;
 output reg victim_wr;
 output ICacheLine victim_line;
 
-integer n;
+integer n, m;
+integer g, j;
 
 ICacheLine ic_eline, ic_oline;
 reg [1:0] ic_rwaye,ic_rwayo,wway;
@@ -353,8 +354,8 @@ uictage
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wre),
-	.vadr_i(ic_line_i.vtag),
-	.padr_i(ic_line_i.ptag),
+	.vadr_i({ic_line_i.vtag,{ICacheTagLoBit{1'b0}}}),
+	.padr_i({ic_line_i.ptag,{ICacheTagLoBit{1'b0}}}),
 	.way(wway),
 	.rclk(clk),
 	.ndx(ip[TAGBIT-1:LOBIT]+ip[LOBIT-1]),	// virtual index (same bits as physical address)
@@ -376,8 +377,8 @@ uictago
 	.rst(rst),
 	.clk(clk),
 	.wr(icache_wro),
-	.vadr_i(ic_line_i.vtag),
-	.padr_i(ic_line_i.ptag),
+	.vadr_i({ic_line_i.vtag,{ICacheTagLoBit{1'b0}}}),
+	.padr_i({ic_line_i.ptag,{ICacheTagLoBit{1'b0}}}),
 	.way(wway),
 	.rclk(clk),
 	.ndx(ip[TAGBIT-1:LOBIT]),		// virtual index (same bits as physical address)
@@ -424,9 +425,6 @@ uichito
 	.cv(valid2o)
 );
 
-integer n, m;
-integer g, j;
-
 initial begin
 for (m = 0; m < WAYS; m = m + 1) begin
   for (n = 0; n < LINES; n = n + 1) begin
@@ -435,8 +433,6 @@ for (m = 0; m < WAYS; m = m + 1) begin
   end
 end
 end
-
-wire invce = state==MEMORY4;
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin

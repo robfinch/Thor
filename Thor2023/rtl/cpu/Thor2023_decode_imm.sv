@@ -66,8 +66,8 @@ case(ir.any.opcode)
 OP_SHIFT:
 	case(ir.r2.func)
 	OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:
-		imm <= ir.r2.Rb[6:0];
-	default:	imm <= 'd0;
+		imm = ir.r2.Rb[6:0];
+	default:	imm = 'd0;
 	endcase
 OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI:
 	imm = {{80{ir.ri.immhi[7]}},ir.ri.immhi,ir.ri.immlo};
@@ -76,46 +76,46 @@ OP_ANDI:	// Pad with ones to the left
 OP_ORI,OP_EORI:	// Pad with zeros to the left
 	imm = {{80{1'b0}},ir.ri.immhi,ir.ri.immlo};
 OP_LOAD,OP_LOADZ,OP_STORE:
-	imm = {{88{ir.ls.immlo[7]}},ir.ls.immlo};
+	imm = {{89{ir.ls.immlo[6]}},ir.ls.immlo};
 OP_FADDI,OP_FCMPI,OP_FMULI,OP_FDIVI:
 	imm = imm16x96;
 default:
 	imm = 'd0;
 endcase
 
-inc <= 5'd5;
+inc = 5'd5;
 if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd0) begin
 	if (fpAddi)
-		imm <= imm32x96;
+		imm = imm32x96;
 	else
-		imm <= {{64{ir2[39]}},ir2[39:8]};
-	inc <= 5'd10;
+		imm = {{64{ir2[39]}},ir2[39:8]};
+	inc = 5'd10;
 	if (ir3.any.opcode==OP_PFX && ir3.any.sz==3'd1) begin
 		if (fpAddi)
-			imm <= imm64x96;
+			imm = imm64x96;
 		else
-			imm[95:32] <= {{32{ir3[39]}},ir3[39:8]};
-		inc <= 5'd15;
+			imm[95:32] = {{32{ir3[39]}},ir3[39:8]};
+		inc = 5'd15;
 		if (ir4.any.opcode==OP_PFX && ir4.any.sz==3'd2) begin
 			if (fpAddi)
-				imm <= {ir4[39:8],ir3[39:8],ir2[39:8]};
+				imm = {ir4[39:8],ir3[39:8],ir2[39:8]};
 			else
-				imm[95:64] <= ir4[39:8];
-			inc <= 5'd20;
+				imm[95:64] = ir4[39:8];
+			inc = 5'd20;
 		end
 	end
 end
 else if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd1) begin
-	imm <= {{32{ir2[39]}},ir2[39:8],32'd0};
-	inc <= 5'd10;
+	imm = {{32{ir2[39]}},ir2[39:8],32'd0};
+	inc = 5'd10;
 	if (ir3.any.opcode==OP_PFX && ir3.any.sz==3'd2) begin
-		imm[95:64] <= ir3[39:8];
-		inc <= 5'd15;
+		imm[95:64] = ir3[39:8];
+		inc = 5'd15;
 	end
 end
 else if (ir2.any.opcode==OP_PFX && ir2.any.sz==3'd2) begin
-	imm[95:64] <= {ir2[39:8],64'd0};
-	inc <= 5'd10;
+	imm[95:64] = {ir2[39:8],64'd0};
+	inc = 5'd10;
 end
 end
 

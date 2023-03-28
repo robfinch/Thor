@@ -2,7 +2,9 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 import wishbone_pkg::*;
 
-module Thor2023seq(coreno_i, rst_i, clk_i, bok_i, wbm_req, wbm_resp, rb_i);
+module Thor2023seq(coreno_i, rst_i, clk_i, bok_i, wbm_req, wbm_resp, rb_i,
+	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp,
+	snoop_v, snoop_adr, snoop_cid);
 input [95:0] coreno_i;
 input rst_i;
 input clk_i;
@@ -10,6 +12,13 @@ input bok_i;
 output wb_cmd_request128_t wbm_req;
 input wb_cmd_response128_t wbm_resp;
 input rb_i;
+output wb_cmd_request128_t iwbm_req;
+input wb_cmd_response128_t iwbm_resp;
+output wb_cmd_request128_t dwbm_req;
+input wb_cmd_response128_t dwbm_resp;
+input snoop_v;
+input address_t snoop_adr;
+input [3:0] snoop_cid;
 
 
 wire clk_g;
@@ -33,8 +42,9 @@ wire ihite, ihito;
 wire ic_valid;
 wire [$bits(address_t)-1:6] ic_tage;
 wire [$bits(address_t)-1:6] ic_tago;
+ICacheLine ic_line_lo, ic_line_hi;
 reg [$bits(ICacheLine)*2-1:0] ic_line;
-reg run;
+reg [ICacheLineWidth*2-1:0] ic_data;
 status_reg_t sr;
 operating_mode_t omode = sr.om;
 wire AppMode = omode==OM_APP;
@@ -84,31 +94,33 @@ wire memresp_fifo_v;
 reg rollback = 1'b0;
 
 regspec_t Ra,Rb,Rc,Rt;
-reg rfwr;
+reg rfwr,rfwrg;
 reg [95:0] res;
 wire [95:0] rfoa, rfob, rfoc, rfop;
 reg [95:0] a, b, c;
 wire [95:0] imm2;
 reg [95:0] imm;
-wire [3:0] imm_inc;
+wire [4:0] imm_inc;
 reg predact;
 reg [15:0] predbuf;
 reg [4:0] predcond;
 reg [5:0] predreg;
 reg predt;
 wire takb;
+wire [479:0] group_out;
+reg [479:0] group_in;
 
 Thor2023_regfile urf1 
 (
 	.clk(clk_g),
-	.wg(1'b0),
-	.gwa('d0),
-	.gi('d0),
+	.wg(rfwrg),
+	.gwa(Ra.num[3:0]),
+	.gi(group_in),
 	.wr(rfwr),
 	.wa(Rt.num), 
 	.i(res),
-	.gra('d0),
-	.go(),
+	.gra(Ra.num[3:0]),
+	.go(group_out),
 	.ra0(Ra.num),
 	.ra1(Rb.num),
 	.ra2(Rc.num), 
@@ -122,7 +134,7 @@ Thor2023_regfile urf1
 	.hsp(hsp),
 	.msp(msp), 
 	.pc(pc),
-	.om(om)
+	.om(omode)
 );
 
 //module Thor2023_biu(
@@ -143,7 +155,7 @@ Thor2023_biu ubiu
 	.rst(rst_i),
 	.clk(clk_g),
 	.tlbclk(clk_g),
-	.clock(clock),
+	.clock(1'b0),
 	.AppMode(AppMode),
 	.MAppMode(MAppMode),
 	.omode(omode),
@@ -152,11 +164,12 @@ Thor2023_biu ubiu
 	.pe(pe),
 	.ip(pc),
 	.ip_o(pc_o),
-	.ihit(ihit),
+	.ihit_o(ihit),
 	.ihite(ihite),
 	.ihito(ihito),
 	.ifStall(!run),
-	.ic_line(ic_line),
+	.ic_line_hi(ic_line_hi),
+	.ic_line_lo(ic_line_lo),
 	.ic_valid(ic_valid),
 	.ic_tage(ic_tage),
 	.ic_tago(ic_tago),
@@ -185,7 +198,7 @@ Thor2023_biu ubiu
 	.tid_i(wbm_resp.tid),
 	.we_o(wbm_req.we),
 	.sel_o(wbm_req.sel),
-	.adr_o(wbm_req.adr),
+	.adr_o(wbm_req.padr),
 	.dat_i(wbm_resp.dat),
 	.dat_o(wbm_req.data1),
 	.csr_o(wbm_req.csr),
@@ -196,15 +209,23 @@ Thor2023_biu ubiu
 	.ptbr(ptbr),
 	.ipage_fault(ipage_fault),
 	.clr_ipage_fault(clr_ipage_fault),
-	.itlbmiss(itlbmiss),
-	.clr_itlbmiss(clr_itlbmiss),
 	.rollback(rollback),
-	.rollback_bitmaps()
+	.rollback_bitmaps(),
+	.iwbm_req(iwbm_req),
+	.iwbm_resp(iwbm_resp),
+	.dwbm_req(dwbm_req),
+	.dwbm_resp(dwbm_resp),
+	.snoop_v(snoop_v),
+	.snoop_adr(snoop_adr),
+	.snoop_cid(snoop_cid)
 );
 
+always_comb
+	ic_data = {ic_line_hi.data,ic_line_lo.data};
+	
 always_ff @(posedge clk_g)
 if (state==IFETCH && ihit)
-	{postfix3,postfix2,postfix1,ir} <= ic_line >> {pc[4:0],3'b0};
+	{postfix3,postfix2,postfix1,ir} <= ic_data >> {pc[4:0],3'b0};
 
 Thor2023_decode_imm udci1
 (
@@ -236,6 +257,7 @@ Thor2023_eval_branch ube1
 	.inst(ir),
 	.fdm(1'b0),
 	.a(a),
+	.b(b),
 	.takb(takb)
 );
 
@@ -259,48 +281,8 @@ else begin
 	IFETCH:
 		begin
 			opc <= pc;
-			if (ihit) begin
+			if (ihit)
 				goto (DECODE);
-			end
-			else begin
-				if (memreq.adr!={pc[31:5],5'h0}) begin
-					memreq.tid <= tid;
-					memreq.tag <= 'd0;
-					memreq.thread <= 'd0;
-					memreq.omode <= om;
-					memreq.ip <= pc;
-					memreq.step <= 'd0;
-					memreq.count <= 'd0;
-					memreq.wr <= 1'b1;
-					memreq.adr <= {pc[31:5],5'd0};
-					memreq.func <= MR_ICACHE_LOAD;
-					memreq.func2 <= MR_LDN;
-					memreq.load <= 1'b0;
-					memreq.store <= 1'b0;
-					memreq.need_steps <= 1'b0;
-					memreq.v <= 1'b1;
-					memreq.empty <= 1'b0;
-					memreq.cause <= FLT_NONE;
-					memreq.sel <= 16'hFFFF;
-					memreq.asid <= asid;
-					memreq.vcadr <= {pc[31:5],5'd0};
-					memreq.res <= 'd0;
-					memreq.dchit <= 'd0;
-					memreq.cmt <= 'd0;
-					memreq.sz <= Thor2023Pkg::penta;
-					memreq.hit <= {ihito,ihite};
-					memreq.mod <= 2'b00;
-					memreq.acr <= 4'hF;
-					memreq.tlb_access <= 1'b0;
-					memreq.ptgram_en <= 1'b0;
-					memreq.rgn_en <= 1'b0;
-					memreq.pde_en <= 1'b0;
-					memreq.pmtram_ena <= 1'b0;
-					memreq.wr_tgt <= 1'b0;
-					memreq.tgt <= 'd0;
-					tid <= tid + 2'd1;
-				end
-			end
 		end
 	DECODE:
 		begin
@@ -431,10 +413,11 @@ else begin
 				end				
 			OP_LOAD,OP_LOADZ:
 				begin
+					memreq <= 'd0;
 					memreq.tid <= tid;
 					memreq.tag <= 'd0;
 					memreq.thread <= 'd0;
-					memreq.omode <= om;
+					memreq.omode <= omode;
 					memreq.ip <= pc;
 					memreq.step <= 'd0;
 					memreq.count <= 'd0;
@@ -449,7 +432,18 @@ else begin
 					PRC24:	memreq.func2 <= MR_LDC;
 					PRC40:	memreq.func2 <= MR_LDP;
 					PRC96:	memreq.func2 <= MR_LDN;
-					default:	memreq.func2 <= MR_LDN;
+					default:
+						begin
+							if (ir[39])
+								case(sr.ptrsz)
+								2'd0:	memreq.func2 <= MR_LDT;
+								2'd1: memreq.func2 <= MR_LDO;
+								2'd2:	memreq.func2 <= MR_LDN;
+								default:	memreq.func2 <= MR_LDO;
+								endcase
+							else
+								memreq.func2 <= MR_STN;
+						end
 					endcase
 					memreq.load <= 1'b1;
 					memreq.store <= 1'b0;
@@ -465,8 +459,19 @@ else begin
 					PRC24:	memreq.sel <= 16'h0007;
 					PRC40:	memreq.sel <= 16'h001F;
 					PRC96:	memreq.sel <= 16'h0FFF;
-					default:	memreq.sel <= 16'h0FFF;
+					default:
+						if (ir[39])
+							case(sr.ptrsz)
+							2'd0:	memreq.sel <= 64'h000F;
+							2'd1:	memreq.sel <= 64'h00FF;
+							2'd2:	memreq.sel <= 64'h0FFF;
+							default:	memreq.sel <= 16'h00FF;
+							endcase
+						else
+							memreq.sel <= 64'h0FFFFFFFFFFFFFFF;
 					endcase
+					if (ir.ls.sz==3'd7 && ir[39])
+						memreq.group <= 1'b1;
 					memreq.asid <= asid;
 					memreq.adr <= ea;
 					memreq.vcadr <= 'd0;
@@ -498,10 +503,11 @@ else begin
 				end
 			OP_STORE:
 				begin
+					memreq <= 'd0;
 					memreq.tid <= tid;
 					memreq.tag <= 'd0;
 					memreq.thread <= 'd0;
-					memreq.omode <= om;
+					memreq.omode <= omode;
 					memreq.ip <= pc;
 					memreq.step <= 'd0;
 					memreq.count <= 'd0;
@@ -516,7 +522,20 @@ else begin
 					PRC24:	memreq.func2 <= MR_STC;
 					PRC40:	memreq.func2 <= MR_STP;
 					PRC96:	memreq.func2 <= MR_STN;
-					default:	memreq.func2 <= MR_STN;
+					default:	
+						begin
+							if (ir[39]) begin
+								memreq.func <= MR_STOREPTR;
+								case(sr.ptrsz)
+								2'd0:	memreq.func2 <= MR_STT;
+								2'd1: memreq.func2 <= MR_STO;
+								2'd2:	memreq.func2 <= MR_STN;
+								default:	memreq.func2 <= MR_STO;
+								endcase
+							end
+							else
+								memreq.func2 <= MR_STN;
+						end
 					endcase
 					memreq.load <= 1'b0;
 					memreq.store <= 1'b1;
@@ -525,19 +544,33 @@ else begin
 					memreq.empty <= 1'b0;
 					memreq.cause <= FLT_NONE;
 					case(ir.ls.sz)
-					PRC8:		memreq.sel <= 16'h0001;
-					PRC16:	memreq.sel <= 16'h0003;
-					PRC32:	memreq.sel <= 16'h000F;
-					PRC64:	memreq.sel <= 16'h00FF;
-					PRC24:	memreq.sel <= 16'h0007;
-					PRC40:	memreq.sel <= 16'h001F;
-					PRC96:	memreq.sel <= 16'h0FFF;
-					default:	memreq.sel <= 16'h0FFF;
+					PRC8:		memreq.sel <= 64'h0001;
+					PRC16:	memreq.sel <= 64'h0003;
+					PRC32:	memreq.sel <= 64'h000F;
+					PRC64:	memreq.sel <= 64'h00FF;
+					PRC24:	memreq.sel <= 64'h0007;
+					PRC40:	memreq.sel <= 64'h001F;
+					PRC96:	memreq.sel <= 64'h0FFF;
+					default:
+						if (ir[39])
+							case(sr.ptrsz)
+							2'd0:	memreq.sel <= 64'h000F;
+							2'd1:	memreq.sel <= 64'h00FF;
+							2'd2:	memreq.sel <= 64'h0FFF;
+							default:	memreq.sel <= 16'h00FF;
+							endcase
+						else
+							memreq.sel <= 64'h0FFFFFFFFFFFFFFF;
 					endcase
 					memreq.asid <= asid;
 					memreq.adr <= ea;
 					memreq.vcadr <= 'd0;
-					memreq.res <= a;
+					if (ir.ls.sz==3'd7 && ir[39]) begin
+						memreq.group <= 1'b1;
+						memreq.res <= {32'd0,group_out};
+					end
+					else
+						memreq.res <= {416'd0,a};
 					memreq.dchit <= 'd0;
 					memreq.cmt <= 'd0;
 					case(ir.ls.sz)
@@ -548,7 +581,13 @@ else begin
 					PRC24:	memreq.sz <= Thor2023Pkg::char;
 					PRC40:	memreq.sz <= Thor2023Pkg::penta;
 					PRC96:	memreq.sz <= Thor2023Pkg::n96;
-					default:	memreq.sz <= Thor2023Pkg::nul;
+					default:	
+						case(sr.ptrsz)
+						2'd0:	memreq.sz = Thor2023Pkg::tetra;
+						2'd1:	memreq.sz = Thor2023Pkg::octa;
+						2'd2:	memreq.sz = Thor2023Pkg::n96;
+						default:	memreq.sz = Thor2023Pkg::octa;
+						endcase
 					endcase
 					memreq.hit <= 2'b00;
 					memreq.mod <= 2'b00;
@@ -576,9 +615,13 @@ else begin
 	MEMORY2:
 		begin
 			if (memresp.load) begin
-				rfwr <= 1'b1;
+				if (memresp.group)
+					rfwrg <= 1'b1;
+				else
+					rfwr <= 1'b1;
 				Rt <= memresp.tgt;
 				res <= memresp.res;
+				group_in <= memresp.res;
 			end
 			goto (IFETCH);
 		end
@@ -614,6 +657,7 @@ endtask
 task tOnce;
 begin
 	rfwr <= 1'b0;
+	rfwrg <= 1'b0;
 	memreq.wr <= 1'b0;
 	memresp_fifo_rd <= 1'b0;
 end
