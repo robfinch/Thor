@@ -1,0 +1,67 @@
+     1	
+     2	
+     3	
+     4	
+     5	char	flags[8191];
+     6	
+     7	main()
+     8	{
+     9	int i,prime,k,count,iter;
+    10	printf("10 iterations\n");
+    11	for(iter=1;iter<= 10;iter++){
+    12	count=0;
+    13	for(i = 0; i<=8190;i++)
+    14	flags[i]=true;
+    15	for(i=0;i <= 8190; i++){
+    16	if(flags[i]){
+    17	prime = i+i+3;
+    18	k=i+prime;
+    19	while(k<=8190){
+    20	flags[k] = false;
+    21	k += prime;
+    22	}
+    23	count = count+1;
+    24	}
+    25	}
+    26	}
+    27	printf("\n%d primes\n",count);
+    28	}
+    29	
+
+
+*** local symbol table ***
+
+7 _i         =fffffff4  12   -    Auto        Int
+7 _prime     =ffffffe4  12   -    Auto        Int
+7 _k         =ffffffd4  12   -    Auto        Int
+7 _count     =ffffffc4  12   -    Auto        Int
+7 _iter      =ffffffb4  12   -    Auto        Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =003ffe  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -108
+		Stkspc: 108
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+15 _flags     =000000  16382   -    Global      Array of Char
+31 __autonew  =000000  8   -    
+32 _printf    =000000  0   -    External    Function returning Int
+		Parameters:
+			Type array:
+   015 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+
+ *** structures and unions ***
+

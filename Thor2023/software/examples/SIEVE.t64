@@ -1,0 +1,150 @@
+ 
+	.bss
+	.align	8
+
+	.bss
+.lcomm _flags,16382
+	.type	_flags,@object
+	.size	_flags,16382
+
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ 
+	.data
+	.align	14
+
+	.align	14
+
+	.align	14
+
+	.align	14
+
+	.text
+	.align	0
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,48
+  std      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,108
+  std      lr1,24[fp]
+  lea      gp,_bss_start
+  lea      gp1,_rodata_start
+  std      s0,0[sp]
+  std      s1,12[sp]
+  std      s2,24[sp]
+  std      s3,36[sp]
+  std      s4,48[sp]
+# printf("10 iterations\n");
+  lea      t0,SIEVE_1[gp1]
+  std      t0,0[sp]
+  jsr      _printf
+  add      sp,sp,12
+# for(iter=1;iter<= 10;iter++){
+  ldi      s1,1
+  ldi      t0,10
+  blt      t0,s1,.00027
+.00026:
+# count=0;
+  mov      s3,r0
+# for(i = 0; i<=8190;i++)
+  mov      s0,r0
+  ldi      t0,8190
+  blt      t0,s0,.00030
+.00029:
+# flags[i]=true;
+  ldi      t1,1
+  stw      t1,_flags[gp+s0*]
+.00031:
+  add      s0,s0,1
+  ldi      t0,8190
+  bge      t0,s0,.00029
+.00030:
+# for(i=0;i <= 8190; i++){
+  mov      s0,r0
+  ldi      t0,8190
+  blt      t0,s0,.00033
+.00032:
+# if(flags[i]){
+  ldw      t7,_flags[gp+s0*]
+  beqz     t7,.00035
+# prime = i+i+3;
+  add      t1,s0,s0
+  add      s4,t1,3
+# k=i+prime;
+  add      s2,s0,s4
+# while(k<=8190){
+  ldi      t0,8190
+  blt      t0,s2,.00038
+.00037:
+# flags[k] = false;
+  stw      r0,_flags[gp+s2*]
+# k += prime;
+  add      s2,s2,s4
+  ldi      t0,8190
+  bge      t0,s2,.00037
+.00038:
+# count = count+1;
+  add      s3,s3,1
+.00035:
+  add      s0,s0,1
+  ldi      t0,8190
+  bge      t0,s0,.00032
+.00033:
+.00028:
+  add      s1,s1,1
+  ldi      t0,10
+  bge      t0,s1,.00026
+.00027:
+# printf("\n%d primes\n",count);
+  std      s3,0[sp]
+  lea      t0,SIEVE_2[gp1]
+  std      t0,12[sp]
+  jsr      _printf
+  add      sp,sp,24
+.00025:
+  ldd      s0,0[sp]
+  ldd      s1,12[sp]
+  ldd      s2,24[sp]
+  ldd      s3,36[sp]
+  ldd      s4,48[sp]
+  ldd      lr1,24[fp]
+  mov      sp,fp
+  ldd      fp,[sp]
+  add      sp,sp,48
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	SIEVE_1,@object
+	.size	SIEVE_1,30
+SIEVE_1: # 10 iterations
+
+	.2byte	49,48,32,105,116,101,114,97
+	.2byte	116,105,111,110,115,10,0
+	.type	SIEVE_2,@object
+	.size	SIEVE_2,24
+SIEVE_2: # %d primes
+
+	.2byte	10,37,100,32,112,114,105,109
+	.2byte	101,115,10,0
+	.extern	_printf
