@@ -133,6 +133,7 @@ reg [LOG_ENTRIES-1:0] inv_count;
 
 tlb_count_t master_count;
 wb_cmd_request128_t req,req1,wbs_req,wb_req;
+wb_cmd_response128_t wbm_resp;
 wb_asid_t asid_i;
 wb_asid_t asidd;
 wb_asid_t tlbmiss_asid;
@@ -152,8 +153,6 @@ address_t adr_i;
 reg [LOG_ENTRIES-1:0] adr_i_slice [0:ASSOC-1];
 address_t iadrd;
 reg next_i;
-wb_cmd_request128_t wbm_req;
-wb_cmd_response128_t wbm_resp;
 STLBE [ASSOC-1:0] tlbdato;
 wire clk_g = clk_i;
 
@@ -313,7 +312,7 @@ else begin
 	end
 end
 
-always_ff @(posedge clk_g)
+always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
 	dato <= 'd0;
 else begin
@@ -380,50 +379,46 @@ always_comb
 	rr_ce = ne_ack| ~|(rr_req & ~rr_active);
 always_comb
 	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1)
-		if (n5==CHANNELS-1)
-			rr_req[n5] = wbm_req.cyc;
-		else
+//		if (n5==CHANNELS-1)
+//			rr_req[n5] = wbm_req.cyc;
+//		else
 			rr_req[n5] = wbn_req_i[n5].cyc;
 always_comb
 begin
 	req = 'd0;
 	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1)
 		if (rr_sel[n5])	begin // should be one hot
-			if (n5==CHANNELS-1)
-				req = wbm_req;
-			else
+//			if (n5==CHANNELS-1)
+//				req = wbm_req;
+//			else
 				req = wbn_req_i[n5];
 		end
 end
+
 always_comb
 begin
 	wbm_resp = 'd0;
-	wbn_resp_o = 'd0;
-	if (wb_resp_i.tid[7:4]==CHANNELS-1) begin
-		if (cs_config|cs_stlbq) begin
-			wbm_resp.cid = wb_req_o.cid;
-			wbm_resp.tid = wb_req_o.tid;
-			wbm_resp.stall = 1'b0;
-			wbm_resp.next = 1'b0;
-			wbm_resp.ack = acko;
-			wbm_resp.err = 1'b0;
-			wbm_resp.rty = 1'b0;
-			wbm_resp.pri = 4'd7;
-			wbm_resp.dat = dato;
-			wbm_resp.adr = wb_req_o.padr;
-		end
-		else begin
-			wbm_resp = wb_resp_i;
-			wbm_resp.adr = wb_req_o.padr;
-		end
-		wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
-		wbn_resp_o[wb_resp_i.tid[7:4]].adr = wb_req_o.padr;
-	end
-	else begin
-		wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
-		wbn_resp_o[wb_resp_i.tid[7:4]].adr = wb_req_o.padr;
-	end
+	wbm_resp.cid = wb_req_o.cid;
+	wbm_resp.tid = wb_req_o.tid;
+	wbm_resp.stall = 1'b0;
+	wbm_resp.next = 1'b0;
+	wbm_resp.ack = acko;
+	wbm_resp.err = 1'b0;
+	wbm_resp.rty = 1'b0;
+	wbm_resp.pri = 4'd7;
+	wbm_resp.dat = dato;
+	wbm_resp.adr = wb_req_o.padr;
 end
+
+always_comb
+begin
+	wbn_resp_o = 'd0;
+	wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
+	if (wbm_resp.ack)
+		wbn_resp_o[wbm_resp.tid[7:4]] = wbm_resp;
+//	wbn_resp_o[wb_resp_i.tid[7:4]].adr = wb_req_o.padr;
+end
+
 always_comb
 	xlaten_i = req.cyc;
 always_comb
@@ -444,6 +439,8 @@ else begin
 	rr_active <= rr_active | rr_sel;
 	if (wb_resp_i.ack|wb_resp_i.rty|wb_resp_i.err)
 		rr_active[wb_resp_i.tid[7:4]] <= 1'b0;
+	if (wbm_resp.ack)
+		rr_active[wbm_resp.tid[7:4]] <= 1'b0;
 end
 wire [3:0] cache_type = wb_req_o.cache;
 
@@ -554,11 +551,11 @@ edge_det u5 (
 
 // Detect a change in the page number
 wire cd_adr;
-change_det #(.WID($bits(address_t)-16)) ucd1 (
+change_det #(.WID($bits(address_t)-LOG_PAGE_SIZE)) ucd1 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(adr_i[$bits(address_t)-1:16]),
+	.i(adr_i[$bits(address_t)-1:LOG_PAGE_SIZE]),
 	.cd(cd_adr)
 );
 
@@ -599,7 +596,6 @@ if (rst_i) begin
 	inv_count <= 'd0;
 	invall <= 'd0;
 	clock_r <= 1'b0;
-	wbm_req <= 'd0;
 end
 else begin
 tlbeni  <= 1'b0;

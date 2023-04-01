@@ -24,7 +24,7 @@ input [3:0] snoop_cid;
 wire clk_g;
 assign clk_g = clk_i;
 
-typedef enum logic [7:0] {
+typedef enum logic [3:0] {
 	IFETCH = 8'd1,
 	DECODE,
 	OFETCH,
@@ -43,11 +43,15 @@ wire ic_valid;
 wire [$bits(address_t)-1:6] ic_tage;
 wire [$bits(address_t)-1:6] ic_tago;
 ICacheLine ic_line_lo, ic_line_hi;
-reg [$bits(ICacheLine)*2-1:0] ic_line;
 reg [ICacheLineWidth*2-1:0] ic_data;
+
+status_reg_t [7:0] sr_stack;
 status_reg_t sr;
 operating_mode_t omode = sr.om;
+wire mprv = sr.mprv;
 wire AppMode = omode==OM_APP;
+wire MAppMode = mprv ? sr_stack[0].om==OM_APP : sr.om==OM_APP;
+
 wire ipage_fault;
 reg clr_ipage_fault;
 wire itlbmiss;
@@ -107,8 +111,8 @@ reg [4:0] predcond;
 reg [5:0] predreg;
 reg predt;
 wire takb;
-wire [479:0] group_out;
-reg [479:0] group_in;
+wire [511:0] group_out;
+reg [511:0] group_in;
 
 Thor2023_regfile urf1 
 (
@@ -207,8 +211,6 @@ Thor2023_biu ubiu
 	.keys(keys),
 	.arange(),
 	.ptbr(ptbr),
-	.ipage_fault(ipage_fault),
-	.clr_ipage_fault(clr_ipage_fault),
 	.rollback(rollback),
 	.rollback_bitmaps(),
 	.iwbm_req(iwbm_req),
@@ -223,9 +225,13 @@ Thor2023_biu ubiu
 always_comb
 	ic_data = {ic_line_hi.data,ic_line_lo.data};
 	
-always_ff @(posedge clk_g)
-if (state==IFETCH && ihit)
-	{postfix3,postfix2,postfix1,ir} <= ic_data >> {pc[4:0],3'b0};
+always_ff @(posedge clk_g, posedge rst_i)
+if (rst_i)
+	{postfix3,postfix2,postfix1,ir} <= {4{NOP_INSN}};
+else begin
+	if (state==IFETCH && ihit)
+		{postfix3,postfix2,postfix1,ir} <= ic_data >> {pc[4:0],3'b0};
+end
 
 Thor2023_decode_imm udci1
 (
@@ -272,88 +278,15 @@ wire [191:0] roli = {a,a} << ir.r2.Rb[6:0];
 wire [191:0] ror = {a,a} >> b[6:0];
 wire [191:0] rori = {a,a} >> ir.r2.Rb[6:0];
 
-always_ff @(posedge clk_g)
+always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
 	tReset();
 else begin
 	tOnce();
 	case(state)
-	IFETCH:
-		begin
-			opc <= pc;
-			if (ihit)
-				goto (DECODE);
-		end
-	DECODE:
-		begin
-			pc <= pc + imm_inc;
-			case(ir.any.opcode)
-			OP_R2:
-				case(ir.r2.func)
-				OP_ADD,OP_CMP,OP_AND,OP_OR,OP_EOR,OP_MUL,OP_DIV:
-					begin
-						Ra <= ir.r2.Ra;
-						Rb <= ir.r2.Rb;
-						Rt <= ir.r2.Rt;
-					end	
-				endcase
-			OP_SHIFT:
-				case(ir.r2.func)
-				OP_ASL,OP_LSR,OP_LSL,OP_ASR,OP_ROL,OP_ROR:
-					begin
-						Ra <= ir.r2.Ra;
-						Rb <= ir.r2.Rb;
-						Rt <= ir.r2.Rt;
-					end
-				OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:
-					begin
-						Ra <= ir.r2.Ra;
-						Rb <= ir.r2.Rb;
-						Rt <= ir.r2.Rt;
-					end
-				endcase
-			OP_ADDI,OP_CMPI,OP_ANDI,OP_ORI,OP_EORI,OP_MULI,OP_DIVI,
-			OP_CSR:
-				begin
-					Ra <= ir.r2.Ra;
-					Rb <= ir.r2.Rb;
-					Rt <= ir.r2.Rt;
-				end	
-			endcase
-			imm <= imm2;
-			goto (OFETCH);
-		end
-	OFETCH:
-		begin
-			goto (EXECUTE);
-			predbuf <= {predbuf,2'b11};
-			a <= Ra.sign ? -rfoa : rfoa;
-			c <= rfoc;
-			case(ir.any.opcode)
-			OP_R2:
-				case(ir.r2.func)
-				OP_PRED:
-					begin
-						predbuf <= {ir[33:29],ir[26:16]};
-						predreg <= ir[15:10];
-						predcond <= ir[9:5];
-						goto (IFETCH);
-					end
-				endcase
-			OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_ANDI,OP_ORI,OP_EORI:
-				b <= imm;
-			OP_CSR:
-				b <= {ir[37:32],ir[30:23]};
-			default:
-				b <= Rb.sign ? -rfob : rfob;
-			endcase
-			// If predicate is false, ignore instruction
-			if (!((predbuf[15:14]==2'b01 &&  rfop[predcond]) || 
-					(predbuf[15:14]==2'b10 && ~rfop[predcond]) ||
-					(predbuf[15:14]==2'b11) ||
-					(predbuf[15:14]==2'b00)))
-				goto (IFETCH);
-		end
+	IFETCH:	tIFetch();
+	DECODE:	tDecode();
+	OFETCH:	tOFetch();
 	EXECUTE:
 		begin
 			case(ir.any.opcode)
@@ -398,19 +331,7 @@ else begin
 					// tPrivilege();
 					goto (IFETCH);
 				end
-			OP_Bcc:
-				begin
-					if (ir.br.cnd==SR) begin
-						rfwr <= 1'b1;
-						Rt <= ir.br.Rn;
-						res <= opc;
-						pc <= opc + {{40{ir[39]}},ir[39:16]};
-					end
-					else if (takb) begin
-						pc <= opc + {{40{ir[39]}},ir[39:16]};
-					end
-					goto (IFETCH);
-				end				
+			OP_Bcc:	tExBranch();
 			OP_LOAD,OP_LOADZ:
 				begin
 					memreq <= 'd0;
@@ -442,7 +363,7 @@ else begin
 								default:	memreq.func2 <= MR_LDO;
 								endcase
 							else
-								memreq.func2 <= MR_STN;
+								memreq.func2 <= MR_LDN;
 						end
 					endcase
 					memreq.load <= 1'b1;
@@ -485,7 +406,7 @@ else begin
 					PRC64:	memreq.sz <= Thor2023Pkg::octa;
 					PRC24:	memreq.sz <= Thor2023Pkg::char;
 					PRC40:	memreq.sz <= Thor2023Pkg::penta;
-					PRC96:	memreq.sz <= Thor2023Pkg::n96;
+					PRC96:	memreq.sz <= Thor2023Pkg::dodeca;
 					default:	memreq.sz <= Thor2023Pkg::nul;
 					endcase
 					memreq.hit <= 2'b00;
@@ -580,13 +501,13 @@ else begin
 					PRC64:	memreq.sz <= Thor2023Pkg::octa;
 					PRC24:	memreq.sz <= Thor2023Pkg::char;
 					PRC40:	memreq.sz <= Thor2023Pkg::penta;
-					PRC96:	memreq.sz <= Thor2023Pkg::n96;
+					PRC96:	memreq.sz <= Thor2023Pkg::dodeca;
 					default:	
 						case(sr.ptrsz)
-						2'd0:	memreq.sz = Thor2023Pkg::tetra;
-						2'd1:	memreq.sz = Thor2023Pkg::octa;
-						2'd2:	memreq.sz = Thor2023Pkg::n96;
-						default:	memreq.sz = Thor2023Pkg::octa;
+						2'd0:	memreq.sz <= Thor2023Pkg::tetra;
+						2'd1:	memreq.sz <= Thor2023Pkg::octa;
+						2'd2:	memreq.sz <= Thor2023Pkg::dodeca;
+						default:	memreq.sz <= Thor2023Pkg::octa;
 						endcase
 					endcase
 					memreq.hit <= 2'b00;
@@ -661,6 +582,148 @@ begin
 	memreq.wr <= 1'b0;
 	memresp_fifo_rd <= 1'b0;
 end
+endtask
+
+task tIFetch;
+begin
+	opc <= pc;
+	if (ihit)
+		goto (DECODE);
+end
+endtask
+
+task tDecode;
+begin
+	pc <= pc + imm_inc;
+	case(ir.any.opcode)
+	OP_R2:
+		case(ir.r2.func)
+		OP_ADD,OP_CMP,OP_AND,OP_OR,OP_EOR,OP_MUL,OP_DIV:
+			begin
+				Ra <= ir.r2.Ra;
+				Rb <= ir.r2.Rb;
+				Rt <= ir.r2.Rt;
+			end	
+		default:	;
+		endcase
+	OP_SHIFT:
+		case(ir.r2.func)
+		OP_ASL,OP_LSR,OP_LSL,OP_ASR,OP_ROL,OP_ROR:
+			begin
+				Ra <= ir.r2.Ra;
+				Rb <= ir.r2.Rb;
+				Rt <= ir.r2.Rt;
+			end
+		OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:
+			begin
+				Ra <= ir.r2.Ra;
+				Rb <= ir.r2.Rb;
+				Rt <= ir.r2.Rt;
+			end
+		default:	;
+		endcase
+	OP_ADDI,OP_CMPI,OP_ANDI,OP_ORI,OP_EORI,OP_MULI,OP_DIVI,
+	OP_CSR:
+		begin
+			Ra <= ir.r2.Ra;
+			Rb <= ir.r2.Rb;
+			Rt <= ir.r2.Rt;
+		end	
+	OP_LOAD,OP_LOADZ:
+		begin
+			Ra <= 'd0;
+			Rb <= ir.ls.Rb;
+			Rc <= ir.ls.Rc;
+			Rt <= ir.ls.Rn;
+		end
+	OP_STORE:
+		begin
+			Ra <= ir.ls.Rn;
+			Rb <= ir.ls.Rb;
+			Rc <= ir.ls.Rc;
+			Rt <= 'd0;
+		end
+	default:	;
+	endcase
+	imm <= imm2;
+	goto (OFETCH);
+end
+endtask
+
+task tOFetch;
+begin
+	goto (EXECUTE);
+	predbuf <= {predbuf,2'b11};
+	a <= Ra.sign ? -rfoa : rfoa;
+	case(ir.any.opcode)
+	OP_R2:
+		case(ir.r2.func)
+		OP_PRED:
+			begin
+				predbuf <= {ir[33:29],ir[26:16]};
+				predreg <= ir[15:10];
+				predcond <= ir[9:5];
+				goto (IFETCH);
+			end
+		default:	;
+		endcase
+	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_ANDI,OP_ORI,OP_EORI:
+		b <= imm;
+	OP_CSR:
+		b <= {ir[37:32],ir[30:23]};
+	default:
+		b <= Rb.sign ? -rfob : rfob;
+	endcase
+	case(ir.any.opcode)
+	OP_LOAD,OP_LOADZ,OP_STORE:
+		if (ir.ls.sz==PRCNDX) begin
+			if (ir[11:9]==3'd7)
+				c <= 'd0;
+			else
+				c <= rfoc;
+		end
+		else
+			c <= 'd0;
+	default:	c <= rfoc;
+	endcase
+	// If predicate is false, ignore instruction
+	if (!((predbuf[15:14]==2'b01 &&  rfop[predcond]) || 
+			(predbuf[15:14]==2'b10 && ~rfop[predcond]) ||
+			(predbuf[15:14]==2'b11) ||
+			(predbuf[15:14]==2'b00)))
+		goto (IFETCH);
+end
+endtask
+
+
+task tExBranch;
+begin
+	case(ir.br.cnd)
+	RA:
+		begin
+			rfwr <= 1'b0;
+			Rt <= 'd0;
+			res <= opc;
+//			pc[27:0] <= {ir[23:12],ir[39:24]};
+			pc[13:0] <= ir[37:24];
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{68{ir[23]}},ir[23:12],ir[39:38]};
+		end
+	SR:
+		begin
+			rfwr <= 1'b1;
+			Rt <= 6'd56+ir.br.Rn[1:0];
+			res <= opc;
+			pc[13:0] <= ir[37:24];
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{68{ir[23]}},ir[23:12],ir[39:38]};
+		end
+	default:
+		if (takb) begin
+			pc[13:0] <= ir[37:24];
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{80{ir[39]}},ir[39:38]};
+		end
+	endcase
+	goto (IFETCH);
+end				
 endtask
 
 task goto;

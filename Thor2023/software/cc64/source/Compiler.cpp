@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2020  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -31,7 +31,7 @@ extern int options(char *);
 extern int openfiles(char *);
 extern void summary();
 extern void ParseGlobalDeclarations();
-extern void makename(char *s, char *e);
+extern void makename_s(char *s, size_t ln, char *e);
 extern char *errtext(int errnum);
 extern std::string *classname;
 extern void doInitCleanup();
@@ -143,7 +143,7 @@ int Compiler::PreprocessFile(char *nm)
 	static char sysbuf[500];
 
 	strcpy_s(outname, sizeof(outname), nm);
-	makename(outname,(char *)".fpp");
+	makename_s(outname, sizeof(outname), (char *)".fpp");
 	sprintf_s(sysbuf, sizeof(sysbuf), "fpp -b %s %s", nm, outname);
 	return system(sysbuf);
 }

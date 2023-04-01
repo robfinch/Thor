@@ -54,7 +54,6 @@ input address_t padr_i;
 input [1:0] way;
 input rclk;
 input [$clog2(LINES)-1:0] ndx;
-(* ram_style="distributed" *)
 output cache_tag_ex_t [3:0] tag;
 output cache_tag_ex_t ptags0 [0:LINES-1];
 output cache_tag_ex_t ptags1 [0:LINES-1];

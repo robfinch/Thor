@@ -2514,7 +2514,7 @@ j1:
 		  NextToken();
 		  if (lastst==id) {
 			  if (strcmp(lastid,"_pointers")==0)
-				  sizeOfPtr = 8;
+				  sizeOfPtr = 12;
 		  }
 	  }
       break;

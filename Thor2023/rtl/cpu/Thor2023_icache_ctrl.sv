@@ -79,13 +79,16 @@ lfsr17 #(.WID(17)) ulfsr1
 	.o(lfsr_o)
 );
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, posedge rst_i)
 if (rst_i) begin
 	req_state <= RESET;
 	resp_state <= RESET;
 	to_cnt <= 'd0;
 	tid_cnt <= 'd0;
 	wbm_req <= 'd0;
+	wr_ic <= 1'd0;
+	v <= 2'b00;
+	line_o <= 'd0;
 end
 else begin
 	wr_ic <= 1'b0;

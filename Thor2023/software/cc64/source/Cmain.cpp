@@ -42,7 +42,7 @@
  *		Norcross, Ga 30092
  */
 
-void makename(char *s, char *e);
+void makename_s(char *s, size_t ln, char *e);
 void summary();
 int options(char *);
 int openfiles(char *);
@@ -83,7 +83,9 @@ int main(int argc, char **argv)
 	int cnt;
 	txtoStream ofs;
 	Int128 aa, bb, cc, qq, rr;
+	int op;
 
+	syntax = STD;
 	aa = Int128::Convert(0x769bdd5fLL);
 	bb = Int128::Convert(0xbcc6f09eLL);
 	Int128::Mul(&cc, &aa, &bb);
@@ -158,15 +160,15 @@ int main(int argc, char **argv)
 	cpu.SupportsBBC = true;
 	cpu.SupportsBBS = true;
 	cpu.SupportsPop = false;
-	cpu.SupportsPush = true;
+	cpu.SupportsPush = false;
 	cpu.SupportsLink = false;
 	cpu.SupportsUnlink = false;
 	cpu.SupportsBitfield = false;
 	cpu.SupportsLDM = false;
 	cpu.SupportsSTM = false;
 	cpu.SupportsPtrdif = false;
-	cpu.SupportsEnter = true;
-	cpu.SupportsLeave = true;
+	cpu.SupportsEnter = false;
+	cpu.SupportsLeave = false;
 	cpu.SupportsIndexed = true;
 	cpu.Addsi = false;
 	cpu.ext_op = op_ext;
@@ -181,10 +183,12 @@ int main(int argc, char **argv)
 	cpu.ldt_op = op_ldt;
 	cpu.ldwu_op = op_ldwu;
 	cpu.ldw_op = op_ldw;
+	cpu.ldd_op = op_ldd;
 	cpu.stb_op = op_stb;
 	cpu.sto_op = op_sto;
 	cpu.stt_op = op_stt;
 	cpu.stw_op = op_stw;
+	cpu.std_op = op_std;
 	cpu.InitRegs();
 //	printf("c64 starting...\r\n");
 	while(--argc) {
@@ -345,9 +349,9 @@ int PreProcessFile(char *nm)
 	static char sysbuf[500];
 
 	strcpy_s(outname, sizeof(outname), nm);
-	makename(outname,(char *)".fpp");
+	makename_s(outname,sizeof(outname),(char *)".fpp");
 //	snprintf(sysbuf, sizeof(sysbuf), "fpp /d /V -b %s %s", nm, outname);
-	snprintf(sysbuf, sizeof(sysbuf), "fpp -b %s %s", nm, outname);
+	snprintf(sysbuf, sizeof(sysbuf), "fpp64 -b %s %s", nm, outname);
 	return system(sysbuf);
 }
 
@@ -376,10 +380,10 @@ int openfiles(char *s)
 		p = strrchr(nmspace[0],'.');
 		if (p)
 			*p = '\0';
-		makename(irfile, (char *)".hir");
-		makename(infile, (char *)".fpp");
-        makename(listfile, (char *)".lis");
-        makename(outfile,(char *)cpu.fileExt.c_str());
+		makename_s(irfile, sizeof(irfile), (char *)".hir");
+		makename_s(infile, sizeof(infile), (char *)".fpp");
+        makename_s(listfile, sizeof(listfile), (char *)".lis");
+        makename_s(outfile, sizeof(outfile), (char *)cpu.fileExt.c_str());
     dbgfile += ".xml";
 		ifs = new std::ifstream();
 		ifs->open(infile,std::ios::in);
@@ -448,13 +452,14 @@ int openfiles(char *s)
         return 1;
 }
 
-void makename(char *s, char *e)
+void makename_s(char *s, size_t L, char *e)
 {
 	int n;
 
 	n = strlen(s);
 	while(s[n]!='.' && n >= 0) n--;
-	strcpy_s(&s[n],256,e);
+	if (n > 0)
+		strcpy_s(&s[n],L-n-1,e);
 	//while(*s != 0 && *s != '.')
  //       ++s;
  //   while(*s++ = *e++);

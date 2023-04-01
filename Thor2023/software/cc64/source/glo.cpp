@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -26,31 +26,32 @@
 #include "stdafx.h"
 /*      global definitions      */
 
+int syntax;
 Compiler compiler;
 CPU cpu;
 int pass;
 int maxPn = 15;
 int gCpu = 7;
-int regPC = 31;
-int regSP = 31;
-int regFP = 30;
+int regPC = 53;
+int regSP = 63;
+int regFP = 62;
 int regAFP = 31;      // alternate frame pointer
-int regLR = 130;
+int regLR = 56;
 int regXLR = 28;
 int regXHSP = 27;
-int regGP = 29;
-int regGP1 = 28;
+int regGP = 61;
+int regGP1 = 60;
 int regTP = 27;
 int regCLP = 25;                // class pointer
 int regPP = 56;					// program pointer
 int regZero = 0;
-int regFirstTemp = 3;
-int regLastTemp = 10;
+int regFirstTemp = 5;
+int regLastTemp = 14;
 int regXoffs = 55;
-int regFirstRegvar = 11;
-int regLastRegvar = 18;
-int regFirstArg = 20;
-int regLastArg = 25;
+int regFirstRegvar = 15;
+int regLastRegvar = 24;
+int regFirstArg = 1;
+int regLastArg = 4;
 int regAsm = 2;
 int pregSP = 30;
 int pregFP = 29;
@@ -77,15 +78,15 @@ int address_bits = 32;
 int maxVL = 64;
 int nregs = 128;
 
-int64_t sizeOfWord = 16;
-int sizeOfFP = 8;
+int64_t sizeOfWord = 12;
+int sizeOfFP = 12;
 int sizeOfFPS = 4;
 int sizeOfFPD = 8;
 int sizeOfFPT = 12;
 int sizeOfFPQ = 16;
-int sizeOfPtr = 8;
-int sizeOfInt = 8;
-int sizeOfDecimal = 16;
+int sizeOfPtr = 12;
+int sizeOfInt = 12;
+int sizeOfDecimal = 12;
 int sizeOfPosit = 8;
 
 std::ifstream *ifs;

@@ -1431,7 +1431,7 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	//}
 	//else
 	{
-		if (numdimen) {
+		if (numdimen > 1) {
 			sz1 = 1;
 			for (cnt2 = 1; cnt2 <= numdimen; cnt2++)
 				sz1 = sz1 * sa[cnt2];
@@ -1450,29 +1450,47 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	qnode->constflag = TRUE;
 	qnode->isUnsigned = TRUE;
 	cf = qnode->constflag;
+	/*
+	if (numdimen == 1 && cf && pnode->nodetype==en_nacon) {
+		pnode = compiler.ef.Makenode(en_scndx, qnode, rnode, pnode);
+	}
+	else
+	*/
+	{
+		if (cf && qnode->i==elesize && 
+			(elesize==1 || elesize==2 || elesize==4 || elesize==8 || elesize==3 ||elesize==5 || elesize==12)) {
+			qnode = rnode;
+			qnode->scale = sz1;
+		}
+		else
+			qnode = makenode(en_mulu, qnode, rnode);
+		qnode->etype = bt_short;
+		qnode->esize = sizeOfWord;
+		qnode->constflag = cf & rnode->constflag;
+		qnode->isUnsigned = rnode->isUnsigned;
+		if (rnode->sym)
+			qnode->sym = rnode->sym;
 
-	qnode = makenode(en_mulu, qnode, rnode);
-	qnode->etype = bt_short;
-	qnode->esize = sizeOfWord;
-	qnode->constflag = cf & rnode->constflag;
-	qnode->isUnsigned = rnode->isUnsigned;
-	if (rnode->sym)
-		qnode->sym = rnode->sym;
-
-	//(void) cast_op(&qnode, &tp_int32, tp1);
-	cf = pnode->constflag;
-	uf = pnode->isUnsigned;
-	sp1 = pnode->sym;
-	pnode = makenode(en_add, qnode, pnode);
-	pnode->etype = bt_pointer;
-	pnode->esize = sizeOfPtr;
-	pnode->constflag = cf & qnode->constflag;
-	pnode->isUnsigned = uf & qnode->isUnsigned;
-	if (pnode->sym == nullptr)
-		pnode->sym = sp1;
-	if (pnode->sym == nullptr)
-		pnode->sym = qnode->sym;
-
+		//(void) cast_op(&qnode, &tp_int32, tp1);
+		cf = pnode->constflag;
+		uf = pnode->isUnsigned;
+		sp1 = pnode->sym;
+/*
+		if (qnode->scale && pnode->nodetype==en_nacon) {
+			compiler.ef.Makenode(en_scndx, pnode, qnode);
+		}
+		else
+*/
+		pnode = makenode(en_add, pnode, qnode);
+		pnode->etype = bt_pointer;
+		pnode->esize = sizeOfPtr;
+		pnode->constflag = cf & qnode->constflag;
+		pnode->isUnsigned = uf & qnode->isUnsigned;
+		if (pnode->sym == nullptr)
+			pnode->sym = sp1;
+		if (pnode->sym == nullptr)
+			pnode->sym = qnode->sym;
+	}
 	tp1 = CondDeref(&pnode, tp1);
 	pnode->tp = tp1;
 	ep1 = pnode;

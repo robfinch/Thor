@@ -81,6 +81,7 @@ input dc_invall;
 typedef logic [$bits(Thor2023Pkg::address_t)-1:TAGBIT] cache_tag_t;
 typedef struct packed
 {
+	logic resv;			// make struct a multiple of eight
 	logic v;
 	logic m;
 	Thor2023Pkg::asid_t asid;
@@ -165,6 +166,7 @@ always_comb
 		
 always_comb
 begin
+	cline_in.resv <= 'd0;
 	cline_in.v <= 1'b1;					// Whether updating the line or loading a new one, always valid.
 	cline_in.m <= ~cache_load;	// It is not modified if it is a fresh load.
 	cline_in.asid <= cpu_req_i.asid;
@@ -363,9 +365,9 @@ end
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-	for (k = 0; k < WAYS; k = k + 1) begin
-		validr[k] <= 'd0;
-	end
+	for (k = 0; k < WAYS; k = k + 1)
+		validr[k] = 'd0;
+	valid = 'd0;
 end
 else begin
 	if (wr)

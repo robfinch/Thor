@@ -46,7 +46,7 @@ enum e_node {
 		
 		     en_fcall, en_ifcall,
          en_tempref, en_regvar, en_fpregvar, en_pregvar, en_tempfpref, en_temppref,
-		en_add, en_sub, en_mul, en_mod,
+		en_add, en_sub, en_mul, en_mod, en_scndx,
 		en_ftadd, en_ftsub, en_ftmul, en_ftdiv,
 		en_fdadd, en_fdsub, en_fdmul, en_fddiv,
 		en_fsadd, en_fssub, en_fsmul, en_fsdiv,
@@ -338,7 +338,9 @@ enum e_hint {
 	begin_regvar_init,
 	end_regvar_init,
 	begin_func_call,
-	end_func_call
+	end_func_call,
+	begin_index,
+	end_index
 };
 
 #define LR		1

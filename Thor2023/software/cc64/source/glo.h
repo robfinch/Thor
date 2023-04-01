@@ -3,7 +3,7 @@
 
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -27,6 +27,8 @@
 // ============================================================================
 //
 /*      global ParseSpecifierarations     */
+#define MOT   0
+#define STD   1
 #define THOR		0
 #define TABLE888	888
 #define RAPTOR64	64
@@ -118,6 +120,7 @@ extern int maxVL;
 extern MachineReg regs[3072];
 extern int nregs;
 extern int max_reg_in_use;
+extern int syntax;
 
 extern int64_t rodata_base_address;
 extern int64_t bss_base_address;

@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2017-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2017-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -1163,6 +1163,7 @@ Operand *ENODE::GenIndex(bool neg)
 		return (ap1);
 	}
 	GenerateHint(8);
+//	GenerateHint(begin_index);
 	ap1 = cg.GenerateExpression(p[0], am_reg | am_imm, sizeOfInt, 1);
 	if (ap1->mode == am_imm)
 	{
@@ -1190,6 +1191,7 @@ Operand *ENODE::GenIndex(bool neg)
 		return (ap2);
 	}
 	ap2 = cg.GenerateExpression(p[1], am_all, 8, 1);   /* get right op */
+//	GenerateHint(end_index);
 	GenerateHint(9);
 	if (ap2->mode == am_imm && ap1->mode == am_reg) /* make am_indx */
 	{
@@ -1244,6 +1246,23 @@ Operand *ENODE::GenIndex(bool neg)
 	return (ap1);                     /* return indexed */
 }
 
+Operand* ENODE::GenerateScaledIndexing(int flags, int size, int rhs)
+{
+	Operand* ap1;
+	Operand* ap2;
+	Operand* ap3;
+	Operand* ap4;
+
+	ap1 = GetTempRegister();
+	ap4 = cg.GenerateExpression(p[0], flags, sizeOfWord, rhs);	// base (constant)
+	ap3 = cg.GenerateExpression(p[1], flags, sizeOfWord, rhs);
+	ap1->mode = am_indx2;
+	ap1->sreg = ap3->preg;
+	ap1->deep2 = ap3->deep2;
+	ap1->offset = ap4->offset->Clone();
+	ap1->isUnsigned = true;
+	return (ap1);
+}
 
 //
 // Generate code to evaluate a condition operator node (??:)

@@ -3,7 +3,7 @@
 
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021 Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023 Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -765,6 +765,7 @@ public:
 	Operand* GenerateBitfieldAssign(int flags, int size);
 	Operand* GenerateBitfieldAssignAdd(int flags, int size, int op);
 	Operand* GenerateBitfieldAssignLogic(int flags, int size, int op);
+	Operand* GenerateScaledIndexing(int flags, int size, int rhs);
 
 	// Serialization
 	void store(txtoStream& ofs);
@@ -1996,6 +1997,7 @@ public:
 	int ldt_op;
 	int ldw_op;
 	int ldb_op;
+	int ldd_op;
 	int ldbu_op;
 	int ldwu_op;
 	int ldtu_op;
@@ -2003,6 +2005,7 @@ public:
 	int stt_op;
 	int stw_op;
 	int stb_op;
+	int std_op;
 	void InitRegs();
 };
 

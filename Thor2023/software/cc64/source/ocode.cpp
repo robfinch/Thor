@@ -1043,11 +1043,13 @@ void OCODE::OptIndexScale()
 
 	if (fwd == nullptr || back == nullptr)
 		return;
+/*
 	// Make sure we have the right kind of a shift left.
 	if (back->opcode != op_stpl || back->oper3 == nullptr || back->oper3->offset == nullptr)
 		return;
 	if (back->oper3->offset->i < 1 || back->oper3->offset->i > 3)
 		return;
+*/
 	// Now search for double indexed operation. There could be multiple matches.
 	for (frwd = fwd; frwd; frwd = frwd->fwd) {
 		// If there's an intervening flow control, can't optimize.
@@ -1068,7 +1070,8 @@ void OCODE::OptIndexScale()
 				// Is it the right one?
 				if (frwd->oper2->preg == back->oper1->preg) {
 					frwd->oper2->preg = back->oper2->preg;
-					frwd->oper2->scale = 1 << back->oper3->offset->i;
+					frwd->oper2->offset = back->oper2->offset;
+					//frwd->oper2->scale = 1 << back->oper3->offset->i;
 					back->MarkRemove();
 					optimized++;
 				}
@@ -1648,6 +1651,15 @@ void OCODE::store(txtoStream& ofs)
 	char buf[8];
 	int nn;
 	bool addi = false;
+	char ccch;		// comment character
+
+	switch (syntax) {
+	case MOT:
+		ccch = ';';
+		break;
+	default:
+		ccch = '#';
+	}
 
 	nn = 0;
 	ap1 = oper1;
@@ -1661,23 +1673,37 @@ void OCODE::store(txtoStream& ofs)
 
 	if (bb != b) {
 		if (bb->num == 0) {
-			ofs.printf("#====================================================\n");
-			ofs.printf("# Basic Block %d\n", bb->num);
-			ofs.printf("#====================================================\n");
+			switch (syntax) {
+			case MOT:
+				ofs.printf(";====================================================\n");
+				ofs.printf("; Basic Block %d\n", bb->num);
+				ofs.printf(";====================================================\n");
+				break;
+			default:
+				ofs.printf("#====================================================\n");
+				ofs.printf("# Basic Block %d\n", bb->num);
+				ofs.printf("#====================================================\n");
+			}
 		}
 		b = bb;
 	}
 	if (comment) {
-		ofs.printf("#%s\n", (char *)comment->oper1->offset->sp->c_str());
+		switch (syntax) {
+		case MOT:
+			ofs.printf(";%s\n", (char*)comment->oper1->offset->sp->c_str());
+			break;
+		default:
+			ofs.printf("#%s\n", (char*)comment->oper1->offset->sp->c_str());
+		}
 	}
 	if (remove)
-		ofs.printf("#-1");
+		ofs.printf("%c-1", ccch);
 	if (remove2)
-		ofs.printf("#-2");
+		ofs.printf("%c-2", ccch);
 	if (op != op_fnname)
 	{
 		if (op == op_rem2) {
-			ofs.printf("#\t");
+			ofs.printf("%c\t", ccch);
 			ofs.printf((char *)"%6.6s\t", (char *)"");
 			ofs.printf(ap1->offset->sp->c_str());
 			ofs.printf("\n");
@@ -1689,7 +1715,13 @@ void OCODE::store(txtoStream& ofs)
 			ofs.printf("  ");	// 2 spaces
 			if (insn) {
 				if (op == op_string) {
-					ofs.printf(".2byte");
+					switch (syntax) {
+					case MOT:
+						ofs.printf("dc.w");
+						break;
+					default:
+						ofs.printf(".2byte");
+					}
 				}
 				else {
 					nn = insn->store(ofs);

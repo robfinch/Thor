@@ -412,7 +412,7 @@ localparam LOG_DWAYS = $clog2(DWAYS)-1;
 wire dtlbrdy, dtlbmiss;
 reg dtlben, dtlbwr;
 TLBE dtlbdato;
-address_t phys_dadr, phys_dadrd1;
+physical_address_t phys_dadr, phys_dadrd1;
 reg dc_wr;
 wire dhit;
 address_t dadr;

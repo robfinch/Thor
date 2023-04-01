@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2017-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2017-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -667,7 +667,9 @@ void Operand::store(txtoStream& ofs)
 		break;
 
 	case am_indx2:
-		if (scale == 1 || scale == 0) {
+		if (offset)
+			offset->PutConstant(ofs,0,0);
+		if (scale == 1) {
 			if (sreg==regZero)
 				ofs.printf("[%s]", RegMoniker(preg));
 			else if (preg==regZero)
@@ -675,8 +677,18 @@ void Operand::store(txtoStream& ofs)
 			else
 				ofs.printf((char *)"[%s+%s]", RegMoniker(preg), RegMoniker(sreg));
 		}
-		else
-			ofs.printf((char *)"[%s+%s*%d]", RegMoniker(preg), RegMoniker(sreg), scale);
+		else if (scale == 0) {
+			if (sreg == regZero)
+				ofs.printf("[%s]", RegMoniker(preg));
+			else if (preg == regZero)
+				ofs.printf("[%s]", RegMoniker(sreg));
+			else
+				ofs.printf((char*)"[%s+%s*]", RegMoniker(preg), RegMoniker(sreg));
+		}
+		else {
+			printf("DIAG - illegal address mode.\n");
+			ofs.printf((char*)"[%s+%s*%d]", RegMoniker(preg), RegMoniker(sreg), scale);
+		}
 		break;
 
 //	case am_mask:

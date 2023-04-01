@@ -247,10 +247,9 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 1:	GenerateDiadic(cpu.ldbu_op, 0, ap3, ap1); break;
 			case 2:	GenerateDiadic(cpu.ldwu_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldtu_op, 0, ap3, ap1); break;
-			case 8: 
-				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
-				break;
-			case 16:	
+			case 8: GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
+			case 12:	GenerateDiadic(cpu.ldd_op, 0, ap3, ap1); break;
+			case 16:
 				if (ap1->mode == am_indx) {
 					if (ap1->offset->nodetype == en_icon) {
 						if (ap1->offset->i > -1024 && ap1->offset->i < 1023) {
@@ -272,9 +271,8 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			case 1:	GenerateDiadic(cpu.ldb_op, 0, ap3, ap1); break;
 			case 2:	GenerateDiadic(cpu.ldw_op, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldt_op, 0, ap3, ap1); break;
-			case 8:	
-				GenerateDiadic(cpu.ldo_op, 0, ap3, ap1);
-				break;
+			case 8:	GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
+			case 12:	GenerateDiadic(cpu.ldd_op, 0, ap3, ap1); break;
 			case 16:
 				if (ap1->mode == am_indx) {
 					if (ap1->offset->nodetype == en_icon) {
@@ -340,9 +338,8 @@ void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size)
 		case 1: GenerateDiadic(cpu.stb_op, 0, ap1, ap3); break;
 		case 2: GenerateDiadic(cpu.stw_op, 0, ap1, ap3); break;
 		case 4: GenerateDiadic(cpu.stt_op, 0, ap1, ap3); break;
-		case 8:
-			GenerateDiadic(cpu.sto_op, 0, ap1, ap3);
-			break;
+		case 8:	GenerateDiadic(cpu.sto_op, 0, ap1, ap3); break;
+		case 12:	GenerateDiadic(cpu.std_op, 0, ap1, ap3); break;
 		case 16:
 			if (ap3->mode == am_indx) {
 				if (ap3->offset->nodetype == en_icon) {
@@ -2352,13 +2349,14 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	case en_mulf:    ap1 = node->GenMultiply(flags, size, op_mulf); goto retpt;
 	case en_mul:    ap1 = node->GenMultiply(flags,size,op_mul); goto retpt;
   case en_mulu:   ap1 = node->GenMultiply(flags,size,op_mulu); goto retpt;
+	case en_scndx:	ap1 = node->GenerateScaledIndexing(flags, size, rhs); goto retpt;
   case en_div:    ap1 = node->GenDivMod(flags,size,op_div); goto retpt;
   case en_udiv:   ap1 = node->GenDivMod(flags,size,op_divu); goto retpt;
   case en_mod:    ap1 = node->GenDivMod(flags,size,op_rem); goto retpt;
   case en_umod:   ap1 = node->GenDivMod(flags,size,op_remu); goto retpt;
-  case en_asl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
-  case en_shl:    ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
-  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_sll); goto retpt;
+  case en_asl:    ap1 = node->GenerateShift(flags,size,op_asl); goto retpt;
+  case en_shl:    ap1 = node->GenerateShift(flags,size,op_asl); goto retpt;
+  case en_shlu:   ap1 = node->GenerateShift(flags,size,op_asl); goto retpt;
   case en_asr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shr:	ap1 = node->GenerateShift(flags,size,op_sra); goto retpt;
   case en_shru:   ap1 = node->GenerateShift(flags,size,op_srl); goto retpt;
@@ -2408,9 +2406,9 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_asand:  ap1 = node->GenerateAssignLogic(flags,size,op_and); goto retpt;
   case en_asor:   ap1 = node->GenerateAssignLogic(flags,size,op_or); goto retpt;
 	case en_asxor:  ap1 = node->GenerateAssignLogic(flags,size,op_xor); goto retpt;
-  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sll)); goto retpt;
-  case en_asrsh:  ap1 = (node->GenerateAssignShift(flags,size,op_sra)); goto retpt;
-	case en_asrshu: ap1 = (node->GenerateAssignShift(flags,size,op_srl)); goto retpt;
+  case en_aslsh:  ap1 = (node->GenerateAssignShift(flags,size,op_asl)); goto retpt;
+  case en_asrsh:  ap1 = (node->GenerateAssignShift(flags,size,op_asr)); goto retpt;
+	case en_asrshu: ap1 = (node->GenerateAssignShift(flags,size,op_lsr)); goto retpt;
   case en_asmul: ap1 = GenerateAssignMultiply(node,flags,size,op_mul); goto retpt;
   case en_asmulu: ap1 = GenerateAssignMultiply(node,flags,size,op_mulu); goto retpt;
   case en_asdiv: ap1 = GenerateAssignModiv(node,flags,size,op_div); goto retpt;

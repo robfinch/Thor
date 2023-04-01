@@ -21,18 +21,18 @@ static insn_sizes1[20000];
 static insn_sizes2[20000];
 static int sz1ndx = 0;
 static int sz2ndx = 0;
-static short int argregs[10] = {1,2,23,24,25,26,27,28,29,30};
-static short int tmpregs[10] = {3,4,5,6,7,8,9,10,11,12};
-static short int saved_regs[10] = {13,14,15,16,17,18,19,20,21,22};
+static short int argregs[10] = {1,2,3,4,25,26,27,28,29,30};
+static short int tmpregs[10] = {5,6,7,8,9,10,11,12,13,14};
+static short int saved_regs[10] = {15,16,17,18,19,20,21,22,23,24};
 
 static char *regnames[64] = {
-	"0", "a0", "a1", "t0", "t1", "t2", "t3", "t4",
-	"t5", "t6", "t7", "t8", "t9", "s0", "s1", "s2",
-	"s3", "s4", "s5", "s6", "s7", "s8", "s9", "a2",
-	"a3", "a4", "a5", "a6", "a7", "a8", "a9", "r31",
+	"r0", "a0", "a1", "a2", "a3", "t0", "t1", "t2",
+	"t3", "t4", "t5", "t6", "t7", "t8", "t9", "s0",
+	"s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8",
+	"s9", "a4", "a5", "a6", "a7", "a8", "a9", "r31",
 	"m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7",
 	"r40", "r41", "r42", "r43", "r44", "r45", "r46", "r47",
-	"r48", "r49", "r50", "r51", "r52", "pc", "sc", "lc",
+	"r48", "r49", "r50", "r51", "ctp", "pc", "sc", "lc",
 	"lr0", "lr1", "lr2", "lr3", "gp1", "gp0", "fp", "sp"
 };
 
@@ -44,7 +44,7 @@ static int regop[64] = {
 	OP_VMREG, OP_VMREG, OP_VMREG, OP_VMREG, OP_VMREG, OP_VMREG, OP_VMREG, OP_VMREG, 
 	OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, 
 	OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, 
-	OP_LK, OP_LK, OP_LK, OP_LK, OP_REG, OP_REG, OP_REG, OP_REG
+	OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG, OP_REG
 };
 
 mnemonic mnemonics[]={
@@ -80,6 +80,7 @@ mnemonic mnemonics[]={
 	"beq",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,COND(0LL)|OPC(28LL),5},
 	"beq",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,COND(0LL)|OPC(27LL),5},
 
+	"beqz",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,COND(6LL)|OPC(28LL),5},
 //	"beven",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(13LL)|OPC(28LL),5},
 
 	"bfalign",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {BFR3RR,CPU_ALL,0,0x0000000000AALL,6},
@@ -126,6 +127,7 @@ mnemonic mnemonics[]={
 
 	"bne",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,COND(8LL)|OPC(28LL),5},
 	"bne",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,COND(8LL)|OPC(27LL),5},
+	"bnez",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,COND(14LL)|OPC(28LL),5},
 	"bnz",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,COND(14LL)|OPC(28LL),5},
 //	"bodd",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(5LL)|OPC(28LL),5},
 //	"bodd",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(5LL)|OPC(28LL),5},
@@ -287,6 +289,10 @@ mnemonic mnemonics[]={
 	"ldcz",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(4)|OPC(17),5},	
 	"ldcz",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(4)|OPC(17),5},	
 
+	"ldd",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(6)|OPC(16),5},	
+	"ldd",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(6)|OPC(16),5},	
+	"ldd",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(6)|OPC(16),5},	
+
 	"ldi", {OP_VREG|OP_REG,OP_NEXTREG,OP_IMM,0,0}, {RI,CPU_ALL,0,OPC(4LL),5},	
 
 	"ldo",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(3)|OPC(16),5},	
@@ -316,17 +322,15 @@ mnemonic mnemonics[]={
 	"ldwz",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(1)|OPC(17),5},	
 	"ldwz",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(1)|OPC(17),5},	
 
-	"lea",	{OP_REG,OP_IMM,0,0}, {DIRECT,CPU_ALL,0,0xD4LL,6,0x04,4},
-	"lea",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,0xD4LL,6,0x04,4},
-	"lea",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0x19LL,4},	
+	"lea",	{OP_REG,OP_NEXT,OP_IMM,0,0}, {RI,CPU_ALL,0,SZ(6)|OPC(4),5},
+	"lea",	{OP_REG,OP_REGIND,0,0}, {RI,CPU_ALL,0,SZ(6)|OPC(4),5},
+	"lea",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0x19LL,5},	
 
 	"leave", {OP_IMM,0,0,0,0}, {LEAVE,CPU_ALL,0,0xBFLL,4},
 
 	"max",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x520000000002LL,6},	
 	"memdb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF9,2},
 	"memsb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF8,2},
-	"mflk",		{OP_LK,OP_REG,0,0,0}, {MFLK,CPU_ALL,0,0x5ELL,2},
-	"mflk",		{OP_REG,OP_LK,0,0,0}, {MFLK,CPU_ALL,0,0x5ELL,2},
 	"mfsel",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	
 	"mfsel",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x500000000007LL,6},	
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	
@@ -345,7 +349,6 @@ mnemonic mnemonics[]={
 	"mrts",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x01F2LL, 2},
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
-	"mtlk",		{OP_LK,OP_REG,0,0,0}, {MTLK,CPU_ALL,0,0x5FLL,2},
 
 	"mtsel",	{OP_REG,OP_IMM,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
 	"mtsel",	{OP_REG,OP_REG,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
@@ -546,45 +549,49 @@ mnemonic mnemonics[]={
 	"st16",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(1)|OPC(18),5},
 	"st16",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(1)|OPC(18),5},	
 
-	"st24",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(4)|OPC(18),5},
+	"st24",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(4)|OPC(18),5},
 	"st24",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(4)|OPC(18),5},
-	"st24",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(4)|OPC(18),5},
+	"st24",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(4)|OPC(18),5},
 
 	"st32",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(2)|OPC(18),5},	
 	"st32",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,SZ(2)|OPC(18),5},	
 	"st32",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(2)|OPC(18),5},
 		
-	"st40",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(5)|OPC(18),5},
+	"st40",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(5)|OPC(18),5},
 	"st40",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(5)|OPC(18),5},
-	"st40",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(5)|OPC(18),5},
+	"st40",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(5)|OPC(18),5},
 
-	"st64",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(3)|OPC(18),5},
+	"st64",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(3)|OPC(18),5},
 	"st64",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(3)|OPC(18),5},
-	"st64",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(3)|OPC(18),5},
+	"st64",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(3)|OPC(18),5},
 
-	"st8",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(0)|OPC(18),5},
+	"st8",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(0)|OPC(18),5},
 	"st8",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(0)|OPC(18),5},
-	"st8",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(0)|OPC(18),5},
+	"st8",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(0)|OPC(18),5},
 	
-	"st96",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(6)|OPC(18),5},
+	"st96",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(6)|OPC(18),5},
 	"st96",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(6)|OPC(18),5},
-	"st96",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(6)|OPC(18),5},
+	"st96",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(6)|OPC(18),5},
 
-	"stb",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(0)|OPC(18),5},
+	"stb",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(0)|OPC(18),5},
 	"stb",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(0)|OPC(18),5},
-	"stb",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(0)|OPC(18),5},
+	"stb",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(0)|OPC(18),5},
 	
-	"stc",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(4)|OPC(18),5},
+	"stc",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(4)|OPC(18),5},
 	"stc",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(4)|OPC(18),5},
-	"stc",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(4)|OPC(18),5},
+	"stc",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(4)|OPC(18),5},
 
-	"sto",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(3)|OPC(18),5},
+	"std",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(6)|OPC(18),5},
+	"std",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(6)|OPC(18),5},
+	"std",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(6)|OPC(18),5},
+
+	"sto",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(3)|OPC(18),5},
 	"sto",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(3)|OPC(18),5},
-	"sto",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(3)|OPC(18),5},
+	"sto",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(3)|OPC(18),5},
 
-	"stp",	{OP_REG,OP_SEL|OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(5)|OPC(18),5},
+	"stp",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(5)|OPC(18),5},
 	"stp",	{OP_REG,OP_REGIND,0,0,0}, {REGIND,CPU_ALL,0,SZ(5)|OPC(18),5},
-	"stp",	{OP_REG,OP_SEL|OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(5)|OPC(18),5},
+	"stp",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,SZ(5)|OPC(18),5},
 
 	"stptg",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R3RR,CPU_ALL,0,0x4A0000000007LL,6},	
 	
@@ -802,6 +809,11 @@ static int is_reg(char *p, char **ep)
 	/* GP */
 	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && !ISIDCHAR((unsigned char)p[n+2])) {
 		*ep = &p[n+2];
+		return (61+sgn);
+	}
+	/* GP0 */
+	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && p[n+2]=='0' && !ISIDCHAR((unsigned char)p[n+3])) {
+		*ep = &p[n+3];
 		return (61+sgn);
 	}
 	/* GP1 */
@@ -1051,6 +1063,7 @@ static int is_branch(mnemonic* mnemo)
 {
 	switch(mnemo->ext.format) {
 	case B:
+	case BZ:
 	case BL:
 	case J:
 	case JL:
@@ -1134,8 +1147,12 @@ int parse_operand(char *p,int len,operand *op,int requires)
     if (*p == '[') {
     	tree = number_expr((taddr)0);
     }
-    else
+    else {
+    	//printf("beforeph:%.50s\n",p);
     	tree=parse_expr_huge(&p);
+    	while (is_identchar(*p)) p++;
+    	//printf("afterph:%.50s\n",p);
+    }
     if(!tree)
       return (PO_NOMATCH);
    	op->type = OP_IMM;
@@ -1172,12 +1189,10 @@ int parse_operand(char *p,int len,operand *op,int requires)
     			}
     		}
     		else {
+    			op->scale = 0;
+    			op->ndxreg = 0;
     			op->type = OP_REGIND;
     		}
-    	}
-    	else if ((rg = is_careg(p, &p)) >= 0) {
-    		op->basereg = rg;
-    		op->type = OP_CAREGIND;
     	}
       if(*p!=']'){
 				cpu_error(5);
@@ -1235,6 +1250,9 @@ static int get_reloc_type(operand *op)
 	        case REL_LOCALPC:
 	          rtype = REL_LOCALPC;
 	          break;
+	        case REL_ABS:
+	        	rtype = REL_ABS;
+	        	break;
 	        default:
 	          cpu_error(11);
 	          break;
@@ -1253,6 +1271,9 @@ static int get_reloc_type(operand *op)
         case REL_LOCALPC:
           rtype = REL_LOCALPC;
           break;
+        case REL_ABS:
+        	rtype = REL_ABS;
+        	break;
         default:
           cpu_error(11);
           break;
@@ -1272,6 +1293,9 @@ static int get_reloc_type(operand *op)
 	        case REL_LOCALPC:
 	          rtype = REL_LOCALPC;
 	          break;
+	        case REL_ABS:
+	        	rtype = REL_ABS;
+	        	break;
 	        default:
 	          cpu_error(11);
 	          break;
@@ -1461,6 +1485,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
     thuge addend;
     taddr mask;
 
+		base = NULL;
     btype = find_base(op->value,&base,sec,pc);
     pos = disp = 0;
 
@@ -1475,7 +1500,6 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
       if (reloctype == REL_PC && !is_pc_reloc(base,sec)) {
         /* a relative branch - reloc is only needed for external reference */
 				TRACE("m");
-				printf("val.lo=%lld pc=%lld\n", val.lo, pc);
         return huge_from_int(val.lo-pc);//val-pc;
       }
 
@@ -1535,59 +1559,72 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
                            19,13,0,0x7ffc0LL);
           break;
         case RI:
-        	if (is_nbit(addend,15)) {
+        	if (is_nbit(addend,16LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           24,8,0,0xffLL);
+                           23,8,0,0xffLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           33,7,0,0x7f00LL);
+                           32,8,0,0xff00LL);
         	}	/* ToDo: fix for 31 bits and above */
-        	else if (is_nbit(addend,40)) {
+        	else if (is_nbit(addend,32LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           24,8,0,0xffLL);
+                           23,8,0,0xffLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           33,7,0,0x7f00LL);
+                           32,8,0,0x7f00LL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffffff00LL);
+                           8,32,5,0xffffffffLL);
         	}
-        	else if (is_nbit(addend,72)) {
+        	else if (is_nbit(addend,64LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           24,8,0,0xffLL);
+                           23,8,0,0xffLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           33,7,0,0x7f00LL);
+                           32,8,0,0x7f00LL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffffff00LL);
-            shl64 = hshl(addend,40LL);
+                           8,32,5,0xffffffffLL);
+            shl64 = hshl(addend,32LL);
 			      add_extnreloc_masked(reloclist,base,shl64.lo,reloctype,
-                           88,32,0,0xffffffffLL);
+                           8,32,10,0xffffffffLL);
         	}
         	else {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           24,8,0,0xffLL);
+                           23,8,0,0xffLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           33,7,0,0x7f00LL);
+                           32,8,0,0x7f00LL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffffff00LL);
-            shl64 = hshl(addend,40LL);
+                           8,32,5,0xffffffffLL);
+            shl64 = hshl(addend,32LL);
 			      add_extnreloc_masked(reloclist,base,shl64.lo,reloctype,
-                           88,32,0,0xffffffffLL);
+                           8,32,10,0xffffffffLL);
 			      add_extnreloc_masked(reloclist,base,shl64.lo,reloctype,
-                           128,28,0,0xfffffff00000000LL);
+                           8,32,15,0xffffffff00000000LL);
         	}
         	break;
         case DIRECT:
-        	if (abits < 41) {
+        	if (is_nbit(addend,15LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           8,8,0,0xffLL);
+                           9,7,0,0x7fLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffffff00LL);
+                           31,8,0,0x7f80LL);
         	}
-        	else {	// abits < 65
+        	else if (is_nbit(addend,32LL) || abits < 33) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           8,8,0,0xffLL);
+                           9,7,0,0x7fLL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffffff00LL);
+                           31,8,0,0x7f80LL);
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           48,32,0,0xffffff0000000000LL);
+                           8,32,5,0xffffffffLL);
+        	}
+        	else if (is_nbit(addend,64LL) || abits < 65) {
+			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+                           9,7,0,0x7fLL);
+			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+                           31,8,0,0x7f80LL);
+			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+                           8,32,5,0xffffffffLL);
+			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+                           8,32,10,0xffffffff00000000LL);
+        	}
+        	else {	// abits > 64
+	          goto illreloc;
         	}
         	break;
         case REGIND:
@@ -1600,140 +1637,206 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
         		}
         		else
         		*/
-        		if (abits < 30) {
+	        	if (is_nbit(addend,15LL)) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           19,29,0,0x1fffffffLL);
-        		}
-	        	else if (abits < 33) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,7,0,0xfe00000LL);
-				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           35,24,0,0xffffffLL);
-	        		
+	                           31,8,0,0x7f80LL);
 	        	}
-	        	else if (abits < 49) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,32LL) || abits < 33) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-	                         9,23,0,0xfffffe000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-	                         51,24,0,0xffffffLL);
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
 	        	}
-	        	else {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-	                         9,39,0,0xfffffffffe000000LL);
-	            /* might need a fix here for another bit */
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-	                         67,24,0,0xffffffLL);
-						}        		
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
         	}
         	else if (op->basereg==sd2reg) {
         		int org_sdr = sdreg;
         		sdreg = sd2reg;
         		reloctype = REL_SD;
-        		if (abits < 25) {
+	        	if (is_nbit(addend,15LL)) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           19,29,0,0x1fffffffLL);
-        		}
-	        	else if (abits < 33) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,7,0,0xfe000000LL);
-				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           35,24,0,0xffffffLL);
-	        		
+	                           31,8,0,0x7f80LL);
 	        	}
-	        	else if (abits < 49) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,32LL) || abits < 33) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,23,0,0xfffffe000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           51,24,0,0xffffffLL);
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
 	        	}
-	        	else {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,39,0,0xfffffffffe000000LL);
-	            /* might need a fix here for another bit */
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           67,24,0,0x00ffffffLL);
-						}
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
 						sdreg = org_sdr;        		
         	}
         	else if (op->basereg==sd3reg) {
         		int org_sdr = sdreg;
         		sdreg = sd3reg;
         		reloctype = REL_SD;
-        		if (abits < 25) {
+	        	if (is_nbit(addend,15LL)) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           19,29,0,0x1fffffffLL);
-        		}
-	        	else if (abits < 33) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,7,0,0xfe000000LL);
-				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           35,24,0,0xffffffLL);
-	        		
+	                           31,8,0,0x7f80LL);
 	        	}
-	        	else if (abits < 49) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,32LL) || abits < 33) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,23,0,0xfffffe000000LL);
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           51,24,0,0xffffffLL);
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
 	        	}
-	        	else {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,39,0,0xfffffffffe000000LL);
-	            /* might need a fix here for another bit */
+	                           9,7,0,0x7fLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           67,24,0,0x00ffffffLL);
-						}
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
 						sdreg = org_sdr;        		
         	}
         	else {
-        		if (abits < 25) {
+	        	if (is_nbit(addend,15LL)) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           19,29,0,0x1fffffffLL);
+	                           9,7,0,0x7fLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           31,8,0,0x7f80LL);
+	        	}
+	        	else if (is_nbit(addend,32LL) || abits < 33) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           9,7,0,0x7fLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+	        	}
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           9,7,0,0x7fLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           31,8,0,0x7f80LL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
+        	}
+        	break;
+        case SCNDX:
+        	if (op->basereg==sdreg) {
+        		reloctype = REL_SD;
+        		/*
+        		if (mnemo->ext.short_opcode && is_nbit(addend,13)) {
+				      add_extnreloc_masked(reloclist,base,addend,reloctype,
+                           19,13,0,0x1fffLL);
         		}
-	        	else if (abits < 33) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+        		else
+        		*/
+	        	if (is_nbit(addend,32LL) || abits < 33) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,7,0,0xfe000000LL);
-				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           35,24,0,0xffffffLL);
-	        		
+	                           8,32,5,0xffffffffLL);
 	        	}
-	        	else if (abits < 49) {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,23,0,0xfffffe000000LL);
+	                           8,32,5,0xffffffffLL);
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           51,24,0,0xffffffLL);
+	                           8,32,10,0xffffffff00000000LL);
 	        	}
-	        	else {
-			      	add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           0,1,0,0x01000000LL);
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
+        	}
+        	else if (op->basereg==sd2reg) {
+        		int org_sdr = sdreg;
+        		sdreg = sd2reg;
+        		reloctype = REL_SD;
+	        	if (is_nbit(addend,32LL) || abits < 33) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           9,39,0,0xfffffffffe000000LL);
-	            /* might need a fix here for another bit */
+	                           8,32,5,0xffffffffLL);
+	        	}
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
 				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
-                           67,24,0,0x00ffffffLL);
-						}
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
+						sdreg = org_sdr;        		
+        	}
+        	else if (op->basereg==sd3reg) {
+        		int org_sdr = sdreg;
+        		sdreg = sd3reg;
+        		reloctype = REL_SD;
+	        	if (is_nbit(addend,32LL) || abits < 33) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+	        	}
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
+						sdreg = org_sdr;        		
+        	}
+        	else {
+	        	if (is_nbit(addend,32LL) || abits < 33) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+	        	}
+	        	else if (is_nbit(addend,64LL) || abits < 65) {
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,5,0xffffffffLL);
+				      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+	                           8,32,10,0xffffffff00000000LL);
+	        	}
+	        	else {	// abits > 64
+		          goto illreloc;
+	        	}
         	}
         	break;
         default:
@@ -1752,7 +1855,19 @@ illreloc:
   else {
   	val.lo = val.hi = 0;
 		eval_expr_huge(op->value,&val);
-  	
+ 		
+ 		if (op->format==B) {
+ 			if (reloctype == REL_PC) {
+ 				hsub(val,huge_from_int(pc));
+ 				val.lo &= 0xffffffffffffc000LL;
+ 			}
+ 			else if (reloctype==REL_ABS) {
+ 				val.hi = 0;
+ 				val.lo &= 0x3fffLL;
+ 			}
+ 		} 	
+		else
+		
 		if (reloctype == REL_PC) {
 			/* a relative reference to an absolute label */
 			TRACE("n");
@@ -2057,7 +2172,7 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 	if (mnemo->ext.flags & FLG_NEGIMM)
 		hval = hneg(hval);	/* ToDo: check here for value overflow */
 	val = hval;
-	val2 = hshr(val,40LL);
+	val2 = hshr(val,32LL);
 	if (constexpr) {
 		if (mnemo->ext.format==DIRECT) {
 			/*if (mnemo->ext.short_opcode) {
@@ -2065,16 +2180,22 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 					isize = 4;
 				}
 			} */
-			if (!is_nbit(hval,8)) {
+			if (!is_nbit(hval,15)) {
 				if (postfix1)
-					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffffLL) << 8LL) | OPC(31);
-				if (!is_nbit(hval,40)) {
+					*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffffLL) << 8LL) | OPC(31);
+				if (!is_nbit(hval,32) && abits > 32) {
 					if (postfix2)
-						*postfix1 = (5LL << 48LL) | ((val2.lo & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
+						*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
+				}
+				if (!is_nbit(hval,64) && abits > 64) {
+					if (postfix3)
+						*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
 				}
 			}
-			if (insn)
-				*insn = *insn | ((val.lo & 0xffLL) << 8LL);
+			if (insn) {
+				*insn = *insn | ((val.lo & 0x7fLL) << 9LL);
+				*insn = *insn | (((val.lo >> 7LL) & 0xffLL) << 31LL);
+			}
 		}
 		else if (mnemo->ext.format == CSR) {
 			if (insn) {
@@ -2113,20 +2234,20 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 		}
 		else if (mnemo->ext.format==SHIFTI) {
 			if (insn)
-				*insn = *insn | ((val.lo & 0x7fLL) << 29);
+				*insn = *insn | ((val.lo & 0x7fLL) << 29LL);
 		}
 		else if (mnemo->ext.format==RI6) {
 			if (insn)
-				*insn = *insn | ((val.lo & 0x3fLL) << 19);
+				*insn = *insn | ((val.lo & 0x3fLL) << 19LL);
 		}
 		else if (mnemo->ext.format==CSRI) {
 			if (i==1) {
 				if (insn)
-					*insn = *insn | ((val.lo & 0x7fLL) << 16);
+					*insn = *insn | ((val.lo & 0x7fLL) << 16LL);
 			}
 			else if (i==2) {
 				if (insn)
-					*insn = *insn | ((val.lo & 0xffLL) << 23) | (((val.lo >> 7LL) & 0xffLL) << 32LL);
+					*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0x3fLL) << 32LL);
 			}
 		}
 
@@ -2162,9 +2283,8 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			else
 			*/
 			if (insn)
-				*insn = *insn | ((val.lo & 0xffLL) << 24LL) | (((val.lo >> 8LL) & 0x7fLL) << 33LL);
+				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
 			if (!is_nbit(hval,15LL)) {
-				printf("hval=%llx:%llx\n", hval.hi, hval.lo);
 				if (postfix1)
 					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffffLL) << 8LL) | OPC(31);
 			}
@@ -2184,7 +2304,7 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			if (mnemo->ext.short_opcode && is_nbit(val,13LL)) {
 j1:
 				if (insn)
-					*insn = *insn | ((val.lo & 0xffLL) << 24LL) || (((val.lo >> 8LL) & 0x7fLL) << 33LL);
+					*insn = *insn | ((val.lo & 0xffLL) << 23LL) || (((val.lo >> 8LL) & 0xffLL) << 32LL);
 				return (isize);
 			}
 			goto j2;
@@ -2196,7 +2316,7 @@ j1:
 			}
 			else if (i==2) {
 				if (insn)
-					*insn = *insn | ((val.lo & 0xffLL) << 23) | (((val.lo >> 7LL) & 0xffLL) << 32LL);
+					*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0x3fLL) << 32LL);
 			}
 		}
 		else if (mnemo->ext.format==CSR) {
@@ -2236,7 +2356,7 @@ j1:
 		}
 		else {
 			if (op->type & OP_IMM) {
-				if (!is_nbit(val,15LL))
+				if (!is_nbit(val,16LL))
 					goto j2;
 				goto j1;
 			}
@@ -2287,6 +2407,7 @@ static int encode_vmask(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t va
 */
 static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t val, int* isize, int i)
 {
+	uint64_t tgt;
 	*isize = 5;
 
 	TRACE("evb:");
@@ -2300,10 +2421,15 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 					*insn |= ((val & 0xffLL) << 16LL);
 					break;
 				case 2:
-		  		uint64_t tgt;
-		  		tgt = ((val & 0xffffLL) << 24LL);
+		  		tgt = ((val & 0xc000LL) << 38LL);
 		  		*insn |= tgt;
 			  	break;
+			  
+			  case 3:
+		  		tgt = ((val & 0x3fffLL) << 24LL);
+		  		*insn |= tgt;
+			  	break;
+			  
 				}
 			}
 	  	return (1);
@@ -2345,7 +2471,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	  if (op->type==OP_REGIND) {
 	  	if (insn) {
 	  		uint64_t tgt;
-	  		*insn |= RCB(op->basereg & 0x1f);
+	  		*insn |= RCB(op->basereg & 0x3f);
 	  		tgt = (((val >> 1LL) & 0x7ffffLL) << 29LL);
 	  		*insn |= tgt;
 	  	}
@@ -2548,6 +2674,54 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
   return (0);
 }
 
+static void encode_scndx(
+	uint64_t* insn,
+	operand* op,
+	thuge val,
+	int constexpr,
+	uint64_t *postfix1,
+	uint64_t *postfix2,
+	uint64_t *postfix3,
+	void *db
+)
+{
+	TRACE("Etho6:");
+	if (insn) {
+		*insn |= (RB(op->basereg & regmask));
+		/* *insn |= ((val & 0xffLL) << 21LL); */
+		*insn |= RC(op->ndxreg & regmask);
+		*insn |= S(op->scale);
+	}
+	if (constexpr) {
+		/* 	db is NULL for the first encode_thor_operands 
+				If there is a constant during the first pass, then it should remain the
+				same during the second pass. The size of the constant will be known.
+		*/
+		if (db == NULL) {
+  		if (val.lo != 0)
+    		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+    	if (!is_nbit(val,32) && abits > 32)
+    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+    	if (!is_nbit(val,64) && abits > 64)
+    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+  	}
+  	else {
+  		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+    	if (abits > 32)
+    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+    	if (abits > 64)
+    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+  	}
+	}
+	else {
+		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+  	if (abits > 32)
+  		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+  	if (abits > 64)
+  		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+	}
+}
+
 /* evaluate expressions and try to optimize instruction,
    return size of instruction 
 
@@ -2572,6 +2746,17 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 	thuge op1val;
 
 	TRACE("Eto:");
+	if (modifier1)
+		*modifier1 = 0;
+	if (modifier2)
+		*modifier2 = 0;
+	if (postfix1)
+		*postfix1 = 0;
+	if (postfix2)
+		*postfix2 = 0;
+	if (postfix3)
+		*postfix3 = 0;
+
 	isize = mnemo->ext.len;
   if (insn != NULL) {
     *insn = mnemo->ext.opcode;
@@ -2579,6 +2764,17 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 
 	if (modifier1)
 		*modifier1 = 0;
+
+	if (mnemo->ext.format==B) {
+		TRACE("Fmtb:");
+		if (ip->op[2]) {
+			ip->op[3] = new_operand();
+			memcpy(ip->op[3], ip->op[2], sizeof(operand));
+			ip->op[3]->number = ip->op[2]->number + 1;
+			ip->op[3]->attr = REL_ABS;
+			ip->op[3]->value = copy_tree(ip->op[2]->value);
+		}
+	}
 
 	// Detect a vector instruction
   for (i=0; i<MAX_OPERANDS && ip->op[i]!=NULL; i++) {
@@ -2615,11 +2811,16 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
         val = make_reloc(reloctype,&op,sec,pc,&db->relocs,&constexpr);
       }
       else {
+      	val.lo = val.hi = 0;
         if (!eval_expr_huge(op.value,&val)){//,sec,pc)) {
           if (reloctype == REL_PC)
 //          	hval = hsub(huge_zero(),pc);
 						//val -= pc;
 						val = hsub(val,huge_from_int(pc));
+		 			else if (reloctype==REL_ABS) {
+		 				val.hi = 0;
+		 				val.lo &= 0x3fffLL;
+		 			}
         }
       }
     }
@@ -2647,6 +2848,10 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 			}
     }
 
+		if (mnemo->operand_type[i]==-1 || mnemo->operand_type[i]==-2) {
+		}
+		if ((mnemo->operand_type[i]&OP_SCNDX)==OP_SCNDX) {
+		}
 		TRACE("Etho2:");
 		if (op.type==OP_REG) {
 			encode_reg(insn, &op, mnemo, i);
@@ -2717,114 +2922,47 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
     else if (mnemo->operand_type[i]==OP_VMSTR) {
     	isize = encode_vmask(insn, mnemo, &op, val.lo, &isize, i);
     }
-    else if ((mnemo->operand_type[i]&OP_REGIND) && op.type==OP_REGIND) {
+    else if (mnemo->operand_type[i]&OP_REGIND==OP_REGIND && op.type==OP_REGIND) {
 			TRACE("Etho5:");
-    	/* Check for short form */
     	if (constexpr) {
-//	    	if (0 && is_nbit(val,8) && (mnemo->ext.opcode==0x86LL || mnemo->ext.opcode==0x93LL)) {
-	    	{
-	    		/*
-	    		if (is_nbit(val,13) && mnemo->ext.short_opcode!=0) {
-	    			isize = 4;
-		    		if (insn) {
-			    		if (i==0)
-			    			*insn |= (RT(op.basereg & regmask));
-			    		else if (i==1) {
-			    			*insn |= (RA(op.basereg & regmask));
-			    			*insn |= (val & 0x1fffLL) << 19LL;
-			    		}
-			    		*insn = (*insn & ~0xffLL) | mnemo->ext.short_opcode;
-		    		}
-	    		}
-	    		else
-	    		*/
-	    		{
-		    		isize = 5;
-		    		if (insn) {
-			    		if (i==0)
-			    			*insn |= (RT(op.basereg));
-			    		else if (i==1) {
-			    			*insn |= (RA(op.basereg));
-			    			*insn |= (val.lo & 0x1fffffffLL) << 19LL;
-			    		}
-		    		}
-		    	}
-	    		if (!is_nbit(val,28) && abits > 28) {
-	    			if (modifier1)
-							*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI8 | ((val.lo >> 24LL) & 1LL);
-						if (!is_nbit(val,32) && abits > 32) {
-							if (modifier1)
-								*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI24 | ((val.lo >> 24LL) & 1LL);
-							if (!is_nbit(val,48) && abits > 48) {
-								if (modifier1)
-									*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI40 | ((val.lo >> 24LL) & 1LL);
-								if (!is_nbit(val,64) && abits > 64) {
-									if (modifier1)
-										*modifier1 = ((val.lo >> 23LL) << 9LL) | EXI56 | ((val.lo >> 24LL) & 1LL);
-								}
-							}
-						}
-					}
-				}
-  		}
-  		else {
+    		isize = 5;
     		if (insn) {
 	    		if (i==0)
-	    			*insn |= (RT(op.basereg & regmask));
+	    			*insn |= (RA(op.basereg));
 	    		else if (i==1) {
+	    			*insn |= (RB(op.basereg));
+	    			*insn |= (val.lo & 0x7fLL) << 9LL;
+	    			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
+	    		}
+    		}
+	    	if (!is_nbit(val,15) && abits > 15)
+	    		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+	    	if (!is_nbit(val,32) && abits > 32)
+	    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+	    	if (!is_nbit(val,64) && abits > 64)
+	    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+    	}
+  		else {
+	   		isize = 5;
+    		if (insn) {
+	    		if (i==0)
 	    			*insn |= (RA(op.basereg & regmask));
-	    			*insn |= (val.lo & 0x1fffffffLL) << 19LL;
+	    		else if (i==1) {
+	    			*insn |= (RB(op.basereg & regmask));
+	    			*insn |= (val.lo & 0x7fLL) << 9LL;
+	    			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
 	    		}
     		}
-	    	/*
-    		else if (is_nbit(val,13) && mnemo->ext.short_opcode!=0 && reloctype==REL_NONE) {
-    			isize = 4;
-	    		if (insn) {
-		    		if (i==0)
-		    			*insn |= (RT(op.basereg & regmask));
-		    		else if (i==1) {
-		    			*insn |= (RA(op.basereg & regmask));
-		    			*insn |= (val & 0x1fffLL) << 19LL;
-		    		}
-		    		*insn = (*insn & ~0xffLL) | mnemo->ext.short_opcode;
-	    		}
-    		}
-    		*/
-    		else if (abits < 30) {
-  				if (insn)
-						*insn = *insn | ((val.lo & 0x1fffffffLL) << 19LL);
-					if (modifier1)
-						*modifier1 = 0;
-    		}
-    		else if (abits < 33) {
-  				if (insn)
-						*insn = *insn | ((val.lo & 0xffffffLL) << 19LL);
-					if (modifier1)
-						*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI8 | ((val.lo >> 24LL) & 1LL);
-    		}
-    		else if (abits < 48) {
-  				if (insn)
-						*insn = *insn | ((val.lo & 0xffffffLL) << 19LL);
-					if (modifier1)
-						*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI24 | ((val.lo >> 24LL) & 1LL);
-    		}
-    		else {
-  				if (insn)
-						*insn = *insn | ((val.lo & 0xffffffLL) << 19LL);
-					if (modifier1)
-						*modifier1 = ((val.lo >> 25LL) << 9LL) | EXI40 | ((val.lo >> 24LL) & 1LL);
-    		}
+	    	if (abits > 15)
+	    		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+	    	if (abits > 32)
+	    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+	    	if (abits > 64)
+	    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
   		}
     }
-    else if ((mnemo->operand_type[i]&OP_SCNDX) && op.type==OP_SCNDX) {
-			TRACE("Etho6:");
-    	isize = 4;
-  		if (insn) {
-  			*insn |= (RA(op.basereg & regmask));
-  			/* *insn |= ((val & 0xffLL) << 21LL); */
-  			*insn |= RB(op.ndxreg & regmask);
-  		}
-    }
+    else if ((mnemo->operand_type[i]&OP_SCNDX)==OP_SCNDX && op.type==OP_SCNDX)
+			encode_scndx(insn, &op, val, constexpr, postfix1, postfix2, postfix3, db);
 	}
 	
 
@@ -2884,39 +3022,45 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 	postfix2 = 0;
 	postfix3 = 0;
 	encode_thor_operands(ip,sec,pc,&modifier1,&modifier2,
-		&postfix1, &postfix2, &postfix3, &insn,db);
+		&postfix1, &postfix2, &postfix3, &insn, db);
 	db->size = 
-		5 + 
+		5LL + 
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
 		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
 		;
-	insn_sizes2[sz2ndx++] = db->size;
-  if (db->size) {
+	insn_sizes2[sz2ndx] = db->size;
+  if (db) {
     unsigned char *d = db->data = mymalloc(db->size);
     int i;
 
-		if (modifier1 >> 16) {
+		if (modifier1 >> 48LL) {
 	    d = setval(0,d,5,modifier1 & 0xffffffffffLL);
 	    insn_count++;
 	  }
-		if (modifier2 >> 16) {
+		if (modifier2 >> 48LL) {
 	    d = setval(0,d,5,modifier2 & 0xffffffffffLL);
 	    insn_count++;
 	  }
     d = setval(0,d,5,insn);
     insn_count++;
-		if (postfix1 >> 16) {
+		if (postfix1 >> 48LL) {
 	    d = setval(0,d,5,postfix1 & 0xffffffffffLL);
 	    insn_count++;
 	  }
-		if (postfix2 >> 16) {
+		if (postfix2 >> 48LL) {
 	    d = setval(0,d,5,postfix2 & 0xffffffffffLL);
 	    insn_count++;
 	  }
-		if (postfix3 >> 16) {
+		if (postfix3 >> 48LL) {
 	    d = setval(0,d,5,postfix3 & 0xffffffffffLL);
 	    insn_count++;
 	  }
+		while (db->size < insn_sizes1[sz2ndx]) {
+	    d = setval(0,d,5,0x9fLL);	// NOP
+	    db->size += 5;
+	    insn_count++;
+		}	
+		sz2ndx++;
     byte_count += db->size;
   }
   return (db);
@@ -2985,9 +3129,26 @@ int init_cpu()
   return 1;
 }
 
+/* To be inserted at the end of main() for debugging */
+
+void at_end()
+{
+	int lmt = sz1ndx > sz2ndx ? sz2ndx : sz1ndx;
+	int ndx;
+
+	printf("Instructions: %d\n", insn_count);
+	printf("Bytes: %d\n", byte_count);
+	printf("%f bytes per instruction\n", (double)(byte_count)/(double)(insn_count));
+	/*
+	for (ndx = 0; ndx < lmt; ndx++) {
+		printf("%csz1=%d, sz2=%d\n", insn_sizes1[ndx]!=insn_sizes2[ndx] ? '*' : ' ', insn_sizes1[ndx], insn_sizes2[ndx]);
+	}
+	*/
+}
 /* return true, if the passed argument is understood */
 int cpu_args(char *p)
 {
+//	atexit(at_end);
   abits = 32;
   if (strncmp(p, "-abits=", 7)==0) {
   	abits = atoi(&p[7]);
@@ -3043,19 +3204,3 @@ char *parse_cpu_special(char *start)
   return start;
 }
 
-/* To be inserted at the end of main() for debugging */
-
-void at_end()
-{
-	int lmt = sz1ndx > sz2ndx ? sz2ndx : sz1ndx;
-	int ndx;
-
-	printf("Instructions: %d\n", insn_count);
-	printf("Bytes: %d\n", byte_count);
-	printf("%f bytes per instruction\n", (double)(byte_count)/(double)(insn_count));
-	/*
-	for (ndx = 0; ndx < lmt; ndx++) {
-		printf("%csz1=%d, sz2=%d\n", insn_sizes1[ndx]!=insn_sizes2[ndx] ? '*' : ' ', insn_sizes1[ndx], insn_sizes2[ndx]);
-	}
-	*/
-}

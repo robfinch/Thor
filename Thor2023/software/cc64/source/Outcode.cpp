@@ -441,9 +441,9 @@ char *RegMoniker(int regno)
 	else if (regno==regSP)
 		sprintf_s(&buf[n][0], 20, "sp");
 	else if (regno==regLR)
-		sprintf_s(&buf[n][0], 20, "lk1");
+		sprintf_s(&buf[n][0], 20, "lr1");
 	else if (regno == regLR+1)
-		sprintf_s(&buf[n][0], 20, "lk2");
+		sprintf_s(&buf[n][0], 20, "lr2");
 	else if (regno==114)
 		sprintf_s(&buf[n][0], 20, "$cn");
 	else if (regno >= 128 && regno < 144) {
@@ -508,9 +508,9 @@ char *RegMoniker2(int regno)
 	else if (regno == regSP)
 		sprintf_s(&buf[n][0], 20, "sp");
 	else if (regno == regLR)
-		sprintf_s(&buf[n][0], 20, "lk1");
+		sprintf_s(&buf[n][0], 20, "lr1");
 	else if (regno == regLR + 1)
-		sprintf_s(&buf[n][0], 20, "lk2");
+		sprintf_s(&buf[n][0], 20, "lr2");
 	else if (regno == 1)
 		sprintf_s(&buf[n][0], 20, "r%d", regno);
 	else if (regno == 2)
@@ -610,14 +610,22 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 		}
 		else {
 			//sprintf_s(buf, sizeof(buf), "%s_%s:\n", nm, ns);
-			ofs.printf((char *)"%s:	; %s\n", (char *)buf, (char *)nm);
+			switch (syntax) {
+			case MOT:
+				ofs.printf((char*)"%s:	; %s\n", (char*)buf, (char*)nm);
+				break;
+			default:
+				ofs.printf((char*)"%s:	# %s\n", (char*)buf, (char*)nm);
+			}
 		}
 	}
 	else {
 		sprintf_s(buf, sizeof(buf), "%.400s_%d", ns, lab);
-		ofs.printf((char *)"\t.type\t%.400s_%d,@object\n", (char *)ns, lab);
-		ofs.printf((char *)"\t.size\t%.400s_%d,", (char *)ns, lab);
-		ofs.printf("%d\n", sz);
+		if (syntax == STD) {
+			ofs.printf((char*)"\t.type\t%.400s_%d,@object\n", (char*)ns, lab);
+			ofs.printf((char*)"\t.size\t%.400s_%d,", (char*)ns, lab);
+			ofs.printf("%d\n", sz);
+		}
 		if (nm == NULL)
 			ofs.printf("%s:\n", buf);
 		else if (strlen(nm) == 0) {
@@ -626,7 +634,16 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 		else {
 			//sprintf_s(buf, sizeof(buf), "%s_%s:\n", nm, ns);
 			ofs.printf("%s: ", buf);
-			ofs.printf((char *)"# %s\n", (char *)nm);
+			switch (syntax) {
+			case MOT:
+				ofs.printf((char*)"; %s\n", (char*)nm);
+				break;
+			default:
+				ofs.printf((char*)"# %s\n", (char*)nm);
+			}
+		}
+		if (syntax == MOT) {
+			ofs.printf("\tdcb.b\t%d,0\n", sz);
 		}
 	}
 	return (buf);
@@ -645,7 +662,10 @@ void GenerateByte(int64_t val)
     }
     else {
         nl();
-        ofs.printf("\t.byte\t%d",(int)val & 0x00ff);
+				if (syntax == MOT)
+					ofs.printf("\tdc.b\t%d", (int)val & 0x00ff);
+				else
+	        ofs.printf("\t.byte\t%d",(int)val & 0x00ff);
         gentype = bytegen;
         outcol = 19;
     }
@@ -660,7 +680,10 @@ void GenerateChar(int64_t val)
     }
     else {
         nl();
-        ofs.printf("\t.2byte\t%d",(int)val & 0xffff);
+				if (syntax == MOT)
+					ofs.printf("\tdc.w\t%d", (int)val & 0xffff);
+				else
+					ofs.printf("\t.2byte\t%d",(int)val & 0xffff);
         gentype = chargen;
         outcol = 21;
     }
@@ -675,7 +698,10 @@ void GenerateHalf(int64_t val)
     }
     else {
         nl();
-        ofs.printf("\t.4byte\t%ld",(long)(val & 0xffffffffLL));
+				if (syntax == MOT)
+					ofs.printf("\tdc.l\t%ld", (long)(val & 0xffffffffLL));
+				else
+	        ofs.printf("\t.4byte\t%ld",(long)(val & 0xffffffffLL));
         gentype = halfgen;
         outcol = 25;
     }
@@ -690,7 +716,10 @@ void GenerateWord(int64_t val)
     }
     else {
         nl();
-        ofs.printf("\t.8byte\t%I64d",val);
+				if (syntax == MOT)
+					ofs.printf("\tdc.q\t%I64d", val);
+				else
+	        ofs.printf("\t.8byte\t%I64d",val);
         gentype = wordgen;
         outcol = 33;
     }
@@ -705,7 +734,10 @@ void GenerateLong(Int128 val)
                 }
         else    {
                 nl();
-                ofs.printf((char *)"\t.8byte\t%I64d,%I64d",val.low,val.high);
+								if (syntax == MOT)
+									ofs.printf((char*)"\tdc.q\t%I64d,%I64d", val.low, val.high);
+								else
+	                ofs.printf((char *)"\t.8byte\t%I64d,%I64d",val.low,val.high);
                 gentype = longgen;
                 outcol = 25;
                 }
@@ -720,7 +752,10 @@ void GenerateInt(int64_t val)
 	}
 	else {
 		nl();
-		ofs.printf("\t.8byte\t%I64d", val);
+		if (syntax == MOT)
+			ofs.printf("\tdc.q\t%I64d", val);
+		else
+			ofs.printf("\t.8byte\t%I64d", val);
 		gentype = longgen;
 		outcol = 25;
 	}
@@ -731,8 +766,14 @@ void GenerateFloat(Float128 *val)
 { 
 	if (val==nullptr)
 		return;
-	ofs.printf("\r\n\t.align 2\r\n");
-	ofs.printf("\t.4byte\t%s",val->ToString(64));
+	if (syntax == MOT) {
+		ofs.printf("\r\n\talign 2\r\n");
+		ofs.printf("\tdc.l\t%s", val->ToString(64));
+	}
+	else {
+		ofs.printf("\r\n\t.align 2\r\n");
+		ofs.printf("\t.4byte\t%s", val->ToString(64));
+	}
   gentype = longgen;
   outcol = 65;
 	genst_cumulative += 8;
@@ -742,8 +783,14 @@ void GenerateQuad(Float128 *val)
 { 
 	if (val==nullptr)
 		return;
-	ofs.printf("\r\n\t.align 2\r\n");
-	ofs.printf("\t.4byte\t%s",val->ToString(128));
+	if (syntax == MOT) {
+		ofs.printf("\r\n\t.align 2\r\n");
+		ofs.printf("\tdc.l\t%s", val->ToString(128));
+	}
+	else {
+		ofs.printf("\r\n\t.align 3\r\n");
+		ofs.printf("\t.4byte\t%s", val->ToString(128));
+	}
   gentype = longgen;
   outcol = 65;
 	genst_cumulative += 16;
@@ -751,8 +798,14 @@ void GenerateQuad(Float128 *val)
 
 void GeneratePosit(Posit64 val)
 {
-	ofs.printf("\r\n\t.align 8\r\n");
-	ofs.printf("\t.8byte\t%s", val.ToString());
+	if (syntax == MOT) {
+		ofs.printf("\r\n\talign 3\r\n");
+		ofs.printf("\t.dc.q\t%s", val.ToString());
+	}
+	else {
+		ofs.printf("\r\n\t.align 3\r\n");
+		ofs.printf("\t.8byte\t%s", val.ToString());
+	}
 	gentype = longgen;
 	outcol = 65;
 	genst_cumulative += 8;
@@ -799,7 +852,10 @@ void GenerateReference(SYM *sp,int64_t offset)
     else {
         nl();
         if(sp->storage_class == sc_static) {
-			ofs.printf("\t.8byte\t%s",GetNamespace());
+			if (syntax == MOT)
+				ofs.printf("\tdc.q\t%s", GetNamespace());
+			else
+				ofs.printf("\t.8byte\t%s",GetNamespace());
 			ofs.printf("_%lld",sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld",offset);
@@ -807,17 +863,26 @@ void GenerateReference(SYM *sp,int64_t offset)
 		}
         else if(sp->storage_class == sc_thread) {
 //            fprintf(output,"\tdw\t%s_%ld%c%d",GetNamespace(),sp->value.i,sign,offset);
-			ofs.printf("\t.8byte\t%s",GetNamespace());
+			if (syntax == MOT)
+				ofs.printf("\tdc.q\t%s", GetNamespace());
+			else
+				ofs.printf("\t.8byte\t%s",GetNamespace());
 			ofs.printf("_%lld",sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld",offset);
 		}
 		else {
 			if (offset==0) {
-				ofs.printf("\t.8byte\t%s",(char *)sp->name->c_str());
+				if (syntax == MOT)
+					ofs.printf("\tdc.q\t%s", (char*)sp->name->c_str());
+				else
+					ofs.printf("\t.8byte\t%s",(char *)sp->name->c_str());
 			}
 			else {
-				ofs.printf("\t.8byte\t%s",(char *)sp->name->c_str());
+				if (syntax == MOT)
+					ofs.printf("\tdc.q\t%s", (char*)sp->name->c_str());
+				else
+					ofs.printf("\t.8byte\t%s",(char *)sp->name->c_str());
 				ofs.putch(sign);
 				ofs.printf("%lld", offset);
 //				fprintf(output,"\tdw\t%s%c%d",sp->name,sign,offset);
@@ -836,7 +901,10 @@ void genstorageskip(int nbytes)
 	nl();
 	nn = (nbytes + 7) >> 3;
 	if (nn) {
-		sprintf_s(buf, sizeof(buf), "\t.align\t8\r\n\t.8byte\t0x%I64X\r\n", nn | 0xFFF0200000000000LL);
+		if (syntax == MOT)
+			sprintf_s(buf, sizeof(buf), "\talign\t3\r\n\tdc.q\t0x%I64X\r\n", nn | 0xFFF0200000000000LL);
+		else
+			sprintf_s(buf, sizeof(buf), "\t.align\t3\r\n\t.8byte\t0x%I64X\r\n", nn | 0xFFF0200000000000LL);
 		ofs.printf("%s", buf);
 	}
 }
@@ -846,7 +914,19 @@ std::streampos genstorage(int64_t nbytes)
 	std::streampos pos = ofs.tellp();
 	nl();
 	if (nbytes) {
-		ofs.printf("\t.space\t%I64d,0x00                    \n", nbytes);
+		switch (syntax) {
+		case MOT:
+			ofs.printf("\tdcb.b\t%I64d,0x00                    \n", nbytes);
+			break;
+		default:
+			;
+		}
+		/*
+		if (syntax == MOT)
+			ofs.printf("\tdcb.b\t%I64d,0x00                    \n", nbytes);
+		else
+			ofs.printf("\t.space\t%I64d,0x00                    \n", nbytes);
+		*/
 	}
 	genst_cumulative += nbytes;
 	return (pos);
@@ -866,10 +946,18 @@ void GenerateLabelReference(int n, int64_t offset)
     }
     else {
         nl();
-				if (offset == 0)
-					sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d", GetNamespace(), n);
-				else
-					sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d+%lld", GetNamespace(), n, offset);
+				if (offset == 0) {
+					if (syntax == MOT)
+						sprintf_s(buf, sizeof(buf), "\tdc.w\t%s_%d", GetNamespace(), n);
+					else
+						sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d", GetNamespace(), n);
+				}
+				else {
+					if (syntax == MOT)
+						sprintf_s(buf, sizeof(buf), "\tdc.w\t%s_%d+%lld", GetNamespace(), n, offset);
+					else
+						sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d+%lld", GetNamespace(), n, offset);
+				}
 				ofs.printf(buf);
         outcol = 22;
         gentype = longgen;
@@ -1124,14 +1212,20 @@ void dumplits()
 			case bt_float:
 			case bt_double:
 				put_label(numeric_tab->label, (char *)"", numeric_tab->nmspace, 'D', sizeOfFPD);
-				ofs.printf("\t.4byte\t");
+				if (syntax == MOT)
+					ofs.printf("\tdc.l\t");
+				else
+					ofs.printf("\t.4byte\t");
 				numeric_tab->f128.Pack(64);
 				ofs.printf("%s", numeric_tab->f128.ToString(64));
 				outcol += 35;
 				break;
 			case bt_quad:
 				put_label(numeric_tab->label, (char *)"", numeric_tab->nmspace, 'D', sizeOfFPQ);
-				ofs.printf("\t.4byte\t");
+				if (syntax == MOT)
+					ofs.printf("\tdc.l\t");
+				else
+					ofs.printf("\t.4byte\t");
 				numeric_tab->f128.Pack(64);
 				ofs.printf("%s", numeric_tab->f128.ToString(64));
 				outcol += 35;
@@ -1140,19 +1234,28 @@ void dumplits()
 				switch (numeric_tab->precision) {
 				case 16:
 					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 2);
-					ofs.printf("\t\.2byte\t");
+					if (syntax == MOT)
+						ofs.printf("\tdc.w\t");
+					else
+						ofs.printf("\t.2byte\t");
 					ofs.printf("0x%04X\n", (int)(numeric_tab->p.val & 0xffffLL));
 					outcol += 35;
 					break;
 				case 32:
 					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 4);
-					ofs.printf("\t\.4byte\t");
+					if (syntax == MOT)
+						ofs.printf("\tdc.l\t");
+					else
+						ofs.printf("\t.4byte\t");
 					ofs.printf("0x%08X\n", (int)(numeric_tab->p.val & 0xffffffffLL));
 					outcol += 35;
 					break;
 				default:
 					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 8);
-					ofs.printf("\t\.8byte\t");
+					if (syntax == MOT)
+						ofs.printf("\tdc.q\t");
+					else
+						ofs.printf("\t.8byte\t");
 					ofs.printf("0x%016I64X\n", numeric_tab->p.val);
 					outcol += 35;
 					break;
@@ -1295,7 +1398,10 @@ void nl()
 
 void align(int n)
 {
-	ofs.printf("\t.align\t%d\n",n);
+	if (syntax == MOT)
+		ofs.printf("\talign\t%d\n", n);
+	else
+		ofs.printf("\t.align\t%d\n",n);
 }
 
 void cseg()
@@ -1303,9 +1409,15 @@ void cseg()
 	{
 		if (curseg != codeseg) {
 			nl();
-			ofs.printf("\t.text\n");
-			ofs.printf("\t.align\t4\n");
-			curseg = codeseg;
+			if (syntax == MOT) {
+				ofs.printf("\ttext\n");
+				ofs.printf("\talign\t0\n");
+			}
+			else {
+				ofs.printf("\t.text\n");
+				ofs.printf("\t.align\t0\n");
+				curseg = codeseg;
+			}
 		}
 	}
 }
@@ -1314,10 +1426,16 @@ void dseg()
 {    
 	nl();
 	if (curseg != dataseg) {
-		ofs.printf("\t.data\n");
+		if (syntax == MOT)
+			ofs.printf("\tdata\n");
+		else
+			ofs.printf("\t.data\n");
 		curseg = dataseg;
   }
-	ofs.printf("\t.align\t8\n");
+	if (syntax == MOT)
+		ofs.printf("\talign\t14\n");
+	else
+		ofs.printf("\t.align\t14\n");
 }
 
 void tseg()
@@ -1325,7 +1443,7 @@ void tseg()
 	if( curseg != tlsseg) {
 		nl();
 		ofs.printf("\t.tls\n");
-		ofs.printf("\t.align\t8\n");
+		ofs.printf("\t.align\t14\n");
 		curseg = tlsseg;
     }
 }
@@ -1334,8 +1452,14 @@ void roseg()
 {
 	if( curseg != rodataseg) {
 		nl();
-		ofs.printf("\t.rodata\n");
-		ofs.printf("\t.align\t16\n");
+		if (syntax == MOT) {
+			ofs.printf("\tdata\n");
+			ofs.printf("\talign\t14\n");
+		}
+		else {
+			ofs.printf("\t.rodata\n");
+			ofs.printf("\t.align\t14\n");
+		}
 		curseg = rodataseg;
     }
 }
@@ -1344,27 +1468,54 @@ void seg(int sg, int algn)
 {    
 	nl();
 	if( curseg != sg) {
-		switch(sg) {
-		case bssseg:
-			ofs.printf("\t.bss\n");
-			break;
-		case dataseg:
-			ofs.printf("\t.data\n");
-			break;
-		case tlsseg:
-			ofs.printf("\t.tls\n");
-			break;
-		case idataseg:
-			ofs.printf("\t.idata\n");
-			break;
-		case codeseg:
-			ofs.printf("\t.text\n");
-			break;
-		case rodataseg:
-			ofs.printf("\t.rodata\n");
-			break;
+		if (syntax == MOT) {
+			switch (sg) {
+			case bssseg:
+				ofs.printf("\tbss\n");
+				break;
+			case dataseg:
+				ofs.printf("\tdata\n");
+				break;
+			case tlsseg:
+				ofs.printf("\t.tls\n");
+				break;
+			case idataseg:
+				ofs.printf("\t.idata\n");
+				break;
+			case codeseg:
+				ofs.printf("\ttext\n");
+				break;
+			case rodataseg:
+				ofs.printf("\tdata\n");
+				break;
+			}
+		}
+		else {
+			switch (sg) {
+			case bssseg:
+				ofs.printf("\t.bss\n");
+				break;
+			case dataseg:
+				ofs.printf("\t.data\n");
+				break;
+			case tlsseg:
+				ofs.printf("\t.tls\n");
+				break;
+			case idataseg:
+				ofs.printf("\t.idata\n");
+				break;
+			case codeseg:
+				ofs.printf("\t.text\n");
+				break;
+			case rodataseg:
+				ofs.printf("\t.rodata\n");
+				break;
+			}
 		}
 		curseg = sg;
     }
- 	ofs.printf("\t.align\t%d\n", algn);
+	if (syntax == MOT)
+		ofs.printf("\talign\t%d\n", algn);
+	else
+	 	ofs.printf("\t.align\t%d\n", algn);
 }

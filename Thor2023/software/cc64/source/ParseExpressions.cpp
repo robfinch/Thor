@@ -680,6 +680,8 @@ TYP* Expression::deref(ENODE **node, TYP *tp)
 	//(*node)->constflag = tp->isConst;
 	(*node)->sym = sp;
 	(*node)->tp = tp;
+	if ((*node)->nodetype==en_nacon)
+		(*node)->constflag = TRUE;
 	dfs.printf("</Deref>");
   return (tp);
 }
@@ -721,6 +723,8 @@ TYP *Expression::CondDeref(ENODE **node, TYP *tp)
 		tp->btp = tp1->GetIndex();
 		tp->btpp = tp1;
 		tp->isUnsigned = TRUE;
+		if ((*node)->nodetype == en_nacon)
+			(*node)->constflag = TRUE;
 	}
 	else if (tp->type==bt_pointer)
 		return (tp);

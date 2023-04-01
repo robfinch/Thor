@@ -228,7 +228,18 @@ int Instruction::store(txtoStream& ofs)
 {
 //	if (strnicmp(mnem, ";empty", 6)==0)
 //		printf("hi");
-	ofs.write(mnem);
+	switch (syntax) {
+	case MOT:
+		if (mnem[0] == '#') {
+			ofs.write(";");
+			ofs.write(&mnem[1]);
+		}
+		else
+			ofs.write(mnem);
+		break;
+	default:
+		ofs.write(mnem);
+	}
 	return (strlen(mnem));
 }
 

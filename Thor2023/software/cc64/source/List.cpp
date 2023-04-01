@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -180,8 +180,15 @@ void list_var(SYM *sp, int i)
       }
     }
 //			if (sp->IsPascal) ofs.printf("\tpascal ");
-        if( sp->storage_class == sc_external)
-                ofs.printf("\t.extern\t%s\n",(char *)sp->name->c_str());
+    if (sp->storage_class == sc_external) {
+      switch (syntax) {
+      case MOT:
+        ofs.printf("\txref\t%s\n", (char*)sp->name->c_str());
+        break;
+      default:
+        ofs.printf("\t.extern\t%s\n", (char*)sp->name->c_str());
+      }
+    }
         //else if( sp->storage_class == sc_global )
         //        ofs.printf(";\tglobal\t%s\n",(char *)sp->name->c_str());
 		put_typedef(sp->storage_class==sc_typedef);

@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2017-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2017-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -45,6 +45,7 @@ Statement *Function::ParseBody()
 	OCODE *ip, *ip2;
 	int oc;
 	int label, lab1;
+	char cc = '#';
 
 	dfs.printf("<Parse function body>:%s|\n", (char *)sym->name->c_str());
 
@@ -55,7 +56,13 @@ Statement *Function::ParseBody()
 	tmpReset();
 	//ParseAutoDeclarations();
 	lbl += *sym->mangledName;
-	ofs.printf("\n#{++ %s\n", (char* )lbl.c_str());
+	switch (syntax) {
+	case MOT:
+		ofs.printf("\n;{++ %s\n", (char*)lbl.c_str());
+		break;
+	default:
+		ofs.printf("\n#{++ %s\n", (char*)lbl.c_str());
+	}
 	lbl = std::string("");
 	if (IsCoroutine)
 		GenerateCoroutineData();
@@ -69,8 +76,15 @@ Statement *Function::ParseBody()
 		lbl += *sym->mangledName;
 		if (sym->tp->type == bt_pointer)
 			lbl += "_func";
-		else
-			lbl = "\n\t.align 4\n" + lbl;
+		else {
+			switch (syntax) {
+			case MOT:
+				lbl = "\n\talign 5\n" + lbl;
+				break;
+			default:
+				lbl = "\n\t.align 5\n" + lbl;
+			}
+		}
 		//			gen_strlab((char *)lbl.c_str());
 		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char *)lbl.c_str(), codeseg));
 	}
@@ -79,7 +93,13 @@ Statement *Function::ParseBody()
 		if (sym->storage_class == sc_global) {
 //			lbl = "\n\t.global ";
 //			lbl += *sym->mangledName;
-			lbl = "\n\t.align 4\n";
+			switch (syntax) {
+			case MOT:
+				lbl = "\n\talign 5\n";
+				break;
+			default:
+				lbl = "\n\t.align 5\n";
+			}
 			if (!IsInline) {
 				ofs.printf((char*)lbl.c_str());
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst(my_strdup((char*)lbl.c_str()), codeseg));
@@ -95,7 +115,13 @@ Statement *Function::ParseBody()
 				lbl = "\n\t.local ";
 				lbl += *sym->mangledName;
 				ofs.printf((char*)lbl.c_str());
-				lbl = "\n\t.align 4\n";
+				switch (syntax) {
+				case MOT:
+					lbl = "\n\talign 5\n";
+					break;
+				default:
+					lbl = "\n\t.align 5\n";
+				}
 				ofs.printf((char*)lbl.c_str());
 				lbl = *sym->mangledName;
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst("\n;{+", codeseg));
@@ -109,7 +135,13 @@ Statement *Function::ParseBody()
 			lbl += "_func";
 		//gen_strlab(lbl);
 	}
-	ofs.printf("\t.sdreg\t%d\n", regGP);
+	switch (syntax) {
+	case MOT:
+		ofs.printf("\tsdreg\t%d\n", regGP);
+		break;
+	default:
+		ofs.printf("\t.sdreg\t%d\n", regGP);
+	}
 	dfs.printf("B");
 	p = my_strdup((char *)lbl.c_str());
 	dfs.printf("b");
@@ -171,9 +203,14 @@ Statement *Function::ParseBody()
 
 		PeepOpt();
 		FlushPeep();
-		ofs.printf("\t.type\t%s,@function\n", (char *)sym->mangledName->c_str());
-		ofs.printf("\t.size\t%s,$-", (char *)sym->mangledName->c_str());
-		ofs.printf("%s\n", (char *)sym->mangledName->c_str());
+		switch (syntax) {
+		case MOT:
+			break;
+		default:
+			ofs.printf("\t.type\t%s,@function\n", (char*)sym->mangledName->c_str());
+			ofs.printf("\t.size\t%s,$-", (char*)sym->mangledName->c_str());
+			ofs.printf("%s\n", (char*)sym->mangledName->c_str());
+		}
 		lbl = ".endp ";
 		lbl += *sym->mangledName;
 		//ofs.printf(lbl.c_str());
@@ -735,11 +772,8 @@ void Function::UnlinkStack(int64_t amt)
 	else if (!IsLeaf) {
 		if (doesJAL) {
 			if (alstk) {
-				ap = GetTempRegister();
-				cg.GenerateLoad(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
+				cg.GenerateLoad(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
 				//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
-				GenerateDiadic(op_mtlk, 0, makereg(regLR), ap);
-				ReleaseTempRegister(ap);
 				if (IsFar) {
 					ap = GetTempRegister();
 					cg.GenerateLoad(ap, MakeIndexed(3 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
@@ -763,11 +797,8 @@ void Function::UnlinkStack(int64_t amt)
 	}
 	else if (!IsLeaf && doesJAL) {
 		if (!alstk) {
-			ap = GetTempRegister();
-			cg.GenerateLoad(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
+			cg.GenerateLoad(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
 			//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
-			GenerateDiadic(op_mtlk, 0, makereg(regLR), ap);
-			ReleaseTempRegister(ap);
 			if (IsFar) {
 				ap = GetTempRegister();
 				cg.GenerateLoad(ap, MakeIndexed(3 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
@@ -852,11 +883,11 @@ void Function::SetupReturnBlock()
 		if (!cpu.SupportsEnter) {
 			//if (IsFar)
 			//	GenerateMonadic(op_di, 0, MakeImmediate(2));
-			ap = GetTempRegister();
+			//ap = GetTempRegister();
 			//GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3102));
-			GenerateDiadic(op_mflk, 0, makereg(regLR), ap);
-			cg.GenerateStore(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord);
-			ReleaseTempRegister(ap);
+			//GenerateDiadic(op_mflk, 0, makereg(regLR), ap);
+			cg.GenerateStore(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord);
+			//ReleaseTempRegister(ap);
 			if (IsFar) {
 				ap = GetTempRegister();
 				GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3103));
@@ -1891,7 +1922,13 @@ void Function::Summary(Statement *stmt)
 	isOscall = FALSE;
 	isInterrupt = FALSE;
 	isNocall = FALSE;
-	ofs.printf("#--}\n");
+	switch (syntax) {
+	case MOT:
+		ofs.printf(";--}\n");
+		break;
+	default:
+		ofs.printf("#--}\n");
+	}
 	dfs.printf("</FuncSummary>\n");
 }
 

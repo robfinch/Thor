@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -129,7 +129,10 @@ void doinit(SYM *sp)
 		//strcpy_s(glbl, sizeof(glbl), gen_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D'));
 		if (sp->tp->IsSkippable()) {
 			patchpoint = ofs.tellp();
-			sprintf_s(buf, sizeof(buf), "\t.align\t8\n\t.8byte\t$FFF0200000000001\n");
+			if (syntax == MOT)
+				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t$FFF0200000000001\n");
+			else
+				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t$FFF0200000000001\n");
 			ofs.printf(buf);
 		}
 		sp->realname = my_strdup(put_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D', sp->tp->size));
@@ -139,21 +142,53 @@ void doinit(SYM *sp)
 		if (sp->storage_class == sc_global) {
 			//strcpy_s(lbl, sizeof(lbl), ".global ");
 			strcpy_s(lbl, sizeof(lbl), "");
-			if (curseg==dataseg)
-				strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.data\n");
-			else if (curseg==bssseg)
-				strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.bss\n");
-			else if (curseg==tlsseg)
-				strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.tls\n");
+			switch (syntax) {
+			case MOT:
+				if (curseg == dataseg)
+					strcat_s(lbl, sizeof(lbl), "\tdata\n");
+				else if (curseg == bssseg)
+					strcat_s(lbl, sizeof(lbl), "\tbss\n");
+				else if (curseg == tlsseg)
+					strcat_s(lbl, sizeof(lbl), "\ttls\n");
+				break;
+			default:
+				if (curseg == dataseg)
+					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.data\n");
+				else if (curseg == bssseg)
+					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.bss\n");
+				else if (curseg == tlsseg)
+					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.tls\n");
+			}
 		}
-		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.type\t%s,@object\n", (char *)sp->name->c_str());
-		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.size\t%s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
-		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
+		switch (syntax) {
+		case MOT:
+			if (curseg == bssseg)
+				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "comm %s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
+			else {
+				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
+				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\tdcb.b\t%I64d\n", sp->tp->size);
+			}
+			break;
+		default:
+			if (curseg == bssseg) {
+				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), ".lcomm %s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
+			}
+			else
+				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
+			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.type\t%s,@object\n", (char*)sp->name->c_str());
+			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.size\t%s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
+		}
 		//		strcat_s(lbl, sizeof(lbl), sp->name->c_str());
 //		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "[xxx%d]", sp->tp->size);
 		if (sp->tp->IsSkippable()) {
 			patchpoint = ofs.tellp();
-			sprintf_s(buf, sizeof(buf), "\t.align\t8\n\t.8byte\t$FFF0200000000001\n");
+			switch (syntax) {
+			case MOT:
+				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t$FFF0200000000001\n");
+				break;
+			default:
+				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t$FFF0200000000001\n");
+			}
 			ofs.printf(buf);
 		}
 		strcpy_s(glbl2, sizeof(glbl2), sp->name->c_str());
@@ -183,7 +218,13 @@ void doinit(SYM *sp)
 					strcpy_s(buf2, sizeof(buf2), "\n");
 				else
 					strcpy_s(buf2, sizeof(buf2), "");
-				sprintf_s(buf, sizeof (buf), "%s:\n.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, lbl);
+				switch (syntax) {
+				case MOT:
+					sprintf_s(buf, sizeof(buf), "%s:\ndc.q %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, lbl);
+					break;
+				default:
+					sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, lbl);
+				}
 				ofs.seekp(lblpoint);
 				ofs.write(buf);
 				//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
@@ -223,13 +264,25 @@ void doinit(SYM *sp)
 						}
 					}
 				}
-				sprintf_s(buf, sizeof(buf), "%s:\n.8byte ", lbl);
+				switch (syntax) {
+				case MOT:
+					sprintf_s(buf, sizeof(buf), "%s:\ndc.q ", lbl);
+					break;
+				default:
+					sprintf_s(buf, sizeof(buf), "%s:\n.8byte ", lbl);
+				}
 				ofs.seekp(lblpoint);
 				ofs.write(buf);
 				n2->PutConstant(ofs, 0, 0, false, 0);
 			}
 			else {
-				sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_func\n", lbl, sp->name->c_str());
+				switch (syntax) {
+				case MOT:
+					sprintf_s(buf, sizeof(buf), "%s:\ndc.q %s_func\n", lbl, sp->name->c_str());
+					break;
+				default:
+					sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_func\n", lbl, sp->name->c_str());
+				}
 				ofs.seekp(lblpoint);
 				ofs.write(buf);
 			}
@@ -266,7 +319,13 @@ void doinit(SYM *sp)
 	if (!hasPointer && sp->tp->IsSkippable()) {
 		endpoint = ofs.tellp();
 		ofs.seekp(patchpoint);
-		sprintf_s(buf, sizeof(buf), "\t.align\t8\n\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+		switch (syntax) {
+		case MOT:
+			sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+			break;
+		default:
+			sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+		}
 		ofs.printf(buf);
 		ofs.seekp(endpoint);
 		genst_cumulative = 0;
@@ -274,7 +333,13 @@ void doinit(SYM *sp)
 	else if (sp->tp->IsSkippable()) {
 		endpoint = ofs.tellp();
 		ofs.seekp(patchpoint);
-		sprintf_s(buf, sizeof(buf), "\t.align\t8\n\t  \t                 \n");
+		switch (syntax) {
+		case MOT:
+			sprintf_s(buf, sizeof(buf), "\talign\t3\n\t  \t                 \n");
+			break;
+		default:
+			sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t  \t                 \n");
+		}
 		ofs.printf(buf);
 		ofs.seekp(endpoint);
 		genst_cumulative = 0;
@@ -299,7 +364,13 @@ void doInitCleanup()
 		endpoint = ofs.tellp();
 		if (patchpoint > 0) {
 			ofs.seekp(patchpoint);
-			sprintf_s(buf, sizeof(buf), "\t.align\t8\n\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+			switch (syntax) {
+			case MOT:
+				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+				break;
+			default:
+				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+			}
 			ofs.printf(buf);
 			ofs.seekp(endpoint);
 		}

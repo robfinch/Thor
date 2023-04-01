@@ -100,7 +100,7 @@ wb_cmd_response128_t cpu2_dresp;
 
 Thor2023_stlb
 #(
-	.CHANNELS(CHANNELS+1)	// +1 for TLB itself
+	.CHANNELS(CHANNELS)	// +1 for TLB itself
 )
 ustlb
 (
@@ -196,6 +196,7 @@ Thor2023_pic upic1
 	.dat_i(wbm32_req.dat),
 	.dat_o(pic_dato),
 	.vol_o(),		// volatile register selected
+	.vp_o(),
 	.i1(iirq[1]),
 	.i2(iirq[2]),
 	.i3(iirq[3]),

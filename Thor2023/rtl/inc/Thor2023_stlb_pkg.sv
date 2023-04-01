@@ -1,12 +1,12 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2022-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2020-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_agen.sv
-//	- bus interface unit
+//	Thor2023_stlb_pkg.sv
+//	- shared TLB package
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -33,43 +33,23 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
 // ============================================================================
 
-import Thor2023Pkg::*;
+package Thor2023_stlb_pkg;
 
-module Thor2023_agen (ir, b, c, imm, adr);
-input instruction_t ir;
-input value_t b;
-input value_t c;
-input value_t imm;
-output address_t adr;
+typedef enum logic [3:0] {
+	ST_RST = 4'd0,
+	ST_RUN = 4'd1,
+	ST_AGE1 = 4'd2,
+	ST_AGE2 = 4'd3,
+	ST_AGE3 = 4'd4,
+	ST_AGE4 = 4'd5,
+	ST_WRITE_PTE = 4'd6,
+	ST_INVALL1 = 4'd7,
+	ST_INVALL2 = 4'd8,
+	ST_INVALL3 = 4'd9,
+	ST_INVALL4 = 4'd10
+} tlb_state_t;
 
-reg [4:0] sc;
-
-always_comb
-	case(ir.ls.sz)
-	PRC8:		sc = 5'd1;
-	PRC16:	sc = 5'd2;
-	PRC32:	sc = 5'd4;
-	PRC64:	sc = 5'd8;
-	PRC24:	sc = 5'd3;
-	PRC40:	sc = 5'd5;
-	PRC96:	sc = 5'd12;
-	default:
-		case(ir[11:9])
-		PRC8:		sc = 5'd1;
-		PRC16:	sc = 5'd2;
-		PRC32:	sc = 5'd4;
-		PRC64:	sc = 5'd8;
-		PRC24:	sc = 5'd3;
-		PRC40:	sc = 5'd5;
-		PRC96:	sc = 5'd12;
-		default:	sc = 5'd12;
-		endcase
-	endcase
-
-always_comb
-	adr = b + (ir.ls.Sc ? c * sc : c) + imm;
-
-endmodule
+endpackage

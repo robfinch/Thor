@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2020  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2020-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -29,11 +29,11 @@ void CPU::SetRealRegisters()
 {
 	int n;
 
-	regSP = 31;
-	regFP = 30;
-	regLR = 29;
+	regSP = 63;
+	regFP = 62;
+	regLR = 56;
 	regXLR = 28;
-	regGP = 27;
+	regGP = 61;
 	regTP = 26;
 	regCLP = 25;                // class pointer
 	regPP = 24;					// program pointer

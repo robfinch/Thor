@@ -3,7 +3,7 @@
 
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2016  Robert Finch, Stratford
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Stratford
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -67,7 +67,7 @@ enum e_node {
 		en_struct_ref,
         en_fcall, en_ifcall,
          en_tempref, en_regvar, en_fpregvar, en_tempfpref,
-		en_add, en_sub, en_mul, en_mod,
+		en_add, en_sub, en_mul, en_scndx, en_mod,
 		en_ftadd, en_ftsub, en_ftmul, en_ftdiv,
 		en_fdadd, en_fdsub, en_fdmul, en_fddiv,
 		en_fsadd, en_fssub, en_fsmul, en_fsdiv,

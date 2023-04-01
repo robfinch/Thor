@@ -37,7 +37,6 @@ typedef struct {
   char basereg;
   char ndxreg;
   char scale;
-  char selector;
   expr *value;
 } operand;
 
@@ -53,34 +52,28 @@ typedef struct {
 #define OP_REG6						0x00000100L
 #define OP_VMREG					0x00000200L
 #define OP_UIMM6					0x00000400L
-#define OP_REGIND13				0x00000800L
-#define OP_REGIND24				0x00001000L
-#define OP_REGIND30				0x00002000L
-#define OP_REGIND46				0x00004000L
-#define OP_REGIND64				0x00008000L
-#define OP_REGIND78				0x00010000L
+#define OP_REGIND					0x00000800L
+#define OP_BRTGT					0x00001000L
+#define OP_REG7						0x00001000L
 #define OP_SCNDX					0x00020000L
 #define OP_LK							0x00040000L
 #define OP_CAREG					0x00080000L
-#define OP_BRTGT20				0x00100000L
-#define OP_BRTGT12				0x00200000L
+#define OP_BRTGT16				0x00100000L
+#define OP_BRTGT28				0x00200000L
 #define OP_BRTGT34				0x00400000L
 #define OP_DATA						0x00800000L
 #define OP_SEL						0x01000000L
 #define OP_VREG						0x02000000L
 #define OP_IMM7						0x04000000L
 #define OP_CAREGIND				0x08000000L
-#define OP_BRTGT					0x10000000L
-#define OP_REG7						0x20000000L
 
-#define OP_NEXT			-1
-#define OP_NEXTREG	-2
+#define OP_NEXT			0x20000000L
+#define OP_NEXTREG	0x10000000L
 
 /* supersets of other operands */
 #define OP_IMM			(OP_IMM7|OP_IMM13|OP_IMM23|OP_IMM30|OP_IMM46|OP_IMM64)
-#define OP_REGIND		(OP_REGIND13|OP_REGIND24|OP_REGIND30|OP_REGIND46|OP_REGIND64|OP_REGIND78)
 #define OP_MEM      (OP_REGIND|OP_SCNDX)
-#define OP_ALL      0x3fffffff
+#define OP_ALL      0x0fffffffL
 
 #define OP_ISMEM(x) ((((x) & OP_MEM)!=0)
 
@@ -177,11 +170,10 @@ typedef struct {
 #define VT(x)		(((x) & 1LL) << 15LL)
 #define RA(x)		(((x) & 0x3fLL) << 16LL)
 #define SA(x)		(((x) & 1LL) << 22LL)
-#define VA(x)		(((x) & 1LL) << 23LL)
-#define RB(x)		(((x) & 0x3fLL) << 24LL)
-#define SB(x)		(((x) & 1LL) << 30LL)
-#define VB(x)		(((x) & 1LL) << 31LL)
-#define S(x)		(((x) & 1LL) << 32LL)
+#define RB(x)		(((x) & 0x3fLL) << 23LL)
+#define SB(x)		(((x) & 1LL) << 29LL)
+#define VB(x)		(((x) & 1LL) << 30LL)
+#define S(x)		(((x) & 1LL) << 31LL)
 #define RC(x)		(((x) & 0x3fLL) << 33LL)
 #define VC(x)		(((x) & 1LL) << 39LL)
 #define RCB(x)		(((x) & 0x1fLL) << 24LL)
