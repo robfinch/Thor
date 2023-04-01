@@ -1,9 +1,11 @@
-/* (c) in 2021-2022 by Robert Finch */
+/* (c) in 2021-2023 by Robert Finch */
+#define FLOAT_PARSER 1
 #include "hugeint.h"
 
 #define LITTLEENDIAN 1
 #define BIGENDIAN 0
 #define VASM_CPU_THOR 1
+#define HAVE_INSTRUCTION_EXTENSION	1
 
 /* maximum number of operands in one mnemonic */
 #define MAX_OPERANDS 5
@@ -92,6 +94,12 @@ typedef struct {
   unsigned int flags;
 } mnemonic_extension;
 
+typedef struct {
+	int const_expr;		// in pass one
+	int	size;
+	int postfix_count;
+} instruction_ext;
+
 #define FLG_NEGIMM	1
 
 #define EXI8	0x46
@@ -136,9 +144,6 @@ typedef struct {
 #define BL3		33
 #define J3		34
 #define JL3		35
-#define MTSEL	36
-#define MTLK	37
-#define MFLK	38
 #define ENTER	39
 #define LEAVE	40
 #define EXI56F	41

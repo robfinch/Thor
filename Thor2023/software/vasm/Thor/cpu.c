@@ -3,7 +3,7 @@
 #define TRACE(x)		/*printf(x)*/
 #define TRACE2(x,y)	/*printf((x),(y))*/
 
-char *cpu_copyright="vasm Thor cpu backend (c) in 2021-2023 Robert Finch";
+const char *cpu_copyright="vasm Thor cpu backend (c) in 2021-2023 Robert Finch";
 
 char *cpuname="Thor";
 int bitsperbyte=8;
@@ -322,9 +322,9 @@ mnemonic mnemonics[]={
 	"ldwz",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(1)|OPC(17),5},	
 	"ldwz",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(1)|OPC(17),5},	
 
-	"lea",	{OP_REG,OP_NEXT,OP_IMM,0,0}, {RI,CPU_ALL,0,SZ(6)|OPC(4),5},
-	"lea",	{OP_REG,OP_REGIND,0,0}, {RI,CPU_ALL,0,SZ(6)|OPC(4),5},
-	"lea",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,0x19LL,5},	
+	"lea",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,SZ(0)|OPC(30),5},	
+	"lea",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(0)|OPC(30),5},	
+	"lea",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(0)|OPC(30),5},	
 
 	"leave", {OP_IMM,0,0,0,0}, {LEAVE,CPU_ALL,0,0xBFLL,4},
 
@@ -350,8 +350,6 @@ mnemonic mnemonics[]={
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
 
-	"mtsel",	{OP_REG,OP_IMM,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
-	"mtsel",	{OP_REG,OP_REG,0,0,0},{MTSEL,CPU_ALL,0,0x520000000007LL,6},	
 
 	"mul", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x1D2LL,6},	
 	"mul", {OP_VREG,OP_VREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x1D2LL,6},
@@ -651,7 +649,7 @@ mnemonic mnemonics[]={
 
 };
 
-int mnemonic_cnt=sizeof(mnemonics)/sizeof(mnemonics[0]);
+const int mnemonic_cnt = sizeof(mnemonics)/sizeof(mnemonics[0]);
 
 int thor_data_operand(int n)
 {
@@ -1559,6 +1557,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
                            19,13,0,0x7ffc0LL);
           break;
         case RI:
+        	printf("RI reloc\n");
         	if (is_nbit(addend,16LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
                            23,8,0,0xffLL);
@@ -1599,6 +1598,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
         	}
         	break;
         case DIRECT:
+        	printf("DIRECT reloc\n");
         	if (is_nbit(addend,15LL)) {
 			      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
                            9,7,0,0x7fLL);
@@ -1628,6 +1628,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
         	}
         	break;
         case REGIND:
+        	printf("REGIND reloc\n");
         	if (op->basereg==sdreg) {
         		reloctype = REL_SD;
         		/*
@@ -1762,6 +1763,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
         	}
         	break;
         case SCNDX:
+        	printf("SCNDX reloc\n");
         	if (op->basereg==sdreg) {
         		reloctype = REL_SD;
         		/*
@@ -1973,38 +1975,21 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			break;
 		case REGIND:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
 				*insn = *insn| (RA(op->basereg & regmask));
+			else if (i==1)
+				*insn = *insn| (RB(op->basereg & regmask));
 			break;
 		case SCNDX:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
 				*insn = *insn| (RA(op->basereg & regmask));
-			else if (i==2)
+			else if (i==1)
 				*insn = *insn| (RB(op->basereg & regmask));
-			break;
-		case RIL:
-			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+			else if (i==2)
+				*insn = *insn| (RC(op->basereg & regmask));
 			break;
 		case DIRECT:
 			if (i==1)
 				*insn = *insn| (RA(op->basereg));
-			break;
-		case MTSEL:
-			if (i==0)
-				*insn = *insn| (RB(op->basereg & regmask));
-			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
-			break;
-		case MTLK:
-		case MFLK:
-			if (i==0||i==1)
-				*insn = *insn| (RT(op->basereg & regmask));
 			break;
 		}				
 	}
@@ -2096,38 +2081,21 @@ static void encode_vreg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			break;
 		case REGIND:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
 				*insn = *insn| (RA(op->basereg & regmask));
+			else if (i==1)
+				*insn = *insn| (RB(op->basereg & regmask));
 			break;
 		case SCNDX:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
 				*insn = *insn| (RA(op->basereg & regmask));
-			else if (i==2)
+			else if (i==1)
 				*insn = *insn| (RB(op->basereg & regmask));
-			break;
-		case RIL:
-			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
-			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+			else if (i==2)
+				*insn = *insn| (RC(op->basereg & regmask));
 			break;
 		case DIRECT:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
-			break;
-		case MTSEL:
-			if (i==0)
-				*insn = *insn| (RB(op->basereg & regmask));
-			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
-			break;
-		case MTLK:
-		case MFLK:
-			if (i==0||i==1)
-				*insn = *insn| (RT(op->basereg & regmask));
 			break;
 		}				
 	}
@@ -2156,6 +2124,24 @@ static void encode_reg6(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 	}
 }
 
+static encode_direct(uint64_t *insn, thuge val, uint64_t *postfix1, uint64_t *postfix2, uint64_t *postfix3)
+{
+	if (postfix1)
+		*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffffLL) << 8LL) | OPC(31);
+	if (abits > 32) {
+		if (postfix2)
+			*postfix2 = (5LL << 48LL) | (((val.lo >> 32LL) & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
+	}
+	if (abits > 64) {
+		if (postfix3)
+			*postfix3 = (5LL << 48LL) | ((val.hi & 0xffffffffffLL) << 8LL) | SZ(2) | OPC(31);
+	}
+	if (insn) {
+		*insn = *insn | ((val.lo & 0x7fLL) << 9LL);
+		*insn = *insn | (((val.lo >> 7LL) & 0xffLL) << 31LL);
+	}
+}
+
 static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* postfix3, uint64_t *insn, mnemonic* mnemo,
 	operand *op, thuge hval, int constexpr, int i, char vector)
 {
@@ -2175,27 +2161,7 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 	val2 = hshr(val,32LL);
 	if (constexpr) {
 		if (mnemo->ext.format==DIRECT) {
-			/*if (mnemo->ext.short_opcode) {
-				if (is_nbit(val,8)) {
-					isize = 4;
-				}
-			} */
-			if (!is_nbit(hval,15)) {
-				if (postfix1)
-					*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffffLL) << 8LL) | OPC(31);
-				if (!is_nbit(hval,32) && abits > 32) {
-					if (postfix2)
-						*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
-				}
-				if (!is_nbit(hval,64) && abits > 64) {
-					if (postfix3)
-						*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffffLL) << 8LL) | SZ(1) | OPC(31);
-				}
-			}
-			if (insn) {
-				*insn = *insn | ((val.lo & 0x7fLL) << 9LL);
-				*insn = *insn | (((val.lo >> 7LL) & 0xffLL) << 31LL);
-			}
+			encode_direct(insn, hval, postfix1, postfix2, postfix3);
 		}
 		else if (mnemo->ext.format == CSR) {
 			if (insn) {
@@ -2284,30 +2250,23 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			*/
 			if (insn)
 				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
-			if (!is_nbit(hval,15LL)) {
+			if (!is_nbit(hval,16LL)) {
 				if (postfix1)
-					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffffLL) << 8LL) | OPC(31);
+					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffLL) << 8LL) | OPC(31);
 			}
-			if (!is_nbit(hval,40LL)) {
+			if (!is_nbit(hval,32LL)) {
 				if (postfix2)
-					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffffLL) << 8LL) | OPC(31) | SZ(1);
+					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffLL) << 8LL) | OPC(31) | SZ(1);
 			}
-			if (!is_nbit(hval,72LL)) {
+			if (!is_nbit(hval,64LL)) {
 				if (postfix3)
-					*postfix3 = (5LL << 48LL) | (((val2.lo >> 40LL) & 0xffffffLL) << 8LL) | OPC(31) | SZ(2);
+					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
 		}
 	}
 	else {
 		if (mnemo->ext.format==DIRECT) {
-			goto j2;
-			if (mnemo->ext.short_opcode && is_nbit(val,13LL)) {
-j1:
-				if (insn)
-					*insn = *insn | ((val.lo & 0xffLL) << 23LL) || (((val.lo >> 8LL) & 0xffLL) << 32LL);
-				return (isize);
-			}
-			goto j2;
+			encode_direct(insn, hval, postfix1, postfix2, postfix3);
 		}
 		else if (mnemo->ext.format==CSRI) {
 			if (i==1) {
@@ -2354,11 +2313,29 @@ j1:
 				if (insn)
 					*insn = *insn | BFWID(val.lo);
 		}
+		else if (mnemo->ext.format==RI) {
+			if (insn)
+				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
+			if (!is_nbit(hval,16LL)) {
+				if (postfix1)
+					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffLL) << 8LL) | OPC(31);
+			}
+			if (!is_nbit(hval,32LL)) {
+				if (postfix2)
+					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffLL) << 8LL) | OPC(31) | SZ(1);
+			}
+			if (!is_nbit(hval,64LL)) {
+				if (postfix3)
+					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+		}
 		else {
 			if (op->type & OP_IMM) {
 				if (!is_nbit(val,16LL))
 					goto j2;
-				goto j1;
+				if (insn)
+					*insn = *insn | ((val.lo & 0xffLL) << 23LL) || (((val.lo >> 8LL) & 0xffLL) << 32LL);
+				return (isize);
 			}
 			else {
 j2:
@@ -2697,7 +2674,7 @@ static void encode_scndx(
 				If there is a constant during the first pass, then it should remain the
 				same during the second pass. The size of the constant will be known.
 		*/
-		if (db == NULL) {
+		if (0 && db == NULL) {
   		if (val.lo != 0)
     		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
     	if (!is_nbit(val,32) && abits > 32)
@@ -2715,6 +2692,58 @@ static void encode_scndx(
 	}
 	else {
 		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+  	if (abits > 32)
+  		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+  	if (abits > 64)
+  		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+	}
+}
+
+static void encode_regind(
+	instruction *ip,
+	uint64_t* insn,
+	operand* op,
+	thuge val,
+	int constexpr,
+	uint64_t *postfix1,
+	uint64_t *postfix2,
+	uint64_t *postfix3,
+	int i,
+	int pass
+)
+{
+	TRACE("Etho5:");
+	printf("encode_regind\n");
+	if (pass==1)
+		ip->ext.const_expr = 1;
+	if ((constexpr && pass==1) || ip->ext.const_expr) {
+		if (insn) {
+  		if (i==0)
+  			*insn |= (RA(op->basereg));
+  		else if (i==1) {
+  			*insn |= (RB(op->basereg));
+  			*insn |= (val.lo & 0x7fLL) << 9LL;
+  			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
+  		}
+		}
+		if (!is_nbit(val,15LL))
+ 			*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
+  	if (!is_nbit(val,32) && abits > 32)
+  		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
+  	if (!is_nbit(val,64) && abits > 64)
+  		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
+	}
+	else {
+		if (insn) {
+  		if (i==0)
+  			*insn |= (RA(op->basereg & regmask));
+  		else if (i==1) {
+  			*insn |= (RB(op->basereg & regmask));
+  			*insn |= (val.lo & 0x7fLL) << 9LL;
+  			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
+  		}
+		}
+ 		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
   	if (abits > 32)
   		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
   	if (abits > 64)
@@ -2848,10 +2877,6 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 			}
     }
 
-		if (mnemo->operand_type[i]==-1 || mnemo->operand_type[i]==-2) {
-		}
-		if ((mnemo->operand_type[i]&OP_SCNDX)==OP_SCNDX) {
-		}
 		TRACE("Etho2:");
 		if (op.type==OP_REG) {
 			encode_reg(insn, &op, mnemo, i);
@@ -2922,45 +2947,9 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
     else if (mnemo->operand_type[i]==OP_VMSTR) {
     	isize = encode_vmask(insn, mnemo, &op, val.lo, &isize, i);
     }
-    else if (mnemo->operand_type[i]&OP_REGIND==OP_REGIND && op.type==OP_REGIND) {
-			TRACE("Etho5:");
-    	if (constexpr) {
-    		isize = 5;
-    		if (insn) {
-	    		if (i==0)
-	    			*insn |= (RA(op.basereg));
-	    		else if (i==1) {
-	    			*insn |= (RB(op.basereg));
-	    			*insn |= (val.lo & 0x7fLL) << 9LL;
-	    			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
-	    		}
-    		}
-	    	if (!is_nbit(val,15) && abits > 15)
-	    		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
-	    	if (!is_nbit(val,32) && abits > 32)
-	    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
-	    	if (!is_nbit(val,64) && abits > 64)
-	    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
-    	}
-  		else {
-	   		isize = 5;
-    		if (insn) {
-	    		if (i==0)
-	    			*insn |= (RA(op.basereg & regmask));
-	    		else if (i==1) {
-	    			*insn |= (RB(op.basereg & regmask));
-	    			*insn |= (val.lo & 0x7fLL) << 9LL;
-	    			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
-	    		}
-    		}
-	    	if (abits > 15)
-	    		*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
-	    	if (abits > 32)
-	    		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
-	    	if (abits > 64)
-	    		*postfix3 = ((val.hi & 0xffffffffLL) << 8LL) | SZ(2) | 0x1fLL | (5LL << 48LL);
-  		}
-    }
+    else if ((mnemo->operand_type[i]&OP_REGIND)==OP_REGIND && op.type==OP_REGIND)
+			encode_regind(ip, insn, &op, val, constexpr, postfix1, postfix2, postfix3, i, db==NULL);
+
     else if ((mnemo->operand_type[i]&OP_SCNDX)==OP_SCNDX && op.type==OP_SCNDX)
 			encode_scndx(insn, &op, val, constexpr, postfix1, postfix2, postfix3, db);
 	}
@@ -2976,6 +2965,9 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 {
   uint64_t modifier1, modifier2;
   uint64_t postfix1, postfix2, postfix3;
+  instruction* lip = NULL;
+  section* lsec = NULL;
+  taddr lpc = -1;
  
 	modifier1 = 0;
 	modifier2 = 0;
@@ -2992,6 +2984,12 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
 		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
 		;
+	if (ip->ext.size != 0) {
+		if (ip->ext.size != sz)
+			printf("size diff\n");
+	}
+	else
+		ip->ext.size = sz;
 	if (0 && sz > 80) {
 		printf("mod1: %d\n", modifier1 >> 48LL);
 		printf("mod2: %d\n", modifier2 >> 48LL);
@@ -3023,15 +3021,19 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 	postfix3 = 0;
 	encode_thor_operands(ip,sec,pc,&modifier1,&modifier2,
 		&postfix1, &postfix2, &postfix3, &insn, db);
-	db->size = 
+	sz = 
 		5LL + 
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
 		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
 		;
-	insn_sizes2[sz2ndx] = db->size;
+	if (sz != ip->ext.size)
+		printf("sizediff2\n");
+	insn_sizes2[sz2ndx] = sz;
   if (db) {
-    unsigned char *d = db->data = mymalloc(db->size);
+    unsigned char *d = db->data = mymalloc(sz);
     int i;
+    
+    db->size = sz;
 
 		if (modifier1 >> 48LL) {
 	    d = setval(0,d,5,modifier1 & 0xffffffffffLL);
@@ -3055,12 +3057,14 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 	    d = setval(0,d,5,postfix3 & 0xffffffffffLL);
 	    insn_count++;
 	  }
+	  /*
 		while (db->size < insn_sizes1[sz2ndx]) {
 	    d = setval(0,d,5,0x9fLL);	// NOP
 	    db->size += 5;
 	    insn_count++;
 		}	
 		sz2ndx++;
+		*/
     byte_count += db->size;
   }
   return (db);
@@ -3087,7 +3091,7 @@ dblock *eval_data(operand *op,size_t bitsize,section *sec,taddr pc)
   if (type_of_expr(op->value) == FLT) {
     if (!eval_expr_float(op->value,&flt))
       general_error(60);  /* cannot evaluate floating point */
-
+/*
     switch (bitsize) {
       case 32:
         conv2ieee32(0,db->data,flt);
@@ -3096,9 +3100,10 @@ dblock *eval_data(operand *op,size_t bitsize,section *sec,taddr pc)
         conv2ieee64(0,db->data,flt);
         break;
       default:
-        cpu_error(10);  /* data has illegal type */
+        cpu_error(10);
         break;
     }
+*/
   }
   else {
     val = make_reloc(get_reloc_type(op),op,sec,pc,&db->relocs,&constexpr);
@@ -3204,3 +3209,9 @@ char *parse_cpu_special(char *start)
   return start;
 }
 
+void init_instruction_ext(instruction_ext *ext)
+{
+	ext->size = 0;
+	ext->postfix_count = 0;
+	ext->const_expr = 0;
+}
