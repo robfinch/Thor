@@ -49,13 +49,13 @@ localparam HIBIT=$clog2(LINES)-1+LOBIT;
 input rst;
 input clk;
 input wr;
-input address_t vadr_i;
-input address_t padr_i;
+input Thor2023Pkg::address_t vadr_i;
+input Thor2023Pkg::address_t padr_i;
 input [1:0] way;
 input rclk;
 input [$clog2(LINES)-1:0] ndx;
 output cache_tag_ex_t [3:0] tag;
-output cache_tag_ex_t ptags0 [0:LINES-1];
+output cache_tag_ex_t ptags0 [0:LINES-1];	// physical tags
 output cache_tag_ex_t ptags1 [0:LINES-1];
 output cache_tag_ex_t ptags2 [0:LINES-1];
 output cache_tag_ex_t ptags3 [0:LINES-1];
@@ -64,7 +64,7 @@ output cache_tag_ex_t ptags3 [0:LINES-1];
 //typedef logic [$bits(code_address_t)-1:TAGBIT] tag_t;
 
 (* ram_style="distributed" *)
-cache_tag_ex_t vtags0 [0:LINES-1];
+cache_tag_ex_t vtags0 [0:LINES-1];	// virtual tags
 (* ram_style="distributed" *)
 cache_tag_ex_t vtags1 [0:LINES-1];
 (* ram_style="distributed" *)
@@ -87,6 +87,10 @@ for (n = 0; n < LINES; n = n + 1) begin
 	vtags1[n] <= 'd1;
 	vtags2[n] <= 'd1;
 	vtags3[n] <= 'd1;
+	ptags0[n] <= 'd1;
+	ptags1[n] <= 'd1;
+	ptags2[n] <= 'd1;
+	ptags3[n] <= 'd1;
 end
 end
 
@@ -105,18 +109,18 @@ end
 else
 `endif
 begin
-	if (wr && way==2'd0) vtags0[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd1) vtags1[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd2) vtags2[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd3) vtags3[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd0) vtags0[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd1) vtags1[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd2) vtags2[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd3) vtags3[vadr_i[HIBIT:LOBIT]] <= {vadr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
 end
 
 always_ff @(posedge clk)
 begin
-	if (wr && way==2'd0) ptags0[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd1) ptags1[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd2) ptags2[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
-	if (wr && way==2'd3) ptags3[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(address_t)-1:TAGBIT]};
+	if (wr && way==2'd0) ptags0[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd1) ptags1[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd2) ptags2[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
+	if (wr && way==2'd3) ptags3[vadr_i[HIBIT:LOBIT]] <= {padr_i[$bits(Thor2023Pkg::address_t)-1:TAGBIT]};
 end
 
 assign tag[0] = vtags0[ndx];

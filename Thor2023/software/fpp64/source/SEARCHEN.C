@@ -24,8 +24,9 @@
 void searchenv(char *filename, char *envname, char *pathname, int pathsize)
 {
    static char pbuf[5000];
-   char envbuf[5000];
+   char* envbuf;
    char *p, *np;
+   size_t buflen;
 //   char *strpbrk(), *strtok(), *getenv();
 
    strcpy_s(pathname, pathsize-1, filename);
@@ -38,7 +39,7 @@ void searchenv(char *filename, char *envname, char *pathname, int pathsize)
       isn't set, return a NULL, else search for the file on the path.
    ---------------------------------------------------------------------- */
    
-   if (_dupenv_s(envbuf, sizeof(envbuf), envname) != 0)
+   if (_dupenv_s(&envbuf, &buflen, envname) != 0)
    {
       *pathname = '\0';
       return;
@@ -46,7 +47,8 @@ void searchenv(char *filename, char *envname, char *pathname, int pathsize)
    p = envbuf;
 
    strcpy_s(pbuf, sizeof(pbuf)-1, "");
-   strcat_s(pbuf, sizeof(pbuf)-1, p);
+   if (p)
+    strcat_s(pbuf, sizeof(pbuf)-1, p);
    np = NULL;
    if (p = strtok_s(pbuf, ";", &np))
    {
@@ -62,5 +64,6 @@ void searchenv(char *filename, char *envname, char *pathname, int pathsize)
       while(p = strtok_s(NULL, "; ", &np));
    }
    *pathname = 0;
+   free(envbuf);
 }
 

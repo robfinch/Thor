@@ -42,7 +42,7 @@ import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
-	ip,ip_o,ihit_o,ihite,ihito,ifStall,ic_line_hi,ic_line_lo,ic_valid,ic_tage, ic_tago,
+	ip,ip_o,ihit_o,ifStall,ic_line_hi,ic_line_lo,ic_valid,
 	fifoToCtrl_wack, fifoToCtrl_i,fifoToCtrl_full_o,
 	fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
@@ -64,14 +64,10 @@ input pe;									// protected mode enable
 input code_address_t ip;
 output code_address_t ip_o;
 output ihit_o;
-output ihite;
-output ihito;
 input ifStall;
 output ICacheLine ic_line_hi;
 output ICacheLine ic_line_lo;
 output ic_valid;
-output [$bits(address_t)-1:6] ic_tage;
-output [$bits(address_t)-1:6] ic_tago;
 // Fifo controls
 output fifoToCtrl_wack;
 input memory_arg_t fifoToCtrl_i;
@@ -335,20 +331,16 @@ wire itlbrdy;
 reg itlben, itlbwr;
 wire ihit;
 TLBE itlbdato;
-code_address_t phys_ip;
+code_address_t phys_ip, imiss_adr;
 code_address_t original_ip;
 wb_address_t upd_adr = 'd0;
-reg wr_ic1, wr_ic2;
+wire wr_ic2;
 ICacheLine ic_input;		// Must be a multiple of 128 bits wide for shifting.
 reg [2:0] ivictim_count;
 ICacheLine [4:0] ivictim_cache;
-ICacheLine ivictim_line;
-wire ivictim_wr;
 reg [LOG_IWAYS:0] ic_wway;
 reg [2:0] vcn;
 reg ic_invline,ic_invall;
-wire ihit2e, ihit2o;
-wire icache_wre, icache_wro;
 
 Thor2023_icache_ex
 #(
@@ -367,20 +359,13 @@ uic1
 	.ip_o(ip_o),
 	.ihit_o(ihit_o),
 	.ihit(ihit),
-	.ihite(ihite),
-	.ihito(ihito),
 	.ic_line_hi_o(ic_line_hi),
 	.ic_line_lo_o(ic_line_lo),
 	.ic_valid(ic_valid),
-	.ic_tage(ic_tage),
-	.ic_tago(ic_tago),
+	.miss_adr(imiss_adr),
 	.ic_line_i(ic_input),
 	.wway(ic_wway),
-	.wr_ic(wr_ic2),
-	.icache_wre(icache_wre),
-	.icache_wro(icache_wro),
-	.victim_wr(ivictim_wr),
-	.victim_line(ivictim_line)
+	.wr_ic(wr_ic2)
 );
 
 Thor2023_icache_ctrl 
@@ -390,12 +375,12 @@ Thor2023_icache_ctrl
 ) 
 uictrl
 (
-	.rst_i(rst),
-	.clk_i(clk),
+	.rst(rst),
+	.clk(clk),
 	.wbm_req(iwbm_req),
 	.wbm_resp(iwbm_resp),
 	.hit(ihit),
-	.miss_adr(ip_o),
+	.miss_adr(imiss_adr),
 	.wr_ic(wr_ic2),
 	.way(ic_wway),
 	.line_o(ic_input),
@@ -423,8 +408,8 @@ reg dcachable;
 reg dc_invline,dc_invall;
 wire dcache_load;
 wire [1:0] dc_uway, dc_way;
-wb_cmd_request256_t cpu_req;
-wb_cmd_response256_t cpu_resp1, cpu_resp2;
+wb_cmd_request512_t cpu_req;
+wb_cmd_response512_t cpu_resp1, cpu_resp2;
 wire dc_dump, dc_dump_ack;
 DCacheLine dc_dump_o;
 
@@ -434,7 +419,8 @@ begin
 	memresp.cmt = 1'b1;
 	memresp.wr = cpu_resp1.ack;
 	memresp.sel = cpu_req.sel;
-	tDataAlign(cpu_req,memresp);
+	memresp.cause = imemreq.cause;
+	tDataAlign(cpu_req,imemreq.bytcnt,memresp);
 end
 
 Thor2023_dcache_ex3
@@ -1056,8 +1042,6 @@ always_comb// @(posedge clk)
 	cs1 <= req.seg==wishbone_pkg::CODE;
 always_ff @(posedge clk)
 	blen1 <= req.blen;
-always_comb
-	wr_ic2 <= wr_ic1;
 
 always_ff @(posedge clk)
 if (rst) begin
@@ -2149,7 +2133,7 @@ begin
 		adr_o <= adr_o + 5'd16;
 	dat_o <= memr_res[127:0];
 	dat <= memr_res[127:0];
-	csr_o <= memr.func2==MR_STC;
+	csr_o <= memr.func2==MR_STCR;
   tid_o <= {tid_cnt[7:3] + 2'd1,3'd0};
 	tid_cnt[7:3] <= tid_cnt[7:3] + 2'd1;
 	tid_cnt[2:0] <= 'd0;
@@ -2307,18 +2291,18 @@ end
 endtask
 
 task tAlignFaultDetect;
-input wb_cmd_request256_t req;
+input wb_cmd_request512_t req;
 output cause_code_t code;
 begin
 	code <= FLT_NONE;
 	case(req.sz)
 	Thor2023Pkg::nul:		;		
 	Thor2023Pkg::byt:		;
-	Thor2023Pkg::wyde: 	if (req.vadr[4:0]==5'h1F) code <= FLT_ALN;
-	Thor2023Pkg::tetra:	if (req.vadr[4:0] >5'h1C) code <= FLT_ALN;
-	Thor2023Pkg::octa:	if (req.vadr[4:0] >5'h18) code <= FLT_ALN;
-	Thor2023Pkg::hexi:	if (req.vadr[4:0] >5'h10) code <= FLT_ALN;
-	default:	if (req.vadr[4:0]!=5'h00) code <= FLT_ALN;
+	Thor2023Pkg::wyde: 	if (req.vadr[5:0]==6'h3F) code <= FLT_ALN;
+	Thor2023Pkg::tetra:	if (req.vadr[5:0] >6'h3C) code <= FLT_ALN;
+	Thor2023Pkg::octa:	if (req.vadr[5:0] >6'h38) code <= FLT_ALN;
+	Thor2023Pkg::hexi:	if (req.vadr[5:0] >6'h30) code <= FLT_ALN;
+	default:	if (req.vadr[5:0]!=6'h00) code <= FLT_ALN;
 	endcase
 end
 endtask
@@ -2326,10 +2310,11 @@ endtask
 // This data align is for non-cached data.
 
 task tDataAlign;
-input wb_cmd_request256_t req;
+input wb_cmd_request512_t req;
+input [4:0] bytcnt;
 output memory_arg_t resp;
 begin
-	tAlignFaultDetect(req,resp.cause);
+//	tAlignFaultDetect(req,resp.cause);
 //	resp.step <= req.step;
   resp.cmt <= TRUE;
 	resp.tid <= req.tid;
@@ -2337,28 +2322,50 @@ begin
   case(req.cmd)
   CMD_LOAD:
   	begin
-			case(req.sz)
-			Thor2023Pkg::nul:	resp.res <= 'h0;
-			Thor2023Pkg::byt:	begin resp.res <= {{56{datis[7]}},datis[7:0]}; end
-			Thor2023Pkg::wyde:	begin resp.res <= {{48{datis[15]}},datis[15:0]}; end
-			Thor2023Pkg::tetra:	begin resp.res <= {{32{datis[31]}},datis[31:0]}; end
-			Thor2023Pkg::octa:	begin resp.res <= {{64{datis[63]}},datis[63:0]}; end
-			Thor2023Pkg::hexi:	begin resp.res <= datis[127:0]; end
+			case(bytcnt)
+			5'd0:	resp.res <= 'h0;
+			5'd1:	begin resp.res <= {{120{datis[7]}},datis[7:0]}; end
+			5'd2:	begin resp.res <= {{112{datis[15]}},datis[15:0]}; end
+			5'd3:	begin resp.res <= {{104{datis[23]}},datis[23:0]}; end
+			5'd4:	begin resp.res <= {{96{datis[31]}},datis[31:0]}; end
+			5'd5:	begin resp.res <= {{88{datis[39]}},datis[39:0]}; end
+			5'd6:	begin resp.res <= {{80{datis[47]}},datis[47:0]}; end
+			5'd7:	begin resp.res <= {{72{datis[55]}},datis[55:0]}; end
+			5'd8:	begin resp.res <= {{64{datis[63]}},datis[63:0]}; end
+			5'd9:	begin resp.res <= {{56{datis[71]}},datis[71:0]}; end
+			5'd10:	begin resp.res <= {{48{datis[79]}},datis[79:0]}; end
+			5'd11:	begin resp.res <= {{40{datis[87]}},datis[87:0]}; end
+			5'd12:	begin resp.res <= {{32{datis[95]}},datis[95:0]}; end
+			5'd13:	begin resp.res <= {{24{datis[103]}},datis[103:0]}; end
+			5'd14:	begin resp.res <= {{16{datis[111]}},datis[111:0]}; end
+			5'd15:	begin resp.res <= {{ 8{datis[119]}},datis[119:0]}; end
+			5'd16:	begin resp.res <= datis[127:0]; end
 			default:	resp.res <= req.dat;
 			endcase
-	end
+		end
   CMD_LOADZ:
   	begin
-			case(req.sz)
-			Thor2023Pkg::nul:	resp.res <= 'h0;
-			Thor2023Pkg::byt:	begin resp.res <= {56'd0,datis[7:0]}; end
-			Thor2023Pkg::wyde:	begin resp.res <= {48'd0,datis[15:0]}; end
-			Thor2023Pkg::tetra:	begin resp.res <= {32'd0,datis[31:0]}; end
-			Thor2023Pkg::octa:	begin resp.res <= {64'd0,datis[63:0]}; end
-			Thor2023Pkg::hexi:	begin resp.res <= datis[127:0]; end
+			case(bytcnt)
+			5'd0:	resp.res <= 'h0;
+			5'd1:	begin resp.res <= {{120{1'b0}},datis[7:0]}; end
+			5'd2:	begin resp.res <= {{112{1'b0}},datis[15:0]}; end
+			5'd3:	begin resp.res <= {{104{1'b0}},datis[23:0]}; end
+			5'd4:	begin resp.res <= {{96{1'b0}},datis[31:0]}; end
+			5'd5:	begin resp.res <= {{88{1'b0}},datis[39:0]}; end
+			5'd6:	begin resp.res <= {{80{1'b0}},datis[47:0]}; end
+			5'd7:	begin resp.res <= {{72{1'b0}},datis[55:0]}; end
+			5'd8:	begin resp.res <= {{64{1'b0}},datis[63:0]}; end
+			5'd9:	begin resp.res <= {{56{1'b0}},datis[71:0]}; end
+			5'd10:	begin resp.res <= {{48{1'b0}},datis[79:0]}; end
+			5'd11:	begin resp.res <= {{40{1'b0}},datis[87:0]}; end
+			5'd12:	begin resp.res <= {{32{1'b0}},datis[95:0]}; end
+			5'd13:	begin resp.res <= {{24{1'b0}},datis[103:0]}; end
+			5'd14:	begin resp.res <= {{16{1'b0}},datis[111:0]}; end
+			5'd15:	begin resp.res <= {{ 8{1'b0}},datis[119:0]}; end
+			5'd16:	begin resp.res <= datis[127:0]; end
 			default:	resp.res <= req.dat;
 			endcase
-	end
+		end
   default:  ;
   endcase
 end

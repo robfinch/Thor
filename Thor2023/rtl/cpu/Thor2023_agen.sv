@@ -38,12 +38,13 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_agen (ir, b, c, imm, adr);
+module Thor2023_agen (ir, b, c, imm, adr, nxt_adr);
 input instruction_t ir;
 input value_t b;
 input value_t c;
 input value_t imm;
 output address_t adr;
+output address_t nxt_adr;
 
 reg [4:0] sc;
 
@@ -53,23 +54,21 @@ always_comb
 	PRC16:	sc = 5'd2;
 	PRC32:	sc = 5'd4;
 	PRC64:	sc = 5'd8;
-	PRC24:	sc = 5'd3;
-	PRC40:	sc = 5'd5;
-	PRC96:	sc = 5'd12;
+	PRC128:	sc = 5'd16;
 	default:
 		case(ir[11:9])
 		PRC8:		sc = 5'd1;
 		PRC16:	sc = 5'd2;
 		PRC32:	sc = 5'd4;
 		PRC64:	sc = 5'd8;
-		PRC24:	sc = 5'd3;
-		PRC40:	sc = 5'd5;
-		PRC96:	sc = 5'd12;
-		default:	sc = 5'd12;
+		PRC128:	sc = 5'd16;
+		default:	sc = 5'd8;
 		endcase
 	endcase
 
 always_comb
 	adr = b + (ir.ls.Sc ? c * sc : c) + imm;
+always_comb
+	nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
 
 endmodule

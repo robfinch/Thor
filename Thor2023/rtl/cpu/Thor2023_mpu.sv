@@ -70,7 +70,7 @@ assign cs_config = wbm_req.padr[31:28]==4'hD;
 assign cs_io = wbm_req.padr[31:24]==8'hFE;
 
 wire snoop_v;
-address_t snoop_adr;
+Thor2023Pkg::address_t snoop_adr;
 wire [3:0] snoop_cid;
 reg [31:0] iirq;
 

@@ -56,15 +56,15 @@ localparam LOG_WAYS = $clog2(WAYS)-1;
 input rst;
 input clk;
 input dce;										// 1= data cache enabled
-input address_t snoop_adr;
+input Thor2023Pkg::address_t snoop_adr;
 input snoop_v;								// 1= valid snoop taking place
 input [3:0] snoop_cid;
 input cache_load;							// 1= load operation, 0=update
 output reg hit;
 output reg [LOG_WAYS:0] uway;	// way to use on a cache hit
-input wb_cmd_request256_t cpu_req_i;
-output wb_cmd_response256_t cpu_resp_o;
-input wb_cmd_response256_t cpu_resp_i;
+input wb_cmd_request512_t cpu_req_i;
+output wb_cmd_response512_t cpu_resp_o;
+input wb_cmd_response512_t cpu_resp_i;
 
 output reg dump;
 output DCacheLine dump_o;
@@ -92,7 +92,7 @@ typedef struct packed
 localparam CACHE_LINE_WIDTH = ($bits(cache_line_t)+7) & 32'hFFF8;	// Must be a multiple of eight
 
 integer n, m;
-integer k;
+integer k, j;
 
 reg dump1;							// dump the cache line to memory
 cache_line_t cline_in;
@@ -200,6 +200,8 @@ for (g = 0; g < WAYS; g = g + 1) begin : gFor
 		.o(lines[g])
 	);
 
+	// Physcial tag memory needs to be snooped, so it has its own memory with
+	// read port.
 	sram_1r1w 
 	#(
 		.WID($bits(cache_tag_t)),
@@ -333,21 +335,21 @@ else begin
 	else
 		dump <= dump1;
 	if (dump1 & ~dump) begin
-		dump_o.v = 1'b1;
-		dump_o.m = 1'b0;
-		dump_o.asid = lines[way].asid;
-		dump_o.vtag = lines[way].tag;
-		dump_o.ptag = ptags[way];
-		dump_o.data = lines[way].data;
+		dump_o.v <= 1'b1;
+		dump_o.m <= 1'b0;
+		dump_o.asid <= lines[way].asid;
+		dump_o.vtag <= lines[way].tag;
+		dump_o.ptag <= ptags[way];
+		dump_o.data <= lines[way].data;
 	end
 end
 
 always_comb
 begin
-	for (k = 0; k < WAYS; k = k + 1) begin
-	  hits[k] = lines[k[LOG_WAYS:0]].tag==cpu_req_i.vadr[$bits(address_t)-1:TAGBIT] && 
-	  					lines[k[LOG_WAYS:0]].asid==cpu_req_i.asid &&
-	  					lines[k[LOG_WAYS:0]].v==1'b1;
+	for (j = 0; j < WAYS; j = j + 1) begin
+	  hits[j] = lines[j[LOG_WAYS:0]].tag==cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:TAGBIT] && 
+	  					lines[j[LOG_WAYS:0]].asid==cpu_req_i.asid &&
+	  					lines[j[LOG_WAYS:0]].v==1'b1;
 	end
 end
 
@@ -366,8 +368,8 @@ end
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	for (k = 0; k < WAYS; k = k + 1)
-		validr[k] = 'd0;
-	valid = 'd0;
+		validr[k] <= 'd0;
+	valid <= 'd0;
 end
 else begin
 	if (wr)
@@ -388,12 +390,12 @@ else begin
 	// snoop.
 	if (snoop_v && snoop_cid!=CID) begin
 		for (k = 0; k < WAYS; k = k + 1) begin
-			if (snoop_adr[$bits(address_t)-1:TAGBIT]==ptags[k])
+			if (snoop_adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT]==ptags[k])
 				validr[k][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
 		end
 	end
 	for (k = 0; k < WAYS; k = k + 1)
-		valid[k] = validr[k][vndx];
+		valid[k] <= validr[k][vndx];
 end
 
 

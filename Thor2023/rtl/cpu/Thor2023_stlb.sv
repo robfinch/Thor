@@ -551,7 +551,7 @@ edge_det u5 (
 
 // Detect a change in the page number
 wire cd_adr;
-change_det #(.WID($bits(address_t)-LOG_PAGE_SIZE)) ucd1 (
+change_det #(.WID($bits(Thor2023Pkg::address_t)-LOG_PAGE_SIZE)) ucd1 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
@@ -810,11 +810,11 @@ else
 
 
 // Mask selecting between incoming address bits and address bits from the PPN.
-function address_t fnAmask;
+function Thor2023Pkg::address_t fnAmask;
 input [4:0] L;
 integer nn;
 begin
-for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+for (nn = 0; nn < $bits(Thor2023Pkg::address_t); nn = nn + 1)
 	if (nn < LOG_PAGE_SIZE + LOG_ENTRIES*L)
 		fnAmask[nn] = 1'b1;
 	else
@@ -823,11 +823,11 @@ end
 endfunction
 
 // Mask for virtual address bits that must match the incoming address.
-function address_t fnVmask1;
+function Thor2023Pkg::address_t fnVmask1;
 input [4:0] L;
 integer nn;
 begin
-for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+for (nn = 0; nn < $bits(Thor2023Pkg::address_t); nn = nn + 1)
 	if (nn < LOG_PAGE_SIZE + LOG_ENTRIES*(L+1))
 		fnVmask1[nn] = 1'b0;
 	else
@@ -836,11 +836,11 @@ end
 endfunction
 
 // Mask for virtual page number that must match incoming address's page number.
-function address_t fnVmask2;
+function Thor2023Pkg::address_t fnVmask2;
 input [4:0] L;
 integer nn;
 begin
-	for (nn = 0; nn < $bits(address_t); nn = nn + 1)
+	for (nn = 0; nn < $bits(Thor2023Pkg::address_t); nn = nn + 1)
 		if (nn < LOG_ENTRIES * L)
 			fnVmask2 = 1'b0;
 		else

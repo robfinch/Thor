@@ -39,23 +39,20 @@
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_cache_hit(clk, asid, adr, ndx, tag, valid, hit, rway, victag, cv);
+module Thor2023_cache_hit(clk, adr, ndx, tag, valid, hit, rway, cv);
 parameter LINES=256;
 parameter WAYS=4;
 parameter AWID=32;
 parameter TAGBIT=14;
 input clk;
-input asid_t asid;
-input address_t adr;
+input Thor2023Pkg::address_t adr;
 input [$clog2(LINES)-1:0] ndx;
-input cache_tag_t [3:0] tag;
+input cache_tag_ex_t [3:0] tag;
 input [LINES-1:0] valid [0:WAYS-1];
 output reg hit;
 output [1:0] rway;
-output cache_tag_t victag;	// victim tag
 output reg cv;
 
-reg [AWID-7:0] prev_vtag = 'd0;
 reg [1:0] prev_rway = 'd0;
 reg [WAYS-1:0] hit1, snoop_hit1;
 reg hit2;
@@ -66,7 +63,7 @@ integer k,ks;
 always_comb//ff @(posedge clk)
 begin
 	for (k = 0; k < WAYS; k = k + 1)
-	  hit1[k] = tag[k[1:0]]=={asid,adr[$bits(address_t)-1:TAGBIT]} && 
+	  hit1[k] = tag[k[1:0]]==adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT] && 
 	  					valid[k][ndx]==1'b1;
 end
 
@@ -86,16 +83,6 @@ begin
 		if (hit1[n]) rway1 = n;
 end
 
-// For victim cache update
-integer m;
-always_comb
-begin
-	victag = prev_vtag;
-	for (m = 0; m < WAYS; m = m + 1)
-		if (hit1[m]) victag = tag[m[1:0]];
-end
-
-
 always_ff @(posedge clk)
 	prev_rway <= rway1;
 assign rway = rway1;
@@ -103,8 +90,6 @@ assign rway = rway1;
 always_comb//ff @(posedge clk)
 	hit = |hit1;
 
-always_ff @(posedge clk)
-	prev_vtag <= victag;
 always_ff @(posedge clk)
 	cv1 <= cv2;
 always_ff @(posedge clk)

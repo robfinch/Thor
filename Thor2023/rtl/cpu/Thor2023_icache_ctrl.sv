@@ -40,13 +40,13 @@ import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_icache_ctrl(rst_i, clk_i, wbm_req, wbm_resp, hit, miss_adr,
+module Thor2023_icache_ctrl(rst, clk, wbm_req, wbm_resp, hit, miss_adr,
 	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
 parameter WAYS = 4;
 parameter CID = 4'd2;
 localparam LOG_WAYS = $clog2(WAYS)-1;
-input rst_i;
-input clk_i;
+input rst;
+input clk;
 output wb_cmd_request128_t wbm_req;
 input wb_cmd_response128_t wbm_resp;
 input hit;
@@ -66,21 +66,23 @@ typedef enum logic [2:0] {
 state_t req_state, resp_state;
 
 reg [4:0] to_cnt;
+reg [5:0] ack_cnt;
+reg [5:0] nxt_cnt;
 wb_tranid_t tid_cnt;
 wire [16:0] lfsr_o;
 reg [1:0] v;
 
 lfsr17 #(.WID(17)) ulfsr1
 (
-	.rst(rst_i),
-	.clk(clk_i),
+	.rst(rst),
+	.clk(clk),
 	.ce(1'b1),
 	.cyc(1'b0),
 	.o(lfsr_o)
 );
 
-always_ff @(posedge clk_i, posedge rst_i)
-if (rst_i) begin
+always_ff @(posedge clk, posedge rst)
+if (rst) begin
 	req_state <= RESET;
 	resp_state <= RESET;
 	to_cnt <= 'd0;
@@ -89,6 +91,9 @@ if (rst_i) begin
 	wr_ic <= 1'd0;
 	v <= 2'b00;
 	line_o <= 'd0;
+	way <= 'd0;
+	ack_cnt <= 'd0;
+	nxt_cnt <= 'd0;
 end
 else begin
 	wr_ic <= 1'b0;
@@ -118,12 +123,15 @@ else begin
 			tid_cnt[7:4] <= {CORENO,1'b0};
 			tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
 			wbm_req.tid <= tid_cnt;
+			wbm_req.blen <= 8'd1;
 			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
-			wbm_req.vadr <= {miss_adr[$bits(wb_address_t)-1:ICacheTagLoBit],v[0],{ICacheTagLoBit-2{1'h0}}};
+			wbm_req.vadr <= {miss_adr[$bits(wb_address_t)-1:ICacheTagLoBit],v[0],{ICacheTagLoBit-1{1'h0}}};
 			to_cnt <= 'd0;
+			ack_cnt <= 'd0;
+			nxt_cnt <= 'd0;
 			req_state <= STATE2;
 		end
 	STATE2:
@@ -154,6 +162,7 @@ else begin
 			resp_state <= STATE1;
 		end
 	STATE1:
+		begin
 	/*
 		if (wbm_resp.next) begin
 			wbm_req.cti <= CLASSIC;
@@ -165,41 +174,67 @@ else begin
 		end
 		else
 	*/
-		if (wbm_resp.ack) begin
-			wbm_req.cyc <= 1'b0;
-			wbm_req.stb <= 1'b0;
-			wbm_req.sel <= 16'h0000;
-			wbm_req.we <= 1'b0;
-			if (wbm_resp.adr[4]) begin
-				v[1] <= 1'b1;
-				line_o.v[1] <= 1'b1;
-				line_o.data[255:128] <= wbm_resp.dat;
+			if (wbm_resp.next) begin
+				if (nxt_cnt=='d0) begin
+					line_o.vtag <= {wbm_req.vadr[$bits(wb_address_t)-1:ICacheTagLoBit],{ICacheTagLoBit{1'b0}}};
+					line_o.ptag <= {wbm_req.padr[$bits(wb_address_t)-1:ICacheTagLoBit],{ICacheTagLoBit{1'b0}}};//wbm_resp.adr[$bits(wb_address_t)-1:0];
+				end
+				if (nxt_cnt!=wbm_req.blen) begin
+					nxt_cnt <= nxt_cnt + 2'd1;
+					wbm_req.vadr <= wbm_req.vadr + 5'd16;
+					wbm_req.padr <= wbm_req.padr + 5'd16;
+				end			
 			end
-			else begin
-				v[0] <= 1'b1;
-				line_o.v[0] <= 1'b1;
-				line_o.data[127:  0] <= wbm_resp.dat;
+			if (ack_cnt==wbm_req.blen && wbm_req.cyc) begin
+				wbm_req.cyc <= 1'b0;
+				wbm_req.stb <= 1'b0;
+				wbm_req.sel <= 16'h0000;
+				wbm_req.we <= 1'b0;
+				resp_state <= STATE2;
 			end
-			line_o.vtag <= {wbm_req.vadr[$bits(wb_address_t)-1:ICacheTagLoBit],{ICacheTagLoBit{1'b0}}};
-			line_o.ptag <= {wbm_resp.adr[$bits(wb_address_t)-1:ICacheTagLoBit],{ICacheTagLoBit{1'b0}}};
-			resp_state <= STATE2;
-		end
-		else if (wbm_resp.rty) begin
-			wbm_req.cyc <= 1'b0;
-			wbm_req.stb <= 1'b0;
-			wbm_req.sel <= 16'h0000;
-			wbm_req.we <= 1'b0;
-			v <= 2'b00;
-			line_o.v <= 2'b00;
-			req_state <= STATE6;
+			if (wbm_resp.ack) begin
+				if (ack_cnt != wbm_req.blen)
+					ack_cnt <= ack_cnt + 2'd1;
+				if (wbm_resp.adr[4]) begin
+					v[1] <= 1'b1;
+					line_o.v[1] <= 1'b1;
+					line_o.data[255:128] <= wbm_resp.dat;
+				end
+				else begin
+					v[0] <= 1'b1;
+					line_o.v[0] <= 1'b1;
+					line_o.data[127:  0] <= wbm_resp.dat;
+				end
+	//			resp_state <= STATE2;
+			end
+			else if (wbm_resp.rty) begin
+				wbm_req.cyc <= 1'b0;
+				wbm_req.stb <= 1'b0;
+				wbm_req.sel <= 16'h0000;
+				wbm_req.we <= 1'b0;
+				nxt_cnt <= 'd0;
+				ack_cnt <= 'd0;
+				v <= 2'b00;
+				line_o.v <= 2'b00;
+				req_state <= STATE6;
+			end
 		end
 	STATE2:
 		begin
-			if (v==2'b11) begin
-				v <= 2'b00;
-				wr_ic <= 1'b1;
-				way <= lfsr_o[LOG_WAYS:0];
-			end
+			v <= 2'b00;
+			wr_ic <= 1'b1;
+			way <= lfsr_o[LOG_WAYS:0];
+			resp_state <= STATE3;
+		end
+	STATE3:
+		begin
+			if (!wbm_resp.ack)
+				resp_state <= STATE4;
+		end
+	STATE4:
+		resp_state <= STATE5;
+	STATE5:
+		begin
 			req_state <= STATE1;
 			resp_state <= STATE1;
 		end
@@ -212,6 +247,8 @@ else begin
 		wbm_req.stb <= 1'b0;
 		wbm_req.sel <= 16'h0000;
 		wbm_req.we <= 1'b0;
+		ack_cnt <= 'd0;
+		nxt_cnt <= 'd0;
 		wr_ic <= 1'b0;
 		v <= 2'b00;
 		line_o.v <= 2'b00;

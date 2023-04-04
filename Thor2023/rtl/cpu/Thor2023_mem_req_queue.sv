@@ -69,7 +69,7 @@ input [NTHREADS-1:0] rollback;
 output reg [127:0] rollback_bitmaps [0:NTHREADS-1];
 
 localparam LOG_QDEP = $clog2(QDEP)-1;
-localparam NSEL = 32;
+localparam NSEL = 64;
 
 integer n3, n5, n6, m1;
 genvar g1, g2;
@@ -99,14 +99,14 @@ reg [NSEL-1:0] i0_sel, i1_sel;
 function [NSEL-1:0] fnSel;
 input Thor2023Pkg::memsz_t sz;
 case(sz)
-Thor2023Pkg::byt:	fnSel = 32'h00000001;
-Thor2023Pkg::wyde:	fnSel = 32'h00000003;
-Thor2023Pkg::tetra:	fnSel = 32'h0000000F;
-Thor2023Pkg::octa:	fnSel = 32'h000000FF;
-Thor2023Pkg::hexi:	fnSel = 32'h0000FFFF;
+Thor2023Pkg::byt:	fnSel = 64'h00000001;
+Thor2023Pkg::wyde:	fnSel = 64'h00000003;
+Thor2023Pkg::tetra:	fnSel = 64'h0000000F;
+Thor2023Pkg::octa:	fnSel = 64'h000000FF;
+Thor2023Pkg::hexi:	fnSel = 64'h0000FFFF;
 //hexi:	fnSel = 32'h0000FFFF;
 //hexipair:	fnSel = 32'hFFFFFFFF;
-default:	fnSel = 32'h000000FF;
+default:	fnSel = 64'h000000FF;
 endcase
 endfunction
 
@@ -124,6 +124,10 @@ begin
 	i1_.sel = i1_sel << i1.adr[3:0];
 	i0_.res = i0.res << {i0.adr[3:0],3'b0};
 	i1_.res = i1.res << {i1.adr[3:0],3'b0};
+	if (|i0_.sel[79:64])
+		i0_.cause = FLT_ALN;
+	if (|i1_.sel[79:64])
+		i1_.cause = FLT_ALN;
 end
 
 // Generate a mask for the load data.

@@ -55,9 +55,9 @@ input wb_cmd_response128_t wbm_resp;
 input [3:0] acr;
 input hit;
 output reg cache_load;
-input wb_cmd_request256_t cpu_request_i;
-output wb_cmd_response256_t cpu_response_o;
-input wb_cmd_response256_t cpu_response_i;
+input wb_cmd_request512_t cpu_request_i;
+output wb_cmd_response512_t cpu_response_o;
+input wb_cmd_response512_t cpu_response_i;
 output reg wr;
 input [LOG_WAYS:0] uway;
 output reg [LOG_WAYS:0] way;
@@ -77,13 +77,16 @@ typedef enum logic [2:0] {
 state_t req_state, resp_state;
 
 reg [LOG_WAYS:0] iway;
-wb_cmd_response256_t response_o;
+wb_cmd_response512_t response_o;
 reg cache_dump;
 reg [10:0] to_cnt;
 wb_tranid_t tid_cnt;
 wire [16:0] lfsr_o;
-reg [1:0] v;
-reg [255:0] upd_dat;
+reg [3:0] v;
+reg [5:0] wr_cnt;
+reg [5:0] dump_cnt;
+reg [5:0] load_cnt;
+reg [511:0] upd_dat;
 
 
 lfsr17 #(.WID(17)) ulfsr1
@@ -121,7 +124,7 @@ always_comb
 	end
 	else begin
 		way = iway;
-		cpu_response_o = response_o;
+		cpu_response_o = upd_dat;
 		cpu_response_o.ack = response_o.ack;
 	end
 
@@ -130,16 +133,16 @@ always_comb
 // Otherwise it is just a cache line load, all data comes from the response.
 // Note data is passed in 128-bit chunks.
 generate begin : gCacheLineUpdate
-	for (g = 0; g < 16; g = g + 1) begin : gFor
+	for (g = 0; g < 64; g = g + 1) begin : gFor
 		always_comb
-			if (cpu_request_i.we && cpu_request_i.sel[wbm_resp.adr[4]*16+g]) begin
-				if (wbm_resp.adr[4])
-					upd_dat[g*8+7:g*8] <= cpu_request_i.dat[128+g*8+7:128+g*8];
-				else
+			if (cpu_request_i.we) begin
+				if (cpu_request_i.sel[g])
 					upd_dat[g*8+7:g*8] <= cpu_request_i.dat[g*8+7:g*8];
+				else
+					upd_dat[g*8+7:g*8] <= cpu_response_o.dat[g*8+7:g*8];
 			end
 			else
-				upd_dat[g*8+7:g*8] <= wbm_resp.dat[g*8+7:g*8];
+				upd_dat[g*8+7:g*8] <= response_o[g*8+7:g*8];
 	end
 end
 endgenerate				
@@ -154,6 +157,9 @@ if (rst_i) begin
 	wr <= 1'b0;
 	response_o <= 'd0;
 	wbm_req <= 'd0;
+	wr_cnt <= 'd0;
+	dump_cnt <= 'd0;
+	load_cnt <= 'd0;
 end
 else begin
 	dump_ack <= 1'd0;
@@ -181,10 +187,11 @@ else begin
 			wbm_req.stb <= 1'b0;
 			wbm_req.sel <= 16'h0000;
 			wbm_req.we <= 1'b0;
+			wr_cnt <= 'd0;
 			req_state <= STATE1;
 		end
 	STATE1:
-		if (!hit && allocate && dce && cpu_request_i.cyc) begin
+		if ((!hit && allocate && dce && cpu_request_i.cyc) || cache_dump) begin
 			cache_dump <= 1'b1;
 			tid_cnt[7:4] <= CID;
 			tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
@@ -195,13 +202,19 @@ else begin
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b1;
 			wbm_req.asid <= dump_i.asid;
-			wbm_req.vadr <= {dump_i.vtag[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
-			wbm_req.data1 <= v[0] ? dump_i.data[255:128] : dump_i.data[127:0];
+			wbm_req.vadr <= {dump_i.vtag[$bits(wb_address_t)-1:DCacheTagLoBit],dump_cnt[1:0],{DCacheTagLoBit-2{1'h0}}};
+			case(wr_cnt)
+			2'd0:	wbm_req.data1 <= dump_i.data[127:  0];
+			2'd1:	wbm_req.data1 <= dump_i.data[255:128];
+			2'd2:	wbm_req.data1 <= dump_i.data[383:256];
+			2'd3:	wbm_req.data1 <= dump_i.data[511:384];
+			endcase
 			to_cnt <= 'd0;
 			req_state <= STATE2;
 		end
-		// It may have missed because a non-cacheable address is begin accessed.
+		// It may have missed because a non-cacheable address is being accessed.
 		else if (!hit) begin
+			req_state <= STATE5;
 			cache_load <= !(non_cacheable & cpu_request_i.cyc);
 			tid_cnt[7:4] <= CID;
 			tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
@@ -212,9 +225,44 @@ else begin
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
 			wbm_req.asid <= cpu_request_i.asid;
-			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
+			response_o.dat <= 'd0;
+			// Access only the strip of memory requested. It could be an I/O device.
+			if (|cpu_request_i.sel[15:0]) begin
+				wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],2'b00,{DCacheTagLoBit-2{1'h0}}};
+				load_cnt <= 2'd00;
+				v[0] <= 1'b0;
+				v[1] <= ~|cpu_request_i.sel[31:16];
+				v[2] <= ~|cpu_request_i.sel[47:32];
+				v[3] <= ~|cpu_request_i.sel[63:48];
+			end
+			else if (|cpu_request_i,sel[31:16]) begin
+				wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],2'b01,{DCacheTagLoBit-2{1'h0}}};
+				load_cnt <= 2'd01;
+				v[0] <= 1'b1;
+				v[1] <= 1'b0;
+				v[2] <= ~|cpu_request_i.sel[47:32];
+				v[3] <= ~|cpu_request_i.sel[63:48];
+			end
+			else if (|cpu_request_i,sel[47:32]) begin
+				wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],2'b10,{DCacheTagLoBit-2{1'h0}}};
+				load_cnt <= 2'd10;
+				v[0] <= 1'b1;
+				v[1] <= 1'b1;
+				v[2] <= 1'b0;
+				v[3] <= ~|cpu_request_i.sel[63:48];
+			end
+			else if (cpu_request_i,sel[47:32]) begin
+				wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],2'b11,{DCacheTagLoBit-2{1'h0}}};
+				load_cnt <= 2'd11;
+				v[0] <= 1'b1;
+				v[1] <= 1'b1;
+				v[2] <= 1'b1;
+				v[3] <= 1'b0;
+			end
+			// If nothing selected remain in STATE1
+			else
+				req_state <= STATE1;
 			to_cnt <= 'd0;
-			req_state <= STATE5;
 		end
 	STATE2:
 		begin
@@ -229,7 +277,6 @@ else begin
 		end
 	STATE4:
 		begin
-			cache_load <= dce;
 			tid_cnt[7:4] <= CID;
 			tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
 			wbm_req.cmd <= wishbone_pkg::CMD_DCACHE_LOAD;
@@ -239,7 +286,7 @@ else begin
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
 			wbm_req.asid <= cpu_request_i.asid;
-			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],v[0],{DCacheTagLoBit-2{1'h0}}};
+			wbm_req.vadr <= {cpu_request_i.vadr[$bits(wb_address_t)-1:DCacheTagLoBit],load_cnt[1:0],{DCacheTagLoBit-2{1'h0}}};
 			to_cnt <= 'd0;
 			req_state <= STATE5;
 		end
@@ -267,45 +314,30 @@ else begin
 	case(resp_state)
 	RESET:
 		begin
-			v <= 2'b00;
+			v <= 4'b0000;
 			resp_state <= STATE1;
 		end
 	STATE1:
 		if (wbm_resp.ack) begin
-			req_state <= req_state==STATE5 ? STATE4 : STATE1;
 			resp_state <= STATE2;
 			wbm_req.cyc <= 1'b0;
 			wbm_req.stb <= 1'b0;
 			wbm_req.sel <= 16'h0000;
 			wbm_req.we <= 1'b0;
-			if (wbm_resp.adr[4]) begin
-				v[1] <= 1'b1;
-				response_o.cid <= wbm_resp.cid;
-				response_o.tid <= wbm_resp.tid;
-				response_o.pri <= wbm_resp.pri;
-				response_o.adr <= wbm_resp.adr;
-				response_o.dat[255:128] <= upd_dat;
-			end
-			else begin
-				v[0] <= 1'b1;
-				response_o.cid <= wbm_resp.cid;
-				response_o.tid <= wbm_resp.tid;
-				response_o.pri <= wbm_resp.pri;
-				response_o.adr <= wbm_resp.adr;
-				response_o.dat[127:0] <= upd_dat;
-			end
-			// Line load complete or cpu access complete, pulse appropriate ack line.
-			if (v==2'b01 || v==2'b10) begin
-				if (cache_dump)
-					req_state <= STATE4;
-				dump_ack <= cache_dump;
-				response_o.ack <= !cache_dump;
-				v <= 2'b00;
-				iway <= lfsr_o[LOG_WAYS:0];
-				// Write to cache only if response from TLB indicates a cacheable
-				// address.
-				wr <= acr[3] & dce;
-			end
+			if (wbm_req.we && cache_dump)
+				dump_cnt <= dump_cnt + 2'd1;
+			if (!wbm_req.we || cache_load)
+				load_cnt <= load_cnt + 2'd1;
+			response_o.cid <= wbm_resp.cid;
+			response_o.tid <= wbm_resp.tid;
+			response_o.pri <= wbm_resp.pri;
+			response_o.adr <= {wbm_resp.adr[$bits(wb_address_t)-1:6],6'd0};
+			case(wbm_resp.adr[5:4])
+			2'd0: begin response_o.dat[127:  0] <= wbm_resp.dat; v[0] <= 1'b1; end
+			2'd1:	begin response_o.dat[255:128] <= wbm_resp.dat; v[1] <= 1'b1; end
+			2'd2:	begin response_o.dat[383:256] <= wbm_resp.dat; v[2] <= 1'b1; end
+			2'd3:	begin response_o.dat[511:384] <= wbm_resp.dat; v[3] <= 1'b1; end
+			endcase
 		end
 		else if (wbm_resp.rty|wbm_resp.err) begin
 			wbm_req.cyc <= 1'b0;
@@ -315,13 +347,44 @@ else begin
 			response_o.rty <= wbm_resp.rty;
 			response_o.err <= wbm_resp.err;
 			response_o.ack <= 1'b0;
-			v <= 2'b00;
+			v <= 4'b0000;
 			req_state <= STATE6;
 		end
 	// Wait for ack to clear before continuing.
 	STATE2:
-		if (!wbm_resp.ack)
-			resp_state <= STATE1;
+		begin
+			resp_state <= STATE3;
+			// Line load complete or cpu access complete, pulse appropriate ack line.
+			if (v==4'b1111) begin
+				if (cache_dump)
+					req_state <= STATE4;
+				else if (~cpu_request_i.we || cache_load)
+					req_state <= STATE1;
+				load_cnt <= 'd0;
+				dump_cnt <= 'd0;
+				dump_ack <= cache_dump;
+				v <= 4'b0000;
+				iway <= lfsr_o[LOG_WAYS:0];
+				// Write to cache only if response from TLB indicates a cacheable
+				// address.
+			end
+		end
+	STATE3:
+		resp_state <= STATE4;
+	// response_o.ack is delayed a couple of cycles to give time to read the
+	// cache.
+	STATE4:
+		begin
+			if (!wbm_resp.ack) begin
+				if (v==4'b1111) begin
+					wr <= cache_load | (~non_cacheable & dce & cpu_request_i.we & allocate);
+					response_o.ack <= !cache_dump;
+					cache_dump <= 'd0;
+				end
+				req_state <= req_state==STATE5 ? STATE4 : STATE1;
+				resp_state <= STATE1;
+			end
+		end
 	default:	resp_state <= STATE1;
 	endcase
 	// Only the cache index need be compared for snoop hit.
