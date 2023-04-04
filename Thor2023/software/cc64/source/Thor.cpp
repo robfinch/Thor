@@ -739,19 +739,19 @@ Operand *ThorCodeGenerator::GenExpr(ENODE *node)
 void ThorCodeGenerator::GenerateBranchTrue(Operand* ap, int label)
 {
 	gHeadif = currentFn->pl.tail;
-	GenerateTriadic(op_bne, 0, ap, makereg(regZero), MakeCodeLabel(label));
+	GenerateDiadic(op_bnez, 0, ap, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBranchFalse(Operand* ap, int label)
 {
 	gHeadif = currentFn->pl.tail;
-	GenerateTriadic(op_beq, 0, ap, makereg(regZero), MakeCodeLabel(label));
+	GenerateDiadic(op_beqz, 0, ap, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBeq(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -759,7 +759,8 @@ void ThorCodeGenerator::GenerateBeq(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
 	/*
 	if (false && ap2->mode == am_imm && ap2->offset->i >= -128 && ap2->offset->i < 128)
 		GenerateTriadic(op_beqi, 0, ap1, ap2, MakeCodeLabel(label));
@@ -796,10 +797,13 @@ void ThorCodeGenerator::GenerateBne(Operand* ap1, Operand* ap2, int label)
 		if (Int128::IsEQ(&ap2->offset->i128, Int128::Zero()))
 			GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
 		else {
+			/*
 			ap3 = GetTempRegister();
 			GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
 			GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(8), MakeCodeLabel(label));
 			ReleaseTempReg(ap3);
+			*/
+			GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
 		}
 	}
 	else
@@ -838,20 +842,25 @@ void ThorCodeGenerator::GenerateBlt(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
 
+	GenerateTriadic(op_blt, 0, ap1, ap2, MakeCodeLabel(label));
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
 		GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(1), MakeCodeLabel(label));
 		ReleaseTempReg(ap3);
+		GenerateTriadic(op_blt, 0, ap1, ap2, MakeCodeLabel(label));
 	}
 	else
 		GenerateTriadic(op_blt, 0, ap1, ap2, MakeCodeLabel(label));
+	*/
 }
 
 void ThorCodeGenerator::GenerateBge(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
 
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -859,13 +868,14 @@ void ThorCodeGenerator::GenerateBge(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bge, 0, ap1, ap2, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_bge, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBle(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -873,13 +883,14 @@ void ThorCodeGenerator::GenerateBle(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bge, 0, ap2, ap1, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_ble, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBgt(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -887,13 +898,14 @@ void ThorCodeGenerator::GenerateBgt(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_blt, 0, ap2, ap1, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_bgt, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBltu(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		if (Int128::IsEQ(&ap2->offset->i128,Int128::Zero()))
@@ -903,13 +915,19 @@ void ThorCodeGenerator::GenerateBltu(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bltu, 0, ap1, ap2, MakeCodeLabel(label));
+	*/
+	if (ap2->mode == am_imm) {
+		if (Int128::IsEQ(&ap2->offset->i128, Int128::Zero()))
+			error(ERR_UBLTZ);
+	}
+	GenerateTriadic(op_bltu, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBgeu(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
 
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -917,13 +935,14 @@ void ThorCodeGenerator::GenerateBgeu(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bgeu, 0, ap1, ap2, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_bgeu, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBleu(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -931,13 +950,14 @@ void ThorCodeGenerator::GenerateBleu(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bgeu, 0, ap2, ap1, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_bleu, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBgtu(Operand* ap1, Operand* ap2, int label)
 {
 	Operand* ap3;
-
+	/*
 	if (ap2->mode == am_imm) {
 		ap3 = GetTempRegister();
 		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
@@ -945,7 +965,8 @@ void ThorCodeGenerator::GenerateBgtu(Operand* ap1, Operand* ap2, int label)
 		ReleaseTempReg(ap3);
 	}
 	else
-		GenerateTriadic(op_bltu, 0, ap2, ap1, MakeCodeLabel(label));
+	*/
+	GenerateTriadic(op_bgtu, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBand(Operand* ap1, Operand* ap2, int label)
@@ -1012,7 +1033,7 @@ bool ThorCodeGenerator::GenerateBranch(ENODE *node, int op, int label, int predr
   }
   else {
 		ap1 = cg.GenerateExpression(node->p[0], am_reg, size,0);
-		ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm0, size,0);
+		ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, size,0);
   }
 	if (limit && currentFn->pl.Count(ip) > 10) {
 		currentFn->pl.tail = ip;
