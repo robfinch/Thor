@@ -462,9 +462,7 @@ char *RegMoniker(int regno)
 	else if (regno >= regFirstRegvar && regno <= regLastRegvar)
 		sprintf_s(&buf[n][0], 20, "s%d", regno - regFirstRegvar);
 	else {
-		if ((regno & 0x70)==0x020)
-			sprintf_s(&buf[n][0], 20, "$f%d", regno & 0x1f);
-		else if ((regno & 0x70) == 0x040)
+		if ((regno & 0x70) == 0x040)
 			sprintf_s(&buf[n][0], 20, "$p%d", regno & 0x1f);
 		else if ((regno & 0x70) == 0x070)
 			sprintf_s(&buf[n][0], 20, "$cr%d", regno & 0x3);
@@ -527,9 +525,7 @@ char *RegMoniker2(int regno)
 		sprintf_s(&buf[n][0], 20, "ca%d", (regno - 128) >> 1);
 	}
 	else
-		if ((regno & 0x70) == 0x020)
-			sprintf_s(&buf[n][0], 20, "$f%d", regno & 0x1f);
-		else if ((regno & 0x70) == 0x040)
+		if ((regno & 0x70) == 0x040)
 			sprintf_s(&buf[n][0], 20, "$p%d", regno & 0x1f);
 		else if ((regno & 0x70) == 0x070)
 			sprintf_s(&buf[n][0], 20, "$cr%d", regno & 0x3);

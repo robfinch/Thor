@@ -45,9 +45,8 @@ bool ENODE::IsEqualOperand(Operand *a, Operand *b)
 char ENODE::fsize()
 {
 	switch (etype) {
-	case bt_float:	return (' ');
+	case bt_float:	return ('s');
 	case bt_double:	return (' ');
-	case bt_triple:	return ('t');
 	case bt_quad:	return ('q');
 	case bt_posit: return (' ');
 	default:	return (' ');
@@ -145,12 +144,17 @@ int ENODE::GetNaturalSize()
 			return (4);
 		return (sizeOfWord);
 	case en_fcon:
-		return (tp->precision / 8);
+		if (tp != nullptr)
+			return (tp->precision / 8);
+		else
+			return (stdflt.precision / 8);
+	case en_ubyt2tetra:
+	case en_uwyde2tetra:
+		return (4);
 	case en_byt2octa: case en_ubyt2octa:
 	case en_wyde2octa: case en_uwyde2octa:
 	case en_tetra2octa: case en_utetra2octa:
-	case en_cbu: case en_ccu: case en_chu:
-	case en_cubu: case en_cucu: case en_cuhu:
+		return (8);
 	case en_ccwp: case en_cucwp:
 	case en_sxb:	case en_sxc:	case en_sxh:
 		return (sizeOfInt);
@@ -160,10 +164,12 @@ int ENODE::GetNaturalSize()
 	case en_octa2hexi:
 	case en_byt2hexi: case en_ubyt2hexi:
 	case en_wyde2hexi: case en_uwyde2hexi:
-	case en_chl: case en_utetra2hexi:
+	case en_tetra2hexi: case en_utetra2hexi:
 	case en_uocta2hexi:
-	case en_cclp: case en_cuclp:
-		return (sizeOfWord);
+		return (16);
+	case en_byt2ptr: case en_ubyt2ptr:
+	case en_wyde2ptr: case en_uwyde2ptr:
+		return (sizeOfPtr);
 	case en_type:
 		return (tp->size);
 	case en_fcall:
@@ -182,9 +188,9 @@ int ENODE::GetNaturalSize()
 		return (sizeOfWord);
 	case en_ref:
 		return (tp->size);
-	case en_cbc:
-	case en_cbh:	return (4);
-	case en_cch:	return (4);
+	case en_byt2wyde: case en_ubyt2wyde: return (2);
+	case en_byt2tetra:	return (4);
+	case en_wyde2tetra:	return (4);
 	case en_autovcon:
 	case en_tempfpref:
 		if (tp)
@@ -654,13 +660,13 @@ void ENODE::repexpr()
 		else
 			p[0]->repexpr();
 		break;
-	case en_cbc: case en_ubyt2octa:
-	case en_cbh: case en_uwyde2octa:
+	case en_ubyt2tetra: case en_uwyde2tetra:
+	case en_byt2wyde: case en_ubyt2wyde: case en_ubyt2octa:
+	case en_byt2tetra: case en_uwyde2octa:
 	case en_byt2octa: case en_utetra2octa:
-	case en_cbu: case en_ccu: case en_chu:
-	case en_cubu: case en_cucu: case en_cuhu:
+	case en_tetra2hexi:
 	case en_ccwp: case en_cucwp:
-	case en_cch:
+	case en_wyde2tetra:
 	case en_wyde2octa:
 	case en_wyde2hexi:
 	case en_tetra2octa:
@@ -911,15 +917,15 @@ void ENODE::scanexpr(int duse)
 		break;
 	case en_type:
 		break;
-	case en_cbc: case en_ubyt2octa: case en_ubyt2hexi:
-	case en_cbh: case en_uwyde2octa: case en_uwyde2hexi:
+	case en_byt2wyde: case en_ubyt2wyde:
+	case en_ubyt2tetra: case en_ubyt2octa: case en_ubyt2hexi:
+	case en_byt2tetra:
+	case en_uwyde2tetra: case en_uwyde2octa: case en_uwyde2hexi:
 	case en_byt2octa: case en_utetra2octa: case en_byt2hexi: case en_utetra2hexi:
-	case en_cbu: case en_ccu: case en_chu:
-	case en_cubu: case en_cucu: case en_cuhu:
-	case en_ccwp: case en_cucwp: case en_cclp: case en_cuclp:
-	case en_cch:
+	case en_ccwp: case en_cucwp: case en_wyde2ptr: case en_uwyde2ptr:
+	case en_wyde2tetra:
 	case en_wyde2octa: case en_wyde2hexi:
-	case en_tetra2octa: case en_chl:
+	case en_tetra2octa: case en_tetra2hexi:
 	case en_octa2hexi: case en_uocta2hexi:
 		p[0]->scanexpr(duse);
 		break;
@@ -1964,12 +1970,12 @@ int GetNaturalSize(ENODE *node)
 	case en_byt2octa: case en_ubyt2octa:
 	case en_wyde2octa: case en_uwyde2octa:
 	case en_tetra2octa: case en_utetra2octa:
-	case en_cbu: case en_chu:
+	case en_cbu: case en_tetra2hexi:
 	case en_cubu: case en_cucu: case en_cuhu:
 	case en_ccwp: case en_cucwp:
 	case en_sxb:	case en_sxc:	case en_sxh:
 		return (sizeOfWord);
-	case en_ccu:
+	case en_wyde2hexi:
 		return (2);
 	case en_fcall:
 	case en_regvar:
@@ -1982,9 +1988,9 @@ int GetNaturalSize(ENODE *node)
 		return (sizeOfWord);
 	case en_ref:
 		return (node->tp->size);
-	case en_cbc:
-	case en_cbh:	return (4);
-	case en_cch:	return (4);
+	case en_byt2wyde:
+	case en_byt2tetra:	return (4);
+	case en_wyde2tetra:	return (4);
 	case en_autovcon:
 	case en_tempfpref:
 	if (node->tp)

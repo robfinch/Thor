@@ -61,7 +61,8 @@ Operand* ThorCodeGenerator::MakeBoolean(Operand* ap)
 	ip = currentFn->pl.tail;
 	if (ip->opcode & 0x8000)
 		return (ap1);
-	Generate4adic(op_sne, 0, ap1, ap, makereg(regZero), MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap1, ap, MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap1, ap1, MakeImmediate(1), MakeImmediate(0));
 	ap1->isBool = true;
 	return (ap1);
 }
@@ -303,10 +304,8 @@ Operand* ThorCodeGenerator::GenerateEq(ENODE *node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode==am_imm)
-		GenerateTriadic(op_seq, 0, ap3, ap1, ap2);
-	else
-		Generate4adic(op_seq, 0, ap3, ap1, ap2, MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(0), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -321,10 +320,8 @@ Operand* ThorCodeGenerator::GenerateNe(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode==am_imm)
-		GenerateTriadic(op_sne, 0, ap3, ap1, ap2);
-	else
-		Generate4adic(op_sne, 0, ap3, ap1, ap2, MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(1), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -339,10 +336,8 @@ Operand* ThorCodeGenerator::GenerateLt(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode == am_imm)
-		GenerateTriadic(op_slt, 0, ap3, ap1, ap2);
-	else
-		GenerateTriadic(op_slt, 0, ap3, ap1, ap2);
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(2), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -357,10 +352,8 @@ Operand* ThorCodeGenerator::GenerateLe(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode == am_reg)
-		Generate4adic(op_sgt, 0, ap3, ap2, ap1, MakeImmediate(1));
-	else
-		GenerateTriadic(op_sle, 0, ap3, ap1, ap2);
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(3), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -375,10 +368,8 @@ Operand* ThorCodeGenerator::GenerateGt(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, size, 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, size, 1);
-	if (ap2->mode == am_reg)
-		GenerateTriadic(op_slt, 0, ap3, ap2, ap1);
-	else
-		GenerateTriadic(op_sgt, 0, ap3, ap1, ap2);
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(5), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	//		GenerateDiadic(op_sgt,0,ap3,ap3);
@@ -394,10 +385,8 @@ Operand* ThorCodeGenerator::GenerateGe(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode == am_imm)
-		GenerateTriadic(op_sgt, 0, ap3, ap1, MakeImmediate(ap2->offset->i-1));
-	else
-		Generate4adic(op_sge, 0, ap3, ap1, ap2, MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(4), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -412,10 +401,8 @@ Operand* ThorCodeGenerator::GenerateLtu(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode == am_imm)
-		GenerateTriadic(op_sltu, 0, ap3, ap1, ap2);
-	else
-		Generate4adic(op_sltu, 0, ap3, ap1, ap2, MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(10), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -430,10 +417,8 @@ Operand* ThorCodeGenerator::GenerateLeu(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, node->p[1]->GetNaturalSize(), 1);
-	if (ap2->mode == am_reg)
-		Generate4adic(op_sgtu, 0, ap3, ap2, ap1, MakeImmediate(1));
-	else
-		GenerateTriadic(op_sleu, 0, ap3, ap1, ap2);
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(11), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -448,10 +433,8 @@ Operand* ThorCodeGenerator::GenerateGtu(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, size, 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, size, 1);
-	if (ap2->mode == am_reg)
-		Generate4adic(op_sltu, 0, ap3, ap2, ap1, MakeImmediate(1));
-	else
-		GenerateTriadic(op_sgtu, 0, ap3, ap1, ap2);
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(13), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	//		GenerateDiadic(op_sgt,0,ap3,ap3);
@@ -467,10 +450,8 @@ Operand* ThorCodeGenerator::GenerateGeu(ENODE* node)
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, size, 1);
 	ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, size, 1);
-	if (ap2->mode == am_imm)
-		GenerateTriadic(op_sgtu, 0, ap3, ap1, MakeImmediate(ap2->offset->i-1));
-	else
-		Generate4adic(op_sgeu, 0, ap3, ap1, ap2, MakeImmediate(1));
+	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(12), MakeImmediate(0));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -1347,8 +1328,7 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 		return (0);
 	}
 	switch(ep->etype) {
-	case bt_quad:	sz = sizeOfFPD; break;
-	case bt_triple:	sz = sizeOfFPT; break;
+	case bt_quad:	sz = sizeOfFPQ; break;
 	case bt_double:	sz = sizeOfFPD; break;
 	case bt_float:	sz = sizeOfFPD; break;
 	case bt_posit:	sz = sizeOfPosit; break;
@@ -1365,8 +1345,6 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 	else if (ep->etype==bt_quad)
 		ap = cg.GenerateExpression(ep,am_reg,sz,1);
 	else if (ep->etype==bt_double)
-		ap = cg.GenerateExpression(ep,am_reg,sz,1);
-	else if (ep->etype==bt_triple)
 		ap = cg.GenerateExpression(ep,am_reg,sz,1);
 	else if (ep->etype==bt_float)
 		ap = cg.GenerateExpression(ep,am_reg,sz,1);

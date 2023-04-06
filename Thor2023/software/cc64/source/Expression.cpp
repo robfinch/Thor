@@ -1593,7 +1593,7 @@ ENODE* Expression::MakeConstNameNode(SYM* sp)
 
 	if (sp->tp->type == bt_quad)
 		node = makefqnode(en_fqcon, &sp->f128);
-	else if (sp->tp->type == bt_float || sp->tp->type == bt_double || sp->tp->type == bt_triple)
+	else if (sp->tp->type == bt_float || sp->tp->type == bt_double)
 		node = compiler.ef.Makefnode(en_fcon, sp->value.f);
 	else if (sp->tp->type == bt_posit)
 		node = compiler.ef.Makepnode(en_pcon, sp->p);

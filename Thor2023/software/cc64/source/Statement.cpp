@@ -1816,14 +1816,7 @@ void Statement::GenerateCatch(int opt, int oldthrow, int olderthrow)
 		stmt->GenMixedSource();
 		curlab = nextlabel++;
 		if (stmt->num != 99999) {
-			if (stmt->num >= -32 && stmt->num < 32)
-				GenerateTriadic(op_bne, 0, makereg(cpu.argregs[1]), MakeImmediate(stmt->num), MakeCodeLabel(curlab));
-			else {
-				ap2 = GetTempRegister();
-				GenerateTriadic(op_sne, 0, ap2, makereg(cpu.argregs[1]), MakeImmediate(stmt->num));
-				GenerateDiadic(op_bnez, 0, ap2, MakeCodeLabel(curlab));
-				ReleaseTempRegister(ap2);
-			}
+			GenerateTriadic(op_bne, 0, makereg(cpu.argregs[1]), MakeImmediate(stmt->num), MakeCodeLabel(curlab));
 		}
 		// move the throw expression result in '$a0' into the catch variable.
 		node = stmt->exp;

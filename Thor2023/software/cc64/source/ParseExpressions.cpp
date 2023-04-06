@@ -609,14 +609,6 @@ TYP* Expression::deref(ENODE **node, TYP *tp)
 			(*node)->tp = tp;
 			break;
 
-    case bt_triple:
-			SetRefType(node);
-			(*node)->esize = tp->size;
-			(*node)->etype = (enum e_bt)tp->type;
-            tp = &stdtriple;
-						(*node)->sym = sp;
-						(*node)->tp = tp;
-						break;
 		case bt_quad:
 			SetRefType(node);
 			(*node)->esize = tp->size;
@@ -896,8 +888,6 @@ TYP *Expression::nameref(ENODE **node,int nt, SYM* symi)
 
 	dfs.puts("<Nameref>");
 	dfs.printf("GSearchfor:%s|",lastid);
-	if (strcmp(lastid, "_uval") == 0)
-		printf("hi");
 	// Search locally first
 	sp = gsearch2(lastid, (__int16)bt_int, nullptr, false);
 	if (TABLE::matchno == 0) {
@@ -1313,25 +1303,19 @@ int IsLValue(ENODE *node)
 	case en_ref:
 	case en_fieldref:
 		return (TRUE);
-	case en_cbc:
-	case en_cbh:
-	case en_byt2octa: case en_byt2hexi:
-	case en_cch:
-	case en_wyde2octa: case en_wyde2hexi:
-	case en_tetra2octa: case en_chl:
+	case en_byt2wyde: case en_ubyt2wyde:
+	case en_byt2tetra: case en_ubyt2tetra:
+	case en_byt2octa: case en_ubyt2octa:
+	case en_byt2hexi: case en_ubyt2hexi:
+	case en_wyde2tetra: case en_uwyde2tetra:
+	case en_wyde2octa: case en_uwyde2octa:
+	case en_wyde2hexi: case en_uwyde2hexi:
+	case en_tetra2octa: case en_utetra2octa:
+	case en_tetra2hexi: case en_utetra2hexi:
+	case en_octa2hexi: case en_uocta2hexi:
 	case en_cfd:
-	case en_ubyt2octa: case en_ubyt2hexi:
-	case en_uwyde2octa: case en_uwyde2hexi:
-	case en_utetra2octa: case en_utetra2hexi:
-	case en_uocta2hexi:
-	case en_cbu:
-	case en_ccu:
-	case en_chu:
-	case en_cubu:
-	case en_cucu:
-	case en_cuhu:
-	case en_ccwp: case en_cclp:
-	case en_cucwp: case en_cuclp:
+	case en_ccwp: case en_wyde2ptr:
+	case en_cucwp: case en_uwyde2ptr:
 		return IsLValue(node->p[0]);
 		// Detect if there's an addition to a pointer happening.
 	// For an array reference there will be an add node at the top of the
@@ -1355,10 +1339,10 @@ int IsLValue(ENODE *node)
 		return (true);
 	}
 /*
-	case en_cbc:
-	case en_cbh:
+	case en_byt2wyde:
+	case en_byt2tetra:
     case en_byt2octa:
-	case en_cch:
+	case en_wyde2tetra:
 	case en_wyde2octa:
 	case en_tetra2octa:
 	case en_cfd:
@@ -1366,8 +1350,8 @@ int IsLValue(ENODE *node)
 	case en_uwyde2octa:
 	case en_utetra2octa:
 	case en_cbu:
-	case en_ccu:
-	case en_chu:
+	case en_wyde2hexi:
+	case en_tetra2hexi:
 	case en_cubu:
 	case en_cucu:
 	case en_cuhu:
@@ -1891,10 +1875,12 @@ TYP *Expression::ParseCastExpression(ENODE **node, SYM* symi)
 				else {
 					if (ep2->p[0]->constflag || ep1->constflag) {
 						ep2->constflag = true;
-						if (ep2->p[0]->tp->IsScalar())
-							ep2->nodetype = en_icon;
-						else if (ep2->p[0]->tp->IsFloatType())
-							ep2->nodetype = en_fcon;
+						if (ep2->p[0]->tp != nullptr) {
+							if (ep2->p[0]->tp->IsScalar())
+								ep2->nodetype = en_icon;
+							else if (ep2->p[0]->tp->IsFloatType())
+								ep2->nodetype = en_fcon;
+						}
 					}
 					ep2->isUnsigned = ep2->p[0]->isUnsigned;
 					//ep2->etype = ep1->etype;
@@ -1970,11 +1956,6 @@ TYP *Expression::ParseMultOps(ENODE **node, SYM* symi)
                 switch( oper ) {
                 case star:
 									switch(tp1->type) {
-									case bt_triple:
-										ep1 = makenode(en_fmul,ep1,ep2);
-										ep1->esize = sizeOfFPT;
-										ep1->etype = bt_triple;
-										break;
 									case bt_double:
 										ep1 = makenode(en_fmul,ep1,ep2);
 										ep1->esize = sizeOfFPD;
@@ -2029,12 +2010,7 @@ TYP *Expression::ParseMultOps(ENODE **node, SYM* symi)
 								ep1->etype = (e_bt)tp1->type;
                  break;
                 case divide:
-                if (tp1->type==bt_triple) {
-									ep1 = makenode(en_fdiv,ep1,ep2);
-									ep1->esize = sizeOfFPT;
-									ep1->etype = bt_triple;
-								}
-								else if (tp1->type==bt_double) {
+								if (tp1->type==bt_double) {
 									ep1 = makenode(en_fdiv,ep1,ep2);
 									ep1->esize = sizeOfFPD;
 									ep1->etype = bt_double;
@@ -2172,10 +2148,6 @@ TYP *Expression::ParseAddOps(ENODE **node, SYM* symi)
 			if (!onePtr)
 				tp1 = forcefit(&ep2,tp2,&ep1,tp1,true,false);
 			switch (tp1->type) {
-			case bt_triple:
-    		ep1 = makenode( oper ? en_fadd : en_fsub,ep1,ep2);
-				ep1->esize = sizeOfFPT;
-				break;
 			case bt_double:
     		ep1 = makenode( oper ? en_fadd : en_fsub,ep1,ep2);
 				ep1->esize = sizeOfFPD;

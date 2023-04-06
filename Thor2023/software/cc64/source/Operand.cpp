@@ -612,8 +612,6 @@ void Operand::store(txtoStream& ofs)
 			ofs.printf("v%d", (int)preg);
 		else if (typep == stdvectormask)
 			ofs.printf("vm%d", (int)preg);
-		else if (typep == &stddouble)
-			ofs.printf("$fp%d", (int)preg);
 		else {
 			ofs.write(RegMoniker(preg));
 			//if (renamed)

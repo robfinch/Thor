@@ -213,8 +213,6 @@ void dooper(ENODE *node)
 	case en_or:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i | ep->p[1]->i;
-		if (ep->p[0]->i == 0xFFFC0 || ep->p[1]->i == 0xFFFC0)
-			printf("Hi");
 		Int128::BitOr(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		ep->p[0] = nullptr;
 		ep->p[1] = nullptr;
@@ -864,7 +862,11 @@ static void opt0(ENODE **node)
 		return;
 	case en_ccwp:
 	case en_cucwp:
-	case en_cuclp:
+
+	case en_ubyt2ptr:
+	case en_uwyde2ptr:
+	case en_utetra2ptr:
+	case en_uocta2ptr:
 		opt0(&((*node)->p[0]));
 		if (ep->p[0]->nodetype == en_icon) {
 			ep->esize = sizeOfPtr;
@@ -874,29 +876,30 @@ static void opt0(ENODE **node)
 			ooptimized++;
 		}
 		return;
-	case en_wyde2hexi:
-		Opt0_wyde2hexi(ep);
+
+	// to wyde
+	case en_byt2wyde:
+		Opt0_byt2wyde(ep);
+		return;
+	case en_ubyt2wyde:
+		Opt0_ubyt2wyde(ep);
 		return;
 
-	case en_cubu:
-	case en_cucu:
-	case en_cuhu:
-	case en_cbu:
-	case en_ccu:
-	case en_chu:
-	case en_cbc:
-	case en_cbh:
-	case en_cch:
-		opt0(&(ep->p[0]));
+		// to tetra
+	case en_byt2tetra:
+		Opt0_byt2tetra(ep);
 		return;
-		if (ep->p[0]->nodetype == en_icon) {
-			ep->esize = sizeOfWord/4;
-			ep->nodetype = en_icon;
-			ep->i = ep->p[0]->i;
-			ep->i128 = ep->p[0]->i128;
-			ooptimized++;
-		}
+	case en_ubyt2tetra:
+		Opt0_byt2tetra(ep);
 		return;
+	case en_wyde2tetra:
+		Opt0_wyde2tetra(ep);
+		return;
+	case en_uwyde2tetra:
+		Opt0_uwyde2tetra(ep);
+		return;
+
+	// to octa
 	case en_byt2octa:
 		Opt0_byt2octa(ep);
 		return;
@@ -906,23 +909,31 @@ static void opt0(ENODE **node)
 	case en_wyde2octa:
 		Opt0_wyde2octa(ep);
 		return;
-	case en_tetra2octa:
-		Opt0_tetra2octa(ep);
-		return;
 	case en_uwyde2octa:
 		Opt0_uwyde2octa(ep);
+		return;
+	case en_tetra2octa:
+		Opt0_tetra2octa(ep);
 		return;
 	case en_utetra2octa:
 		Opt0_utetra2octa(ep);
 		return;
+
+	// to hexi
 	case en_byt2hexi:
 		Opt0_byt2hexi(ep);
 		return;
 	case en_ubyt2hexi:
 		Opt0_ubyt2hexi(ep);
 		return;
+	case en_wyde2hexi:
+		Opt0_wyde2hexi(ep);
+		return;
 	case en_uwyde2hexi:
 		Opt0_uwyde2hexi(ep);
+		return;
+	case en_tetra2hexi:
+		Opt0_tetra2hexi(ep);
 		return;
 	case en_utetra2hexi:
 		Opt0_utetra2hexi(ep);

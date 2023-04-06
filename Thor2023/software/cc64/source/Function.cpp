@@ -582,7 +582,7 @@ void Function::SaveRegisterArguments()
 			for (count = nn = 0; nn < ta->length; nn++)
 				if (ta->preg[nn]) {
 					count++;
-					if (ta->types[nn] == bt_quad || ta->types[nn] == bt_triple)
+					if (ta->types[nn] == bt_quad)
 						count++;
 				}
 			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(count * sizeOfWord));
@@ -590,9 +590,8 @@ void Function::SaveRegisterArguments()
 				if (ta->preg[nn]) {
 					switch (ta->types[nn]) {
 					case bt_quad:	GenerateDiadic(op_stf, 'q', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 2; break;
-					case bt_float:	GenerateDiadic(op_stf, 'd', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
+					case bt_float:	GenerateDiadic(op_stf, 's', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
 					case bt_double:	GenerateDiadic(op_stf, 'd', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
-					case bt_triple:	GenerateDiadic(op_stf, 't', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 2; break;
 					case bt_posit:	GenerateDiadic(op_stf, 'd', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count * sizeOfWord, regSP)); count += 1; break;
 					default:	cg.GenerateStore(makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP), sizeOfWord); count += 1; break;
 					}
@@ -604,9 +603,8 @@ void Function::SaveRegisterArguments()
 				if (ta->preg[nn]) {
 					switch (ta->types[nn]) {
 					case bt_quad:	GenerateMonadic(op_pushf, 'q', makereg(ta->preg[nn] & 0x7fff)); break;
-					case bt_float:	GenerateMonadic(op_pushf, 'd', makereg(ta->preg[nn] & 0x7fff)); break;
+					case bt_float:	GenerateMonadic(op_pushf, 's', makereg(ta->preg[nn] & 0x7fff)); break;
 					case bt_double:	GenerateMonadic(op_pushf, 'd', makereg(ta->preg[nn] & 0x7fff)); break;
-					case bt_triple:	GenerateMonadic(op_pushf, 't', makereg(ta->preg[nn] & 0x7fff)); break;
 					case bt_posit:	GenerateMonadic(op_push, ' ', makereg(ta->preg[nn] & 0x7fff)); break;
 					default:	GenerateMonadic(op_push, 0, makereg(ta->preg[nn] & 0x7fff)); break;
 					}
@@ -630,7 +628,7 @@ void Function::RestoreRegisterArguments()
 		for (count = nn = 0; nn < ta->length; nn++)
 			if (ta->preg[nn]) {
 				count++;
-				if (ta->types[nn] == bt_quad || ta->types[nn] == bt_triple)
+				if (ta->types[nn] == bt_quad)
 					count++;
 			}
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(count * sizeOfWord));
@@ -638,9 +636,8 @@ void Function::RestoreRegisterArguments()
 			if (ta->preg[nn]) {
 				switch (ta->types[nn]) {
 				case bt_quad:	GenerateDiadic(op_ldf, 'q', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 2; break;
-				case bt_float:	GenerateDiadic(op_ldf, 'd', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
+				case bt_float:	GenerateDiadic(op_ldf, 's', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
 				case bt_double:	GenerateDiadic(op_ldf, 'd', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 1; break;
-				case bt_triple:	GenerateDiadic(op_ldf, 't', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP)); count += 2; break;
 				case bt_posit:	GenerateDiadic(op_ldf, ' ', makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count * sizeOfWord, regSP)); count += 1; break;
 				default:	cg.GenerateLoad(makereg(ta->preg[nn] & 0x7fff), MakeIndexed(count*sizeOfWord, regSP), sizeOfWord, sizeOfWord); count += 1; break;
 				}
@@ -1163,6 +1160,11 @@ void Function::GenerateReturn(Statement* stmt)
 		for (nn = 0; nn < ta->length; nn++) {
 			switch (ta->types[nn]) {
 			case bt_float:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfFP;
+				break;
 			case bt_quad:
 				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
 					;
@@ -1174,12 +1176,6 @@ void Function::GenerateReturn(Statement* stmt)
 					;
 				else
 					toAdd += sizeOfFPD;
-				break;
-			case bt_triple:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfFPT;
 				break;
 			case bt_posit:
 				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)

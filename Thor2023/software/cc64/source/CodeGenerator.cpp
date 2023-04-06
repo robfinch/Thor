@@ -245,24 +245,11 @@ void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size
 			switch (size) {
 			case 0: GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
 			case 1:	GenerateDiadic(cpu.ldbu_op, 0, ap3, ap1); break;
-			case 2:	GenerateDiadic(cpu.ldwu_op, 0, ap3, ap1); break;
+			case 2:	GenerateDiadic(op_ldwu, 0, ap3, ap1); break;
 			case 4:	GenerateDiadic(cpu.ldtu_op, 0, ap3, ap1); break;
 			case 8: GenerateDiadic(cpu.ldo_op, 0, ap3, ap1); break;
 			case 12:	GenerateDiadic(cpu.ldd_op, 0, ap3, ap1); break;
-			case 16:
-				if (ap1->mode == am_indx) {
-					if (ap1->offset->nodetype == en_icon) {
-						if (ap1->offset->i > -1024 && ap1->offset->i < 1023) {
-							GenerateDiadic(op_ldhs, 0, ap3, ap1);
-							break;
-						}
-					}
-				}
-				else if (ap1->mode == am_ind) {
-					GenerateDiadic(op_ldhs, 0, ap3, ap1);
-					break;
-				}
-				GenerateDiadic(op_ldh, 0, ap3, ap1); break;
+			case 16:	GenerateDiadic(op_ldh, 0, ap3, ap1); break;
 			}
     }
     else {
@@ -458,10 +445,11 @@ Operand* CodeGenerator::GenerateAutofconDereference(ENODE* node, TYP* tp, bool i
 	ap1->tp = tp;
 	if (node->tp)
 		switch (node->tp->precision) {
+		case 8: ap1->FloatSize = 'b'; break;
+		case 16: ap1->FloatSize = 'h'; break;
 		case 32: ap1->FloatSize = 's'; break;
-		case 40: ap1->FloatSize = 's'; break;
 		case 64: ap1->FloatSize = ' '; break;
-		case 80: ap1->FloatSize = 'd'; break;
+		case 128: ap1->FloatSize = 'q'; break;
 		default: ap1->FloatSize = 'd'; break;
 		}
 	else
@@ -471,7 +459,6 @@ Operand* CodeGenerator::GenerateAutofconDereference(ENODE* node, TYP* tp, bool i
 		switch (node->tp->type) {
 		case bt_float:	ap1->typep = &stdflt; break;
 		case bt_double:	ap1->typep = &stddouble; break;
-		case bt_triple:	ap1->typep = &stdtriple; break;
 		case bt_quad:	ap1->typep = &stdquad; break;
 		case bt_posit:	ap1->typep = &stdposit; break;
 		}
@@ -546,7 +533,6 @@ Operand* CodeGenerator::GenerateNaconDereference(ENODE* node, TYP* tp, bool isRe
 	switch (node->tp->type) {
 	case bt_float:	ap1->typep = &stdflt; break;
 	case bt_double:	ap1->typep = &stddouble; break;
-	case bt_triple:	ap1->typep = &stdtriple; break;
 	case bt_quad:	ap1->typep = &stdquad; break;
 	case bt_posit:	ap1->typep = &stdposit; break;
 	}
@@ -640,7 +626,6 @@ Operand* CodeGenerator::GenerateFPRegvarDereference(ENODE* node, TYP* tp, bool i
 	switch (node->tp->type) {
 	case bt_float:	ap1->typep = &stdflt; break;
 	case bt_double:	ap1->typep = &stddouble; break;
-	case bt_triple:	ap1->typep = &stdtriple; break;
 	case bt_quad:	ap1->typep = &stdquad; break;
 	case bt_posit:	ap1->typep = &stdposit; break;
 	}
@@ -906,8 +891,6 @@ Operand *CodeGenerator::GenerateDereference(ENODE *node,int flags,int size, int 
 			if (ap1->isPtr && rhs){// && !IsLValue(node)) {
 				int sz = node->GetReferenceSize();
 				int rg = ap1->preg;
-				if (rg == 0)
-					printf("hi");
 				ReleaseTempRegister(ap1);
 				ap1 = GetTempRegister();
 				GenerateLoad(ap1, MakeIndirect(rg), sz, sz);
@@ -1267,7 +1250,7 @@ Operand *CodeGenerator::GenerateAssignModiv(ENODE *node,int flags,int size,int o
 		ap3->MakeLegal( flags, size);
 		return (ap3);
 	}
-	isFP = node->etype==bt_double || node->etype==bt_float || node->etype==bt_triple || node->etype==bt_quad;
+	isFP = node->etype==bt_double || node->etype==bt_float || node->etype==bt_quad;
 	isPosit = node->etype == bt_posit;
     if (isFP) {
         if (op==op_div || op==op_divu)
@@ -2183,7 +2166,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		case bt_double:
 			ap1 = GenAutocon(node, flags, size, &stddouble);
 			goto retpt;
-		case bt_triple:	return GenAutocon(node, flags, size, &stdtriple);
 		case bt_quad:	return GenAutocon(node, flags, size, &stdquad);
 		case bt_posit: return GenAutocon(node, flags, size, &stdposit);
 		case bt_pointer:
@@ -2201,7 +2183,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		case bt_double:
 			ap1 = GenAutocon(node, flags, size, &stddouble);
 			goto retpt;
-		case bt_triple:	return GenAutocon(node, flags, size, &stdtriple);
 		case bt_quad:	return GenAutocon(node, flags, size, &stdquad);
 		case bt_posit: return GenAutocon(node, flags, size, &stdposit);
 		case bt_pointer:
@@ -2241,8 +2222,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1->tp = node->tp;
     ap1->mode = am_reg;
     ap1->preg = node->rg;
-		if (ap1->preg == regZero)
-			printf("hi");
     ap1->tempflag = 0;      /* not a temporary */
     ap1->MakeLegal(flags,size);
 		ap1->tp = node->tp;
@@ -2268,7 +2247,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 			switch (node->tp->type) {
 			case bt_float:	ap1->typep = &stdflt; break;
 			case bt_double:	ap1->typep = &stddouble; break;
-			case bt_triple:	ap1->typep = &stdtriple; break;
 			case bt_quad:	ap1->typep = &stdquad; break;
 			case bt_posit: ap1->typep = &stdposit; break;
 			default: ap1->typep = &stdint; break;
@@ -2305,7 +2283,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 			switch (node->tp->type) {
 			case bt_float:	ap1->typep = &stdflt; break;
 			case bt_double:	ap1->typep = &stddouble; break;
-			case bt_triple:	ap1->typep = &stdtriple; break;
 			case bt_quad:	ap1->typep = &stdquad; break;
 			case bt_posit: ap1->typep = &stdposit; break;
 			default: ap1->typep = &stdint; break;
@@ -2649,8 +2626,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 
 	case en_ubyt2hexi:
 	case en_ubyt2octa:
-	case en_cubu:
-	case en_cbu:
+	case en_ubyt2tetra:
 		ap1 = GenerateExpression(node->p[0],am_reg|am_imm,1,rhs);
 		if (ap1->mode == am_imm) {
 			ap1->offset->i &= 0xffLL;
@@ -2663,18 +2639,17 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 
 	case en_uwyde2hexi:
 	case en_uwyde2octa:
-	case en_cucu:
-	case en_ccu:
+	case en_uwyde2tetra:
 		ap1 = GenerateExpression(node->p[0],am_reg,2,rhs);
 		GenerateDiadic(op_zxw,0,ap1,ap1);
 		goto retpt;
-	case en_cclp:
+	case en_wyde2ptr:
 	case en_ccwp:
 		ap1 = GenerateExpression(node->p[0], am_reg, 2,rhs);
 		ap1->isPtr = TRUE;
 		GenerateDiadic(op_sxw, 0, ap1, ap1);
 		goto retpt;
-	case en_cuclp:
+	case en_uwyde2ptr:
 	case en_cucwp:
 		ap1 = GenerateExpression(node->p[0], am_reg, 2,rhs);
 		ap1->isPtr = TRUE;
@@ -2682,8 +2657,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		goto retpt;
 	case en_utetra2hexi:
 	case en_utetra2octa:
-	case en_cuhu:
-	case en_chu:
 		ap1 = GenerateExpression(node->p[0],am_reg,4,rhs);
 		GenerateDiadic(op_zxt,0,ap1,ap1);
 		goto retpt;
@@ -2706,7 +2679,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 //		GenerateDiadic(op_sxw,0,ap1,ap1);
 		ReleaseTempRegister(ap2);
 		goto retpt;
-	case en_chl:
+	case en_tetra2hexi:
 	case en_tetra2octa:
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg|am_imm,4,rhs);

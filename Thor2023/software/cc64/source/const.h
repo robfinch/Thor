@@ -1,6 +1,31 @@
 #ifndef _CONST_H
 #define _CONST_H
 
+// ============================================================================
+//        __
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
+//    \  __ /    All rights reserved.
+//     \/_//     robfinch<remove>@finitron.ca
+//       ||
+//
+// CC64 - 'C' derived language compiler
+//  - 64 bit CPU
+//
+// This source file is free software: you can redistribute it and/or modify 
+// it under the terms of the GNU Lesser General Public License as published 
+// by the Free Software Foundation, either version 3 of the License, or     
+// (at your option) any later version.                                      
+//                                                                          
+// This source file is distributed in the hope that it will be useful,      
+// but WITHOUT ANY WARRANTY; without even the implied warranty of           
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+// GNU General Public License for more details.                             
+//                                                                          
+// You should have received a copy of the GNU General Public License        
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.    
+//                                                                          
+// ============================================================================
+//
 enum e_bt {
 	bt_none,
 	bt_byte, bt_ubyte, bt_bit, bt_bool,
@@ -18,24 +43,31 @@ enum e_bt {
 enum e_node {
 		en_unknown,
         en_void,        /* used for parameter lists */
-				en_cast,				/* typecase */
+				en_cast,				/* typecast */
 				en_nop,
+
 		en_list, en_aggregate,
 
-		en_cbu, en_ccu, en_chu,
-		en_cubu, en_cucu, en_cuhu,
+		en_ubyt2wyde,
+		en_ubyt2tetra, en_uwyde2tetra,
+		en_byt2wyde,
 		en_byt2octa, en_wyde2octa, en_tetra2octa,
 		en_ubyt2octa, en_uwyde2octa, en_utetra2octa,
-		en_cucwp, en_ccwp, en_cuc,
+		en_cucwp, en_ccwp,
 		
-		en_byt2hexi, en_wyde2hexi, en_chl,
+		en_byt2hexi, en_wyde2hexi, en_tetra2hexi,
 		en_ubyt2hexi, en_uwyde2hexi, en_utetra2hexi,
-		en_cuclp, en_cclp,
+		en_ubyt2ptr, en_byt2ptr,
+		en_uwyde2ptr, en_wyde2ptr,
+		en_utetra2ptr, en_tetra2ptr,
+		en_uocta2ptr, en_octa2ptr,
 		en_uocta2hexi,
 
-    en_cbc, en_cbh, en_cbuc, en_cubc,
-		en_cch,
-		en_octa2hexi, en_cld, en_cfd,
+    en_byt2tetra,
+		en_wyde2tetra,
+		en_octa2hexi,
+
+		en_cld, en_cfd,
 		en_sxb, en_sxc, en_sxh,
 		en_zxb, en_zxc, en_zxh,
 		en_i2p, en_p2i,

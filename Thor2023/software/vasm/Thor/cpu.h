@@ -83,15 +83,39 @@ typedef struct {
 #define CPU_LARGE 2
 #define CPU_ALL  (-1)
 
+#define EXT_BYTE	0
+#define EXT_WYDE	1
+#define EXT_TETRA	2
+#define EXT_OCTA	3
+#define EXT_HEXI	4
+#define EXT_SINGLE	1
+#define EXT_DOUBLE	2
+#define EXT_QUAD		3
+
+#define SZ_BYTE	1
+#define SZ_WYDE	2
+#define SZ_TETRA	4
+#define SZ_OCTA	8
+#define SZ_HEXI	16
+#define SZ_SINGLE	2
+#define SZ_DOUBLE 4
+#define SZ_QUAD		8
+#define SZ_UNSIZED	128
+
+#define SZ_INTALL	(SZ_BYTE|SZ_WYDE|SZ_TETRA|SZ_OCTA|SZ_HEXI)
+#define SZ_FLTALL	(SZ_SINGLE|SZ_DOUBLE|SZ_QUAD)
+
 typedef struct {
 	unsigned int format;
   unsigned int available;
   uint64_t prefix;
   uint64_t opcode;
   size_t len;
+  uint8_t size;
+  uint8_t defsize;
+  unsigned int flags;
   uint64_t short_opcode;
   size_t short_len;
-  unsigned int flags;
 } mnemonic_extension;
 
 typedef struct {
@@ -101,6 +125,7 @@ typedef struct {
 } instruction_ext;
 
 #define FLG_NEGIMM	1
+#define FLG_FP			2
 
 #define EXI8	0x46
 #define EXI24	0x48
@@ -144,6 +169,7 @@ typedef struct {
 #define BL3		33
 #define J3		34
 #define JL3		35
+#define RII		36
 #define ENTER	39
 #define LEAVE	40
 #define EXI56F	41
@@ -172,6 +198,7 @@ typedef struct {
 #define FUNC(x)	(((x) & 0x3fLL) << 34LL)
 #define FUNC2(x)	(((x) & 0x3LL) << 38LL)
 #define FUNC3(x)	(((x) & 0x7LL) << 37LL)
+#define FUNC5(x)	(((x) & 0x1fLL) << 35LL)
 #define RT(x)		(((x) & 0x3fLL) << 9LL)
 #define ST(x)		(((x) & 1LL) << 15LL)
 #define RA(x)		(((x) & 0x3fLL) << 16LL)

@@ -576,7 +576,7 @@ public:
 	bool IsFloatType() const { 
 		if (this == nullptr)
 			return (false);
-		return (type==bt_quad || type==bt_float || type==bt_double || type==bt_triple); };
+		return (type==bt_quad || type==bt_float || type==bt_double); };
 	bool IsPositType() const {
 		if (this == nullptr)
 			return (false);
@@ -692,7 +692,7 @@ public:
 			printf("hello");
 		if (this) { tp = t; if (t) etype = t->type; val.typ = tp; } };
 	bool IsPtr() { return (etype == bt_pointer || etype == bt_struct || etype == bt_union || etype == bt_class || nodetype == en_addrof); };
-	bool IsFloatType() { return (nodetype == en_addrof || nodetype == en_autofcon) ? false : (etype == bt_double || etype == bt_quad || etype == bt_float || etype == bt_triple); };
+	bool IsFloatType() { return (nodetype == en_addrof || nodetype == en_autofcon) ? false : (etype == bt_double || etype == bt_quad || etype == bt_float); };
 	bool IsPositType() {
 		return (nodetype == en_addrof || nodetype == en_autopcon) ? false : (etype == bt_posit);
 	};

@@ -806,9 +806,6 @@ j1:
 		case bt_double:
 			nbytes = initfloat(symi,opt);
 			break;
-		case bt_triple:
-			nbytes = inittriple(symi, opt);
-			break;
 		case bt_posit:
 			nbytes = initPosit(symi, opt);
 			break;
@@ -1635,7 +1632,7 @@ int TYP::Alignment()
 	case bt_float:          return AL_FLOAT;
 	case bt_double:         return AL_DOUBLE;
 	case bt_posit:					return AL_POSIT;
-	case bt_triple:         return AL_TRIPLE;
+	case bt_quad:         return AL_QUAD;
 	case bt_class:
 	case bt_struct:
 	case bt_union:
@@ -1683,7 +1680,7 @@ int TYP::walignment()
 	case bt_float:          level--; return imax(AL_FLOAT, worstAlignment);
 	case bt_double:         level--; return imax(AL_DOUBLE, worstAlignment);
 	case bt_posit:					level--; return imax(AL_POSIT, worstAlignment);
-	case bt_triple:         level--; return imax(AL_TRIPLE, worstAlignment);
+	case bt_quad:         level--; return imax(AL_QUAD, worstAlignment);
 	case bt_class:
 	case bt_struct:
 	case bt_union:

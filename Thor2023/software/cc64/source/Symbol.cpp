@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -752,9 +752,6 @@ j1:
 		case bt_float:
 		case bt_double:
 			nbytes = initfloat(this, opt);
-			break;
-		case bt_triple:
-			nbytes = inittriple(this, opt);
 			break;
 		case bt_posit:
 			nbytes = initPosit(this, opt);
