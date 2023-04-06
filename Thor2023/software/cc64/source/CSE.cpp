@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2017-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2017-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -36,10 +36,18 @@ int CSE::OptimizationDesireability()
 {
 	if (exp==nullptr)
 		return (0);
-	if( voidf || (exp->nodetype == en_icon))// &&
+	if( voidf )// &&
                        //exp->i < 32768 && exp->i >= -32768))
         return (0);
- /* added this line to disable register optimization of global variables.
+	if (exp->nodetype == en_icon) {// &&
+		// zero can have r0 substituted.
+		if (exp->i == 0)
+			return (0);
+		if (exp->i < 32768 && exp->i >= -32768)
+			return (uses / 2);
+		return (uses / 4);
+	}
+	/* added this line to disable register optimization of global variables.
     The compiler would assign a register to a global variable ignoring
     the fact that the value might change due to a subroutine call.
   */

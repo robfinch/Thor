@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2017-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2017-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -328,6 +328,8 @@ void CSETable::InitializeTempRegs()
 				if (exptr->tp || true) {
 					initstack();
 					ap = cg.GenerateExpression(exptr, am_reg | am_imm | am_mem, exptr->tp ? exptr->tp->size : sizeOfInt, 1);
+					if (ap == nullptr)
+						continue;
 					ap2 = csp->isfp ? makefpreg(csp->reg) : csp->isPosit ? compiler.of.makepreg(csp->reg) : makereg(csp->reg);
 					if (csp->isfp | csp->isPosit) {
 						ap2->type = ap->type;
@@ -540,9 +542,13 @@ void CSETable::Dump()
 		dfs.printf("%d   ", (int)csp->voidf);
 		dfs.printf("%d   ", csp->reg);
 		if (csp->exp && csp->exp->sym)
-			dfs.printf("%s   ", (char *)csp->exp->sym->name->c_str());
+			dfs.printf("%s   ", (char*)csp->exp->sym->name->c_str());
+		else if (csp->exp)
+			dfs.printf("%lld ", csp->exp->i);
 		if (csp->exp && csp->exp->sp)
 			dfs.printf("%s   ", (char *)((std::string *)(csp->exp->sp))->c_str());
+		else if (csp->exp)
+			dfs.printf("%lld ", csp->exp->i);
 		dfs.printf("\n");
 	}
 	dfs.printf("</CSETable>\n");

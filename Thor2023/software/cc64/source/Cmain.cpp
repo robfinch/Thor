@@ -352,6 +352,7 @@ int PreProcessFile(char *nm)
 	makename_s(outname,sizeof(outname),(char *)".fpp");
 //	snprintf(sysbuf, sizeof(sysbuf), "fpp /d /V -b %s %s", nm, outname);
 	snprintf(sysbuf, sizeof(sysbuf), "fpp64 -b %s %s", nm, outname);
+	_flushall();
 	return system(sysbuf);
 }
 

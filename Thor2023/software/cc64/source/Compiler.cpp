@@ -418,7 +418,7 @@ void Compiler::storeHex(txtoStream& ofs)
 	sprintf_s(buf, sizeof(buf), "SYMTBL%05d\n", nn);
 	ofs.write(buf);
 	for (mm = 0; mm < nn; mm++)
-		symbolTable[mm].storeHex(ofs);
+		symTables[mm >> 15][mm & 0x7fff].storeHex(ofs);
 	nn = compiler.funcnum;
 	sprintf_s(buf, sizeof(buf), "FNCTBL%05d\n", nn);
 	ofs.write(buf);

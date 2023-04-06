@@ -499,17 +499,22 @@ void Function::SaveGPRegisterVars()
 {
 	int cnt;
 	int nn;
+	char buf[100];
 
 	if (rmask) {
 		if (rmask->NumMember()) {
 			cnt = 0;
 			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
 			rmask->resetPtr();
+			sprintf_s(buf, sizeof(buf), "store_s0s%d", rmask->NumMember());
+			GenerateMonadic(op_bsr, 0, MakeStringAsNameConst(buf, codeseg));
+			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
 				cg.GenerateStore(makereg(nregs - 1 - nn), MakeIndexed(cnt, regSP), sizeOfWord);
 				//GenerateDiadic(cpu.sto_op, 0, makereg(nregs - 1 - nn), MakeIndexed(cnt, regSP));
 				cnt += sizeOfWord;
 			}
+			*/
 		}
 	}
 }
@@ -650,6 +655,7 @@ int Function::RestoreGPRegisterVars()
 	int cnt2 = 0, cnt;
 	int nn;
 	int64_t mask;
+	char buf[100];
 
 	if (save_mask == nullptr)
 		return (0);
@@ -666,10 +672,14 @@ int Function::RestoreGPRegisterVars()
 			cnt2 = cnt = save_mask->NumMember() * sizeOfWord;
 			cnt = 0;
 			save_mask->resetPtr();
+			sprintf_s(buf, sizeof(buf), "load_s0s%d", save_mask->NumMember()-1);
+			GenerateDiadic(op_bsr, 0, makereg(regLR+1), MakeStringAsNameConst(buf, codeseg));
+			/*
 			for (nn = save_mask->nextMember(); nn >= 0; nn = save_mask->nextMember()) {
 				cg.GenerateLoad(makereg(nn), MakeIndexed(cnt, regSP), sizeOfWord, sizeOfWord);
 				cnt += sizeOfWord;
 			}
+			*/
 		}
 	}
 	return (cnt2);

@@ -308,6 +308,7 @@ void Function::PeepOpt()
 	pl.Dump((char *)"===== After peephole optimizations =====");
 	forest.func = this;
 	//	RootBlock->ExpandReturnBlocks();
+
 	CFG::Create();
 
 	pl.RemoveMoves();

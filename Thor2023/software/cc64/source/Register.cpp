@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -133,44 +133,45 @@ int save_rap[20];
 int NumTempRegs()
 {
 	return (cpu.NumTmpRegs);
-	if (currentFn->IsLeaf)
-		return (regLastTemp - 1 + 1);
-	else
-		return (regLastTemp - regFirstTemp + 1);
 }
 
 void CPU::InitRegs()
 {
-	cpu.NumArgRegs = 9;
+	cpu.NumArgRegs = 10;
 	cpu.argregs[0] = 1;
 	cpu.argregs[1] = 2;
-	cpu.argregs[2] = 19;
-	cpu.argregs[3] = 20;
-	cpu.argregs[4] = 21;
-	cpu.argregs[5] = 22;
-	cpu.argregs[6] = 23;
-	cpu.argregs[7] = 24;
-	cpu.argregs[8] = 25;
+	cpu.argregs[2] = 3;
+	cpu.argregs[3] = 4;
+	cpu.argregs[4] = 25;
+	cpu.argregs[5] = 26;
+	cpu.argregs[6] = 27;
+	cpu.argregs[7] = 28;
+	cpu.argregs[8] = 29;
+	cpu.argregs[9] = 30;
 
-	cpu.NumTmpRegs = 8;
-	cpu.tmpregs[0] = 3;
-	cpu.tmpregs[1] = 4;
-	cpu.tmpregs[2] = 5;
-	cpu.tmpregs[3] = 6;
-	cpu.tmpregs[4] = 7;
-	cpu.tmpregs[5] = 8;
-	cpu.tmpregs[6] = 9;
-	cpu.tmpregs[7] = 10;
+	cpu.NumTmpRegs = 10;
+	cpu.tmpregs[0] = 5;
+	cpu.tmpregs[1] = 6;
+	cpu.tmpregs[2] = 7;
+	cpu.tmpregs[3] = 8;
+	cpu.tmpregs[4] = 9;
+	cpu.tmpregs[5] = 10;
+	cpu.tmpregs[6] = 11;
+	cpu.tmpregs[7] = 12;
+	cpu.tmpregs[8] = 13;
+	cpu.tmpregs[9] = 14;
 
-	cpu.NumSavedRegs = 8;
-	cpu.saved_regs[0] = 11;
-	cpu.saved_regs[1] = 12;
-	cpu.saved_regs[2] = 13;
-	cpu.saved_regs[3] = 14;
-	cpu.saved_regs[4] = 15;
-	cpu.saved_regs[5] = 16;
-	cpu.saved_regs[6] = 17;
-	cpu.saved_regs[7] = 18;
+	cpu.NumSavedRegs = 10;
+	cpu.saved_regs[0] = 15;
+	cpu.saved_regs[1] = 16;
+	cpu.saved_regs[2] = 17;
+	cpu.saved_regs[3] = 18;
+	cpu.saved_regs[4] = 19;
+	cpu.saved_regs[5] = 20;
+	cpu.saved_regs[6] = 21;
+	cpu.saved_regs[7] = 22;
+	cpu.saved_regs[8] = 23;
+	cpu.saved_regs[9] = 24;
 }
 
 void initRegStack()
@@ -178,13 +179,12 @@ void initRegStack()
 	int i;
 	Function *sym = currentFn;
 
-	next_reg = regFirstTemp;
 	next_reg = 0;
-	next_fpreg = regFirstTemp;
-	next_preg = regFirstTemp;
-	next_vreg = regFirstTemp;
-	next_vmreg = 1;
-    next_breg = 5;
+	next_fpreg = 0;// regFirstTemp;
+	next_preg = 0;// regFirstTemp;
+	next_vreg = 0;// regFirstTemp;
+	next_vmreg = 0;
+    next_breg = 0;
 	//for (rsp=0; rsp < 3; rsp=rsp+1)
 	//	regstack[rsp] = tmpregs[rsp];
 	//rsp = 0;
@@ -797,11 +797,12 @@ common:
 		if (IsTempReg(ap->preg)) {
 			if (reg_in_use[ap->preg]==-1)
 				return;
-			next_reg--;
-			if (next_reg <= frg) {
-				next_reg = cpu.NumTmpRegs-1;// regLastTemp;
+			if (next_reg == 0) {
+				next_reg = cpu.NumTmpRegs - 1;// regLastTemp;
 				wrapno--;
 			}
+			else
+				next_reg--;
 			number = reg_in_use[ap->preg];
 			reg_in_use[ap->preg] = -1;
 			break;
@@ -811,11 +812,12 @@ common:
 		if (IsTempReg(ap->sreg)) {
 			if (reg_in_use[ap->sreg]==-1)
 				goto common;
-			next_reg--;
-			if (next_reg <= frg) {
+			if (next_reg == 0) {
 				next_reg = cpu.NumTmpRegs - 1;// regLastTemp;
 				wrapno--;
 			}
+			else
+				next_reg--;
 			number = reg_in_use[ap->sreg];
 			reg_in_use[ap->sreg] = -1;
 			//break;

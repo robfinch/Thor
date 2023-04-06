@@ -45,36 +45,50 @@ Function* SYM::MakeFunction(int symnum, bool isPascal) {
 
 SYM *SYM::GetPtr(int n)
 { 
+	SYM* p1;
   if (n==0)
-    return nullptr;
-  if (n > 32767)
-     return nullptr;
-  return (SYM *)&compiler.symbolTable[n]; 
+    return (nullptr);
+	if ((n >> 15) > 9)
+		return (nullptr);
+	p1 = compiler.symTables[n >> 15];
+	if (p1 == nullptr)
+		return (nullptr);
+  return (SYM *)&compiler.symTables[n>>15][n & 0x7fff]; 
 }
 
 SYM *SYM::GetNextPtr()
 { 
-  if (next==0)
-     return nullptr;
-  if (next > 32767)
-     return nullptr;
-  return &compiler.symbolTable[next];
+	SYM* p1;
+	if (next == 0)
+		return (nullptr);
+	if ((next >> 15) > 9)
+		return (nullptr);
+	p1 = compiler.symTables[next >> 15];
+	if (p1 == nullptr)
+		return (nullptr);
+	return (SYM*)&compiler.symTables[next >> 15][next & 0x7fff];
 }
 
 SYM *SYM::GetParentPtr()
 {
-	if (parent==0)
-	   return nullptr;
-  if (parent > 32767)
-     return nullptr;
-   return &compiler.symbolTable[parent];
+	SYM* p1;
+	if (parent == 0)
+		return (nullptr);
+	if ((parent >> 15) > 9)
+		return (nullptr);
+	p1 = compiler.symTables[parent >> 15];
+	if (p1 == nullptr)
+		return (nullptr);
+	return (SYM*)&compiler.symTables[parent >> 15][parent & 0x7fff];
 };
 
 int SYM::GetIndex()
 {
-  if (this==nullptr)
-     return 0; 
-  return this - &compiler.symbolTable[0];
+	SYM* p1;
+	if (this==nullptr)
+     return 0;
+	return (this->id);
+//	return this - &compiler.symbolTable[0];
 };
 
 bool SYM::IsTypedef()
@@ -119,7 +133,7 @@ SYM *search2(std::string na,TABLE *tbl,TypeArray *typearray)
 	else if (tbl == &tagtable)
 		thead = SYM::GetPtr(tagtable.GetHead());
 	else
-		thead = &compiler.symbolTable[tbl->GetHead()];
+		thead = &compiler.symTables[tbl->GetHead() >> 15][tbl->GetHead() & 0x7fff];
 	while( thead != NULL) {
 		if (thead->name && thead->name->length() != 0) {
 		  /*
@@ -160,6 +174,7 @@ SYM *search(std::string na,TABLE *tbl)
 SYM *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exact)
 {
 	SYM *sp;
+	SYM* sp1;
 	Statement *st;
 	SYM *p, *q;
 	int n;
@@ -324,17 +339,20 @@ j1:
 		}
 		// Second finally, search for an enum
 		dfs.printf("Looking at enums\n");
-		for (n = 0; n < 32768; n++) {
-			sp = &compiler.symbolTable[n];
-			if (sp->name) {
-				if (sp->name->compare(na) == 0) {
-					if (sp->tp == &stdconst) {
-						if (gSearchCnt < 100) {
-							gSearchSyms[gSearchCnt] = sp;
-							gSearchCnt++;
+		for (n = 0; n < 32768*10; n++) {
+			sp1 = compiler.symTables[n >> 15];
+			if (sp1) {
+				sp = &compiler.symTables[n >> 15][n & 0x7fff];
+				if (sp->name) {
+					if (sp->name->compare(na) == 0) {
+						if (sp->tp == &stdconst) {
+							if (gSearchCnt < 100) {
+								gSearchSyms[gSearchCnt] = sp;
+								gSearchCnt++;
+							}
+							TABLE::match[0] = sp;
+							TABLE::matchno = 1;
 						}
-						TABLE::match[0] = sp;
-						TABLE::matchno = 1;
 					}
 				}
 			}

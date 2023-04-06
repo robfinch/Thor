@@ -78,15 +78,15 @@ int address_bits = 32;
 int maxVL = 64;
 int nregs = 128;
 
-int64_t sizeOfWord = 12;
-int sizeOfFP = 12;
+int64_t sizeOfWord = 16;
+int sizeOfFP = 16;
 int sizeOfFPS = 4;
 int sizeOfFPD = 8;
 int sizeOfFPT = 12;
 int sizeOfFPQ = 16;
-int sizeOfPtr = 12;
-int sizeOfInt = 12;
-int sizeOfDecimal = 12;
+int sizeOfPtr = 16;
+int sizeOfInt = 16;
+int sizeOfDecimal = 16;
 int sizeOfPosit = 8;
 
 std::ifstream *ifs;
@@ -163,5 +163,3 @@ ENODE* gNameRefNode;
 TABLE* gCurrentTbl;
 
 ThorCodeGenerator cg;
-
-

@@ -117,7 +117,8 @@ int64_t ENODE::GetReferenceSize()
 			return(tp->size);
 		else
 			return (sizeOfFPD);
-	case en_tempref:
+	case en_type:
+		return (tp->size);
 	case en_regvar:
 		return (sizeOfWord);
 		//			return node->esize;
@@ -145,9 +146,9 @@ int ENODE::GetNaturalSize()
 		return (sizeOfWord);
 	case en_fcon:
 		return (tp->precision / 8);
-	case en_cbw: case en_cubw:
-	case en_ccw: case en_cucw:
-	case en_chw: case en_cuhw:
+	case en_byt2octa: case en_ubyt2octa:
+	case en_wyde2octa: case en_uwyde2octa:
+	case en_tetra2octa: case en_utetra2octa:
 	case en_cbu: case en_ccu: case en_chu:
 	case en_cubu: case en_cucu: case en_cuhu:
 	case en_ccwp: case en_cucwp:
@@ -156,14 +157,20 @@ int ENODE::GetNaturalSize()
 	case en_tcon: return (6);
 	case en_labcon: case en_clabcon:
 	case en_cnacon: case en_nacon:  case en_autocon: case en_classcon:
-	case en_tempref:
-	case en_cwl:
-	case en_cbl: case en_cubl:
-	case en_ccl: case en_cucl:
-	case en_chl: case en_cuhl:
+	case en_octa2hexi:
+	case en_byt2hexi: case en_ubyt2hexi:
+	case en_wyde2hexi: case en_uwyde2hexi:
+	case en_chl: case en_utetra2hexi:
+	case en_uocta2hexi:
 	case en_cclp: case en_cuclp:
 		return (sizeOfWord);
+	case en_type:
+		return (tp->size);
 	case en_fcall:
+		if (tp)
+			return (tp->size);
+		else
+			return (sizeOfWord);
 	case en_regvar:
 	case en_fpregvar:
 		if (tp)
@@ -230,8 +237,13 @@ int ENODE::GetNaturalSize()
 			return (siz1);
 		else
 			return (siz0);
-	case en_void:   case en_cond:	case en_safe_cond: case en_cast:
+	case en_void:   case en_cond:	case en_safe_cond:
 		return (p[1]->GetNaturalSize());
+	case en_cast:
+		if (p[0])
+			return (p[0]->GetNaturalSize());
+		else
+			return (p[1]->GetNaturalSize());
 	case en_bchk:
 		return (p[0]->GetNaturalSize());
 	case en_chk:
@@ -329,7 +341,7 @@ bool ENODE::IsEqual(ENODE *node1, ENODE *node2, bool lit)
 		return (node1->rg == node2->rg);
 	case en_pregvar:
 		return (node1->rg == node2->rg);
-	case en_tempref:
+	//case en_type:
 	case en_tempfpref:
 	case en_icon:
 	case en_labcon:
@@ -386,14 +398,21 @@ bool ENODE::IsEqual(ENODE *node1, ENODE *node2, bool lit)
 ENODE *ENODE::Clone()
 {
 	ENODE *temp;
+	int num;
 
 	if (this == nullptr)
 		return (ENODE *)nullptr;
 	temp = allocEnode();
+	num = temp->number;
 	memcpy(temp, this, sizeof(ENODE));	// copy all the fields
-//	temp->p[0] = p[0]->Clone();
-//	temp->p[1] = p[1]->Clone();
-//	temp->p[2] = p[2]->Clone();
+	temp->number = num;
+	/*
+	if (p[0]) temp->p[0] = p[0]->Clone();
+	if (p[1]) temp->p[1] = p[1]->Clone();
+	if (p[2]) temp->p[2] = p[2]->Clone();
+	if (p[3]) temp->p[3] = p[3]->Clone();
+	if (p[4]) temp->p[4] = p[4]->Clone();
+	*/
 	return (temp);
 }
 
@@ -567,7 +586,6 @@ void ENODE::repexpr()
 	case en_classcon:
 	case en_cnacon:
 	case en_clabcon:
-	case en_tempref:
 		if ((csp = currentFn->csetbl->Search(this)) != NULL) {
 			if (!csp->voidf) {
 				if (csp->reg > 0) {
@@ -578,6 +596,8 @@ void ENODE::repexpr()
 				}
 			}
 		}
+		break;
+	case en_type:
 		break;
 	/*
 	case en_c_ref:
@@ -634,16 +654,18 @@ void ENODE::repexpr()
 		else
 			p[0]->repexpr();
 		break;
-	case en_cbc: case en_cubw:
-	case en_cbh: case en_cucw:
-	case en_cbw: case en_cuhw:
+	case en_cbc: case en_ubyt2octa:
+	case en_cbh: case en_uwyde2octa:
+	case en_byt2octa: case en_utetra2octa:
 	case en_cbu: case en_ccu: case en_chu:
 	case en_cubu: case en_cucu: case en_cuhu:
 	case en_ccwp: case en_cucwp:
 	case en_cch:
-	case en_ccw:
-	case en_chw:
-	case en_cwl:
+	case en_wyde2octa:
+	case en_wyde2hexi:
+	case en_tetra2octa:
+	case en_octa2hexi:
+	case en_uocta2hexi:
 	case en_uminus:
 	case en_abs:
 	case en_sxb: case en_sxh: case en_sxc:
@@ -716,9 +738,14 @@ void ENODE::repexpr()
 	case en_asdiv:  case en_asdivu:
 	case en_asor:   case en_asand:    case en_asxor:
 	case en_asmod:  case en_aslsh:
-	case en_asrsh:  case en_fcall:
+	case en_asrsh:
 	case en_aggregate:
-	case en_void:		case en_cast:
+	case en_void:
+		p[0]->repexpr();
+	case en_cast:
+		p[1]->repexpr();
+		break;
+	case en_fcall:
 		p[0]->repexpr();
 		p[1]->repexpr();
 		break;
@@ -880,19 +907,20 @@ void ENODE::scanexpr(int duse)
 	case en_autovcon:
 	case en_autocon:
 	case en_classcon:
-	case en_tempref:
 		OptInsertAutocon(duse);
 		break;
-	case en_cbc: case en_cubw: case en_cubl:
-	case en_cbh: case en_cucw: case en_cucl:
-	case en_cbw: case en_cuhw: case en_cbl: case en_cuhl:
+	case en_type:
+		break;
+	case en_cbc: case en_ubyt2octa: case en_ubyt2hexi:
+	case en_cbh: case en_uwyde2octa: case en_uwyde2hexi:
+	case en_byt2octa: case en_utetra2octa: case en_byt2hexi: case en_utetra2hexi:
 	case en_cbu: case en_ccu: case en_chu:
 	case en_cubu: case en_cucu: case en_cuhu:
 	case en_ccwp: case en_cucwp: case en_cclp: case en_cuclp:
 	case en_cch:
-	case en_ccw: case en_ccl:
-	case en_chw: case en_chl:
-	case en_cwl:
+	case en_wyde2octa: case en_wyde2hexi:
+	case en_tetra2octa: case en_chl:
+	case en_octa2hexi: case en_uocta2hexi:
 		p[0]->scanexpr(duse);
 		break;
 	case en_fieldref:
@@ -970,9 +998,10 @@ void ENODE::scanexpr(int duse)
 	case en_asrsh:
 	case en_asand:	case en_asxor: case en_asor:
 	case en_cond:	case en_safe_cond:
-	case en_void:	case en_cast:
+	case en_void:
 	case en_aggregate:
 		p[0]->scanexpr(0);
+	case en_cast:
 		p[1]->scanexpr(0);
 		break;
 	case en_list:
@@ -1136,8 +1165,9 @@ Operand *ENODE::GenIndex(bool neg)
 {
 	Operand *ap1, *ap2, *ap3;
 
-	if ((p[0]->nodetype == en_tempref || p[0]->nodetype == en_regvar)
-		&& (p[1]->nodetype == en_tempref || p[1]->nodetype == en_regvar))
+//	if ((p[0]->nodetype == en_type || p[0]->nodetype == en_regvar)
+//		&& (p[1]->nodetype == en_type || p[1]->nodetype == en_regvar))
+	if (p[0]->nodetype == en_regvar && p[1]->nodetype == en_regvar)
 	{       /* both nodes are registers */
 			// Don't need to free ap2 here. It is included in ap1.
 		GenerateHint(8);
@@ -1831,88 +1861,7 @@ Operand *ENODE::GenerateBinary(int flags, int size, int op)
 
 Operand *ENODE::GenerateAssignAdd(int flags, int size, int op)
 {
-	Operand *ap1, *ap2, *ap3, *ap4;
-	int ssize;
-	bool negf = false;
-	bool intreg = false;
-	MachineReg *mr;
-
-	ssize = p[0]->GetNaturalSize();
-	if (ssize > size)
-		size = ssize;
-	if (p[0]->IsBitfield()) {
-		ap3 = GetTempRegister();
-		ap1 = cg.GenerateBitfieldDereference(p[0], am_reg | am_mem, size, 1);
-		//		GenerateDiadic(op_mov, 0, ap3, ap1);
-		//ap1 = cg.GenerateExpression(p[0], am_reg | am_mem, size);
-		ap2 = cg.GenerateExpression(p[1], am_reg | am_imm, size, 1);
-		if (ap1->mode == am_reg) {
-			GenerateTriadic(op, 0, ap1, ap1, ap2);
-//			if (ap1->bit_offset < 0)
-//				GenerateBitfieldInsert(ap3, ap1, ap1->next, MakeImmediate(1));
-//			else
-				GenerateBitfieldInsert(ap3, ap1, ap1->bit_offset, ap1->bit_width);
-			//cg.GenerateBitfieldInsert(ap3, ap1, ap1->offset->bit_offset, ap1->offset->bit_width);
-		}
-		else {
-			GenerateLoad(ap3, ap1, size, size);
-			//Generate4adic(op_bfext, 0, ap4, ap3, MakeImmediate(ap1->offset->bit_offset), MakeImmediate(ap1->offset->bit_width-1));
-			ap4 = cg.GenerateBitfieldExtract(ap3, ap1->bit_offset, ap1->bit_width);
-			GenerateTriadic(op, 0, ap4, ap4, ap2);
-			cg.GenerateBitfieldInsert(ap3, ap4, ap1->bit_offset, ap1->bit_width);
-			GenStore(ap3, ap1, ssize);
-			ReleaseTempReg(ap4);
-		}
-		ReleaseTempReg(ap2);
-		ReleaseTempReg(ap1);
-		ap3->MakeLegal( flags, size);
-		return (ap3);
-	}
-	if (IsFloatType()) {
-		ap1 = cg.GenerateExpression(p[0], am_reg | am_mem, ssize, 0);
-		ap2 = cg.GenerateExpression(p[1], am_reg, size, 1);
-		if (op == op_add)
-			op = op_fadd;
-		else if (op == op_sub)
-			op = op_fsub;
-	}
-	else if (etype == bt_vector) {
-		ap1 = cg.GenerateExpression(p[0], am_reg | am_mem, ssize, 0);
-		ap2 = cg.GenerateExpression(p[1], am_reg, size, 1);
-		if (op == op_add)
-			op = op_vadd;
-		else if (op == op_sub)
-			op = op_vsub;
-	}
-	else {
-		ap1 = cg.GenerateExpression(p[0], am_all, ssize, 0);
-		ap2 = cg.GenerateExpression(p[1], Instruction::Get(op)->amclass3, size, 1);
-		intreg = true;
-	}
-	if (ap1->mode == am_reg) {
-		GenerateTriadic(op, 0, ap1, ap1, ap2);
-		if (intreg) {
-			mr = &regs[ap1->preg];
-			if (mr->assigned)
-				mr->modified = true;
-			mr->assigned = true;
-			mr->isConst = ap1->isConst && ap2->isConst;
-		}
-	}
-	//else if (ap1->mode == am_fpreg) {
-	//	GenerateTriadic(op, ap1->fpsize(), ap1, ap1, ap2);
-	//	ReleaseTempReg(ap2);
-	//	ap1->MakeLegal( flags, size);
-	//	return (ap1);
-	//}
-	else {
-		GenMemop(op, ap1, ap2, ssize, etype);
-	}
-	ReleaseTempReg(ap2);
-	//if (ap1->type != stddouble.GetIndex() && !ap1->isUnsigned)
-	//	ap1 = ap1->GenSignExtend(ssize, size, flags);
-	ap1->MakeLegal( flags, size);
-	return (ap1);
+	return (cg.GenerateAssignAdd(this, flags, size, op));
 }
 
 Operand *ENODE::GenerateAssignLogic(int flags, int size, int op)
@@ -2011,10 +1960,10 @@ int GetNaturalSize(ENODE *node)
 	case en_tcon: return (6);
 	case en_labcon: case en_clabcon:
 	case en_cnacon: case en_nacon:  case en_autocon: case en_classcon:
-	case en_tempref:
-	case en_cbw: case en_cubw:
-	case en_ccw: case en_cucw:
-	case en_chw: case en_cuhw:
+	case en_type:
+	case en_byt2octa: case en_ubyt2octa:
+	case en_wyde2octa: case en_uwyde2octa:
+	case en_tetra2octa: case en_utetra2octa:
 	case en_cbu: case en_chu:
 	case en_cubu: case en_cucu: case en_cuhu:
 	case en_ccwp: case en_cucwp:
@@ -2474,8 +2423,8 @@ void ENODE::loadHex(txtiStream& ifs)
 		tp = &compiler.typeTable[nn];
 	ifs.read(buf, 6);
 	nn = strtoul(buf, nullptr, 16);
-	if (nn < 65535)
-		sym = &compiler.symbolTable[nn];
+	if (nn < 10*32768)
+		sym = &compiler.symTables[nn >> 15][nn & 0x7fff];
 	vmask = allocEnode();
 	vmask->load(ifs);
 	ifs.read(buf, 4);
@@ -2643,7 +2592,11 @@ std::string ENODE::nodetypeStr()
 	case en_eq: return "en_eq";
 	case en_land: return "en_land";
 	case en_not: return "en_not";
-	case en_cwl: return "en_cwl";
+	case en_octa2hexi: return "en_octa2hexi";
+	case en_add: return "en_add";
+	case en_sub: return "en_sub";
+	case en_assub: return "en_assub";
+	case en_div: return "en_div";
 	default:
 		if (IsRefType()) {
 			return "en_ref";
@@ -2672,9 +2625,12 @@ void ENODE::Dump()
 		dfs.printf(" ");
 	dfs.printf("rg: %d\n", rg);
 	level++;
-	p[0]->Dump();
-	p[1]->Dump();
-	p[2]->Dump();
+	if (p[0])
+		p[0]->Dump();
+	if (p[1])
+		p[1]->Dump();
+	if (p[2])
+		p[2]->Dump();
 	level--;
 }
 

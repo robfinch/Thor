@@ -687,7 +687,10 @@ public:
 
 	ENODE* Clone();
 
-	void SetType(TYP* t) { if (this) { tp = t; if (t) etype = t->type; val.typ = tp; } };
+	void SetType(TYP* t) { 
+		if (t == (TYP*)1)
+			printf("hello");
+		if (this) { tp = t; if (t) etype = t->type; val.typ = tp; } };
 	bool IsPtr() { return (etype == bt_pointer || etype == bt_struct || etype == bt_union || etype == bt_class || nodetype == en_addrof); };
 	bool IsFloatType() { return (nodetype == en_addrof || nodetype == en_autofcon) ? false : (etype == bt_double || etype == bt_quad || etype == bt_float || etype == bt_triple); };
 	bool IsPositType() {
@@ -1134,6 +1137,7 @@ public:
 	virtual void GenerateLea(Operand* ap1, Operand* ap2);
 	virtual void SignExtendBitfield(Operand* ap3, uint64_t mask);
 	Operand *GenerateBitfieldAssign(ENODE *node, int flags, int size);
+	Operand* GenerateBitfieldAssignAdd(ENODE* node, int flags, int size, int op);
 	virtual void GenerateBitfieldInsert(Operand *ap1, Operand *ap2, int offset, int width);
 	virtual void GenerateBitfieldInsert(Operand* ap1, Operand* ap2, Operand* offset, Operand* width);
 	virtual void GenerateBitfieldInsert(Operand* ap1, Operand* ap2, ENODE* offset, ENODE* width);
@@ -1156,7 +1160,8 @@ public:
 	Operand* GeneratePositRegvarDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size);
 	Operand *GenerateDereference(ENODE *node, int flags, int size, int su, int opt, int rhs);
 	Operand* GenerateDereference2(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su, int opt);
-	Operand *GenerateAssignMultiply(ENODE *node, int flags, int size, int op);
+	Operand* GenerateAssignAdd(ENODE* node, int flags, int size, int op);
+	Operand* GenerateAssignMultiply(ENODE *node, int flags, int size, int op);
 	Operand *GenerateAssignModiv(ENODE *node, int flags, int size, int op);
 	void GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Operand *base);
 	void GenerateArrayAssign(TYP *tp, ENODE *node1, ENODE *node2, Operand *base);
@@ -1933,6 +1938,7 @@ public:
 	int symnum;
 	short int funcnum;
 	SYM symbolTable[32768];
+	SYM* symTables[10];
 	Function functionTable[3000];
 	TYP typeTable[32768];
 	OperandFactory of;
@@ -1945,7 +1951,14 @@ public:
 	bool os_code;
 	int pollCount;
 public:
-	Compiler() { typenum = 0; ipoll = false; pollCount = 33; };
+	Compiler() { 
+		int i;
+
+		for (i = 0; i < 10; i++)
+			symTables[i] = nullptr;
+		symTables[0] = &symbolTable[0];
+		typenum = 0; ipoll = false; pollCount = 33;
+	};
 	GlobalDeclaration *decls;
 	void compile();
 	int PreprocessFile(char *nm);
@@ -1967,9 +1980,9 @@ public:
 	int NumArgRegs;
 	int NumTmpRegs;
 	int NumSavedRegs;
-	int argregs[32];
-	int tmpregs[32];
-	int saved_regs[32];
+	int argregs[64];
+	int tmpregs[64];
+	int saved_regs[64];
 	bool SupportsBand;
 	bool SupportsBor;
 	bool SupportsBBS;

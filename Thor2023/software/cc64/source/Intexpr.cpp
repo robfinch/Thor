@@ -67,7 +67,7 @@ Int128 GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simple
 		// A type case is represented by a tempref node associated with a value.
 		// There may be an integer typecast to another value that can be used.
 		if (n2->nodetype == en_void || n2->nodetype == en_cast) {
-			if (n2->p[0]->nodetype == en_tempref) {
+			if (n2->p[0]->nodetype == en_type) {
 				if (n2->p[1]->nodetype == en_icon) {
 					if (pnode)
 						*pnode = n2;

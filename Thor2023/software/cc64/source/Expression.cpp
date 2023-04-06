@@ -466,6 +466,7 @@ ENODE* Expression::ParseMinus(SYM* symi)
 	}
 	else if (ep1->constflag && (ep1->nodetype == en_icon)) {
 		ep1->i = -ep1->i;
+		Int128::Sub(&ep1->i128, Int128::Zero(), &ep1->i128);
 	}
 	else if (ep1->constflag && (ep1->nodetype == en_fcon)) {
 		ep1->f = -ep1->f;
@@ -618,7 +619,7 @@ ENODE* Expression::ParseSizeof(SYM* symi)
 	if (flag2)
 		needpunc(closepa, 2);
 	ep1->constflag = TRUE;
-	ep1->esize = 2;//??? 8?
+	ep1->esize = sizeOfWord;//??? 8?
 	tp = &stdint;
 	ep1->SetType(tp);
 	return (ep1);

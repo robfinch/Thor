@@ -82,9 +82,9 @@ void searchenv(char *filename, int fnsz, char *envname, char *pathname, int pths
       do
       {
 		  if (p[strlen(p)-1]=='\\')
-	         sprintf_s(pathname, pthsz-1, "%0.90s%s", p, filename);
+	         sprintf_s(pathname, pthsz-1, "%0.200s%s", p, filename);
 		  else
-	         sprintf_s(pathname, pthsz, "%0.90s\\%s", p, filename);
+	         sprintf_s(pathname, pthsz, "%0.200s\\%s", p, filename);
 
          if (_access(pathname, 0) >= 0)
             return;

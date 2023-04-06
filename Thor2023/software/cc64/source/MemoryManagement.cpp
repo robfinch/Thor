@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2020  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -104,7 +104,7 @@ char    *xalloc(int siz)
 				printf(" not enough memory.\n");
 				exit(1);
 			}
-			strcpy_s(bp->name,8,"C64    ");
+			strcpy_s(bp->name,8,"CC64   ");
             bp->next = glbblk;
             glbblk = bp;
             glbsize = BLKSIZE - siz;
@@ -126,7 +126,7 @@ char    *xalloc(int siz)
 				printf(" not enough local memory.\n");
 				exit(1);
 			}
-			strcpy_s(bp->name,8,"C64    ");
+			strcpy_s(bp->name,8,"CC64   ");
             bp->next = locblk;
             locblk = bp;
             locsize = BLKSIZE - siz;
@@ -143,7 +143,7 @@ void ReleaseLocalMemory()
     blkcnt = 0;
     bp1 = locblk;
     while( bp1 != NULL ) {
-		if (strcmp(bp1->name,"C64    "))
+		if (strcmp(bp1->name,"CC64   "))
 			printf("Block corrupted.");
         bp2 = bp1->next;
         free( bp1 );
@@ -165,7 +165,7 @@ void ReleaseGlobalMemory()
   bp1 = glbblk;
   blkcnt = 0;
   while( bp1 != (struct blk *)NULL ) {
-		if (strcmp(bp1->name,"C64    "))
+		if (strcmp(bp1->name,"CC64   "))
 		  dfs.printf("Block corrupted.");
     bp2 = bp1->next;
     free(bp1);
@@ -183,6 +183,13 @@ void ReleaseGlobalMemory()
 }
 
 SYM *allocSYM() {
+  if (compiler.symTables[compiler.symnum >> 15] == nullptr) {
+    if ((compiler.symnum >> 15) > 9) {
+      dfs.printf("Too many symbols.\n");
+      throw new C64PException(ERR_TOOMANY_SYMBOLS, 1);
+    }
+    compiler.symTables[compiler.symnum >> 15] = (SYM*)calloc(32768, sizeof(SYM));
+  }
 	SYM *sym = (SYM *)&compiler.symbolTable[compiler.symnum];
 	ZeroMemory(sym,sizeof(SYM));
 	sym->id = compiler.symnum;
@@ -192,11 +199,7 @@ SYM *allocSYM() {
 	sym->shortname = new std::string("");
 	sym->lsyms.SetOwner(compiler.symnum);
   	compiler.symnum++;
-	if (compiler.symnum > 32760) {
-	  dfs.printf("Too many symbols.\n");
-    throw new C64PException(ERR_TOOMANY_SYMBOLS,1);
-  }
-	return sym;
+	return (sym);
 };
 
 void FreeFunction(Function *fn)
@@ -222,10 +225,13 @@ TYP *allocTYP()
 
 Statement *allocSnode() { return (Statement *)xalloc(sizeof(Statement)); };
 ENODE *allocEnode() {
+  static int num = 0;
   ENODE *p;
   p = (ENODE *)allocx(sizeof(ENODE));
   ZeroMemory(p, sizeof(ENODE));
   p->sp = new std::string();
+  p->number = num;
+  num++;
   return (p);
 };
 Operand *allocOperand() { return (Operand *)xalloc(sizeof(Operand)); };

@@ -237,6 +237,9 @@ void doinit(SYM *sp)
 			char buf[400];
 			char buf2[40];
 			int64_t val = 0;
+			Int128 val128;
+
+			val128.low = val128.high = 0;
 			if (sp->storage_class == sc_global)
 				strcpy_s(buf2, sizeof(buf2), "\n");
 			else
@@ -248,18 +251,21 @@ void doinit(SYM *sp)
 				if (n2->nodetype == en_add) {
 					if (n2->p[0]->nodetype == en_labcon && n2->p[1]->nodetype == en_icon) {
 						val = n2->i;
+						val128 = n2->i128;
 					}
 					if (n2->p[0]->nodetype == en_icon && n2->p[1]->nodetype == en_labcon) {
 						val = n2->i;
+						val128 = n2->i128;
 					}
 				}
 				if (n2->nodetype != en_icon && n2->nodetype != en_cnacon && n2->nodetype != en_labcon) {
-					// A type case is represented by a tempref node associated with a value.
+					// A type cast is represented by a tempref node associated with a value.
 					// There may be an integer typecast to another value that can be used.
 					if (n2->nodetype == en_void || n2->nodetype == en_cast) {
-						if (n2->p[0]->nodetype == en_tempref) {
+						if (n2->p[0]->nodetype == en_type) {
 							if (n2->p[1]->nodetype == en_icon) {
 								val = n2->i;
+								val128 = n2->i128;
 							}
 						}
 					}

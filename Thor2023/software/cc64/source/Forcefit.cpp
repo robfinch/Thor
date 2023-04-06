@@ -89,8 +89,8 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 		case bt_ichar:
 		case bt_char:
 			switch (srctp->type) {
-			case bt_ubyte: nt = en_cubw; break;
-			case bt_byte:	nt = en_cbw; break;
+			case bt_ubyte: nt = en_ubyt2octa; break;
+			case bt_byte:	nt = en_byt2octa; break;
 			case bt_iuchar:
 			case bt_uchar: return (dsttp);
 			case bt_ichar:
@@ -118,8 +118,8 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 		case bt_iuchar:
 		case bt_uchar:
 			switch (srctp->type) {
-			case bt_ubyte: nt = en_cubw; break;
-			case bt_byte:	nt = en_cbw; break;
+			case bt_ubyte: nt = en_ubyt2octa; break;
+			case bt_byte:	nt = en_byt2octa; break;
 			case bt_iuchar:
 			case bt_uchar: return (dsttp);
 			case bt_ichar:
@@ -156,18 +156,18 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 
 		case bt_short:
 			switch (srctp->type) {
-			case bt_ubyte:	*srcnode = makenode(en_cubw, *srcnode, nullptr);
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_byte:		*srcnode = makenode(en_cbw, *srcnode, nullptr);
+			case bt_byte:		*srcnode = makenode(en_byt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_iuchar:
-			case bt_uchar:	*srcnode = makenode(en_cucw, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_ichar:
-			case bt_char:		*srcnode = makenode(en_ccw, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_short:
@@ -198,18 +198,18 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 
 		case bt_ushort:
 			switch (srctp->type) {
-			case bt_ubyte:	*srcnode = makenode(en_cubw, *srcnode, nullptr);
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_byte:		*srcnode = makenode(en_cbw, *srcnode, nullptr);
+			case bt_byte:		*srcnode = makenode(en_byt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_iuchar:
-			case bt_uchar:	*srcnode = makenode(en_cucw, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_ichar:
-			case bt_char:		*srcnode = makenode(en_ccw, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_short:
@@ -240,18 +240,18 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 
 		case bt_int:
 			switch (srctp->type) {
-			case bt_ubyte:	*srcnode = makenode(en_cubw, *srcnode, nullptr);
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_byte:		*srcnode = makenode(en_cbw, *srcnode, nullptr);
+			case bt_byte:		*srcnode = makenode(en_byt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_iuchar:
-			case bt_uchar:	*srcnode = makenode(en_cucw, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_ichar:
-			case bt_char:		*srcnode = makenode(en_ccw, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2octa, *srcnode, nullptr);
 				return (dsttp);
 			case bt_short:
 			case bt_ushort:	return (dsttp);
@@ -281,18 +281,18 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 
 		case bt_uint:
 			switch (srctp->type) {
-			case bt_ubyte:	*srcnode = makenode(en_cubw, *srcnode, nullptr);
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_byte:		*srcnode = makenode(en_cbw, *srcnode, nullptr);
+			case bt_byte:		*srcnode = makenode(en_byt2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_iuchar:
-			case bt_uchar:	*srcnode = makenode(en_cucw, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_ichar:
-			case bt_char:		*srcnode = makenode(en_ccw, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2octa, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_short:
@@ -324,30 +324,30 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 		case bt_ulong:
 		case bt_long:
 			switch (srctp->type) {
-			case bt_ubyte:	*srcnode = makenode(en_cubl, *srcnode, nullptr);
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_byte:		*srcnode = makenode(en_cbl, *srcnode, nullptr);
+			case bt_byte:		*srcnode = makenode(en_byt2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_iuchar:
-			case bt_uchar:	*srcnode = makenode(en_cucl, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_ichar:
-			case bt_char:		*srcnode = makenode(en_ccl, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_short:	*srcnode = makenode(en_chl, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_ushort:	*srcnode = makenode(en_cuhl, *srcnode, nullptr);
+			case bt_ushort:	*srcnode = makenode(en_utetra2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_int:	*srcnode = makenode(en_cwl, *srcnode, nullptr);
+			case bt_int:	*srcnode = makenode(en_octa2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_uint:	*srcnode = makenode(en_cuwl, *srcnode, nullptr);
+			case bt_uint:	*srcnode = makenode(en_uocta2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_exception:
@@ -373,34 +373,34 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 
 		case bt_pointer:
 			switch (srctp->type) {
-			case bt_byte:		*srcnode = makenode(en_cbl, *srcnode, nullptr); 
+			case bt_byte:		*srcnode = makenode(en_byt2hexi, *srcnode, nullptr); 
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_ubyte:	*srcnode = makenode(en_cubl, *srcnode, nullptr); 
+			case bt_ubyte:	*srcnode = makenode(en_ubyt2hexi, *srcnode, nullptr); 
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_char:		*srcnode = makenode(en_ccl, *srcnode, nullptr);
+			case bt_char:		*srcnode = makenode(en_wyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_ichar:	*srcnode = makenode(en_ccl, *srcnode, nullptr);
+			case bt_ichar:	*srcnode = makenode(en_wyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_uchar:	*srcnode = makenode(en_cucl, *srcnode, nullptr);
+			case bt_uchar:	*srcnode = makenode(en_uwyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_iuchar: *srcnode = makenode(en_cucl, *srcnode, nullptr);
+			case bt_iuchar: *srcnode = makenode(en_uwyde2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_short:	*srcnode = makenode(en_chl, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_ushort:	*srcnode = makenode(en_cuhl, *srcnode, nullptr);
+			case bt_ushort:	*srcnode = makenode(en_utetra2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_int:	*srcnode = makenode(en_cwl, *srcnode, nullptr);
+			case bt_int:	*srcnode = makenode(en_octa2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
-			case bt_uint:	*srcnode = makenode(en_cuwl, *srcnode, nullptr);
+			case bt_uint:	*srcnode = makenode(en_uocta2hexi, *srcnode, nullptr);
 				if (fcd) *fcd = true;
 				return (dsttp);
 			case bt_exception:
@@ -486,7 +486,7 @@ j1:
 	switch (srctp->type) {
 	case bt_int:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cwl, *srcnode, nullptr);
+			*srcnode = makenode(en_octa2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -500,7 +500,7 @@ j1:
 		return &stdlong;
 	case bt_uint:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cuwl, *srcnode, nullptr);
+			*srcnode = makenode(en_uocta2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -528,7 +528,7 @@ j1:
 		return &stdlong;
 	case bt_ushort:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cuhl, *srcnode, nullptr);
+			*srcnode = makenode(en_utetra2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -542,7 +542,7 @@ j1:
 		return &stdlong;
 	case bt_byte:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cbl, *srcnode, nullptr);
+			*srcnode = makenode(en_byt2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -556,7 +556,7 @@ j1:
 		return &stdlong;
 	case bt_ubyte:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cubl, *srcnode, nullptr);
+			*srcnode = makenode(en_ubyt2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -570,7 +570,7 @@ j1:
 		return &stdlong;
 	case bt_ichar:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_ccl, *srcnode, nullptr);
+			*srcnode = makenode(en_wyde2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -584,7 +584,7 @@ j1:
 		return &stdlong;
 	case bt_iuchar:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cucl, *srcnode, nullptr);
+			*srcnode = makenode(en_uwyde2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -597,8 +597,10 @@ j1:
 		}
 		return &stdlong;
 	case bt_char:
+		if (srctp->type == dsttp->type)
+			return (&stdchar);
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_ccl, *srcnode, nullptr);
+			*srcnode = makenode(en_wyde2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -612,7 +614,7 @@ j1:
 		return &stdlong;
 	case bt_uchar:
 		if (!(*srcnode)->IsRefType())
-			*srcnode = makenode(en_cucl, *srcnode, nullptr);
+			*srcnode = makenode(en_uwyde2hexi, *srcnode, nullptr);
 		if (dsttp->IsFloatType()) {
 			*srcnode = makenode(en_i2d, *srcnode, *dstnode);
 			(*srcnode)->esize = 8;
@@ -679,19 +681,19 @@ j1:
 
 	case bt_enum:
 		switch (dsttp->type) {
-		case bt_long:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 16; return &stdlong;
+		case bt_long:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 16; return &stdlong;
 		case bt_ulong:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 16; return &stdulong;
-		case bt_short:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
+		case bt_short:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
 		case bt_ushort:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stduint;
-		case bt_int:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
+		case bt_int:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
 		case bt_uint:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stduint;
 		case bt_ichar:
-		case bt_char:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
+		case bt_char:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
 		case bt_iuchar:
 		case bt_uchar:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stduint;
-		case bt_byte:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
+		case bt_byte:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
 		case bt_ubyte:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stduint;
-		case bt_enum:	/**srcnode = makenode(en_ccw, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
+		case bt_enum:	/**srcnode = makenode(en_wyde2octa, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdint;
 		case bt_pointer:/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return dsttp;
 		case bt_exception:	/**srcnode = makenode(en_ccu, *srcnode, *dstnode);*/ (*srcnode)->esize = 8; return &stdexception;
 		case bt_float:

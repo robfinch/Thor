@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2018-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2018-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -233,12 +233,18 @@ void OCODE::OptAdd()
 {
 	// Add zero to self.
 	if (IsEqualOperand(oper1, oper2)) {
-		if (oper3->mode == am_imm) {
-			if (oper3->offset->nodetype == en_icon) {
-				if (oper3->offset->i == 0) {
-					MarkRemove();
-					optimized++;
+		if (oper3) {
+			if (oper3->mode == am_imm) {
+				if (oper3->offset->nodetype == en_icon) {
+					if (oper3->offset->i == 0) {
+						MarkRemove();
+						optimized++;
+					}
 				}
+			}
+			if (oper3->mode == am_reg && oper3->preg == regZero) {
+				MarkRemove();
+				optimized++;
 			}
 		}
 	}
@@ -261,6 +267,10 @@ void OCODE::OptSubtract()
 					return;
 				}
 			}
+		}
+		if (oper3->mode == am_reg && oper3->preg == regZero) {
+			MarkRemove();
+			optimized++;
 		}
 	}
 	//if (oper2->isPtr && oper3->isPtr && oper2->mode == am_reg && oper3->mode == am_reg) {
@@ -542,6 +552,11 @@ void OCODE::OptSxb()
 	OCODE* ip;
 
 	ip = back;
+	if (oper1->preg == regZero) {
+		MarkRemove();
+		optimized++;
+		return;
+	}
 	if (oper1->preg == oper2->preg) {
 		if (ip->opcode == op_ldb) {
 			if (ip->oper1->preg == oper1->preg) {
@@ -1517,6 +1532,7 @@ void OCODE::OptPush()
 }
 
 // Remove SXW after LDW
+// No point in extending r0.
 void OCODE::OptSxw()
 {
 	OCODE* ip;
@@ -1524,6 +1540,11 @@ void OCODE::OptSxw()
 	ip = back;
 	if (oper1->preg != oper2->preg)
 		return;
+	if (oper1->preg == regZero) {
+		MarkRemove();
+		optimized++;
+		return;
+	}
 	if (ip->opcode == op_ldw) {
 		if (ip->oper1->preg == oper1->preg) {
 			MarkRemove();

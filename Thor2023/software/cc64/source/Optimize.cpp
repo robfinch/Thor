@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -60,6 +60,8 @@ void dooper(ENODE *node)
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i + ep->p[1]->i;
 			Int128::Add(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+			ep->p[0] = ep->p[1] = nullptr;
+			break;
 		}
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
@@ -77,6 +79,8 @@ void dooper(ENODE *node)
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i - ep->p[1]->i;
 			Int128::Sub(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+			ep->p[0] = ep->p[1] = nullptr;
+			break;
 		}
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
@@ -645,6 +649,197 @@ static void Opt0_relop(ENODE** node)
 		dooper(*node);
 }
 
+static void Opt0_byt2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		if (ep->i & 0x80) {
+			ep->i = ep->p[0]->i | 0xffffffffffffff00LL;
+			ep->i128.high = 0xffffffffffffffffLL;
+			ep->i128.low = ep->p[0]->i128.low | 0xffffffffffffff00LL;
+		}
+		else {
+			ep->i = ep->p[0]->i & 0xffLL;
+			ep->i128.high = 0;
+			ep->i128.low = ep->p[0]->i128.low & 0xffLL;
+		}
+		ooptimized++;
+	}
+}
+
+static void Opt0_ubyt2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		ep->i = ep->p[0]->i & 0xffLL;
+		ep->i128.high = 0;
+		ep->i128.low = ep->p[0]->i128.low & 0xffLL;
+		ooptimized++;
+	}
+}
+
+static void Opt0_wyde2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		if (ep->i & 0x8000) {
+			ep->i = ep->p[0]->i | 0xffffffffffff0000LL;
+			ep->i128.high = 0xffffffffffffffffLL;
+			ep->i128.low = ep->p[0]->i128.low | 0xffffffffffff0000LL;
+		}
+		else {
+			ep->i = ep->p[0]->i & 0xffffLL;
+			ep->i128.high = 0;
+			ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
+		}
+		ooptimized++;
+	}
+}
+
+static void Opt0_uwyde2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		ep->i = ep->p[0]->i & 0xffffLL;
+		ep->i128.high = 0;
+		ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
+		ooptimized++;
+	}
+}
+
+static void Opt0_tetra2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		if (ep->i & 0x80000000LL) {
+			ep->i = ep->p[0]->i | 0xffffffff00000000LL;
+			ep->i128.high = 0xffffffffffffffffLL;
+			ep->i128.low = ep->p[0]->i128.low | 0xffffffff00000000LL;
+		}
+		else {
+			ep->i = ep->p[0]->i & 0xffffffffLL;
+			ep->i128.high = 0;
+			ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
+		}
+		ooptimized++;
+	}
+}
+
+static void Opt0_utetra2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		ep->i = ep->p[0]->i & 0xffffffffLL;
+		ep->i128.high = 0;
+		ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
+		ooptimized++;
+	}
+}
+
+static void Opt0_octa2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		ep->i = ep->p[0]->i;
+		if (ep->i & 0x8000000000000000LL) {
+			ep->i128.high = 0xffffffffffffffffLL;
+			ep->i128.low = ep->p[0]->i128.low;
+		}
+		else {
+			ep->i128.high = 0;
+			ep->i128.low = ep->p[0]->i128.low;
+		}
+		ooptimized++;
+	}
+}
+
+static void Opt0_uocta2hexi(ENODE* ep)
+{
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		ep->esize = sizeOfWord;
+		ep->nodetype = en_icon;
+		ep->i = ep->p[0]->i;
+		ep->i128.high = 0;
+		ep->i128.low = ep->p[0]->i128.low;
+		ooptimized++;
+	}
+}
+
+static void Opt0_byt2wyde(ENODE* ep)
+{
+	Opt0_byt2hexi(ep);
+}
+
+static void Opt0_ubyt2wyde(ENODE* ep)
+{
+	Opt0_ubyt2hexi(ep);
+}
+
+static void Opt0_byt2tetra(ENODE* ep)
+{
+	Opt0_byt2hexi(ep);
+}
+
+static void Opt0_ubyt2tetra(ENODE* ep)
+{
+	Opt0_ubyt2hexi(ep);
+}
+
+static void Opt0_byt2octa(ENODE* ep)
+{
+	Opt0_byt2hexi(ep);
+}
+
+static void Opt0_ubyt2octa(ENODE* ep)
+{
+	Opt0_ubyt2hexi(ep);
+}
+
+static void Opt0_wyde2tetra(ENODE* ep)
+{
+	Opt0_wyde2hexi(ep);
+}
+
+static void Opt0_uwyde2tetra(ENODE* ep)
+{
+	Opt0_uwyde2hexi(ep);
+}
+
+static void Opt0_wyde2octa(ENODE* ep)
+{
+	Opt0_wyde2hexi(ep);
+}
+
+static void Opt0_uwyde2octa(ENODE* ep)
+{
+	Opt0_uwyde2hexi(ep);
+}
+
+static void Opt0_tetra2octa(ENODE* ep)
+{
+	Opt0_tetra2hexi(ep);
+}
+
+static void Opt0_utetra2octa(ENODE* ep)
+{
+	Opt0_utetra2hexi(ep);
+}
+
 /*
  *      opt0 - delete useless expressions and combine constants.
  *
@@ -665,15 +860,24 @@ static void opt0(ENODE **node)
     return;
   switch( (*node)->nodetype ) {
   case en_ref:
-	case en_ccwp:
-	case en_cucwp:
-	case en_ccl:
-	case en_cuclp:
 		opt0(&((*node)->p[0]));
 		return;
-	case en_cubw:	case en_cubl:
-	case en_cucw: case en_cucl:
-	case en_cuhw: case en_cuhl:
+	case en_ccwp:
+	case en_cucwp:
+	case en_cuclp:
+		opt0(&((*node)->p[0]));
+		if (ep->p[0]->nodetype == en_icon) {
+			ep->esize = sizeOfPtr;
+			ep->nodetype = en_icon;
+			ep->i = ep->p[0]->i;
+			ep->i128 = ep->p[0]->i128;
+			ooptimized++;
+		}
+		return;
+	case en_wyde2hexi:
+		Opt0_wyde2hexi(ep);
+		return;
+
 	case en_cubu:
 	case en_cucu:
 	case en_cuhu:
@@ -682,20 +886,54 @@ static void opt0(ENODE **node)
 	case en_chu:
 	case en_cbc:
 	case en_cbh:
-	case en_cbw:
-	case en_cbl:
 	case en_cch:
-	case en_ccw:
-	case en_chw:
-	case en_cwl:
-    opt0( &(ep->p[0]));
+		opt0(&(ep->p[0]));
+		return;
 		if (ep->p[0]->nodetype == en_icon) {
+			ep->esize = sizeOfWord/4;
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i;
 			ep->i128 = ep->p[0]->i128;
 			ooptimized++;
 		}
-    return;
+		return;
+	case en_byt2octa:
+		Opt0_byt2octa(ep);
+		return;
+	case en_ubyt2octa:
+		Opt0_ubyt2octa(ep);
+		return;
+	case en_wyde2octa:
+		Opt0_wyde2octa(ep);
+		return;
+	case en_tetra2octa:
+		Opt0_tetra2octa(ep);
+		return;
+	case en_uwyde2octa:
+		Opt0_uwyde2octa(ep);
+		return;
+	case en_utetra2octa:
+		Opt0_utetra2octa(ep);
+		return;
+	case en_byt2hexi:
+		Opt0_byt2hexi(ep);
+		return;
+	case en_ubyt2hexi:
+		Opt0_ubyt2hexi(ep);
+		return;
+	case en_uwyde2hexi:
+		Opt0_uwyde2hexi(ep);
+		return;
+	case en_utetra2hexi:
+		Opt0_utetra2hexi(ep);
+		return;
+	case en_uocta2hexi:
+		Opt0_uocta2hexi(ep);
+		return;
+	case en_octa2hexi:
+		Opt0_octa2hexi(ep);
+		return;
+
 	case en_sxb:
 	case en_sxc:
 	case en_sxh:
@@ -736,20 +974,12 @@ static void opt0(ENODE **node)
 			ooptimized++;
 		}
     return;
-            case en_tempref:
-                    opt0( &(ep->p[0]));
-                    if( ep->p[0] && ep->p[0]->nodetype == en_icon )
-                    {
-                        ep->nodetype = en_icon;
-                        ep->i = ep->p[0]->i;
-												ep->i128 = ep->p[0]->i128;
-												ooptimized++;
-										}
-										else if (ep->constflag) {
-											ep->nodetype = en_icon;
-											ooptimized++;
-										}
-                    return;
+
+		// A en_type node should not be hit because it is always part of a typecast,
+		// and processed by en_cast. It is a compiler error if it is hit.
+    case en_type:
+			return;
+
             case en_tempfpref:
               opt0( &(ep->p[0]));
               if( ep->p[0] && ep->p[0]->nodetype == en_fcon )
@@ -1055,7 +1285,7 @@ static void opt0(ENODE **node)
                     break;
 								case en_safe_cond:
 			case en_cond:
-                    opt0(&(ep->p[0]));
+          opt0(&(ep->p[0]));
 					opt0(&(ep->p[1]->p[0]));
 					opt0(&(ep->p[1]->p[1]));
 					if ((ep->p[0]->nodetype==en_icon||ep->p[0]->nodetype==en_cnacon) &&
@@ -1073,7 +1303,10 @@ static void opt0(ENODE **node)
   case en_asmul:  case en_asdiv:
   case en_asmod:  case en_asrsh:
   case en_aslsh:  
-  case en_fcall:
+		opt0(&(ep->p[0]));
+		opt0(&(ep->p[1]));
+		break;
+	case en_fcall:
     opt0(&(ep->p[0]));
     opt0(&(ep->p[1]));
     break;
@@ -1085,20 +1318,33 @@ static void opt0(ENODE **node)
 		opt0(&(ep->p[0]));
 		opt0(&(ep->p[1]));
 		break;
-	// en_tempref comes from typecasting
+
+	// en_type comes from typecasting
 	// The value for a cast is really ep->p[1]
 	// The type of the cast is from ep->p[0]
 	case en_cast:
-		opt0(&(ep->p[0]));
 		opt0(&(ep->p[1]));
-		if (ep->p[0]->nodetype == en_tempref) {
-			//(*node)->nodetype = ep->p[1]->nodetype;
-			*node = ep->p[1];
+		//(*node)->nodetype = ep->p[1]->nodetype;
+		*node = ep->p[1];
+		if (ep->p[0]) {
 			(*node)->tp = ep->p[0]->tp;
-			(*node)->nodetype = ep->p[0]->nodetype;
-			ooptimized++;
+			if (ep->p[0]->constflag) {
+				if (ep->p[0]->tp->IsScalar())
+					(*node)->nodetype = en_icon;
+				else if (ep->p[0]->tp->IsFloatType())
+					(*node)->nodetype = en_fcon;
+				(*node)->constflag = true;
+			}
+			if (ep->constflag) {
+				if (ep->tp->IsScalar())
+					(*node)->nodetype = en_icon;
+				else if (ep->tp->IsFloatType())
+					(*node)->nodetype = en_fcon;
+			}
 		}
+		ooptimized++;
 		break;
+
 	case en_addrof:
 		opt0(&(ep->p[0]));
 		break;
@@ -1147,6 +1393,13 @@ static Int128 xfold(ENODE *node)
 		return (0);
 	case en_sxb: case en_sxc: case en_sxh:
 	case en_zxb: case en_zxc: case en_zxh:
+		fold_const(&node->p[1]);
+		if (node->p[0]->constflag) {
+			node->i = 0;
+			node->i128 = *Int128::Zero();
+			return (node->p[0]->i128);
+		}
+		return (*Int128::Zero());
 	case en_abs:
 	case en_isnullptr:
 		return (*Int128::Zero());
@@ -1155,12 +1408,12 @@ static Int128 xfold(ENODE *node)
 		p0 = xfold(node->p[0]);
 		p1 = xfold(node->p[1]);
 		Int128::Add(&i128, &p0, &p1);
-    return i128;
+    return (i128);
   case en_sub:
 		p0 = xfold(node->p[0]);
 		p1 = xfold(node->p[1]);
 		Int128::Sub(&i128, &p0, &p1);
-		return i128;
+		return (i128);
 	case en_mulf:
   case en_mul:
 	case en_mulu:
@@ -1207,7 +1460,7 @@ static Int128 xfold(ENODE *node)
 		fold_const(&node->p[0]);
 		fold_const(&node->p[1]);
 		fold_const(&node->p[2]);
-		return *Int128::Zero();
+		return (*Int128::Zero());
 	case en_shr:    case en_div:	case en_udiv:	case en_shru: case en_asr:
 	case en_mod:    case en_asadd:	case en_bytendx:	case en_wydendx:
   case en_assub:  case en_asmul:
@@ -1215,16 +1468,31 @@ static Int128 xfold(ENODE *node)
 	case en_and:    case en_land:	case en_land_safe:
 	case en_lor:	case en_lor_safe:
   case en_xor:    case en_asand:
-	case en_asor:   case en_void:		case en_cast:
-  case en_fcall:  case en_assign:
+	case en_asor:   case en_void:
+  case en_assign:
           fold_const(&node->p[0]);
           fold_const(&node->p[1]);
-          return *Int128::Zero();
+          return (*Int128::Zero());
+	case en_cast:
+		fold_const(&node->p[1]);
+		/*
+		if (node->constflag) {
+			i128 = node->i128;
+			node->i = 0;
+			node->i128 = *Int128::Zero();
+			return (i128);
+		}
+		*/
+		return (*Int128::Zero());
+	case en_fcall:
+		fold_const(&node->p[0]);
+		fold_const(&node->p[1]);
+		return (*Int128::Zero());
 	case en_ref:
   case en_compl:
   case en_not:
 		fold_const(&node->p[0]);
-		return *Int128::Zero();
+		return (*Int128::Zero());
 	case en_or:
 		if (node->p[0]->nodetype == en_icon) {
 			p0 = node->p[0]->i128;
@@ -1376,7 +1644,7 @@ void opt_const(ENODE **node)
 	dfs.printf("<OptConst>");
     if (opt_noexpr==FALSE) {
     	opt0(node);
-//    	fold_const(node);
+    	fold_const(node);
 			do {
 				ooptimized = false;
 				opt0(node);

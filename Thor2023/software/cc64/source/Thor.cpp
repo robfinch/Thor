@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -718,7 +718,7 @@ Operand *ThorCodeGenerator::GenExpr(ENODE *node)
 	size = node->GetNaturalSize();
   ap3 = GetTempRegister();         
 	ap1 = cg.GenerateExpression(node->p[0],am_reg,size,1);
-	ap2 = cg.GenerateExpression(node->p[1],am_reg|am_imm,size,1);
+	ap2 = cg.GenerateExpression(node->p[1],am_reg|am_imm|am_imm0,size,1);
 	GenerateTriadic(op,0,ap3,ap1,ap2);
   ReleaseTempRegister(ap2);
   ReleaseTempRegister(ap1);
@@ -1033,7 +1033,7 @@ bool ThorCodeGenerator::GenerateBranch(ENODE *node, int op, int label, int predr
   }
   else {
 		ap1 = cg.GenerateExpression(node->p[0], am_reg, size,0);
-		ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm, size,0);
+		ap2 = cg.GenerateExpression(node->p[1], am_reg | am_imm | am_imm0, size,0);
   }
 	if (limit && currentFn->pl.Count(ip) > 10) {
 		currentFn->pl.tail = ip;
@@ -1216,6 +1216,7 @@ void SaveRegisterVars(CSet *rmask)
 	int cnt;
 	int nn;
 	int64_t mask;
+	char buf[100];
 
 	if (pass == 1) {
 		max_stack_use += rmask->NumMember() * sizeOfWord;
@@ -1234,6 +1235,9 @@ void SaveRegisterVars(CSet *rmask)
 			cnt = 0;
 			//GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * sizeOfWord));
 			rmask->resetPtr();
+			sprintf_s(buf, sizeof(buf), "store_s0s%d", rmask->NumMember()-1);
+			GenerateDiadic(op_bsr, 0, makereg(regLR+1), cg.MakeStringAsNameConst(buf, codeseg));
+			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
 				// nn = nregs - 1 - regno
 				// regno = -(nn - nregs + 1);
@@ -1241,6 +1245,7 @@ void SaveRegisterVars(CSet *rmask)
 				cg.GenerateStore(makereg(nregs - 1 - nn), cg.MakeIndexed(cnt, regSP), sizeOfWord);
 				cnt += sizeOfWord;
 			}
+			*/
 		}
 	}
 }

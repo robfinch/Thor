@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[326] =
+Instruction opl[328] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -106,6 +106,7 @@ Instruction opl[326] =
 { "cache",op_cache,1,0 },
 { "call", op_call,4,1,false,0,0,0,0 },
 { "chk", op_chk,1,0 },
+{ "clr",op_clr,1,1,false,am_reg,am_reg,am_reg | am_imm, am_imm },
 { "cmovenz", op_cmovenz,1,1,false,am_reg,am_reg,am_reg,am_reg },
 { "cmp",op_cmp,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "cmpu",op_cmpu,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
@@ -291,6 +292,7 @@ Instruction opl[326] =
 { "rtx", op_rtx,1,0,0,0,0,0 },
 { "sand",op_sand,1,1,false,am_reg,am_reg,am_reg | am_imm,0 },
 { "sb",op_sb,4,0,true,am_reg,am_mem,0,0 },
+{ "sbx",op_sbx,1,1,false,am_reg,am_imm,am_imm,0 },
 { "sd",op_sd,4,0,true,am_reg,am_mem,0,0 },
 { "sei", op_sei,1,0,false,am_reg|am_ui6,0,0,0 },
 { "seq", op_seq,1,1,false,am_reg,am_reg,am_reg | am_i26,0 },

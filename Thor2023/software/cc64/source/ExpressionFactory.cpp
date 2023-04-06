@@ -55,7 +55,8 @@ ENODE* ExpressionFactory::MakePositNode(int nt, Posit64 v1)
 ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3, ENODE* v4)
 {
 	ENODE* ep;
-	ep = (ENODE*)xalloc(sizeof(ENODE));
+//	ep = (ENODE*)xalloc(sizeof(ENODE));
+	ep = allocEnode();
 	ep->nodetype = (enum e_node)nt;
 
 	if (v1 != nullptr && v2 != nullptr) {
@@ -82,7 +83,8 @@ ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3, ENOD
 ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3)
 {
 	ENODE* ep;
-	ep = (ENODE*)xalloc(sizeof(ENODE));
+//	ep = (ENODE*)xalloc(sizeof(ENODE));
+	ep = allocEnode();
 	ep->nodetype = (enum e_node)nt;
 
 	if (v1 != nullptr && v2 != nullptr) {
@@ -108,7 +110,8 @@ ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3)
 ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2)
 {
 	ENODE* ep;
-	ep = (ENODE*)xalloc(sizeof(ENODE));
+//	ep = (ENODE*)xalloc(sizeof(ENODE));
+	ep = allocEnode();
 	ep->nodetype = (enum e_node)nt;
 
 	if (v1 != nullptr && v2 != nullptr) {
@@ -133,6 +136,7 @@ ENODE* ExpressionFactory::Makenode(int nt, ENODE* v1, ENODE* v2)
 ENODE* ExpressionFactory::Makenode()
 {
 	ENODE* ep;
-	ep = (ENODE*)xalloc(sizeof(ENODE));
+//	ep = (ENODE*)xalloc(sizeof(ENODE));
+	ep = allocEnode();
 	return (ep);
 }

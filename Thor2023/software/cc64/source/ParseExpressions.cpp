@@ -147,7 +147,8 @@ int GetPtrSize()
 ENODE *makenode(int nt, ENODE *v1, ENODE *v2)
 {
 	ENODE *ep;
-	ep = (ENODE *)xalloc(sizeof(ENODE));
+//	ep = (ENODE *)xalloc(sizeof(ENODE));
+	ep = allocEnode();
 	ep->nodetype = (enum e_node)nt;
 
 	if (v1!=nullptr && v2 != nullptr) {
@@ -173,7 +174,8 @@ ENODE *makenode(int nt, ENODE *v1, ENODE *v2)
 ENODE *makefcnode(int nt, ENODE *v1, ENODE *v2, SYM *sp)
 {
 	ENODE *ep;
-  ep = (ENODE *)xalloc(sizeof(ENODE));
+//  ep = (ENODE *)xalloc(sizeof(ENODE));
+	ep = allocEnode();
   ep->nodetype = (enum e_node)nt;
   ep->sym = sp;
   ep->constflag = FALSE;
@@ -1132,7 +1134,7 @@ SYM *CreateDummyParameters(ENODE *ep, SYM *parent, TYP *tp)
 // ----------------------------------------------------------------------------
 TYP *Expression::ParsePrimaryExpression(ENODE **node, int got_pa, SYM* symi)
 {
-	ENODE *pnode, *qnode1, *qnode2;
+	ENODE *pnode, *qnode1, *qnode2, * qnode3;
   TYP *tptr;
 	TypeArray typearray;
 
@@ -1146,12 +1148,15 @@ TYP *Expression::ParsePrimaryExpression(ENODE **node, int got_pa, SYM* symi)
     needpunc(closepa,7);
     *node = pnode;
 		if (pnode) {
+			/*
 			qnode1 = pnode->pfl;
 			pnode->pfl = nullptr;
-			if (qnode1) {
+			while (qnode1) {
 				*node = makenode(en_void, *node, qnode1);
+				qnode1 = qnode1->pfl;
 				(*node)->p[1]->pfl = nullptr;
 			}
+			*/
 		}
     if (pnode==NULL)
       dfs.printf("pnode is NULL\r\n");
@@ -1310,14 +1315,15 @@ int IsLValue(ENODE *node)
 		return (TRUE);
 	case en_cbc:
 	case en_cbh:
-	case en_cbw: case en_cbl:
+	case en_byt2octa: case en_byt2hexi:
 	case en_cch:
-	case en_ccw: case en_ccl:
-	case en_chw: case en_chl:
+	case en_wyde2octa: case en_wyde2hexi:
+	case en_tetra2octa: case en_chl:
 	case en_cfd:
-	case en_cubw: case en_cubl:
-	case en_cucw: case en_cucl:
-	case en_cuhw: case en_cuhl:
+	case en_ubyt2octa: case en_ubyt2hexi:
+	case en_uwyde2octa: case en_uwyde2hexi:
+	case en_utetra2octa: case en_utetra2hexi:
+	case en_uocta2hexi:
 	case en_cbu:
 	case en_ccu:
 	case en_chu:
@@ -1351,14 +1357,14 @@ int IsLValue(ENODE *node)
 /*
 	case en_cbc:
 	case en_cbh:
-    case en_cbw:
+    case en_byt2octa:
 	case en_cch:
-	case en_ccw:
-	case en_chw:
+	case en_wyde2octa:
+	case en_tetra2octa:
 	case en_cfd:
-	case en_cubw:
-	case en_cucw:
-	case en_cuhw:
+	case en_ubyt2octa:
+	case en_uwyde2octa:
+	case en_utetra2octa:
 	case en_cbu:
 	case en_ccu:
 	case en_chu:
@@ -1423,9 +1429,11 @@ ENODE *Autoincdec(TYP *tp, ENODE **node, int flag, bool isPostfix)
 			if (postfixList == nullptr)
 				postfixList = ep1;
 			else {
-				for (ep2 = postfixList; ep2->p[1]; ep2 = ep2->p[1])
+				for (ep2 = postfixList; ep2->pfl; ep2 = ep2->pfl)
 					;
-				ep2->p[1] = makenode(en_void, ep2, ep1);
+				
+				ep2->pfl = ep1;// makenode(en_void, ep2, ep1);
+				
 			}
 		}
 	}
@@ -1437,6 +1445,7 @@ ENODE *Autoincdec(TYP *tp, ENODE **node, int flag, bool isPostfix)
 		    (*node)->SetType(tp);
 	}
 	return (*node);
+//	return (ep1);
 }
 
 
@@ -1873,15 +1882,21 @@ TYP *Expression::ParseCastExpression(ENODE **node, SYM* symi)
 					//else if (ep1->constflag)
 					//	ep2 = makeinode(en_icon, ep1->i);
 					//else
-					ep2 = makenode(en_tempref, (ENODE *)NULL, (ENODE *)NULL);
+					ep2 = makenode(en_type, (ENODE *)NULL, (ENODE *)NULL);
 					ep2->SetType(tp);
 				}
 				ep2 = makenode(en_cast, ep2, ep1);
 				if (ep1 == nullptr)
 					error(ERR_NULLPOINTER);
 				else {
-					ep2->constflag = ep1->constflag;
-					ep2->isUnsigned = ep1->isUnsigned;
+					if (ep2->p[0]->constflag || ep1->constflag) {
+						ep2->constflag = true;
+						if (ep2->p[0]->tp->IsScalar())
+							ep2->nodetype = en_icon;
+						else if (ep2->p[0]->tp->IsFloatType())
+							ep2->nodetype = en_fcon;
+					}
+					ep2->isUnsigned = ep2->p[0]->isUnsigned;
 					//ep2->etype = ep1->etype;
 					//ep2->esize = ep1->esize;
 	//				forcefit(&ep2,tp,&ep1,tp2,false);
@@ -1988,19 +2003,27 @@ TYP *Expression::ParseMultOps(ENODE **node, SYM* symi)
 										ep1->esize = 512;
 										break;
 	                default:
-									// place constant as second operand.
-									if (ep1->nodetype == en_icon) {
-										if (tp1->isUnsigned)
-											ep1 = makenode(en_mulu, ep2, ep1);
+										/*
+										if (ep1->constflag && ep2->constflag) {
+											Int128::Mul(&ep1->i128, &ep1->i128, &ep2->i128);
+										}
 										else
-											ep1 = makenode(en_mul, ep2, ep1);
-									}
-									else {
-										if (tp1->isUnsigned)
-											ep1 = makenode(en_mulu, ep1, ep2);
-										else
-											ep1 = makenode(en_mul, ep1, ep2);
-									}
+										*/
+										{
+											// place constant as second operand.
+											if (ep1->nodetype == en_icon) {
+												if (tp1->isUnsigned)
+													ep1 = makenode(en_mulu, ep2, ep1);
+												else
+													ep1 = makenode(en_mul, ep2, ep1);
+											}
+											else {
+												if (tp1->isUnsigned)
+													ep1 = makenode(en_mulu, ep1, ep2);
+												else
+													ep1 = makenode(en_mul, ep1, ep2);
+											}
+										}
 								}
 								ep1->esize = tp1->size;
 								ep1->etype = (e_bt)tp1->type;
@@ -2186,8 +2209,17 @@ TYP *Expression::ParseAddOps(ENODE **node, SYM* symi)
 				else
 					ep1 = makenode(oper ? en_add : en_sub, ep1, ep2);
 				break;
-			default:
-    			ep1 = makenode( oper ? en_add : en_sub,ep1,ep2);
+			default: 
+				/*
+				if (ep1->constflag && ep2->constflag) {
+					if (oper)
+						Int128::Add(&ep1->i128, &ep1->i128, &ep2->i128);
+					else
+						Int128::Sub(&ep1->i128, &ep1->i128, &ep2->i128);
+				}
+				else
+				*/
+   			ep1 = makenode( oper ? en_add : en_sub,ep1,ep2);
 			}
 		}
 		PromoteConstFlag(ep1);
@@ -2405,8 +2437,9 @@ TYP *Expression::ParseEqualOps(ENODE **node, SYM* symi)
 				ep1->esize = 1;
 				if (isVector)
 					tp1 = TYP::Make(bt_vector_mask, sizeOfWord);
-				ep1->etype = stdint.GetIndex(); //tp1->type;
-				ep1->etypep = &stdint;
+				ep1->etype = tp1->type;// stdint.GetIndex(); //tp1->type;
+				ep1->etypep = tp1;
+				//ep1->etypep = &stdint;
 				PromoteConstFlag(ep1);
 			}
 		}
@@ -2875,7 +2908,7 @@ ascomm2:
 					}
 					// Struct assign calls memcpy, so function is no
 					// longer a leaf routine.
-					if (tp1->size > 8)
+					if (tp1->size > sizeOfWord)
 						currentFn->IsLeaf = FALSE;
 				}
 				break;
@@ -3044,14 +3077,10 @@ static void Safize(ENODE* nd)
 		nd->nodetype = en_lor_safe;
 	else if (nd->nodetype == en_land)
 		nd->nodetype = en_land_safe;
-	if (nd->p[0])
-		Safize(nd->p[0]);
-	if (nd->p[1])
-		Safize(nd->p[1]);
-	if (nd->p[2])
-		Safize(nd->p[2]);
-	if (nd->p[3])
-		Safize(nd->p[3]);
+	Safize(nd->p[0]);
+	Safize(nd->p[1]);
+	Safize(nd->p[2]);
+	Safize(nd->p[3]);
 }
 
 // ----------------------------------------------------------------------------
