@@ -1,0 +1,35 @@
+  
+	.bss
+	.align	8
+
+	.bss
+.lcomm _s,2
+	.type	_s,@object
+	.size	_s,2
+
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  mov      a0,r0
+.00010:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

@@ -1,0 +1,64 @@
+     1	
+     2	int
+     3	main()
+     4	{
+     5	int32_t x;
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 4: E Undefined symbol
+     6	int64_t l;
+ *** error 4: E Undefined symbol
+ *** error 6: E Bad punctuation
+ *** error 4: E Undefined symbol
+     7	
+     8	x = 0;
+ *** error 17: E LValue required
+ *** error 4: E Undefined symbol
+     9	l = 0;
+ *** error 17: E LValue required
+ *** error 4: E Undefined symbol
+    10	
+    11	x = ~x;
+ *** error 17: E LValue required
+ *** error 4: E Undefined symbol
+ *** error 4: E Undefined symbol
+    12	if (x != 0xffffffff)
+ *** error 4: E Undefined symbol
+    13	return 1;
+    14	
+    15	l = ~l;
+ *** error 17: E LValue required
+ *** error 4: E Undefined symbol
+ *** error 4: E Undefined symbol
+    16	if (x != 0xffffffffffffffff)
+ *** error 4: E Undefined symbol
+    17	return 2;
+    18	
+    19	
+    20	return 0;
+    21	}
+    22	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

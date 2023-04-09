@@ -1,0 +1,42 @@
+     1	int
+     2	main()
+     3	{
+     4	start:
+     5	goto next;
+     6	return 1;
+     7	success:
+     8	return 0;
+     9	next:
+    10	foo:
+    11	goto success;
+    12	return 1;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+34 _start     =000001  0   -    Label
+34 _next      =000002  16   -    Label
+34 _success   =000003  0   -    Label
+34 _foo       =000004  0   -    Label
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

@@ -1,0 +1,57 @@
+     1	int
+     2	main()
+     3	{
+     4	int arr[2];
+     5	int *p;
+     6	
+     7	arr[0] = 2;
+     8	arr[1] = 3;
+     9	p = &arr[0];
+    10	if(*(p++) != 2)
+    11	return 1;
+    12	if(*(p++) != 3)
+    13	return 2;
+    14	
+    15	p = &arr[1];
+    16	if(*(p--) != 3)
+    17	return 1;
+    18	if(*(p--) != 2)
+    19	return 2;
+    20	
+    21	p = &arr[0];
+    22	if(*(++p) != 3)
+    23	return 1;
+    24	
+    25	p = &arr[1];
+    26	if(*(--p) != 2)
+    27	return 1;
+    28	
+    29	return 0;
+    30	}
+    31	
+
+
+*** local symbol table ***
+
+15 _arr       =ffffffe0  32   -    Auto        Array of Int
+15 _p         =ffffffd0  16   -    Auto        Pointer to Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -128
+		Stkspc: 128
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

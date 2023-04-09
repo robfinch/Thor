@@ -1,0 +1,33 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+# if(sizeof(a) != sizeof(b))
+  ldi      t0,0
+  beqz     t0,.00013
+# return 1;
+  ldi      a0,1
+.00012:
+  ret    
+.00013:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00012
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

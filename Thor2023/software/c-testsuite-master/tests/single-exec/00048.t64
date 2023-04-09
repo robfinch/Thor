@@ -1,0 +1,18 @@
+   
+	.bss
+	.align	8
+
+	.bss
+.lcomm __noname_var0,32
+	.type	__noname_var0,@object
+	.size	__noname_var0,32
+
+
+ 
+	.data
+	.align	8
+
+	.data
+_s:
+	.type	_s,@object
+	.size	_s,32

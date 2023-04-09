@@ -1,0 +1,40 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+# for(i = 0; i < 10; i++)
+  mov      s0,r0
+  bge      s0,10,.00017
+.00016:
+# if (!i)
+  cmp      t0,s0,0
+  extu     t0,t0,1,0
+  bnez     t0,.00019
+.00019:
+  add      s0,s0,1
+  blt      s0,10,.00016
+.00017:
+# return 0;
+  mov      a0,r0
+.00015:
+  bsr      lr2,load_s0s0
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

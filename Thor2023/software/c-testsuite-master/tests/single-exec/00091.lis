@@ -1,0 +1,49 @@
+     1	typedef struct {
+     2	int v;
+     3	int sub[2];
+     4	} S;
+     5	
+     6	S a[1] = {{1, {2, 3}}};
+     7	
+     8	int
+     9	main()
+    10	{
+    11	if (a[0].v != 1)
+    12	return 1;
+    13	if (a[0].sub[0] != 2)
+    14	return 2;
+    15	if (a[0].sub[1] != 3)
+    16	return 3;
+    17	
+    18	return 0;
+    19	}
+    20	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000060  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+43 _S         =000000  48   1   struct __noname_tag0 
+15 _a         =000030  48   -    Global      Array of struct __noname_tag0 
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  48   -    Type        struct __noname_tag0 
+    7 _v         =000000  16   -    Member      Int
+    15 _sub       =000010  32   -    Member      Array of Int

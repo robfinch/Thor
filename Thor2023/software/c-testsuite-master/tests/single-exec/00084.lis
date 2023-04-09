@@ -1,0 +1,9 @@
+
+ *** global scope typedef symbol table ***
+
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

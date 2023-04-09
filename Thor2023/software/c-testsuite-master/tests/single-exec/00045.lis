@@ -1,0 +1,45 @@
+     1	int x = 5;
+     2	long y = 6;
+     3	int *p = &x;
+ *** error 66: E Cast aggregate should be a constant
+     4	
+     5	int
+     6	main()
+     7	{
+     8	if (x != 5)
+     9	return 1;
+    10	if (y != 6)
+    11	return 2;
+    12	if (*p != 5)
+    13	return 3;
+    14	return 0;
+    15	}
+    16	
+    17	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000030  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+15 _p         =000020  16   -    Global      Pointer to Int
+7 _x         =000000  16   -    Global      Int
+8 _y         =000010  16   -    Global      Long
+
+ *** structures and unions ***
+

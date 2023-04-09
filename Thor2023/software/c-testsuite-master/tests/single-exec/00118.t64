@@ -1,0 +1,13 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+  
+	.rodata
+	.align	14
+

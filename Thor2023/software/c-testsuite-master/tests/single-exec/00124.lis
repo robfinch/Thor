@@ -1,0 +1,33 @@
+     1	int
+     2	f2(int c, int b)
+     3	{
+     4	return c - b;
+     5	}
+     6	
+
+
+*** local symbol table ***
+
+
+
+
+     7	int (*
+     8	f1(int a, int b))(int c, int b)
+     9	{
+    10	if (a != b)
+ *** error 4: E Undefined symbol
+ *** error 4: E Undefined symbol
+    11	return f2;
+    12	return 0;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+
+
+
+    15	int
+    16	main()
+    17	{

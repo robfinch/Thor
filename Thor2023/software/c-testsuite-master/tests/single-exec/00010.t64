@@ -1,0 +1,26 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+# goto next;
+  bra      .00002
+.00014:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

@@ -1,0 +1,56 @@
+     1	
+     2	typedef struct  { int n; } Vec;
+     3	
+     4	static void
+     5	vecresize(Vec *v, int cap)
+     6	{
+     7	return;
+     8	}
+     9	
+
+
+*** local symbol table ***
+
+
+
+
+    10	int main()
+    11	{
+    12	return 0;
+    13	}
+    14	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000010  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+32 _vecresize =000001  0   -    Static      Function returning 
+		Parameters:
+			Type array:
+   015 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __delete   =000000  8   -    
+43 _Vec       =000000  16   1   struct __noname_tag0 
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  16   -    Type        struct __noname_tag0 
+    7 _n         =000000  16   -    Member      Int

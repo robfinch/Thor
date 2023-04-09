@@ -1,0 +1,54 @@
+ 
+	.data
+	.align	2
+
+	.data
+_x:
+	.type	_x,@object
+	.size	_x,16
+
+	.8byte	0
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+  ldi      s0,1
+# switch(x)
+  ldh      t0,_x[gp]
+# case 0:
+  beq      t0,0,.00053
+.00053:
+# switch(x)
+  ldh      t0,_x[gp]
+# case 0:
+  beq      t0,0,.00058
+.00058:
+# switch(x) {
+  ldh      t0,_x[gp]
+# case 0:
+  beq      t0,0,.00064
+.00064:
+# goto next;
+  bra      .00001
+.00048:
+  bsr      lr2,load_s0s0
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

@@ -1,0 +1,35 @@
+ 
+	.data
+	.align	2
+
+	.data
+_x:
+	.type	_x,@object
+	.size	_x,16
+
+	.8byte	0
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  mov      a0,r0
+.00010:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

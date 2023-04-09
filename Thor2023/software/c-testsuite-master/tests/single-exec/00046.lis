@@ -1,0 +1,76 @@
+     1	typedef struct {
+     2	int a;
+     3	union {
+     4	int b1;
+     5	int b2;
+     6	};
+     7	struct { union { struct { int c; }; }; };
+     8	struct {
+     9	int d;
+    10	};
+    11	} s;
+    12	
+    13	int
+    14	main()
+    15	{
+    16	s v;
+    17	
+    18	v.a = 1;
+    19	v.b1 = 2;
+    20	v.c = 3;
+    21	v.d = 4;
+    22	
+    23	if (v.a != 1)
+    24	return 1;
+    25	if (v.b1 != 2 && v.b2 != 2)
+    26	return 2;
+    27	if (v.c != 3)
+    28	return 3;
+    29	if (v.d != 4)
+    30	return 4;
+    31	
+    32	return 0;
+    33	}
+    34	
+
+
+*** local symbol table ***
+
+43 _v         =ffffffc0  64   -    Auto        struct __noname_tag0 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000040  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+43 _s         =000000  64   1   struct __noname_tag0 
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  64   -    Type        struct __noname_tag0 
+    7 _a         =000000  16   -    Member      Int
+    44 __noname_var0 =000010  16   -    Member      union __noname_tag1 
+    45 __noname_var3 =000020  16   -    Member      struct __noname_tag2 
+    48 __noname_var4 =000030  16   -    Member      struct __noname_tag5 
+44 __noname_tag1 =000000  16   -    Type        union __noname_tag1 
+    7 _b1        =000010  16   -    Member      Int
+    7 _b2        =000010  16   -    Member      Int
+45 __noname_tag2 =000000  16   -    Type        struct __noname_tag2 
+    46 __noname_var2 =000020  16   -    Member      union __noname_tag3 
+46 __noname_tag3 =000000  16   -    Type        union __noname_tag3 
+    47 __noname_var1 =000020  16   -    Member      struct __noname_tag4 
+47 __noname_tag4 =000000  16   -    Type        struct __noname_tag4 
+    7 _c         =000020  16   -    Member      Int
+48 __noname_tag5 =000000  16   -    Type        struct __noname_tag5 
+    7 _d         =000030  16   -    Member      Int

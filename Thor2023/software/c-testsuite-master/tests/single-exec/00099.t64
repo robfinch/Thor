@@ -1,0 +1,41 @@
+     
+#{++ _vecresize
+
+	.text
+	.align	0
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+
+	.align 5
+_vecresize:
+.00011:
+  ret    
+	.type	_vecresize,@function
+	.size	_vecresize,$-_vecresize
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  mov      a0,r0
+.00021:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

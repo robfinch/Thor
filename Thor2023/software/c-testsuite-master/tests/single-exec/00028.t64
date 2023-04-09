@@ -1,0 +1,32 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+# x = 1;
+  ldi      s0,1
+# x = x & 3;
+  and      s0,s0,3
+# return x - 1;
+  sub      a0,s0,1
+.00010:
+  bsr      lr2,load_s0s0
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

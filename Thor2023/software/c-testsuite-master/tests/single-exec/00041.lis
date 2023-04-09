@@ -1,0 +1,55 @@
+     1	int
+     2	main() {
+     3	int n;
+     4	int t;
+     5	int c;
+     6	int p;
+     7	
+     8	c = 0;
+     9	n = 2;
+    10	while (n < 5000) {
+    11	t = 2;
+    12	p = 1;
+    13	while (t*t <= n) {
+    14	if (n % t == 0)
+    15	p = 0;
+    16	t++;
+    17	}
+    18	n++;
+    19	if (p)
+    20	c++;
+    21	}
+    22	if (c != 669)
+    23	return 1;
+    24	return 0;
+    25	}
+    26	
+    27	
+
+
+*** local symbol table ***
+
+7 _n         =fffffff0  16   -    Auto        Int
+7 _t         =ffffffe0  16   -    Auto        Int
+7 _c         =ffffffd0  16   -    Auto        Int
+7 _p         =ffffffc0  16   -    Auto        Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -128
+		Stkspc: 128
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

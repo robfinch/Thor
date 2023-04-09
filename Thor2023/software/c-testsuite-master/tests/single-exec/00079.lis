@@ -1,0 +1,43 @@
+     1	
+     2	int
+     3	main()
+     4	{
+     5	int x;
+     6	int y;
+     7	
+     8	y = 0;
+     9	x = ((y) + 1);
+    10	
+    11	if(x != 1)
+    12	return 1;
+    13	
+    14	return 0;
+    15	}
+    16	
+    17	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff0  16   -    Auto        Int
+7 _y         =ffffffe0  16   -    Auto        Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -96
+		Stkspc: 96
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

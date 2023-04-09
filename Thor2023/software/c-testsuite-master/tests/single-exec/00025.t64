@@ -1,0 +1,54 @@
+   
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,80
+  sth      lr1,0[fp]
+  lea      gp1,_rodata_start
+  bsr      lr2,store_s0s0
+# p = "hello";
+  lea      t0,00025_1[gp1]
+  mov      s0,t0
+# return strlen(p) - 5;
+  sth      t0,0[fp]
+  sth      s0,0[sp]
+  jsr      _strlen
+  ldh      t0,0[fp]
+  mov      t1,a0
+  sub      a0,t1,5
+.00011:
+  bsr      lr2,load_s0s0
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	00025_1,@object
+	.size	00025_1,12
+00025_1: # hello
+
+	.2byte	104,101,108,108,111,0

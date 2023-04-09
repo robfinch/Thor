@@ -1,0 +1,38 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+  #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s1
+# y = 0;
+  mov      s1,r0
+# x = ((y) + 1);
+  add      s0,s1,1
+# if(x != 1)
+  beq      s0,1,.00013
+# return 1;
+  ldi      a0,1
+.00012:
+  bsr      lr2,load_s0s1
+  ret    
+.00013:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00012
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

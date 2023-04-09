@@ -1,0 +1,148 @@
+ 
+#{++ _zero
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_zero:
+  mov      a0,r0
+.00010:
+  ret    
+	.type	_zero,@function
+	.size	_zero,$-_zero
+
+
+#--}
+ 
+#{++ _one
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_one:
+  ldi      a0,1
+.00020:
+  ret    
+	.type	_one,@function
+	.size	_one,$-_one
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+  #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,112
+  sth      lr1,0[fp]
+  bsr      lr2,store_s0s2
+  ldi      s2,1
+# x = zero();
+  jsr      _zero
+  mov      t0,a0
+  mov      s0,t0
+# y = ++x;
+  add      s0,s0,s2
+  mov      s1,s0
+# if (x != 1)
+  beq      s0,s2,.00047
+# return 1;
+  mov      a0,s2
+.00046:
+  bsr      lr2,load_s0s2
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+.00047:
+# if (y != 1)
+  beq      s1,s2,.00049
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00049:
+# x = one();
+  jsr      _one
+  mov      t0,a0
+  mov      s0,t0
+# y = --x;
+  sub      s0,s0,s2
+  mov      s1,s0
+# if (x != 0)
+  beq      s0,0,.00051
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00051:
+# if (y != 0)
+  beq      s1,0,.00053
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00053:
+# x = zero();
+  jsr      _zero
+  mov      t0,a0
+  mov      s1,t0
+# y = x++;
+  add      s0,s0,s2
+# if (x != 1)
+  beq      s0,s2,.00055
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00055:
+# if (y != 0)
+  beq      s1,0,.00057
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00057:
+# x = one();
+  jsr      _one
+  mov      t0,a0
+  mov      s1,t0
+# y = x--;
+  sub      s0,s0,s2
+# if (x != 0)
+  beq      s0,0,.00059
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00059:
+# if (y != 1)
+  beq      s1,s2,.00061
+# return 1;
+  mov      a0,s2
+  beqz     r0,.00046
+.00061:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00046
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

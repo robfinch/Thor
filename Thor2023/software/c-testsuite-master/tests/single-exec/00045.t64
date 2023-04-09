@@ -1,0 +1,79 @@
+ 
+	.data
+	.align	2
+
+	.data
+_x:
+	.type	_x,@object
+	.size	_x,16
+
+	.8byte	5
+ 
+	.align	2
+
+	.data
+_y:
+	.type	_y,@object
+	.size	_y,16
+
+	.8byte	6,300647710720
+ 
+	.align	8
+
+	.data
+_p:
+	.type	_p,@object
+	.size	_p,16
+
+	.8byte _p_dat
+
+_p_dat:
+
+	.8byte	0,300647710720
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+# if (x != 5)
+  ldh      t0,_x[gp]
+  beq      t0,5,.00017
+# return 1;
+  ldi      a0,1
+.00016:
+  ret    
+.00017:
+# if (y != 6)
+  ldh      t0,_y[gp]
+  beq      t0,6,.00019
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00016
+.00019:
+# if (*p != 5)
+  ldh      t0,_p[gp]
+  beq      t0,5,.00021
+# return 3;
+  ldi      a0,3
+  beqz     r0,.00016
+.00021:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00016
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

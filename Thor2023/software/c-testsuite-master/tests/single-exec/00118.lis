@@ -1,0 +1,26 @@
+     1	int
+     2	main()
+     3	{
+     4	struct { int x; } s = { 0 };
+     5	return s.x;
+     6	}
+     7	
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  16   -    Type        struct __noname_tag0 
+    7 _x         =000000  16   -    Member      Int

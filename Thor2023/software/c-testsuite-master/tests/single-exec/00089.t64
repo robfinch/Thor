@@ -1,0 +1,109 @@
+ 
+#{++ _zero
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_zero:
+  mov      a0,r0
+.00010:
+  ret    
+	.type	_zero,@function
+	.size	_zero,$-_zero
+
+
+#--}
+   
+	.bss
+	.align	8
+
+	.bss
+.lcomm _s,16
+	.type	_s,@object
+	.size	_s,16
+
+
+ 
+#{++ _anon
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_anon:
+  lea      a0,_s[gp]
+.00020:
+  ret    
+	.type	_anon,@function
+	.size	_anon,$-_anon
+
+
+#--}
+   
+#{++ _go
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_go:
+  ldi      a0,_anon
+.00030:
+  ret    
+	.type	_go,@function
+	.size	_go,$-_go
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  sth      lr1,0[fp]
+  jsr      _go
+  mov      t0,a0
+  ldh      t0,[t0]
+  jsr      [t0]
+  mov      t0,a0
+  ldh      t0,[t0]
+  jsr      [t0]
+  mov      t0,a0
+  mov      a0,t0
+.00040:
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

@@ -1,0 +1,40 @@
+     1	int a[3] = {0, 1, 2};
+     2	
+     3	int
+     4	main()
+     5	{
+     6	if (a[0] != 0)
+     7	return 1;
+     8	if (a[1] != 1)
+     9	return 2;
+    10	if (a[2] != 2)
+    11	return 3;
+    12	
+    13	return 0;
+    14	}
+    15	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000030  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+15 _a         =000000  48   -    Global      Array of Int
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

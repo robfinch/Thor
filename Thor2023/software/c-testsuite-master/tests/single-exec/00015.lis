@@ -1,0 +1,36 @@
+     1	int
+     2	main()
+     3	{
+     4	int arr[2];
+     5	
+     6	arr[0] = 1;
+     7	arr[1] = 2;
+     8	
+     9	return arr[0] + arr[1] - 3;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+15 _arr       =ffffffe0  32   -    Auto        Array of Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

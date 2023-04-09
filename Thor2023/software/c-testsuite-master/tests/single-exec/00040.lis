@@ -1,0 +1,480 @@
+     1	
+     2	
+     3	
+     4	
+     5	
+     6	typedef unsigned short _Wchart;
+     7	
+     8	typedef int _Ptrdifft;
+     9	typedef unsigned int _Sizet;
+    10	
+    11	int setjmp(int *);
+    12	
+    13	
+    14	
+    15	
+    16	
+    17	
+    18	
+    19	
+    20	typedef _Sizet size_t;
+    21	typedef _Wchart wchar_t;
+    22	typedef struct {
+    23	int quot;
+    24	int rem;
+    25	} div_t;
+    26	typedef struct {
+    27	long quot;
+    28	long rem;
+    29	} ldiv_t;
+    30	typedef int _Cmpfun(const void *, const void *);
+    31	typedef struct {
+    32	unsigned char _State;
+    33	unsigned short _Wchar;
+    34	} _Mbsave;
+    35	
+    36	void abort(void);
+    37	int abs(int);
+    38	int atexit(void (*)(void));
+    39	double atof(const char *);
+    40	int atoi(const char *);
+    41	long atol(const char *);
+    42	void *bsearch(const void *, const void *,
+    43	size_t, size_t, _Cmpfun *);
+    44	void *calloc(size_t, size_t);
+    45	div_t div(int, int);
+    46	void exit(int);
+    47	void free(void *);
+    48	char *getenv(const char *);
+    49	long labs(long);
+    50	ldiv_t ldiv(long, long);
+    51	void *malloc(size_t);
+    52	int mblen(const char *, size_t);
+    53	size_t mbstowcs(wchar_t *, const char *, size_t);
+    54	int mbtowc(wchar_t *, const char *, size_t);
+    55	void qsort(void *, size_t, size_t, _Cmpfun *);
+    56	int rand(void);
+    57	void *realloc(void *, size_t);
+    58	void srand(unsigned int);
+    59	double strtod(const char *, char **);
+    60	long strtol(const char *, char **, int);
+    61	unsigned long strtoul(const char *, char **, int);
+    62	int system(const char *);
+    63	size_t wcstombs(char *, const wchar_t *, size_t);
+    64	int wctomb(char *, wchar_t);
+    65	int _Mbtowc(wchar_t *, const char *, size_t, _Mbsave *);
+    66	double _Stod(const char *, char **);
+    67	unsigned long _Stoul(const char *, char **, int);
+    68	int _Wctomb(char *, wchar_t, char *);
+    69	extern char _Mbcurmax, _Wcxtomb;
+    70	extern _Mbsave _Mbxlen, _Mbxtowc;
+    71	extern unsigned long _Randseed;
+    72	
+    73	
+    74	
+    75	int N;
+    76	int *t;
+    77	
+    78	int
+    79	chk(int x, int y)
+    80	{
+    81	int i;
+    82	int r;
+    83	
+    84	for (r=i=0; i<8; i++) {
+    85	r = r + t[x + 8*i];
+    86	r = r + t[i + 8*y];
+    87	if (x+i < 8 & y+i < 8)
+    88	r = r + t[x+i + 8*(y+i)];
+    89	if (x+i < 8 & y-i >= 0)
+    90	r = r + t[x+i + 8*(y-i)];
+    91	if (x-i >= 0 & y+i < 8)
+    92	r = r + t[x-i + 8*(y+i)];
+    93	if (x-i >= 0 & y-i >= 0)
+    94	r = r + t[x-i + 8*(y-i)];
+    95	}
+    96	return r;
+    97	}
+    98	
+
+
+*** local symbol table ***
+
+7 _i         =fffffff0  16   -    Auto        Int
+7 _r         =ffffffe0  16   -    Auto        Int
+
+
+
+    99	int
+   100	go(int n, int x, int y)
+   101	{
+   102	if (n == 8) {
+   103	N++;
+   104	return 0;
+   105	}
+   106	for (; y<8; y++) {
+   107	for (; x<8; x++)
+   108	if (chk(x, y) == 0) {
+   109	t[x + 8*y]++;
+   110	go(n+1, x, y);
+   111	t[x + 8*y]--;
+   112	}
+   113	x = 0;
+   114	}
+   115	return 0;
+   116	}
+   117	
+
+
+*** local symbol table ***
+
+
+
+
+   118	int
+   119	main()
+   120	{
+   121	t = calloc(64, sizeof(int));
+   122	go(0, 0, 0);
+   123	if(N != 92)
+   124	return 1;
+   125	return 0;
+   126	}
+   127	
+   128	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+7 __Ptrdifft =000004  16   1   Int
+32 _free      =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _labs      =000080  0   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   008 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _rand      =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   031 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _system    =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _main      =0000a0  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+32 _strtol    =000080  0   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   015 015 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+31 __new      =000000  8   -    
+32 _atof      =000080  0   -    Global      Function returning Double
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _atoi      =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _ldiv      =000080  0   -    Global      Function returning struct __noname_tag1 
+		Parameters:
+			Type array:
+   008 008 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _atol      =000080  0   -    Global      Function returning Long
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _exit      =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+45 __Mbsave   =000078  6   1   struct __noname_tag2 
+45 __Mbxlen   =000000  6   -    External    struct __noname_tag2 
+20 __Wchart   =000000  4   1   
+32 __Cmpfun   =000078  0   1   Function returning Int
+		Parameters:
+			Type array:
+   015 015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 __Mbtowc   =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 015 021 015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 __Wctomb   =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 020 015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+31 __delete   =000000  8   -    
+32 _go        =0000a0  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   007 007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -176
+		Stkspc: 176
+32 _bsearch   =000080  0   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   015 015 021 021 032 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _realloc   =000080  0   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   015 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+20 _wchar_t   =000034  4   1   
+32 __Stod     =000080  0   -    Global      Function returning Double
+		Parameters:
+			Type array:
+   015 015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _mblen     =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+43 _div_t     =000038  32   1   struct __noname_tag0 
+32 _abort     =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   031 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _srand     =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _strtoul   =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   015 015 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _abs       =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _chk       =0000a0  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: -176
+		Stkspc: 176
+32 _qsort     =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   015 021 021 032 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _div       =000080  0   -    Global      Function returning struct __noname_tag0 
+		Parameters:
+			Type array:
+   007 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+5 __Wcxtomb  =000000  2   -    External    Char
+45 __Mbxtowc  =000000  6   -    External    struct __noname_tag2 
+7 _N         =000080  16   -    Global      Int
+31 __autonew  =000000  8   -    
+21 __Sizet    =000014  16   1   Int
+32 _calloc    =000080  0   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   021 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _mbstowcs  =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 015 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _wcstombs  =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 015 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+15 _t         =000090  16   -    Global      Pointer to Int
+32 __Stoul    =000080  0   -    Global      Function returning 
+		Parameters:
+			Type array:
+   015 015 007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _malloc    =000080  0   -    Global      Function returning Pointer to 
+		Parameters:
+			Type array:
+   021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+44 _ldiv_t    =000058  32   1   struct __noname_tag1 
+22 __Randseed =000000  16   -    External    
+32 _getenv    =000080  0   -    Global      Function returning Pointer to Char
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _mbtowc    =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 015 021 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _wctomb    =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 020 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+21 _size_t    =000024  16   1   Int
+32 _atexit    =000080  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _setjmp    =000024  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+5 __Mbcurmax =000000  2   -    External    Char
+32 _strtod    =000080  0   -    Global      Function returning Double
+		Parameters:
+			Type array:
+   015 015 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  32   -    Type        struct __noname_tag0 
+    7 _quot      =000000  16   -    Member      Int
+    7 _rem       =000010  16   -    Member      Int
+44 __noname_tag1 =000000  32   -    Type        struct __noname_tag1 
+    8 _quot      =000000  16   -    Member      Long
+    8 _rem       =000010  16   -    Member      Long
+45 __noname_tag2 =000000  6   -    Type        struct __noname_tag2 
+    19 __State    =000000  2   -    Member      Char
+    20 __Wchar    =000002  4   -    Member      

@@ -1,0 +1,42 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+  lea      t0,00104_9999[lr1]
+  mov      s0,t0
+# if (x != 0xffffffff)
+  beq      s0,4294967295,.00015
+# return 1;
+  ldi      a0,1
+.00014:
+  bsr      lr2,load_s0s0
+  ret    
+.00015:
+# if (x != 0xffffffffffffffff)
+  beq      s0,-1,.00017
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00014
+.00017:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00014
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

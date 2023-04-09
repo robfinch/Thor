@@ -1,0 +1,122 @@
+ 
+#{++ _f
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_f:
+  ldi      a0,100
+.00010:
+  ret    
+	.type	_f,@function
+	.size	_f,$-_f
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,80
+  sth      lr1,0[fp]
+  bsr      lr2,store_s0s0
+  ldi      s0,1
+# if (f() > 1000)
+  jsr      _f
+  mov      t0,a0
+  ble      t0,1000,.00033
+# return 1;
+  mov      a0,s0
+.00032:
+  bsr      lr2,load_s0s0
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+.00033:
+# if (f() >= 1000)
+  jsr      _f
+  mov      t0,a0
+  blt      t0,1000,.00035
+# return 1;
+  mov      a0,s0
+  beqz     r0,.00032
+.00035:
+# if (1000 < f())
+  ldi      t0,1000
+  sth      t0,0[fp]
+  sth      t1,0[fp]
+  jsr      _f
+  ldh      t1,0[fp]
+  ldh      t0,0[fp]
+  mov      t2,a0
+  sbx      t1,t2,31,95
+  bge      t0,t1,.00037
+# return 1;
+  mov      a0,s0
+  beqz     r0,.00032
+.00037:
+# if (1000 <= f())
+  ldi      t0,1000
+  sth      t0,0[fp]
+  sth      t1,0[fp]
+  jsr      _f
+  ldh      t1,0[fp]
+  ldh      t0,0[fp]
+  mov      t2,a0
+  sbx      t1,t2,31,95
+  bgt      t0,t1,.00039
+# return 1;
+  mov      a0,s0
+  beqz     r0,.00032
+.00039:
+# if (1000 == f())
+  sth      t0,0[fp]
+  jsr      _f
+  ldh      t0,0[fp]
+  mov      t1,a0
+  sbx      t0,t1,31,95
+  bne      t0,1000,.00041
+# return 1;
+  mov      a0,s0
+  beqz     r0,.00032
+.00041:
+# if (100 != f())
+  sth      t0,0[fp]
+  jsr      _f
+  ldh      t0,0[fp]
+  mov      t1,a0
+  sbx      t0,t1,31,95
+  beq      t0,100,.00043
+# return 1;
+  mov      a0,s0
+  beqz     r0,.00032
+.00043:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00032
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

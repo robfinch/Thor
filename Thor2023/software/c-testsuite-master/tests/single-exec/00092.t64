@@ -1,0 +1,8 @@
+ 
+	.data
+	.align	8
+
+	.data
+_a:
+	.type	_a,@object
+	.size	_a,0

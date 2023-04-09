@@ -1,0 +1,174 @@
+ 
+	.bss
+	.align	2
+
+	.bss
+.lcomm _g,16
+	.type	_g,@object
+	.size	_g,16
+
+
+ 
+#{++ _effect
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_effect:
+# g = 1;
+  ldi      t0,1
+  sth      t0,_g[gp]
+# return 1;
+  ldi      a0,1
+.00010:
+  ret    
+	.type	_effect,@function
+	.size	_effect,$-_effect
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,80
+  sth      lr1,0[fp]
+  lea      gp,_bss_start
+  bsr      lr2,store_s0s0
+# g = 0;
+  sth      r0,_g[gp]
+# x = 0;
+  mov      s0,r0
+# if(x && effect())
+  beqz     s0,.00039
+  sth      t0,0[fp]
+  jsr      _effect
+  ldh      t0,0[fp]
+  mov      t1,a0
+  sbx      t0,t1,31,95
+  beqz     t0,.00039
+# return 1;
+  ldi      a0,1
+.00038:
+  bsr      lr2,load_s0s0
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+.00039:
+# if(g)
+  ldh      t0,_g[gp]
+  beqz     t0,.00041
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00038
+.00041:
+# x = 1;
+  ldi      s0,1
+# if(x && effect()) {
+  beqz     s0,.00043
+  sth      t0,0[fp]
+  jsr      _effect
+  ldh      t0,0[fp]
+  mov      t1,a0
+  sbx      t0,t1,31,95
+  beqz     t0,.00043
+# if(g != 1)
+  ldh      t0,_g[gp]
+  beq      t0,1,.00045
+# return 3;
+  ldi      a0,3
+  beqz     r0,.00038
+.00045:
+  beqz     r0,.00044
+.00043:
+# return 4;
+  ldi      a0,4
+  beqz     r0,.00038
+.00044:
+# g = 0;
+  sth      r0,_g[gp]
+# x = 1;
+  ldi      s0,1
+# if(x || effect()) {
+  cmp      t0,s0,0
+  extu     t0,t0,1,0
+  bnez     t0,.00049
+  sth      t0,0[fp]
+  sth      t1,0[fp]
+  jsr      _effect
+  ldh      t1,0[fp]
+  ldh      t0,0[fp]
+  mov      t2,a0
+  sbx      t1,t2,31,95
+  beqz     t1,.00047
+.00049:
+# if(g)
+  ldh      t0,_g[gp]
+  beqz     t0,.00050
+# return 5;
+  ldi      a0,5
+  beqz     r0,.00038
+.00050:
+  beqz     r0,.00048
+.00047:
+# return 6;
+  ldi      a0,6
+  beqz     r0,.00038
+.00048:
+# x = 0;
+  mov      s0,r0
+# if(x || effect()) {
+  cmp      t0,s0,0
+  extu     t0,t0,1,0
+  bnez     t0,.00054
+  sth      t0,0[fp]
+  sth      t1,0[fp]
+  jsr      _effect
+  ldh      t1,0[fp]
+  ldh      t0,0[fp]
+  mov      t2,a0
+  sbx      t1,t2,31,95
+  beqz     t1,.00052
+.00054:
+# if(g != 1)
+  ldh      t0,_g[gp]
+  beq      t0,1,.00055
+# return 7;
+  ldi      a0,7
+  beqz     r0,.00038
+.00055:
+  beqz     r0,.00053
+.00052:
+# return 8;
+  ldi      a0,8
+  beqz     r0,.00038
+.00053:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00038
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

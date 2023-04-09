@@ -1,0 +1,39 @@
+     1	
+     2	
+     3	
+     4	int x = 0;
+     5	
+     6	int
+     7	main()
+     8	{
+     9	return x;
+    10	}
+    11	
+    12	
+    13	
+    14	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000010  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+7 _x         =000000  16   -    Global      Int
+
+ *** structures and unions ***
+

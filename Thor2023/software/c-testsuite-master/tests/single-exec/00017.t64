@@ -1,0 +1,45 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+   #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,80
+  bsr      lr2,store_s0s0
+  lea      s0,-32[fp]
+# s.x = 3;
+  ldi      t0,3
+  sth      t0,[s0]
+# s.y = 5;
+  ldi      t0,5
+  sth      t0,16[s0]
+# return s.y - s.x - 2;
+  ldh      t2,16[s0]
+  ldh      t3,[s0]
+  sub      t1,t2,t3
+  sub      a0,t1,2
+.00010:
+  bsr      lr2,load_s0s0
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

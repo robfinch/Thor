@@ -1,0 +1,53 @@
+     1	enum E {
+     2	x,
+     3	y,
+     4	z,
+     5	};
+     6	
+     7	int
+     8	main()
+     9	{
+    10	enum E e;
+    11	
+    12	if(x != 0)
+    13	return 1;
+    14	if(y != 1)
+    15	return 2;
+    16	if(z != 2)
+    17	return 3;
+    18	
+    19	e = x;
+    20	return e;
+    21	}
+    22	
+    23	
+
+
+*** local symbol table ***
+
+30 _e         =ffffffff  1   -    Auto        enum _E 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000001  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+30 __noname_var0 =000000  1   -    Global      enum _E 
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+7 _x         =000000  16   -    Constant    Int
+7 _y         =000001  16   -    Constant    Int
+7 _z         =000002  16   -    Constant    Int
+
+ *** structures and unions ***
+
+30 _E         =000000  1   -    Type        enum _E 

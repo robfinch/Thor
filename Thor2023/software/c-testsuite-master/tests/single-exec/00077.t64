@@ -1,0 +1,112 @@
+  
+#{++ _foo
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+  #====================================================
+# Basic Block 0
+#====================================================
+_foo:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,80
+  bsr      lr2,store_s0s0
+# y[0] = 2000;
+  ldi      t0,2000
+  sth      t0,-1600[fp]
+# if(x[0] != 1000)
+  ldh      t0,0[fp]
+  beq      t0,1000,.00021
+# return 1;
+  ldi      a0,1
+.00020:
+  bsr      lr2,load_s0s0
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,80
+  ret    
+.00021:
+# p = x;
+  lea      s0,0[fp]
+# if(p[0] != 1000)
+  ldh      t0,[s0]
+  beq      t0,1000,.00023
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00020
+.00023:
+# p = y;
+  lea      s0,-1600[fp]
+# if(p[0] != 2000)
+  ldh      t0,[s0]
+  beq      t0,2000,.00025
+# return 3;
+  ldi      a0,3
+  beqz     r0,.00020
+.00025:
+# if(sizeof(x) != sizeof(void*))
+  ldi      t0,1
+  beqz     t0,.00027
+# return 4;
+  ldi      a0,4
+  beqz     r0,.00020
+.00027:
+# if(sizeof(y) <= sizeof(x))
+  ldi      t0,1
+  beqz     t0,.00029
+# return 5;
+  ldi      a0,5
+  beqz     r0,.00020
+.00029:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00020
+	.type	_foo,@function
+	.size	_foo,$-_foo
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  sth      lr1,0[fp]
+# x[0] = 1000;
+  ldi      t0,1000
+  sth      t0,-1600[fp]
+# return foo(x);
+  lea      t0,-1600[fp]
+  sth      t0,0[sp]
+  jsr      _foo
+  mov      t0,a0
+  mov      a0,t0
+.00040:
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

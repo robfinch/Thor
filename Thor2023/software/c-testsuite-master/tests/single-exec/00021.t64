@@ -1,0 +1,68 @@
+   
+#{++ _foo
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_foo:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  ldh      t2,0[fp]
+  add      t1,t2,2
+  ldh      t2,16[fp]
+  sub      a0,t1,t2
+.00010:
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,96
+  ret    
+	.type	_foo,@function
+	.size	_foo,$-_foo
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  sth      lr1,0[fp]
+  ldi      t0,3
+  sth      t0,0[sp]
+  ldi      t0,1
+  sth      t0,0[sp]
+  jsr      _foo
+  mov      t0,a0
+  mov      a0,t0
+.00020:
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

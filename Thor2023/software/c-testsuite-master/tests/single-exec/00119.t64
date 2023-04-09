@@ -1,0 +1,45 @@
+ 
+	.data
+	.align	2
+
+	.data
+_x:
+	.type	_x,@object
+	.size	_x,8
+
+	.align 2
+	.4byte	0x00000000,0x00000000
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  ldo      t1,_x[gp]
+  ldo      t2,00119_6[gp]
+  fslt     a0,t1,t2
+.00013:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	00119_6,@object
+	.size	00119_6,0
+00119_6:
+

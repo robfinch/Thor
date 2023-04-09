@@ -1,0 +1,59 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+  #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s1
+# int x = 0;
+  mov      s1,r0
+  ldi      s0,1
+# if(x ? 1 : 0)
+  beqz     s1,.00021
+  ldi      t1,1
+  mov      t0,t1
+  beqz     r0,.00022
+.00021:
+  ldi      t1,0
+  mov      t0,t1
+.00022:
+  beqz     t0,.00019
+# return 1;
+  ldi      a0,1
+.00018:
+  bsr      lr2,load_s0s1
+  ret    
+.00019:
+# if(y ? 0 : 1)
+  beqz     s0,.00025
+  ldi      t1,0
+  mov      t0,t1
+  beqz     r0,.00026
+.00025:
+  ldi      t1,1
+  mov      t0,t1
+.00026:
+  beqz     t0,.00023
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00018
+.00023:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00018
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

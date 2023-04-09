@@ -1,0 +1,39 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+# p = "hello";
+  lea      s0,00026_1[gp1]
+# return p[0] - 104;
+  ldw      t1,[s0]
+  sub      a0,t1,104
+.00011:
+  bsr      lr2,load_s0s0
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	00026_1,@object
+	.size	00026_1,12
+00026_1: # hello
+
+	.2byte	104,101,108,108,111,0

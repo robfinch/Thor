@@ -1,0 +1,36 @@
+     1	int
+     2	main()
+     3	{
+     4	int c;
+     5	c = 0;
+     6	do
+     7	;
+     8	while (0);
+     9	return c;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+7 _c         =fffffff0  16   -    Auto        Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

@@ -1,0 +1,55 @@
+  
+	.bss
+	.align	8
+
+	.bss
+.lcomm __noname_var0,16
+	.type	__noname_var0,@object
+	.size	__noname_var0,16
+
+
+  
+	.align	8
+
+	.bss
+.lcomm __noname_var1,16
+	.type	__noname_var1,@object
+	.size	__noname_var1,16
+
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+# s2.s1.x = 1;
+  ldi      t0,1
+  sth      t0,-16[fp]
+# return 0;
+  mov      a0,r0
+.00010:
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

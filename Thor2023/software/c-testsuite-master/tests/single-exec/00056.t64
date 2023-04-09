@@ -1,0 +1,83 @@
+           
+	.data
+	.align	14
+                                                                                                                                       
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+   #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,128
+  sth      lr1,0[fp]
+  lea      gp1,_rodata_start
+  bsr      lr2,store_s0s3
+# int a;
+  ldi      s0,64
+  ldi      s2,12
+  ldi      s3,34
+# a = 42;
+  ldi      s1,42
+# printf("%d\n", a);
+  sth      s1,0[sp]
+  lea      t0,00056_1[gp1]
+  sth      t0,0[sp]
+  jsr      _printf
+# printf("%d\n", b);
+  sth      s0,0[sp]
+  lea      t0,00056_2[gp1]
+  sth      t0,0[sp]
+  jsr      _printf
+# printf("%d, %d\n", c, d);
+  sth      s3,0[sp]
+  sth      s2,0[sp]
+  lea      t0,00056_3[gp1]
+  sth      t0,0[sp]
+  jsr      _printf
+  add      sp,sp,16
+# return 0;
+  mov      a0,r0
+.00013:
+  bsr      lr2,load_s0s3
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	00056_1,@object
+	.size	00056_1,8
+00056_1: # %d
+
+	.2byte	37,100,10,0
+	.type	00056_2,@object
+	.size	00056_2,8
+00056_2: # %d
+
+	.2byte	37,100,10,0
+	.type	00056_3,@object
+	.size	00056_3,16
+00056_3: # %d, %d
+
+	.2byte	37,100,44,32,37,100,10,0
+	.extern	__Files

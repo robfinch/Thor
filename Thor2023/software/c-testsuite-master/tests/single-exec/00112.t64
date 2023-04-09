@@ -1,0 +1,35 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  lea      t1,00112_1[gp1]
+  cmp      t0,t1,r0
+  extu     a0,t0,0,0
+.00013:
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+	.type	00112_1,@object
+	.size	00112_1,8
+00112_1: # abc
+
+	.2byte	97,98,99,0

@@ -1,0 +1,57 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s1
+  ldi      s1,10
+# for(x = 10; x; x = x - 1)
+  mov      s0,s1
+  beqz     s0,.00020
+.00019:
+# ;
+  sub      s0,s0,1
+  cmp      t0,s0,0
+  extu     t0,t0,1,0
+  bnez     t0,.00019
+.00020:
+# if(x)
+  beqz     s0,.00022
+# return 1;
+  ldi      a0,1
+.00018:
+  bsr      lr2,load_s0s1
+  ret    
+.00022:
+# x = 10;
+  mov      s0,s1
+# for (;x;)
+  beqz     s0,.00025
+.00024:
+# x = x - 1;
+  sub      s0,s0,1
+.00026:
+  cmp      t0,s0,0
+  extu     t0,t0,1,0
+  bnez     t0,.00024
+.00025:
+# return x;
+  mov      a0,s0
+  beqz     r0,.00018
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

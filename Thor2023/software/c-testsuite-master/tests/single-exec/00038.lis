@@ -1,0 +1,44 @@
+     1	int
+     2	main()
+     3	{
+     4	int x, *p;
+     5	
+     6	if (sizeof(0) < 2)
+     7	return 1;
+     8	if (sizeof 0 < 2)
+     9	return 1;
+    10	if (sizeof(char) < 1)
+    11	return 1;
+    12	if (sizeof(int) - 2 < 0)
+    13	return 1;
+    14	if (sizeof(&x) != sizeof p)
+    15	return 1;
+    16	return 0;
+    17	}
+    18	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff0  16   -    Auto        Int
+15 _p         =ffffffe0  16   -    Auto        Pointer to Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

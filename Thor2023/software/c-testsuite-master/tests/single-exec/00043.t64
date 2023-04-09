@@ -1,0 +1,69 @@
+     
+	.bss
+	.align	8
+
+	.bss
+.lcomm __noname_var0,48
+	.type	__noname_var0,@object
+	.size	__noname_var0,48
+
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,96
+  bsr      lr2,store_s0s1
+  lea      s0,-48[fp]
+  ldi      s1,16
+# v.x = 1;
+  ldi      t0,1
+  sth      t0,[s0]
+# v.nest.y = 2;
+  ldi      t1,2
+  sth      t1,[s0+s1*]
+# v.nest.z = 3;
+  add      t0,s0,s1
+  ldi      t1,3
+  sth      t1,32[t0]
+# if (v.x + v.nest.y + v.nest.z != 6)
+  ldh      t2,[s0]
+  ldh      t3,[s0+s1*]
+  add      t1,t2,t3
+  add      t2,s0,s1
+  ldh      t2,32[t2]
+  add      t0,t1,t2
+  beq      t0,6,.00013
+# return 1;
+  ldi      a0,1
+.00012:
+  bsr      lr2,load_s0s1
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+.00013:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00012
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

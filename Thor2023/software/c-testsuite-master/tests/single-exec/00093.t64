@@ -1,0 +1,46 @@
+ 
+	.data
+	.align	8
+
+	.data
+_a:
+	.type	_a,@object
+	.size	_a,0
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+# if (sizeof(a) != 4*sizeof(int))
+  ldi      t0,1
+  beqz     t0,.00014
+# return 1;
+  ldi      a0,1
+.00013:
+  ret    
+.00014:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00013
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+

@@ -1,0 +1,42 @@
+     1	int
+     2	main()
+     3	{
+     4	int x;
+     5	void *foo;
+     6	void **bar;
+     7	
+     8	x = 0;
+     9	
+    10	foo = (void*)&x;
+    11	bar = &foo;
+    12	
+    13	return **(int**)bar;
+    14	}
+    15	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff0  16   -    Auto        Int
+15 _foo       =ffffffe0  16   -    Auto        Pointer to 
+15 _bar       =ffffffd0  16   -    Auto        Pointer to Pointer to 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

@@ -1,0 +1,69 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s1
+  ldi      s1,1
+# x = 0;
+  mov      s0,r0
+# while(1)
+  beqz     s1,.00027
+.00026:
+# break;
+  beqz     r0,.00027
+.00027:
+# while(1) {
+  beqz     s1,.00029
+.00028:
+# if (x == 5) {
+  bne      s0,5,.00030
+# break;
+  beqz     r0,.00029
+.00030:
+# x = x + 1;
+  add      s0,s0,s1
+# continue;
+  beqz     r0,.00028
+.00029:
+# if (x == 10) {
+  bne      s0,10,.00035
+# break;
+  beqz     r0,.00033
+.00035:
+# x = x + 1;
+  add      s0,s0,s1
+.00033:
+.00037:
+# if (x == 15) {
+  bne      s0,15,.00039
+# break;
+  beqz     r0,.00038
+.00039:
+# x = x + 1;
+  add      s0,s0,s1
+# continue;
+  beqz     r0,.00037
+.00038:
+# return x - 15;
+  sub      a0,s0,15
+.00025:
+  bsr      lr2,load_s0s1
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

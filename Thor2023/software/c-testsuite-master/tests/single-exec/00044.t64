@@ -1,0 +1,46 @@
+  
+	.bss
+	.align	8
+
+	.bss
+.lcomm __noname_var0,16
+	.type	__noname_var0,@object
+	.size	__noname_var0,16
+
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+   #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s0
+# v.x = 2;
+  ldi      s0,2
+# if(v.x != 2)
+  beq      s0,2,.00013
+# return 1;
+  ldi      a0,1
+.00012:
+  bsr      lr2,load_s0s0
+  ret    
+.00013:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00012
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

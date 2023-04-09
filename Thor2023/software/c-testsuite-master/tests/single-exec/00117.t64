@@ -1,0 +1,44 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+ 
+	.data
+	.align	8
+
+_x:
+	.type	_x,@object
+	.size	_x,0
+
+	.text
+	.align	0
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+# return x[1];
+  lea      t0,0[fp]
+  ldh      a0,16[t0]
+.00010:
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

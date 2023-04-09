@@ -1,0 +1,72 @@
+     1	struct S1 {
+     2	int a;
+     3	int b;
+     4	};
+     5	
+     6	struct S2 {
+     7	int a;
+     8	int b;
+     9	union {
+    10	int c;
+    11	int d;
+    12	};
+    13	struct S1 s;
+    14	};
+    15	
+    16	struct S2 v = {1, 2, 3, {4, 5}};
+    17	
+    18	int
+    19	main()
+    20	{
+    21	if(v.a != 1)
+    22	return 1;
+    23	if(v.b != 2)
+    24	return 2;
+    25	if(v.c != 3 || v.d != 3)
+    26	return 3;
+    27	if(v.s.a != 4)
+    28	return 4;
+    29	if(v.s.b != 5)
+    30	return 5;
+    31	
+    32	return 0;
+    33	}
+    34	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =0000c0  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+43 __noname_var0 =000000  32   -    Global      struct _S1 
+44 __noname_var2 =000020  80   -    Global      struct _S2 
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+44 _v         =000070  80   -    Global      struct _S2 
+
+ *** structures and unions ***
+
+43 _S1        =000000  32   -    Type        struct _S1 
+    7 _a         =000030  16   -    Member      Int
+    7 _b         =000040  16   -    Member      Int
+44 _S2        =000000  80   -    Type        struct _S2 
+    7 _a         =000000  16   -    Member      Int
+    7 _b         =000010  16   -    Member      Int
+    45 __noname_var1 =000020  16   -    Member      union __noname_tag0 
+    43 _s         =000030  32   -    Member      struct _S1 
+45 __noname_tag0 =000000  16   -    Type        union __noname_tag0 
+    7 _c         =000020  16   -    Member      Int
+    7 _d         =000020  16   -    Member      Int

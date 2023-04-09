@@ -1,0 +1,71 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+    #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  bsr      lr2,store_s0s3
+# c = 0;
+  mov      s2,r0
+# n = 2;
+  ldi      s1,2
+# while (n < 5000) {
+  bge      s1,5000,.00022
+.00021:
+# t = 2;
+  ldi      s0,2
+# p = 1;
+  ldi      s3,1
+# while (t*t <= n) {
+  mul      t0,s0,s0
+  bgt      t0,s1,.00024
+.00023:
+# if (n % t == 0)
+  div      t1,s1,s0
+  mul      t1,t1,s0
+  sub      t0,s1,t1
+  bnez     t0,.00025
+# p = 0;
+  mov      s3,r0
+.00025:
+# t++;
+  add      s0,s0,1
+  mul      t0,s0,s0
+  ble      t0,s1,.00023
+.00024:
+# n++;
+  add      s1,s1,1
+# if (p)
+  beqz     s3,.00027
+# c++;
+  add      s2,s2,1
+.00027:
+  blt      s1,5000,.00021
+.00022:
+# if (c != 669)
+  beq      s2,669,.00029
+# return 1;
+  ldi      a0,1
+.00020:
+  bsr      lr2,load_s0s3
+  ret    
+.00029:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00020
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

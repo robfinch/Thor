@@ -1,0 +1,40 @@
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+  #====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,96
+  bsr      lr2,store_s0s1
+  lea      s0,-32[fp]
+# p = &arr[1];
+  add      s1,s0,16
+# *p = 0;
+  sth      r0,[s1]
+# return arr[1];
+  ldh      a0,16[s0]
+.00010:
+  bsr      lr2,load_s0s1
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+

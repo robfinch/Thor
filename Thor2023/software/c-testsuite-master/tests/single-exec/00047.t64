@@ -1,0 +1,64 @@
+    
+	.data
+	.align	8
+
+	.data
+_s:
+	.type	_s,@object
+	.size	_s,48
+
+	.8byte	1,0,2
+
+ 
+#{++ _main
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+# if (s.a != 1)
+  ldh      t0,_s[gp]
+  beq      t0,1,.00018
+# return 1;
+  ldi      a0,1
+.00017:
+  ret    
+.00018:
+# if (s.b != 2)
+  lea      t0,_s[gp]
+  ldh      t0,16[t0]
+  beq      t0,2,.00020
+# return 2;
+  ldi      a0,2
+  beqz     r0,.00017
+.00020:
+# if (s.c != 3)
+  lea      t0,_s[gp]
+  ldh      t0,32[t0]
+  beq      t0,3,.00022
+# return 3;
+  ldi      a0,3
+  beqz     r0,.00017
+.00022:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00017
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
+	.align	8
+
+
+

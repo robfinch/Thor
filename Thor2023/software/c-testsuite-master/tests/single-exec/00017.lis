@@ -1,0 +1,38 @@
+     1	int
+     2	main()
+     3	{
+     4	struct { int x; int y; } s;
+     5	
+     6	s.x = 3;
+     7	s.y = 5;
+     8	return s.y - s.x - 2;
+     9	}
+    10	
+
+
+*** local symbol table ***
+
+43 _s         =ffffffe0  32   -    Auto        struct __noname_tag0 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -80
+		Stkspc: 80
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+
+43 __noname_tag0 =000000  32   -    Type        struct __noname_tag0 
+    7 _x         =000000  16   -    Member      Int
+    7 _y         =000010  16   -    Member      Int

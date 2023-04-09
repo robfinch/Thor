@@ -1,0 +1,58 @@
+     1	int
+     2	main()
+     3	{
+     4	int x;
+     5	
+     6	x = 0;
+     7	while(1)
+     8	break;
+     9	while(1) {
+    10	if (x == 5) {
+    11	break;
+    12	}
+    13	x = x + 1;
+    14	continue;
+    15	}
+    16	for (;;) {
+    17	if (x == 10) {
+    18	break;
+    19	}
+    20	x = x + 1;
+    21	continue;
+    22	}
+    23	do {
+    24	if (x == 15) {
+    25	break;
+    26	}
+    27	x = x + 1;
+    28	continue;
+    29	} while(1);
+    30	return x - 15;
+    31	}
+    32	
+    33	
+
+
+*** local symbol table ***
+
+7 _x         =fffffff0  16   -    Auto        Int
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -96
+		Stkspc: 96
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+

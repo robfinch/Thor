@@ -1,0 +1,76 @@
+     1	int f(int a), g(int a), a;
+     2	
+     3	
+     4	int
+     5	main()
+     6	{
+     7	return f(1) - g(1);
+     8	}
+     9	
+
+
+*** local symbol table ***
+
+
+
+
+    10	int
+    11	f(int a)
+    12	{
+    13	return a;
+    14	}
+    15	
+
+
+*** local symbol table ***
+
+
+
+
+    16	int
+    17	g(int a)
+    18	{
+    19	return a;
+    20	}
+    21	
+
+
+*** local symbol table ***
+
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000010  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+31 __delete   =000000  8   -    
+7 _a         =000000  16   -    Global      Int
+31 __autonew  =000000  8   -    
+32 _f         =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+32 _g         =000000  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   007 
+Stack Space:
+		Argbot: 0
+		Tmpbot: 0
+		Stkspc: 0
+
+ *** structures and unions ***
+

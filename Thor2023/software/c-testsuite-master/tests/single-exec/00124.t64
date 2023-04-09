@@ -1,0 +1,65 @@
+   
+#{++ _f2
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_f2:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  ldh      t1,0[fp]
+  ldh      t2,16[fp]
+  sub      a0,t1,t2
+.00010:
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,96
+  ret    
+	.type	_f2,@function
+	.size	_f2,$-_f2
+
+
+#--}
+      
+#{++ _f1
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_f1:
+# if (a != b)
+  lea      t0,00124_9999[lr1]
+  lea      t2,00124_9999[lr1]
+  sbx      t1,t2,31,95
+  beq      t0,t1,.00023
+# return f2;
+  ldi      a0,_f2
+.00022:
+  ret    
+.00023:
+# return 0;
+  mov      a0,r0
+  beqz     r0,.00022
+	.type	_f1,@function
+	.size	_f1,$-_f1
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+     

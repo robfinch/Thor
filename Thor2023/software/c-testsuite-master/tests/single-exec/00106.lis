@@ -1,0 +1,42 @@
+     1	struct S1 { int x; };
+     2	struct S2 { struct S1 s1; };
+     3	
+     4	int
+     5	main()
+     6	{
+     7	struct S2 s2;
+     8	s2.s1.x = 1;
+     9	return 0;
+    10	}
+    11	
+
+
+*** local symbol table ***
+
+44 _s2        =fffffff0  16   -    Auto        struct _S2 
+
+
+
+
+ *** global scope typedef symbol table ***
+
+32 _main      =000020  0   -    Global      Function returning Int
+		Parameters:
+			Type array:
+   
+Stack Space:
+		Argbot: 0
+		Tmpbot: -64
+		Stkspc: 64
+31 __new      =000000  8   -    
+43 __noname_var0 =000000  16   -    Global      struct _S1 
+44 __noname_var1 =000010  16   -    Global      struct _S2 
+31 __delete   =000000  8   -    
+31 __autonew  =000000  8   -    
+
+ *** structures and unions ***
+
+43 _S1        =000000  16   -    Type        struct _S1 
+    7 _x         =000000  16   -    Member      Int
+44 _S2        =000000  16   -    Type        struct _S2 
+    43 _s1        =000000  16   -    Member      struct _S1 

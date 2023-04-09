@@ -1,0 +1,54 @@
+ 
+#{++ _voidfn
+
+	.text
+	.align	0
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_voidfn:
+.00010:
+  ret    
+	.type	_voidfn,@function
+	.size	_voidfn,$-_voidfn
+
+
+#--}
+ 
+#{++ _main
+
+	.align 5
+
+	.sdreg	61
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub      sp,sp,64
+  sth      fp,[sp]
+  mov      fp,sp
+  sub      sp,sp,64
+  sth      lr1,0[fp]
+# voidfn();
+  jsr      _voidfn
+# return 0;
+  mov      a0,r0
+.00020:
+  ldh      lr1,0[fp]
+  mov      sp,fp
+  ldh      fp,[sp]
+  add      sp,sp,64
+  ret    
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	14
+
