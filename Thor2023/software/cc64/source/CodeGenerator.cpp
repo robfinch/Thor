@@ -1359,12 +1359,12 @@ void DumpStructEnodes(ENODE *node)
 
 void CodeGenerator::GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Operand *base)
 {
-	SYM *thead, *first;
+	Symbol *thead, *first;
 	Operand *ap1, *ap2;
 	int64_t offset2;
 	ENODE *node;
 
-	first = thead = SYM::GetPtr(tp->lst.GetHead());
+	first = thead = Symbol::GetPtr(tp->lst.GetHead());
 	ep = ep->p[0];
 	while (thead) {
 		if (ep == nullptr)
@@ -1448,7 +1448,7 @@ void CodeGenerator::GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Ope
 		}
 		if (!thead->tp->IsUnion())
 			offset += thead->tp->size;
-		thead = SYM::GetPtr(thead->next);
+		thead = Symbol::GetPtr(thead->next);
 		ep = ep->p[2];
 	}
 	if (!thead && ep)
@@ -3189,7 +3189,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	Operand* ap, * ap2, * ap3;
 	Function* sym;
 	Function* o_fn;
-	SYM* s;
+	Symbol* s;
 	int i;
 	int sp = 0;
 	int fsp = 0;
@@ -3209,7 +3209,8 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		if (node->p[2])
 			currentSym = node->p[2]->sym;
 		s = gsearch(*node->p[0]->sp);
-		sym = s->fi;
+		if (s)
+			sym = s->fi;
 		/*
 				if ((sym->tp->btpp->type==bt_struct || sym->tp->btpp->type==bt_union) && sym->tp->btpp->size > 8) {
 							nn = tmpAlloc(sym->tp->btpp->size) + lc_auto + roundWord(sym->tp->btpp->size);

@@ -8,12 +8,12 @@ int IsArgReg(int regno);
 bool IsCalleeSave(int regno);
 int IsTempReg(int rg);
 
-extern TYP* expression(ENODE** node, SYM* symi);
+extern TYP* expression(ENODE** node, Symbol* symi);
 
 // Intexpr.c
-extern Int128 GetIntegerExpression(ENODE** p, SYM* symi, int opt);
-extern Float128* GetFloatExpression(ENODE** pnode, SYM* symi);
-Int128 GetConstExpression(ENODE **pnode, SYM* symi);
+extern Int128 GetIntegerExpression(ENODE** p, Symbol* symi, int opt);
+extern Float128* GetFloatExpression(ENODE** pnode, Symbol* symi);
+Int128 GetConstExpression(ENODE **pnode, Symbol* symi);
 
 void GenMemop(int op, Operand *ap1, Operand *ap2, int ssize);
 void GenerateHint(int num);
@@ -22,11 +22,11 @@ void SaveRegisterVars(CSet *rmask);
 void SaveFPRegisterVars(CSet *fprmask);
 void SavePositRegisterVars(CSet *prmask);
 void funcbottom(Statement *stmt);
-SYM *makeint2(std::string na);
+Symbol *makeint2(std::string na);
 int64_t round10(int64_t n);
 int pwrof2(int64_t);
 void ListCompound(Statement *stmt);
-std::string TraceName(SYM *sp);
+std::string TraceName(Symbol *sp);
 void MarkRemove(OCODE *ip);
 void IRemove();
 int roundSize(TYP *tp);
@@ -47,7 +47,7 @@ extern void GenerateInt(int64_t val);
 extern void GenerateLong(Int128 val);
 extern void GenerateFloat(Float128 *val);
 extern void GenerateQuad(Float128 *);
-extern void GenerateReference(SYM *sp, int64_t offset);
+extern void GenerateReference(Symbol *sp, int64_t offset);
 extern void GenerateLabelReference(int n, int64_t);
 // Outcode.c
 extern void gen_strlab(char* s);
@@ -106,21 +106,21 @@ extern int countLeadingBits(int64_t val);
 extern int countLeadingZeros(int64_t val);
 
 // Symbol.cpp
-extern SYM* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
+extern Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
 
-extern Posit64 GetPositExpression(ENODE** pnode, SYM* symi);
+extern Posit64 GetPositExpression(ENODE** pnode, Symbol* symi);
 extern void GeneratePosit(Posit64 val);
 
-extern int64_t initbyte(SYM* symi, int opt);
-extern int64_t initchar(SYM* symi, int opt);
-extern int64_t initshort(SYM* symi, int64_t i, int opt);
-extern int64_t initint(SYM* symi, int64_t i, int opt);
-extern int64_t initlong(SYM* symi, int opt);
-extern int64_t initquad(SYM* symi, int opt);
-extern int64_t initfloat(SYM* symi, int opt);
-extern int64_t inittriple(SYM* symi, int opt);
-extern int64_t initPosit(SYM* symi, int opt);
-extern int64_t InitializePointer(TYP*, int opt, SYM* symi);
+extern int64_t initbyte(Symbol* symi, int opt);
+extern int64_t initchar(Symbol* symi, int opt);
+extern int64_t initshort(Symbol* symi, int64_t i, int opt);
+extern int64_t initint(Symbol* symi, int64_t i, int opt);
+extern int64_t initlong(Symbol* symi, int opt);
+extern int64_t initquad(Symbol* symi, int opt);
+extern int64_t initfloat(Symbol* symi, int opt);
+extern int64_t inittriple(Symbol* symi, int opt);
+extern int64_t initPosit(Symbol* symi, int opt);
+extern int64_t InitializePointer(TYP*, int opt, Symbol* symi);
 
 extern std::string MakeConame(std::string nme, std::string suffix);
 

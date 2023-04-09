@@ -1063,7 +1063,7 @@ bool ThorCodeGenerator::GenerateBranch(ENODE *node, int op, int label, int predr
 }
 
 
-static void SaveRegisterSet(SYM *sym)
+static void SaveRegisterSet(Symbol *sym)
 {
 	int nn, mm;
 
@@ -1081,7 +1081,7 @@ static void SaveRegisterSet(SYM *sym)
 			GenerateMonadic(op_push,0,makereg(nn));
 }
 
-static void RestoreRegisterSet(SYM * sym)
+static void RestoreRegisterSet(Symbol * sym)
 {
 	int nn, mm;
 
@@ -1400,7 +1400,7 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	bool sumFloat;
 	bool o_supportsPush;
 	bool large_argcount = false;
-	SYM** sy = nullptr;
+	Symbol** sy = nullptr;
 
 	sum = 0;
 	push_count = 0;

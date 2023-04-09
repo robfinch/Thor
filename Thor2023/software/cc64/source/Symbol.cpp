@@ -33,19 +33,19 @@ for (nn = TABLE::matchno; gSearchCnt < 100 && nn > 0; nn--) \
 char *prefix;
 extern int nparms;
 extern bool isRegister;
-SYM* currentSym = nullptr;
+Symbol* currentSym = nullptr;
 
-static SYM* gSearchSyms[100];
+static Symbol* gSearchSyms[100];
 static int gSearchCnt;
 
-Function* SYM::MakeFunction(int symnum, bool isPascal) {
+Function* Symbol::MakeFunction(int symnum, bool isPascal) {
 	Function* fn = compiler.ff.MakeFunction(symnum, this, isPascal);
 	return (fn);
 };
 
-SYM *SYM::GetPtr(int n)
+Symbol *Symbol::GetPtr(int n)
 { 
-	SYM* p1;
+	Symbol* p1;
   if (n==0)
     return (nullptr);
 	if ((n >> 15) > 9)
@@ -53,12 +53,12 @@ SYM *SYM::GetPtr(int n)
 	p1 = compiler.symTables[n >> 15];
 	if (p1 == nullptr)
 		return (nullptr);
-  return (SYM *)&compiler.symTables[n>>15][n & 0x7fff]; 
+  return (Symbol *)&compiler.symTables[n>>15][n & 0x7fff]; 
 }
 
-SYM *SYM::GetNextPtr()
+Symbol *Symbol::GetNextPtr()
 { 
-	SYM* p1;
+	Symbol* p1;
 	if (next == 0)
 		return (nullptr);
 	if ((next >> 15) > 9)
@@ -66,12 +66,12 @@ SYM *SYM::GetNextPtr()
 	p1 = compiler.symTables[next >> 15];
 	if (p1 == nullptr)
 		return (nullptr);
-	return (SYM*)&compiler.symTables[next >> 15][next & 0x7fff];
+	return (Symbol*)&compiler.symTables[next >> 15][next & 0x7fff];
 }
 
-SYM *SYM::GetParentPtr()
+Symbol *Symbol::GetParentPtr()
 {
-	SYM* p1;
+	Symbol* p1;
 	if (parent == 0)
 		return (nullptr);
 	if ((parent >> 15) > 9)
@@ -79,21 +79,21 @@ SYM *SYM::GetParentPtr()
 	p1 = compiler.symTables[parent >> 15];
 	if (p1 == nullptr)
 		return (nullptr);
-	return (SYM*)&compiler.symTables[parent >> 15][parent & 0x7fff];
+	return (Symbol*)&compiler.symTables[parent >> 15][parent & 0x7fff];
 };
 
-int SYM::GetIndex()
+int Symbol::GetIndex()
 {
-	SYM* p1;
+	Symbol* p1;
 	if (this==nullptr)
      return 0;
 	return (this->id);
 //	return this - &compiler.symbolTable[0];
 };
 
-bool SYM::IsTypedef()
+bool Symbol::IsTypedef()
 {
-	SYM* p, * q, *first, *next;
+	Symbol* p, * q, *first, *next;
 
 	q = nullptr;
 	for (first = p = GetParentPtr(); p; p = next) {
@@ -119,9 +119,9 @@ uint8_t hashadd(char *nm)
 	return hsh;
 }
 
-SYM *search2(std::string na,TABLE *tbl,TypeArray *typearray)
+Symbol *search2(std::string na,TABLE *tbl,TypeArray *typearray)
 {
-	SYM *thead, *sp;
+	Symbol *thead, *sp;
 	TYP* tp;
 	TypeArray *ta;
 
@@ -131,7 +131,7 @@ SYM *search2(std::string na,TABLE *tbl,TypeArray *typearray)
 	if (tbl == &gsyms[0])
 		thead = compiler.symbolTable[0].GetPtr(hashadd((char*)na.c_str()));
 	else if (tbl == &tagtable)
-		thead = SYM::GetPtr(tagtable.GetHead());
+		thead = Symbol::GetPtr(tagtable.GetHead());
 	else
 		thead = &compiler.symTables[tbl->GetHead() >> 15][tbl->GetHead() & 0x7fff];
 	while( thead != NULL) {
@@ -161,7 +161,7 @@ SYM *search2(std::string na,TABLE *tbl,TypeArray *typearray)
     return (thead);
 }
 
-SYM *search(std::string na,TABLE *tbl)
+Symbol *search(std::string na,TABLE *tbl)
 {
 	return search2(na,tbl,nullptr);
 }
@@ -171,12 +171,12 @@ SYM *search(std::string na,TABLE *tbl)
 // Next look in the local symbol table for the function
 // Finally look in the global symbol table.
 //
-SYM *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exact)
+Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exact)
 {
-	SYM *sp;
-	SYM* sp1;
+	Symbol *sp;
+	Symbol* sp1;
 	Statement *st;
-	SYM *p, *q;
+	Symbol *p, *q;
 	int n;
 	int nn;
 
@@ -283,7 +283,7 @@ j1:
     			// Search for class member
     			dfs.printf("Looking at class members %p\n",(char *)&p->tp->lst);
     			if (p->tp->type == bt_class) {
-    			  SYM *tab;
+    			  Symbol *tab;
     			  int nn;
     				if (p->tp->lst.Find(na,rettype,typearray,exact)) {
     					sp = TABLE::match[TABLE::matchno-1];
@@ -359,7 +359,7 @@ j1:
 		}
 	}
 	ZeroMemory(TABLE::match, sizeof(TABLE::match));
-	memcpy(TABLE::match, gSearchSyms, gSearchCnt * sizeof(SYM*));
+	memcpy(TABLE::match, gSearchSyms, gSearchCnt * sizeof(Symbol*));
 	TABLE::matchno = gSearchCnt;
 	if (TABLE::matchno > 0)
 		sp = TABLE::match[0];
@@ -371,7 +371,7 @@ j1:
 
 // A wrapper for gsearch2() when we only care about finding any match.
 
-SYM *gsearch(std::string name)
+Symbol *gsearch(std::string name)
 {
 	return (gsearch2(name, bt_int, nullptr, false));
 }
@@ -380,15 +380,15 @@ SYM *gsearch(std::string name)
 // Create a copy of a symbol, used when creating derived classes from base
 // classes. The type is copyied and extended by a derived class.
 
-SYM *SYM::Copy(SYM *src)
+Symbol *Symbol::Copy(Symbol *src)
 {
-	SYM *dst = nullptr;
+	Symbol *dst = nullptr;
 
-  dfs.printf("Enter SYM::Copy\n");
+  dfs.printf("Enter Symbol::Copy\n");
 	if (src) {
 		dst = allocSYM();
 		dfs.printf("A");
-		memcpy(dst, src, sizeof(SYM));
+		memcpy(dst, src, sizeof(Symbol));
 //		dst->tp = TYP::Copy(src->tp);
 //		dst->name = src->name;
 //		dst->shortname = src->shortname;
@@ -401,34 +401,34 @@ SYM *SYM::Copy(SYM *src)
 			dst->fi->proto.SetOwner(src->id);
 		}
   }
-  dfs.printf("Leave SYM::Copy\n");
+  dfs.printf("Leave Symbol::Copy\n");
 	return (dst);
 }
 
-SYM* SYM::FindInUnion(std::string nme)
+Symbol* Symbol::FindInUnion(std::string nme)
 {
 	return (tp->lst.Find(nme,false));
 }
 
-SYM *SYM::Find(std::string nme)
+Symbol *Symbol::Find(std::string nme)
 {
-	SYM *sp;
-	SYM* head, * n;
+	Symbol *sp;
+	Symbol* head, * n;
 
 //	printf("Enter Find(char *)\r\n");
 	sp = tp->lst.Find(nme,false);
 	if (sp==nullptr) {
 		if (parent) {
-			sp = GetPtr(parent)->Find(nme);
+			sp = parentp->Find(nme);
 		}
 	}
 	if (sp == nullptr) {
-		for (n = SYM::GetPtr(tp->lst.head); n; n = n->GetNextPtr()) {
+		for (n = tp->lst.headp; n; n = n->nextp) {
 			if (n->tp->IsUnion()) {
 				if (sp = n->FindInUnion(nme))
 					return (sp);
 			}
-			if (n == SYM::GetPtr(tp->lst.tail))
+			if (n == tp->lst.tailp)
 				break;
 		}
 	}
@@ -436,9 +436,9 @@ SYM *SYM::Find(std::string nme)
 	return (sp);
 }
 
-int SYM::FindNextExactMatch(int startpos, TypeArray * tb)
+int Symbol::FindNextExactMatch(int startpos, TypeArray * tb)
 {
-	SYM *sp1;
+	Symbol *sp1;
 	int nn;
 	TypeArray *ta;
 
@@ -458,12 +458,12 @@ int SYM::FindNextExactMatch(int startpos, TypeArray * tb)
 }
 
 
-SYM *SYM::FindRisingMatch(bool ignore)
+Symbol *Symbol::FindRisingMatch(bool ignore)
 {
 	int nn;
 	int em;
 	int iter;
-	SYM *s = this;
+	Symbol *s = this;
 	std::string nme;
 	TypeArray *ta = nullptr;
 
@@ -530,10 +530,10 @@ std::string *TypenoToChars(int typeno)
 
 // Get the mangled name for the function
 //
-std::string *SYM::GetNameHash()
+std::string *Symbol::GetNameHash()
 {
 	std::string *nh;
-  SYM *sp;
+  Symbol *sp;
   int nn;
 
   dfs.puts("<GetNameHash>");
@@ -571,7 +571,7 @@ std::string *SYM::GetNameHash()
 // Build a function signature string including
 // the return type, base classes, and any parameters.
 
-std::string *SYM::BuildSignature(int opt)
+std::string *Symbol::BuildSignature(int opt)
 {
 	std::string *str;
 	std::string *nh;
@@ -620,7 +620,7 @@ std::string *SYM::BuildSignature(int opt)
 // If a struct contains a pointer this will be 8. It has to
 // be the worst case alignment.
 
-void SYM::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
+void Symbol::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
 {
 	// Set the struct member storage offset.
 	if (al == sc_static || al == sc_thread) {
@@ -644,7 +644,7 @@ void SYM::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
 
 // Increase the storage allocation by the type size.
 
-int SYM::AdjustNbytes(int nbytes, int al, int ztype)
+int Symbol::AdjustNbytes(int nbytes, int al, int ztype)
 {
 	if (ztype == bt_union)
 		nbytes = imax(nbytes, tp->roundSize());
@@ -668,7 +668,7 @@ int SYM::AdjustNbytes(int nbytes, int al, int ztype)
 // Initialize the type. Unions can't be initialized. Oh yes they can.
 // The node list coming in already has proper types assigned to it.
 
-int64_t SYM::Initialize(ENODE* pnode, TYP* tp2, int opt)
+int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
 {
 	static int level = 0;
 	int64_t nbytes;
@@ -766,7 +766,7 @@ j2:
 	return (nbytes);
 }
 
-int64_t SYM::InitializeArray(ENODE* rootnode)
+int64_t Symbol::InitializeArray(ENODE* rootnode)
 {
 	int64_t nbytes;
 	int64_t count;
@@ -796,10 +796,10 @@ int64_t SYM::InitializeArray(ENODE* rootnode)
 	return (tp->size);
 }
 
-int64_t SYM::InitializeStruct(ENODE* node)
+int64_t Symbol::InitializeStruct(ENODE* node)
 {
 	static int level = 0;
-	SYM* sp, *hd;
+	Symbol* sp, *hd;
 	int64_t nbytes;
 	int count;
 	TYP* typ;
@@ -826,7 +826,7 @@ int64_t SYM::InitializeStruct(ENODE* node)
 			nbytes++;
 		}
 		*/
-		currentSym = sp;
+		//currentSym = sp;
 		if (node == nullptr)
 			break;
 		nbytes += sp->Initialize(node, sp->tp, 0);
@@ -842,9 +842,9 @@ int64_t SYM::InitializeStruct(ENODE* node)
 	return (tp->size);
 }
 
-int64_t SYM::InitializeUnion(ENODE* node)
+int64_t Symbol::InitializeUnion(ENODE* node)
 {
-	SYM* sp, * osp;
+	Symbol* sp, * osp;
 	int64_t nbytes;
 	int64_t val;
 	bool found = false;
@@ -898,7 +898,7 @@ int64_t SYM::InitializeUnion(ENODE* node)
 	return (tp->size);
 }
 
-int64_t SYM::GenerateT(ENODE* node)
+int64_t Symbol::GenerateT(ENODE* node)
 {
 	int64_t nbytes;
 	int64_t val;
@@ -980,10 +980,10 @@ int64_t SYM::GenerateT(ENODE* node)
 }
 
 
-void SYM::storeHex(txtoStream& ofs)
+void Symbol::storeHex(txtoStream& ofs)
 {
-	ofs.write("SYM:");
-	ofs.writeAsHex((char *)this, sizeof(SYM));
+	ofs.write("Symbol:");
+	ofs.writeAsHex((char *)this, sizeof(Symbol));
 	ofs.printf(":%05d", fi->number);
 	ofs.printf(":%05d", tp->typeno);
 }

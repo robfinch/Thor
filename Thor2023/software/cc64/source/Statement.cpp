@@ -53,9 +53,9 @@ int Statement::oldthrow = 0;
 int Statement::olderthrow = 0;
 bool Statement::lc_in_use = false;
 
-static SYM *makeint(char *name)
+static Symbol *makeint(char *name)
 {
-	SYM *sp;
+	Symbol *sp;
 	TYP *tp;
 
 	sp = allocSYM();
@@ -236,7 +236,7 @@ Statement *Statement::ParseForever()
 Statement *Statement::ParseFirstcall()
 {
 	Statement *snp;
-	SYM *sp;
+	Symbol *sp;
 	int st;
 
 	dfs.puts("<ParseFirstcall>");
@@ -315,7 +315,7 @@ Statement *Statement::ParseIf()
 Statement *Statement::ParseCatch()
 {
 	Statement *snp;
-	SYM *sp;
+	Symbol *sp;
 	TYP *tp, *tp1, *tp2;
 	ENODE *node;
 	static char buf[200];
@@ -470,7 +470,7 @@ Statement *Statement::ParseAsm()
 	static char buf2[50];
 	int nn;
 	bool first = true;
-	SYM* sp, * thead, * firsts;
+	Symbol* sp, * thead, * firsts;
 	int sn, lo, tn;
 	char* p;
 
@@ -650,7 +650,7 @@ Statement *Statement::ParseCompound()
 Statement *Statement::ParseLabel(bool pt)
 {
 	Statement *snp;
-	SYM *sp;
+	Symbol *sp;
 
 	snp = MakeStatement(st_label, FALSE);
 	if ((sp = currentFn->sym->lsyms.Find(lastid, false, bt_label)) == NULL) {
@@ -682,7 +682,7 @@ Statement *Statement::ParseLabel(bool pt)
 Statement *Statement::ParseGoto()
 {
 	Statement *snp;
-	SYM *sp;
+	Symbol *sp;
 
 	NextToken();
 	loopexit = TRUE;
@@ -716,7 +716,7 @@ Statement *Statement::ParseGoto()
 Statement* Statement::ParseYield()
 {
 	Statement* snp;
-	SYM* sp;
+	Symbol* sp;
 	ENODE* ep;
 	Expression exp;
 
@@ -876,7 +876,7 @@ void Statement::repcse()
 
 void Statement::repcse_compound()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -890,7 +890,7 @@ void Statement::repcse_compound()
 
 void Statement::scan_compound()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -1065,7 +1065,7 @@ void Statement::update()
 
 void Statement::update_compound()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -1908,7 +1908,7 @@ void Statement::GenerateYield()
 	Operand* ap1, * ap;
 	ENODE* node = exp;
 	Function* sym;
-	SYM* s;
+	Symbol* s;
 	int i;
 	int sp = 0;
 	int fsp = 0;
@@ -1975,7 +1975,7 @@ void Statement::GenerateYield()
 
 void Statement::GenerateCompound()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -1994,7 +1994,7 @@ void Statement::GenerateCompound()
 // the prolog and epilog clauses.
 void Statement::GenerateFuncBody()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -2013,7 +2013,7 @@ void Statement::Generate(int opt)
 {
 	Operand *ap;
 	Statement *stmt;
-	SYM* sp;
+	Symbol* sp;
 	ENODE* ep1;
 
 	for (stmt = this; stmt != NULL; stmt = stmt->next)
@@ -2153,7 +2153,7 @@ void Statement::GenerateStop()
 void Statement::GenerateAsm()
 {
 	char buf2[50];
-	SYM* thead, * firsts;
+	Symbol* thead, * firsts;
 	int64_t tn, lo, bn, ll, i, j;
 	char* p;
 	char* buf = (char*)label;
@@ -2161,7 +2161,7 @@ void Statement::GenerateAsm()
 	if (compiler.ipoll)
 		GenerateZeradic(op_pfi);
 	ll = strlen(buf);
-	thead = firsts = SYM::GetPtr(currentFn->params.head);
+	thead = firsts = Symbol::GetPtr(currentFn->params.head);
 	while (thead) {
 		p = &buf[-1];
 		while (p = strstr(p+1, &thead->name->c_str()[1])) {
@@ -2296,7 +2296,7 @@ void Statement::Dump()
 
 void Statement::DumpCompound()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = sp->GetPtr(ssyms.GetHead());
 	while (sp) {
@@ -2310,7 +2310,7 @@ void Statement::DumpCompound()
 
 void Statement::CheckCompoundReferences(int* psp, int* pbp, int* pgp, int* pgp1)
 {
-	SYM* spp;
+	Symbol* spp;
 	int sp, bp, gp, gp1;
 
 	spp = ssyms.headp;

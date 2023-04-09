@@ -508,7 +508,7 @@ static void AssignTypeToArray(ENODE* node, TYP* btp)
 	}
 }
 
-static void AssignTypeToAggregateHelper(ENODE* node, SYM* thead)
+static void AssignTypeToAggregateHelper(ENODE* node, Symbol* thead)
 {
 	ENODE* ep;
 	List* lst;
@@ -528,7 +528,7 @@ static void AssignTypeToAggregateHelper(ENODE* node, SYM* thead)
 	}
 }
 
-static void AssignTypeToAggregate(ENODE* node, SYM* thead)
+static void AssignTypeToAggregate(ENODE* node, Symbol* thead)
 {
 	ENODE* ep;
 	List* lst; 
@@ -589,7 +589,7 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 		esize = ptp->size;
 	}
 	else if (ptp->IsAggregateType()) {
-		SYM *thead;
+		Symbol *thead;
 
 		ep = this;
 		thead = ptp->lst.headp;
@@ -602,7 +602,7 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 	}
 	// Else there is just one type to assign.
 	else {
-		SYM* thead;
+		Symbol* thead;
 
 		thead = tp->lst.headp;
 		ep = this;

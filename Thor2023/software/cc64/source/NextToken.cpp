@@ -613,7 +613,7 @@ void SkipSpaces()
 void NextToken()
 {
   int i, j;
-  SYM *sp;
+  Symbol *sp;
   int tch;
 restart:        /* we come back here after comments */
   if (window_pos >= 0) {

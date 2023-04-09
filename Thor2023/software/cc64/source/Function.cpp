@@ -255,7 +255,7 @@ void Function::DoFuncptrAssign(Function *sp)
 	TYP* tp1, * tp2;
 	Expression exp;
 	e_node op;
-	SYM* asym;
+	Symbol* asym;
 
 	NextToken();
 	ep1 = nullptr;
@@ -300,11 +300,12 @@ int Function::Parse()
 	std::string nme;
 
 	currentFn = this;
+	currentSym = this->sym;
 	sp = this;
 	dfs.puts("<ParseFunction>\n");
 	isFuncBody = true;
 	if (this == nullptr) {
-		fatal("Compiler error: Function::Parse: SYM is NULL\r\n");
+		fatal("Compiler error: Function::Parse: Symbol is NULL\r\n");
 	}
 	dfs.printf("***********************************\n");
 	dfs.printf("***********************************\n");
@@ -383,7 +384,7 @@ int Function::Parse()
 		//	NextToken();
 		if (lastst == openpa) {
 			int np, na;
-			SYM* sp = (SYM*)allocSYM();
+			Symbol* sp = (Symbol*)allocSYM();
 			Function* fn = compiler.ff.MakeFunction(sym->number, sp, false);
 			fn->BuildParameterList(&np, &na, &ellipos);
 			if (ellipos >= 0)
@@ -966,7 +967,7 @@ void Function::GenerateReturn(Statement* stmt)
 	int nn;
 	int cnt, cnt2;
 	int64_t toAdd;
-	SYM* p;
+	Symbol* p;
 	bool isFloat, isPosit;
 	int64_t sz;
 
@@ -1463,7 +1464,7 @@ void Function::GenerateDefaultCatch()
 TypeArray *Function::GetParameterTypes()
 {
 	TypeArray *i16;
-	SYM *sp;
+	Symbol *sp;
 	int nn;
 
 	if (this == nullptr)
@@ -1483,7 +1484,7 @@ TypeArray *Function::GetParameterTypes()
 TypeArray *Function::GetProtoTypes()
 {
 	TypeArray *i16;
-	SYM *sp;
+	Symbol *sp;
 	int nn;
 
 	//	printf("Enter GetParameterTypes()\r\n");
@@ -1691,7 +1692,7 @@ Function *Function::FindExactMatch(int mm, std::string name, int rettype, TypeAr
 	return (nullptr);
 }
 
-int Function::BPLAssignReg(SYM* sp1, int reg, bool* noParmOffset)
+int Function::BPLAssignReg(Symbol* sp1, int reg, bool* noParmOffset)
 {
 	if (reg >= cpu.NumArgRegs)
 		sp1->IsRegister = false;
@@ -1712,7 +1713,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 {
 	int64_t poffset;
 	int i, reg, fpreg, preg;
-	SYM *sp1;
+	Symbol *sp1;
 	int onp;
 	int np;
 	bool noParmOffset = false;
@@ -1815,32 +1816,32 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	dfs.printf("</BuildParameterList>\n");
 }
 
-void Function::AddParameters(SYM *list)
+void Function::AddParameters(Symbol *list)
 {
-	SYM *nxt;
+	Symbol *nxt;
 
 	while (list) {
 		nxt = list->GetNextPtr();
-		params.insert(SYM::Copy(list));
+		params.insert(Symbol::Copy(list));
 		list = nxt;
 	}
 
 }
 
-void Function::AddProto(SYM *list)
+void Function::AddProto(Symbol *list)
 {
-	SYM *nxt;
+	Symbol *nxt;
 
 	while (list) {
 		nxt = list->GetNextPtr();
-		proto.insert(SYM::Copy(list));	// will clear next
+		proto.insert(Symbol::Copy(list));	// will clear next
 		list = nxt;
 	}
 }
 
 void Function::AddProto(TypeArray *ta)
 {
-	SYM *sym;
+	Symbol *sym;
 	int nn;
 	char buf[20];
 
@@ -1898,7 +1899,7 @@ bool Function::HasRegisterParameters()
 
 void Function::CheckForUndefinedLabels()
 {
-	SYM *head = SYM::GetPtr(sym->lsyms.GetHead());
+	Symbol *head = Symbol::GetPtr(sym->lsyms.GetHead());
 
 	while (head != 0) {
 		if (head->storage_class == sc_ulabel)
@@ -1968,7 +1969,7 @@ void Function::GenLoad(Operand *ap3, Operand *ap1, int ssize, int size) { cg.Gen
 void Function::InsertMethod()
 {
 	int nn;
-	SYM *sy;
+	Symbol *sy;
 	std::string name;
 
 	name = *sym->name;

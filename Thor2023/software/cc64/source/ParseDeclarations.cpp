@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -64,7 +64,7 @@ char *stkname = 0;
 int64_t sp_init = 0;
 std::string *classname;
 bool isPrivate = true;
-SYM *currentClass;
+Symbol *currentClass;
 int mangledNames = FALSE;
 int defaultcc = 1;
 int isCoroutine = 0;
@@ -101,7 +101,7 @@ std::string* UnknownFuncName()
 	return new std::string(buf);
 }
 
-void Declaration::SetType(SYM *sp)
+void Declaration::SetType(Symbol *sp)
 {
 	if (head) {
 		if (bit_width <= 0) {
@@ -302,15 +302,15 @@ void Declaration::ParseLong()
 	head->isIO = isIO;
 }
 
-void Declaration::ParseInt()
+void Declaration::ParseInt(bool nt)
 {
 //printf("Enter ParseInt\r\n");
 	if (isUnsigned) {
-		head = TYP::Make(bt_uint,sizeOfInt);
+		head = TYP::Make(bt_uint, sizeOfInt);
 		tail = head;
 	}
 	else {
-		head = TYP::Make(bt_int,sizeOfInt);
+		head = TYP::Make(bt_int, sizeOfInt);
 		tail = head;
 	}
 	bit_max = 64;
@@ -319,7 +319,8 @@ void Declaration::ParseInt()
 	head->isUnsigned = isUnsigned;
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
-	NextToken();
+	if (nt)
+		NextToken();
 	if (lastst == colon) {
 		NextToken();
 		if (lastst == iconst) {
@@ -674,9 +675,9 @@ void Declaration::ParseByte()
 	bit_max = head->precision;
 }
 
-SYM *Declaration::ParseId()
+Symbol *Declaration::ParseId()
 {
-	SYM *sp;
+	Symbol *sp;
 
   dfs.printf("<ParseId>%s",lastid);
 	sp = tagtable.Find(lastid,false);//gsyms[0].Find(lastid);
@@ -719,7 +720,7 @@ void Declaration::ParseClass()
 	bit_width = cd.bit_width;
 }
 
-int Declaration::ParseStruct(TABLE* table, e_bt typ, SYM **sp)
+int Declaration::ParseStruct(TABLE* table, e_bt typ, Symbol **sp)
 {
 	StructDeclaration sd;
 	int rv;
@@ -743,9 +744,9 @@ int Declaration::ParseStruct(TABLE* table, e_bt typ, SYM **sp)
 // Returns:
 // 0 usually, 1 if only a specifier is present
 //
-int Declaration::ParseSpecifier(TABLE* table, SYM** sym, e_sc sc)
+int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 {
-	SYM *sp;
+	Symbol *sp;
 	ClassDeclaration cd;
 	StructDeclaration sd;
 	bool rv;
@@ -822,7 +823,7 @@ int Declaration::ParseSpecifier(TABLE* table, SYM** sym, e_sc sc)
 			case kw_int64:	ParseInt64(); goto lxit;
 			case kw_short:	ParseShort();	goto lxit;
 			case kw_long:	ParseLong();	goto lxit;	// long, long int
-			case kw_int:	ParseInt();		goto lxit;
+			case kw_int:	ParseInt(true);		goto lxit;
 
       case kw_task:
         isTask = TRUE;
@@ -834,10 +835,15 @@ int Declaration::ParseSpecifier(TABLE* table, SYM** sym, e_sc sc)
 				NextToken();
 				break;
 
+			// unsigned may be used without a further type specifier, so assume an int
+			// if none specified. Otherwise go back and process the token.
 			case kw_unsigned:
-				NextToken();
 				isUnsigned = TRUE;
-				break;
+				NextToken();
+				if (TYP::IsScalar((e_sym)lastst))
+					continue;
+				ParseInt(false);
+				goto lxit;
 
 			case kw_volatile:
 				NextToken();
@@ -922,9 +928,9 @@ lxit:;
 	return 0;
 }
 
-void Declaration::ParseDoubleColon(SYM *sp)
+void Declaration::ParseDoubleColon(Symbol *sp)
 {
-	SYM *sym;
+	Symbol *sym;
 	bool gotDouble = false;
 
 	while (lastst==double_colon) {
@@ -973,9 +979,9 @@ void Declaration::ParseBitfieldSpec(bool isUnion)
 	dfs.puts("</ParseBitfieldSpec>\n");
 }
 
-SYM *Declaration::ParsePrefixId(SYM* symi)
+Symbol *Declaration::ParsePrefixId(Symbol* symi)
 {
-	SYM *sp;
+	Symbol *sp;
 
 	dfs.puts("<ParsePrefixId>");            
 	if (declid) delete declid;
@@ -1022,10 +1028,10 @@ SYM *Declaration::ParsePrefixId(SYM* symi)
 }
 
 // ()
-SYM *Declaration::ParsePrefixOpenpa(bool isUnion, SYM* symi)
+Symbol *Declaration::ParsePrefixOpenpa(bool isUnion, Symbol* symi)
 {
 	TYP *temp1, *temp2, *temp3, *temp4;
-	SYM *sp;
+	Symbol *sp;
 
 	dfs.puts("<ParsePrefixOpenpa>\n");
 	NextToken();
@@ -1067,11 +1073,11 @@ xit:
 	return (sp);
 }
 
-SYM* Declaration::CreateNonameVar()
+Symbol* Declaration::CreateNonameVar()
 {
 	static int varno = 0;
 	char nmbuf[300];
-	SYM* sp;
+	Symbol* sp;
 
 	sprintf_s(nmbuf, sizeof(nmbuf), "__noname_var%d", varno);
 	sp = allocSYM();
@@ -1085,10 +1091,10 @@ SYM* Declaration::CreateNonameVar()
 // There may be only a single identifier in the prefix. This identifier may
 // contain a class spec or namespace spec.
 
-SYM *Declaration::ParsePrefix(bool isUnion, SYM* symi)
+Symbol *Declaration::ParsePrefix(bool isUnion, Symbol* symi)
 {   
 	TYP *temp1, *temp2, *temp3;
-	SYM *sp, *symo, *sp1;
+	Symbol *sp, *symo, *sp1;
 	ParameterDeclaration pd;
 	static int level = 0;
 
@@ -1294,10 +1300,12 @@ j1:
 	}
 lxit:
 	// Strip out extra "Func returns Func" due to (((
-	while (head->btpp && (head->btpp->type == bt_func || head->btpp->type == bt_ifunc)) {
-		if (tail == head)
-			tail = head->btpp;
-		head = head->btpp;
+	if (head) {
+		while (head->btpp && (head->btpp->type == bt_func || head->btpp->type == bt_ifunc)) {
+			if (tail == head)
+				tail = head->btpp;
+			head = head->btpp;
+		}
 	}
 	dfs.puts("</ParseDeclPrefix>\n");
 	return (sp);
@@ -1420,7 +1428,7 @@ Function* Declaration::ParseFunctionJ2(Function* sp)
 	int numa = 0;
 	int ellipos = -1;
 	Function* cf;
-	SYM* sym;
+	Symbol* sym;
 	ParameterDeclaration pd;
 
 	dfs.printf("r");
@@ -1651,11 +1659,11 @@ Function* Declaration::ParseSuffixOpenpa(Function *sp)
 // There could be multiple sets of [] so a loop is formed to accomodate
 // this. There will be only a single set of () indicating parameters.
 
-SYM *Declaration::ParseSuffix(SYM *sp)
+Symbol *Declaration::ParseSuffix(Symbol *sp)
 {
 	TYP* tp;
 	ENODE* node;
-	SYM* sp1;
+	Symbol* sp1;
 
 	dfs.printf("<ParseDeclSuffix>\n");
 
@@ -1736,7 +1744,7 @@ void Declaration::AssignParameterName()
 }
 
 
-void Declaration::ParseAssign(SYM *sp)
+void Declaration::ParseAssign(Symbol *sp)
 {
 	TYP *tp1, *tp2;
 	enum e_node op;
@@ -1785,7 +1793,7 @@ void Declaration::ParseAssign(SYM *sp)
 
 // Processing done when the end of a declaration (;) is reached.
 
-void Declaration::DoDeclarationEnd(SYM *sp, SYM *sp1)
+void Declaration::DoDeclarationEnd(Symbol *sp, Symbol *sp1)
 {
 	int nn;
 	TYP *tp1;
@@ -1834,7 +1842,7 @@ void Declaration::DoDeclarationEnd(SYM *sp, SYM *sp1)
 	}
 }
 
-void Declaration::DoInsert(SYM *sp, TABLE *table)
+void Declaration::DoInsert(Symbol *sp, TABLE *table)
 {
 	dfs.printf("<DoInsert>");
 	if ((sp->tp->type == bt_class)
@@ -1866,9 +1874,9 @@ void Declaration::DoInsert(SYM *sp, TABLE *table)
 	dfs.printf("</DoInsert>\n");
 }
 
-SYM *Declaration::FindSymbol(SYM *sp, TABLE *table)
+Symbol *Declaration::FindSymbol(Symbol *sp, TABLE *table)
 {
-	SYM *sp1;
+	Symbol *sp1;
 	Function *fn;
 
 	dfs.printf("<FindSymbol>");
@@ -1920,9 +1928,9 @@ SYM *Declaration::FindSymbol(SYM *sp, TABLE *table)
 	return (sp1);
 }
 
-int Declaration::ParseFunction(TABLE* table, SYM* sp, e_sc al)
+int Declaration::ParseFunction(TABLE* table, Symbol* sp, e_sc al)
 {
-	SYM* sp1;
+	Symbol* sp1;
 	bool flag;
 	bool fn_doneinit = false;
 
@@ -1959,7 +1967,7 @@ int Declaration::ParseFunction(TABLE* table, SYM* sp, e_sc al)
 			NextToken();
 			if (lastst == openpa) {
 				int np, na, ellipos;
-				SYM* sp = (SYM*)allocSYM();
+				Symbol* sp = (Symbol*)allocSYM();
 				NextToken();
 				Function* fn = compiler.ff.MakeFunction(sp->number, sp, false);
 				fn->BuildParameterList(&np, &na, &ellipos);
@@ -2038,10 +2046,10 @@ int Declaration::ParseFunction(TABLE* table, SYM* sp, e_sc al)
 	return (0);
 }
 
-void Declaration::FigureStructOffsets(int64_t bgn, SYM* sp)
+void Declaration::FigureStructOffsets(int64_t bgn, Symbol* sp)
 {
 	TABLE* pt;
-	SYM* hd;
+	Symbol* hd;
 	int64_t nn;
 	int64_t ps;
 	int64_t bt;
@@ -2082,10 +2090,10 @@ void Declaration::FigureStructOffsets(int64_t bgn, SYM* sp)
  *      be processed. ztype should be bt_struct for normal and in
  *      structure ParseSpecifierarations and sc_union for in union ParseSpecifierarations.
  */
-int Declaration::declare(SYM* parent, int ilc, int ztype, SYM** symo)
+int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 {
-	SYM* sp;
-	SYM* sp1;
+	Symbol* sp;
+	Symbol* sp1;
 	Function* fn;
 	TYP* dhead, * tp1, * tp2;
 	ENODE* ep1, * ep2;
@@ -2098,7 +2106,7 @@ int Declaration::declare(SYM* parent, int ilc, int ztype, SYM** symo)
 	int nbytes;
 	int itdef;
 	int insState = 0;
-	SYM* fp;
+	Symbol* fp;
 	TABLE* table = itable;
 	e_sc al = istorage_class;
 	static int old_nbytes = 0;
@@ -2319,7 +2327,7 @@ xit1:
 	return (nbytes);
 }
 
-int Declaration::declare(SYM *parent,TABLE *table,e_sc al,int ilc,int ztype, SYM** symo)
+int Declaration::declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo)
 { 
 	itable = table;
 	istorage_class = al;
@@ -2344,7 +2352,7 @@ void Declaration::ParseCoroutine()
 
 void GlobalDeclaration::Parse()
 {
-	SYM* symo;
+	Symbol* symo;
 
 	dfs.puts("<ParseGlobalDecl>\n");
 	isPascal = defaultcc==1;
@@ -2529,9 +2537,9 @@ xit:
 	;
 }
 
-ENODE *AutoDeclaration::Parse(SYM *parent, TABLE *ssyms)
+ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 {
-	SYM *sp;
+	Symbol *sp;
 	ENODE* ep1;
 	int nn;
 
@@ -2616,7 +2624,7 @@ ENODE *AutoDeclaration::Parse(SYM *parent, TABLE *ssyms)
 xit:
 	;
 	ep1 = nullptr;
-	for (sp = SYM::GetPtr(ssyms->GetHead()); sp; sp = sp->GetNextPtr()) {
+	for (sp = Symbol::GetPtr(ssyms->GetHead()); sp; sp = sp->GetNextPtr()) {
 		if (sp->initexp) 
 			ep1 = makenode(en_void, ep1, sp->initexp);
 	}

@@ -145,7 +145,7 @@ ucont:                  if(tp->sname->length() == 0)
                 }
 }
 
-void list_var(SYM *sp, int i)
+void list_var(Symbol *sp, int i)
 {
 	TypeArray *ta;
 	Function *fn;
@@ -222,13 +222,13 @@ void list_var(SYM *sp, int i)
 
 void ListTable(TABLE *t, int i)
 {
-	SYM *sp;
+	Symbol *sp;
 	int nn;
 
 	if (t==&gsyms[0]) {
 		for (nn = 0; nn < 257; nn++) {
 			t = &gsyms[nn];
-			sp = SYM::GetPtr(t->GetHead());
+			sp = Symbol::GetPtr(t->GetHead());
 			while(sp != NULL) {
 				list_var(sp,i);
 				sp = sp->GetNextPtr();
@@ -236,7 +236,7 @@ void ListTable(TABLE *t, int i)
 		}
 	}
 	else {
-		sp = SYM::GetPtr(t->GetHead());
+		sp = Symbol::GetPtr(t->GetHead());
 		while(sp != NULL) {
 			list_var(sp,i);
 			sp = sp->GetNextPtr();

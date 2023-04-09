@@ -34,16 +34,16 @@ Forest::Forest()
 	k = nregs;
 }
 
-Tree *Forest::PlantTree(Tree *t)
+Range *Forest::PlantTree(Range *t)
 {
 	trees[treecount] = t;
 	treecount++;
 	return (t);
 }
 
-Tree *Forest::MakeNewTree() {
-	Tree *t;
-	t = (Tree*)allocx(sizeof(Tree));
+Range *Forest::MakeNewTree() {
+	Range *t;
+	t = (Range*)allocx(sizeof(Range));
 	t->blocks = CSet::MakeNew();
 	trees[treecount] = t;
 	treecount++;
@@ -53,7 +53,7 @@ Tree *Forest::MakeNewTree() {
 void Forest::CalcRegclass()
 {
 	int n;
-	Tree *t;
+	Range *t;
 	int j;
 	BasicBlock *b;
 	OCODE *ip;
@@ -88,7 +88,7 @@ void Forest::SummarizeCost()
 			trees[r]->cost = trees[r]->loads - trees[r]->stores;
 		trees[r]->cost += trees[r]->others;
 		trees[r]->cost -= trees[r]->copies;
-		dfs.printf((char *)"Tree(%d):%d ", trees[r]->lattice,r);
+		dfs.printf((char *)"Range(%d):%d ", trees[r]->lattice,r);
 		dfs.printf("cost = %d\n", (int)trees[r]->cost);
 	}
 	dfs.printf("</TreeCosts>\n");
@@ -107,7 +107,7 @@ bool IsRenumberable(int reg)
 void Forest::Renumber()
 {
 	OCODE *ip;
-	Tree *t;
+	Range *t;
 	int tt;
 	BasicBlock *b;
 	int bb;
@@ -262,7 +262,7 @@ void Forest::Simplify()
 {
 	int m, nn;
 	bool addedLow = false;
-	Tree *t;
+	Range *t;
 	int bb;
 	int degree;
 
@@ -330,7 +330,7 @@ void Forest::Color()
 	int j;
 	__int16 *p;
 	CSet used;
-	Tree *t;
+	Range *t;
 
 	used.clear();
 	for (nn = 0; nn < 32; nn++) {
@@ -405,7 +405,7 @@ unsigned int Forest::ColorUncolorable(unsigned int rg)
 void Forest::ColorBlocks()
 {
 	int m, n;
-	Tree *t;
+	Range *t;
 	BasicBlock *b;
 	OCODE *ip;
 	bool eol = false;
@@ -503,7 +503,7 @@ bool Forest::SpillCode()
 {
 	int c, m, n;
 	Var *v;
-	Tree *t;
+	Range *t;
 	BasicBlock *bb;
 	int64_t spillOffset;
 	OCODE *cd;
@@ -565,7 +565,7 @@ bool Forest::SpillCode()
 bool Forest::IsAllTreesColored()
 {
 	int c;
-	Tree *t;
+	Range *t;
 
 	for (c = 0; c < treecount; c++) {
 		t = trees[c];	// convenience

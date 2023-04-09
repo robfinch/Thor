@@ -34,9 +34,9 @@ extern bool isPrivate;
 
 int16_t typeno = bt_last;
 
-int StructDeclaration::ParseTag(TABLE* table, e_bt ztype, SYM** sym)
+int StructDeclaration::ParseTag(TABLE* table, e_bt ztype, Symbol** sym)
 {
-  SYM* sp;
+  Symbol* sp;
   ENODE nd;
   ENODE* pnd = &nd;
   int ret = 0;
@@ -108,7 +108,7 @@ xit:
   return (ret);
 }
 
-void StructDeclaration::ParseAttributes(SYM* sym)
+void StructDeclaration::ParseAttributes(Symbol* sym)
 {
   ENODE nd;
   ENODE* pnd = &nd;
@@ -125,7 +125,7 @@ void StructDeclaration::ParseAttributes(SYM* sym)
   }
 }
 
-void StructDeclaration::ParseAttribute(SYM* sym)
+void StructDeclaration::ParseAttribute(Symbol* sym)
 {
   int opa_cnt = 0;
 
@@ -152,9 +152,9 @@ void StructDeclaration::ParseAttribute(SYM* sym)
 }
 
 
-SYM* StructDeclaration::CreateSymbol(char *nmbuf, TABLE* table, e_bt ztype, int* ret)
+Symbol* StructDeclaration::CreateSymbol(char *nmbuf, TABLE* table, e_bt ztype, int* ret)
 {
-  SYM* sp;
+  Symbol* sp;
   ENODE nd;
   ENODE* pnd = &nd;
 
@@ -208,9 +208,9 @@ xit:
 }
 
 
-int StructDeclaration::Parse(TABLE* table, int ztype, SYM** sym)
+int StructDeclaration::Parse(TABLE* table, int ztype, Symbol** sym)
 {
-  SYM *sp;
+  Symbol *sp;
   TYP *tp;
 	int ret;
 	int psd;
@@ -295,11 +295,11 @@ isStructDecl = psd;
 	return (ret);
 }
 
-void StructDeclaration::ParseMembers(SYM *sym, int ztype)
+void StructDeclaration::ParseMembers(Symbol *sym, int ztype)
 {
 	size_t slc;
 	bool priv;
-  SYM* sp;
+  Symbol* sp;
   char nmbuf[300];
   static int nmx = 0;
 

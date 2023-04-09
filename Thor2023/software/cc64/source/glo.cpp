@@ -121,7 +121,7 @@ int parseEsc = TRUE;
 TABLE           gsyms[257];// = {0,0},
 bool DataLabels[65535];
 	           
-SYM             *lasthead = (SYM *)NULL;
+Symbol             *lasthead = (Symbol *)NULL;
 Float128		*quadtab = nullptr;
 struct slit     *strtab = (struct slit *)NULL;
 struct clit		*casetab = (struct clit *)NULL;

@@ -810,7 +810,7 @@ void GeneratePosit(Posit64 val)
 	genst_cumulative += 8;
 }
 
-void GenerateReference(SYM *sp,int64_t offset)
+void GenerateReference(Symbol *sp,int64_t offset)
 {
 	char sign;
   if( offset < 0) {

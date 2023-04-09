@@ -182,20 +182,18 @@ void ReleaseGlobalMemory()
  dfs.printf("Leave ReleaseGlobalMemory\n");
 }
 
-SYM *allocSYM() {
+Symbol *allocSYM() {
   if (compiler.symTables[compiler.symnum >> 15] == nullptr) {
     if ((compiler.symnum >> 15) > 9) {
       dfs.printf("Too many symbols.\n");
       throw new C64PException(ERR_TOOMANY_SYMBOLS, 1);
     }
-    compiler.symTables[compiler.symnum >> 15] = (SYM*)calloc(32768, sizeof(SYM));
+    compiler.symTables[compiler.symnum >> 15] = (Symbol*)calloc(32768, sizeof(Symbol));
   }
-	SYM *sym = (SYM *)&compiler.symbolTable[compiler.symnum];
-	ZeroMemory(sym,sizeof(SYM));
+	Symbol *sym = (Symbol *)&compiler.symbolTable[compiler.symnum];
+	ZeroMemory(sym,sizeof(Symbol));
 	sym->id = compiler.symnum;
 	sym->name = new std::string("");
-	sym->name2 = new std::string("");
-	sym->name3 = new std::string("");
 	sym->shortname = new std::string("");
 	sym->lsyms.SetOwner(compiler.symnum);
   	compiler.symnum++;

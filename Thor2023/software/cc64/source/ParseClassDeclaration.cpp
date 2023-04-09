@@ -39,7 +39,7 @@ extern int16_t typeno;
 extern int isTypedef;
 extern std::string *classname;
 extern bool isPrivate;
-extern SYM *currentClass;
+extern Symbol *currentClass;
 
 extern int roundSize(TYP *tp);
 
@@ -60,14 +60,14 @@ extern int roundSize(TYP *tp);
 //
 int ClassDeclaration::Parse(int ztype)
 {
-    SYM *sp, *bcsp;
+    Symbol *sp, *bcsp;
 	int ret;
 	int psd;
 	ENODE nd;
 	ENODE *pnd = &nd;
 	char *idsave;
 	int alignment;
-  SYM *cls;
+  Symbol *cls;
 	
 	idsave = nullptr;
   cls = currentClass;
@@ -216,12 +216,12 @@ lxit:
 	return (ret);
 }
 
-void ClassDeclaration::ParseMembers(SYM *sym, int ztype)
+void ClassDeclaration::ParseMembers(Symbol *sym, int ztype)
 {
 	int slc;
 	TYP *tp = sym->tp;
 	int ist;
-	SYM *hsym;
+	Symbol *hsym;
 	std::string *name;
 
 	isPrivate = true;

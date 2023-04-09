@@ -25,7 +25,7 @@
 //
 #include "stdafx.h"
 
-Int128 GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simple integer value */
+Int128 GetIntegerExpression(ENODE **pnode, Symbol* symi, int opt=0)       /* simple integer value */
 { 
 	TYP *tp;
 	ENODE *node, *n2, *n3;
@@ -86,7 +86,7 @@ Int128 GetIntegerExpression(ENODE **pnode, SYM* symi, int opt=0)       /* simple
 	return (n2->i128);
 }
 
-Float128 *GetFloatExpression(ENODE **pnode, SYM* symi)
+Float128 *GetFloatExpression(ENODE **pnode, Symbol* symi)
 { 
 	TYP *tp;
 	ENODE *node;
@@ -123,7 +123,7 @@ Float128 *GetFloatExpression(ENODE **pnode, SYM* symi)
 	return (&node->f128);
 }
 
-Posit64 GetPositExpression(ENODE** pnode, SYM* symi)
+Posit64 GetPositExpression(ENODE** pnode, Symbol* symi)
 {
 	TYP* tp;
 	ENODE* node;
@@ -159,7 +159,7 @@ Posit64 GetPositExpression(ENODE** pnode, SYM* symi)
 	return (node->posit);
 }
 
-Int128 GetConstExpression(ENODE **pnode, SYM* symi)       /* simple integer value */
+Int128 GetConstExpression(ENODE **pnode, Symbol* symi)       /* simple integer value */
 {
 	TYP *tp;
 	ENODE *node;

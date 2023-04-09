@@ -29,9 +29,9 @@ extern TABLE tagtable;
 extern TYP *head;
 extern TYP stdconst;
 
-SYM* FindEnum(char *txt)
+Symbol* FindEnum(char *txt)
 {
-  SYM* sp;
+  Symbol* sp;
 
   sp = search(std::string(txt), &tagtable);
   if (sp == nullptr)
@@ -44,7 +44,7 @@ SYM* FindEnum(char *txt)
 
 void Declaration::ParseEnum(TABLE *table)
 {   
-	SYM *sp;
+	Symbol *sp;
   TYP *tp;
 	int amt = 1;
   bool power = false;
@@ -101,10 +101,10 @@ void Declaration::ParseEnum(TABLE *table)
   }
 }
 
-void Declaration::ParseEnumerationList(TABLE *table, int amt, SYM *parent, bool power)
+void Declaration::ParseEnumerationList(TABLE *table, int amt, Symbol *parent, bool power)
 {
 	int16_t evalue;
-  SYM *sp;
+  Symbol *sp;
   if (power)
     evalue = 1;
   else

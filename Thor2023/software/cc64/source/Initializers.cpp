@@ -50,7 +50,7 @@ static void pad(char *p, int n)
 	p[nn + 1] = '\0';
 }
 
-static bool IsFuncptrAssign(SYM* sp)
+static bool IsFuncptrAssign(Symbol* sp)
 {
 	if (sp->tp->type == bt_pointer) {
 		if (sp->tp->btpp->type == bt_func || sp->tp->btpp->type == bt_ifunc) {
@@ -62,7 +62,7 @@ static bool IsFuncptrAssign(SYM* sp)
 	return (false);
 }
 
-static void ProcessInitExp(SYM* sp, ENODE* n2)
+static void ProcessInitExp(Symbol* sp, ENODE* n2)
 {
 	int64_t val;
 	Int128 val128;
@@ -96,7 +96,7 @@ static void ProcessInitExp(SYM* sp, ENODE* n2)
 	ProcessInitExp(sp, n2->p[1]);
 }
 
-void doinit(SYM *sp)
+void doinit(Symbol *sp)
 {
 	static bool first = true;
 	static char workbuf[5000];
@@ -311,6 +311,7 @@ void doinit(SYM *sp)
 		}
 		hasPointer = false;
 		if (!IsFuncptrAssign(sp)) {
+			Symbol* s2;
 			hasPointer = sp->tp->FindPointer();
 			typ_sp = 0;
 			tp = sp->tp;
@@ -321,12 +322,14 @@ void doinit(SYM *sp)
 			brace_level = 0;
 			strncpy_s(lastid, sizeof(lastid), sp->name->c_str(), sizeof(lastid));
 			//gNameRefNode = exp.ParseNameRef(sp);
-			currentSym = sp;
+			s2 = currentSym;
+			//currentSym = sp;
 			exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
 			opt_const_unchecked(&node);			// This should reduce to a single integer expression
 			if (!node->AssignTypeToList(sp->tp)) {
 				error(ERR_CASTAGGR);
 			}
+			currentSym = s2;
 			sp->Initialize(node, nullptr, 1);
 			if (sp->tp->numele == 0) {
 				if (sp->tp->btpp) {
@@ -402,63 +405,63 @@ void doInitCleanup()
 	}
 }
 
-int64_t initbyte(SYM* symi, int opt)
+int64_t initbyte(Symbol* symi, int opt)
 {   
 	GenerateByte(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (1LL);
 }
 
-int64_t initchar(SYM* symi, int opt)
+int64_t initchar(Symbol* symi, int opt)
 {   
 	GenerateChar(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (2LL);
 }
 
-int64_t initshort(SYM* symi, int64_t i, int opt)
+int64_t initshort(Symbol* symi, int64_t i, int opt)
 {
 	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : i);
     return (4LL);
 }
 
-int64_t initint(SYM* symi, int64_t i, int opt)
+int64_t initint(Symbol* symi, int64_t i, int opt)
 {
 	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : i);
 	return (8LL);
 }
 
-int64_t initlong(SYM* symi, int opt)
+int64_t initlong(Symbol* symi, int opt)
 {
 	GenerateLong(opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i128 : *Int128::Zero());
     return (16LL);
 }
 
-int64_t initquad(SYM* symi, int opt)
+int64_t initquad(Symbol* symi, int opt)
 {
 	GenerateQuad(opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
 	return (16LL);
 }
 
-int64_t initfloat(SYM* symi, int opt)
+int64_t initfloat(Symbol* symi, int opt)
 {
 	GenerateFloat(opt ? GetFloatExpression((ENODE **)NULL, symi): symi->enode ? &symi->enode->f128 : &symi->f128);
 	return (8LL);
 }
 
-int64_t initPosit(SYM* symi, int opt)
+int64_t initPosit(Symbol* symi, int opt)
 {
 	GeneratePosit(opt ? GetPositExpression((ENODE**)NULL, symi) : 0);
 	return (8LL);
 }
 
-int64_t inittriple(SYM* symi, int opt)
+int64_t inittriple(Symbol* symi, int opt)
 {
 	GenerateQuad(opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
 	return (12LL);
 }
 
-int64_t InitializePointer(TYP *tp2, int opt, SYM* symi)
+int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 {   
-	SYM *sp;
+	Symbol *sp;
 	ENODE *n = nullptr;
 	int64_t lng;
 	TYP *tp;

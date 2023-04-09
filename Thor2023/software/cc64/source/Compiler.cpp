@@ -77,7 +77,7 @@ void Compiler::compile()
 {
 	GlobalDeclaration *gd;
 	int nn;
-	SYM* sp;
+	Symbol* sp;
 
 	dfs.printf("<compile>\n");
 	genst_cumulative = 0;
@@ -377,7 +377,7 @@ void Compiler::AddStandardTypes()
 
 void Compiler::AddBuiltinFunctions()
 {
-	SYM *sp;
+	Symbol *sp;
 	TypeArray tanew, tadelete;
 
 	sp = allocSYM();

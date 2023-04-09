@@ -54,10 +54,10 @@ int popcnt(int64_t m)
 	return (cnt);
 }
 
-std::string TraceName(SYM *sp)
+std::string TraceName(Symbol *sp)
 {
 	std::string namebuf;
-	SYM *vector[64];
+	Symbol *vector[64];
 	int deep = 0;
 
 	do {

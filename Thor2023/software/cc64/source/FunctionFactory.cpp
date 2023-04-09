@@ -1,7 +1,7 @@
 #include "stdafx.h"
 extern CSet* ru, * rru;
 
-Function* FunctionFactory::MakeFunction(int symnum, SYM* sp, bool isPascal)
+Function* FunctionFactory::MakeFunction(int symnum, Symbol* sp, bool isPascal)
 {
 	int count;
 

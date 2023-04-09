@@ -1,12 +1,12 @@
 #include "stdafx.h"
 
 extern int defaultcc;
-extern SYM* currentClass;
+extern Symbol* currentClass;
 extern ENODE* makenodei(int nt, ENODE* v1, int i);
-extern ENODE* makefcnode(int nt, ENODE* v1, ENODE* v2, SYM* sp);
+extern ENODE* makefcnode(int nt, ENODE* v1, ENODE* v2, Symbol* sp);
 extern ENODE* makefqnode(int nt, Float128* f128);
 extern TYP* CondDeref(ENODE** node, TYP* tp);
-extern int IsBeginningOfTypecast(int st);
+extern bool IsBeginningOfTypecast(int st);
 extern int NumericLiteral(ENODE*);
 
 Expression::Expression()
@@ -28,7 +28,7 @@ Expression::Expression()
 	parsingAggregate = 0;
 }
 
-Function* Expression::MakeFunction(int symnum, SYM* sym, bool isPascal) {
+Function* Expression::MakeFunction(int symnum, Symbol* sym, bool isPascal) {
 	Function* fn = compiler.ff.MakeFunction(symnum, sym, isPascal);
 	return (fn);
 };
@@ -124,7 +124,7 @@ TYP* Expression::ParseRealConst(ENODE** node)
 	return (tptr);
 }
 
-ENODE* Expression::ParsePositConst(ENODE** node)
+TYP* Expression::ParsePositConst(ENODE** node)
 {
 	ENODE* pnode;
 	TYP* tptr;
@@ -154,12 +154,13 @@ ENODE* Expression::ParsePositConst(ENODE** node)
 		pnode->esize = 8;
 		break;
 	}
+	*node = pnode;
 	pnode->SetType(tptr);
 	NextToken();
-	return (pnode);
+	return (tptr);
 }
 
-ENODE* Expression::ParseStringConst(ENODE** node)
+TYP* Expression::ParseStringConst(ENODE** node)
 {
 	char* str;
 	ENODE* pnode;
@@ -171,8 +172,8 @@ ENODE* Expression::ParseStringConst(ENODE** node)
 		tptr->size = strlen(str) + (int64_t)1;
 		tptr->btpp = TYP::Make(bt_char, 2);
 		tptr->btp = tptr->btpp->GetIndex();// stdchar.GetIndex();
-		tptr->val_flag = 1;
-		tptr->isUnsigned = TRUE;
+		tptr->val_flag = true;
+		tptr->isUnsigned = true;
 	}
 	else {
 		tptr = &stdstring;
@@ -181,12 +182,13 @@ ENODE* Expression::ParseStringConst(ENODE** node)
 	if (sizeof_flag == 0)
 		pnode->i = stringlit(str);
 	free(str);
+	*node = pnode;
 	pnode->etype = bt_pointer;
 	pnode->esize = 2;
-	pnode->constflag = TRUE;
+	pnode->constflag = true;
 	pnode->segment = rodataseg;
 	pnode->SetType(tptr);
-	return (pnode);
+	return (tptr);
 }
 
 ENODE* Expression::ParseInlineStringConst(ENODE** node)
@@ -298,7 +300,7 @@ ENODE* Expression::ParseThis(ENODE** node)
 	return (pnode);
 }
 
-TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
+TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 {
 	ENODE* pnode;
 	TYP* tptr;
@@ -309,11 +311,11 @@ TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
 	TYP* tptr2;
 	int64_t n;
 	int64_t pos = 0;
-	SYM* sp;
+	Symbol* sp;
 	int count;
 
 	NextToken();
-	pnode = nullptr;
+	cnode = pnode = nullptr;
 	parsingAggregate++;
 	head = tail = nullptr;
 	tptr2 = nullptr;
@@ -328,7 +330,10 @@ TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
 				while (pos < n && pos < 1000000) {
 					pnode = makenode(en_void, pnode, nullptr);
 					pnode->SetType(tptr2);
-					pnode->order = pnode->p[0]->order + 1;
+					if (pnode->p[0] == nullptr)
+						pnode->order = 0;
+					else
+						pnode->order = pnode->p[0]->order + 1;
 					pos++;
 				}
 			}
@@ -368,7 +373,10 @@ TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
 	// the value, not an aggregate list.
 	if (count < 2) {
 		*node = pnode;
-		return (pnode->tp);
+		if (pnode != nullptr && pnode->tp)
+			return (pnode->tp);
+		else
+			return (nullptr);
 	}
 	pnode = makenode(en_aggregate, pnode, nullptr);
 	pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
@@ -385,7 +393,7 @@ TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
 	return (pnode->tp);
 }
 
-TYP* Expression::ParseNameRef(ENODE** node, SYM* symi)
+TYP* Expression::ParseNameRef(ENODE** node, Symbol* symi)
 {
 	ENODE* pnode;
 	TYP* tptr;
@@ -469,7 +477,7 @@ TYP* Expression::ParseNameRef(ENODE** node, SYM* symi)
 	return (tptr);
 }
 
-TYP* Expression::ParseMinus(ENODE** node, SYM* symi)
+TYP* Expression::ParseMinus(ENODE** node, Symbol* symi)
 {
 	ENODE* ep1;
 	TYP* tp;
@@ -504,7 +512,7 @@ TYP* Expression::ParseMinus(ENODE** node, SYM* symi)
 	return (tp);
 }
 
-ENODE* Expression::ParseNot(SYM* symi)
+ENODE* Expression::ParseNot(Symbol* symi)
 {
 	ENODE* ep1;
 	TYP* tp;
@@ -523,7 +531,7 @@ ENODE* Expression::ParseNot(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseCom(SYM* symi)
+ENODE* Expression::ParseCom(Symbol* symi)
 {
 	ENODE* ep1;
 	TYP* tp;
@@ -542,12 +550,13 @@ ENODE* Expression::ParseCom(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseStar(SYM* symi)
+TYP* Expression::ParseStar(ENODE** node, Symbol* symi)
 {
 	ENODE* ep1;
 	TYP* tp, *tp1;
 	int typ;
 
+	*node = nullptr;
 	NextToken();
 	tp = ParseCastExpression(&ep1, symi);
 	if (tp == NULL) {
@@ -573,20 +582,22 @@ ENODE* Expression::ParseStar(SYM* symi)
 	tp1 = tp;
 	// Debugging?
 	if (tp->type == bt_pointer)
-		typ = tp->btpp->type;
+		if (tp->btpp)
+			typ = tp->btpp->type;
 	//Autoincdec(tp,&ep1);
+	*node = ep1;
 	tp = CondDeref(&ep1, tp);
 j1:
 	ep1->SetType(tp);
-	return (ep1);
+	return (tp);
 }
 
-ENODE* Expression::ParseSizeof(SYM* symi)
+ENODE* Expression::ParseSizeof(Symbol* symi)
 {
 	Declaration decl;
 	ENODE* ep1;
 	TYP* tp, * tp1;
-	SYM* sp;
+	Symbol* sp;
 	bool flag2 = false;
 
 	NextToken();
@@ -647,7 +658,7 @@ ENODE* Expression::ParseTypenum()
 	ENODE* ep1;
 	TYP* tp, * tp1;
 	Declaration decl;
-	SYM* sp;
+	Symbol* sp;
 
 	NextToken();
 	needpunc(openpa, 3);
@@ -671,12 +682,12 @@ ENODE* Expression::ParseTypenum()
 	return (ep1);
 }
 
-ENODE* Expression::ParseNew(bool autonew, SYM* symi)
+ENODE* Expression::ParseNew(bool autonew, Symbol* symi)
 {
 	ENODE* ep1, *ep2, * ep3, * ep4, * ep5;
 	TYP* tp, * tp1;
 	Declaration decl;
-	SYM* sp;
+	Symbol* sp;
 
 	std::string* name = new std::string(autonew ? "__autonew" : "__new");
 
@@ -730,7 +741,7 @@ ENODE* Expression::ParseNew(bool autonew, SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseDelete(SYM* symi)
+ENODE* Expression::ParseDelete(Symbol* symi)
 {
 	ENODE* ep1, *ep2;
 	TYP* tp;
@@ -754,7 +765,7 @@ ENODE* Expression::ParseDelete(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseAddressOf(SYM* symi)
+ENODE* Expression::ParseAddressOf(Symbol* symi)
 {
 	ENODE* ep1, * ep2;
 	TYP* tp, * tp1;
@@ -796,7 +807,7 @@ ENODE* Expression::ParseAddressOf(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseMulf(SYM* symi)
+ENODE* Expression::ParseMulf(Symbol* symi)
 {
 	ENODE* ep1, * ep2;
 	TYP* tp, * tp1, * tp2;
@@ -817,7 +828,7 @@ ENODE* Expression::ParseMulf(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseBytndx(SYM* symi)
+ENODE* Expression::ParseBytndx(Symbol* symi)
 {
 	ENODE* ep1, * ep2;
 	TYP* tp, * tp1, * tp2;
@@ -837,7 +848,7 @@ ENODE* Expression::ParseBytndx(SYM* symi)
 	return (ep1);
 }
 
-ENODE* Expression::ParseWydndx(SYM* symi)
+ENODE* Expression::ParseWydndx(Symbol* symi)
 {
 	ENODE* ep1, * ep2;
 	TYP* tp, * tp1, * tp2;
@@ -920,10 +931,10 @@ case kw_min:
 	break;
 */
 
-SYM* Expression::FindMember(TABLE* tbl, char* name)
+Symbol* Expression::FindMember(TABLE* tbl, char* name)
 {
 	int ii;
-	SYM* sp, * first, * mbr;
+	Symbol* sp, * first, * mbr;
 	TYP* tp;
 
 	ii = tbl->FindRising(name);
@@ -941,7 +952,7 @@ SYM* Expression::FindMember(TABLE* tbl, char* name)
 		return (nullptr);
 	}
 j1:
-	first = sp = SYM::GetPtr(tbl->head);
+	first = sp = Symbol::GetPtr(tbl->head);
 	do {
 		if (sp == nullptr)
 			break;
@@ -950,7 +961,7 @@ j1:
 		}
 		sp = sp->GetNextPtr();
 	} while (sp != first);
-	first = sp = SYM::GetPtr(tbl->head);
+	first = sp = Symbol::GetPtr(tbl->head);
 	do {
 		if (sp == nullptr)
 			break;
@@ -963,10 +974,10 @@ j1:
 	return (nullptr);
 }
 
-SYM* Expression::FindMember(TYP* tp1, char *name)
+Symbol* Expression::FindMember(TYP* tp1, char *name)
 {
 	int ii;
-	SYM* sp, * first, *mbr;
+	Symbol* sp, * first, *mbr;
 	TYP* tp;
 
 	ii = tp1->lst.FindRising(name);
@@ -984,7 +995,7 @@ SYM* Expression::FindMember(TYP* tp1, char *name)
 		return (nullptr);
 	}
 j1:
-	first = sp = SYM::GetPtr(tp1->lst.head);
+	first = sp = Symbol::GetPtr(tp1->lst.head);
 	do {
 		if (sp == nullptr)
 			break;
@@ -993,7 +1004,7 @@ j1:
 		}
 		sp = sp->GetNextPtr();
 	} while (sp != first);
-	first = sp = SYM::GetPtr(tp1->lst.head);
+	first = sp = Symbol::GetPtr(tp1->lst.head);
 	do {
 		if (sp == nullptr)
 			break;
@@ -1008,12 +1019,12 @@ j1:
 }
 
 
-ENODE* Expression::ParseDotOperator(TYP* tp1, ENODE *ep1, SYM* symi, ENODE* parent)
+ENODE* Expression::ParseDotOperator(TYP* tp1, ENODE *ep1, Symbol* symi, ENODE* parent)
 {
 	TypeArray typearray;
 	ENODE* ep2, * ep3, * qnode, *n1;
 	TYP* ptp1, * ptp2;
-	SYM* sp, *psp;
+	Symbol* sp, *psp;
 	char* name;
 	int ii;
 	bool iu;
@@ -1210,12 +1221,12 @@ xit:
 	return (ep1);
 }
 
-ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, SYM* symi)
+ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi)
 {
 	TypeArray typearray;
 	ENODE* ep2, * ep3, * ep4;
 	TYP* tp2, * tp3;
-	SYM* sp;
+	Symbol* sp;
 	char* name;
 
 	if (tp1 == NULL) {
@@ -1325,7 +1336,7 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 {
 	ENODE* pnode, * rnode, * qnode, * snode;
 	TYP* tp2, * tp3, * tp4;
-	SYM* sp1;
+	Symbol* sp1;
 	int cnt2;
 	int64_t elesize, sz1;
 	bool cf = false;	// constant flag
@@ -1521,7 +1532,7 @@ xit:
 	return (ep1);
 }
 
-ENODE* Expression::MakeStaticNameNode(SYM* sp)
+ENODE* Expression::MakeStaticNameNode(Symbol* sp)
 {
 	std::string stnm;
 	ENODE* node;
@@ -1552,7 +1563,7 @@ ENODE* Expression::MakeStaticNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeThreadNameNode(SYM* sp)
+ENODE* Expression::MakeThreadNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1566,7 +1577,7 @@ ENODE* Expression::MakeThreadNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeGlobalNameNode(SYM* sp)
+ENODE* Expression::MakeGlobalNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1585,7 +1596,7 @@ ENODE* Expression::MakeGlobalNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeExternNameNode(SYM* sp)
+ENODE* Expression::MakeExternNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1606,7 +1617,7 @@ ENODE* Expression::MakeExternNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeConstNameNode(SYM* sp)
+ENODE* Expression::MakeConstNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1627,7 +1638,7 @@ ENODE* Expression::MakeConstNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeMemberNameNode(SYM* sp)
+ENODE* Expression::MakeMemberNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1660,7 +1671,7 @@ ENODE* Expression::MakeMemberNameNode(SYM* sp)
 	return (node);
 }
 
-ENODE* Expression::MakeNameNode(SYM *sp)
+ENODE* Expression::MakeNameNode(Symbol *sp)
 {
 	ENODE* node;
 
@@ -1705,7 +1716,7 @@ ENODE* Expression::MakeNameNode(SYM *sp)
 	return (node);
 }
 
-ENODE* Expression::MakeAutoNameNode(SYM* sp)
+ENODE* Expression::MakeAutoNameNode(Symbol* sp)
 {
 	ENODE* node;
 
@@ -1751,7 +1762,7 @@ ENODE* Expression::MakeAutoNameNode(SYM* sp)
 ENODE* Expression::MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArray* typearray, ENODE* args)
 {
 	ENODE* node, * namenode;
-	SYM* sp;
+	Symbol* sp;
 
 	sp = allocSYM();
 	sp->fi = compiler.ff.MakeFunction(sp->id, sp, defaultcc == 1);

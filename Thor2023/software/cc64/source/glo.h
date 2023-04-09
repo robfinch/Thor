@@ -153,7 +153,7 @@ extern int parseEsc;
 extern TABLE            gsyms[257],
                         lsyms;
 extern TABLE            tagtable;
-extern SYM              *lasthead;
+extern Symbol              *lasthead;
 extern struct slit      *strtab;
 extern struct clit		*casetab;
 extern Float128		    *quadtab;
@@ -187,7 +187,7 @@ extern int opt_rv5;
 extern int exceptions;
 extern int mixedSource;
 extern Function *currentFn;
-extern SYM* currentSym;
+extern Symbol* currentSym;
 extern int iflevel;
 extern int foreverlevel;
 extern int looplevel;
@@ -284,7 +284,7 @@ extern void needpunc(enum e_sym p,int);
 // Memmgt.c
 extern void *allocx(int);
 extern char *xalloc(int);
-extern SYM *allocSYM();
+extern Symbol *allocSYM();
 extern TYP *allocTYP();
 extern Operand *allocOperand();
 extern ENODE *allocEnode();
@@ -304,12 +304,12 @@ extern void SkipSpaces();
 extern Statement *ParseCompoundStatement();
 
 // Symbol.c
-extern SYM *gsearch(std::string na);
-extern SYM *search(std::string na,TABLE *thead);
-extern void insert(SYM* sp, TABLE *table);
+extern Symbol *gsearch(std::string na);
+extern Symbol *search(std::string na,TABLE *thead);
+extern void insert(Symbol* sp, TABLE *table);
 
 // ParseFunction.c
-extern SYM *BuildParameterList(SYM *sp, int *);
+extern Symbol *BuildParameterList(Symbol *sp, int *);
 
 extern char *my_strdup(char *);
 // Decl.c
@@ -317,29 +317,29 @@ extern int imax(int i, int j);
 extern TYP *maketype(int bt, int siz);
 extern void dodecl(int defclass);
 extern int ParseParameterDeclarations(int);
-extern void ParseAutoDeclarations(SYM *sym, TABLE *table);
+extern void ParseAutoDeclarations(Symbol *sym, TABLE *table);
 extern int ParseSpecifier(TABLE *table);
-extern SYM* ParseDeclarationPrefix(char isUnion);
+extern Symbol* ParseDeclarationPrefix(char isUnion);
 extern int ParseStructDeclaration(int);
 extern void ParseEnumerationList(TABLE *table);
-extern int ParseFunction(SYM *sp);
-extern int declare(SYM *sym,TABLE *table,int al,int ilc,int ztype);
+extern int ParseFunction(Symbol *sp);
+extern int declare(Symbol *sym,TABLE *table,int al,int ilc,int ztype);
 extern void initstack();
 extern int getline(int listflag);
 extern void compile();
 
 // Init.c
-extern void doinit(SYM *sp);
+extern void doinit(Symbol *sp);
 // Func.c
-extern SYM *makeint(char *);
-extern void funcbody(SYM *sp);
+extern Symbol *makeint(char *);
+extern void funcbody(Symbol *sp);
 // Expr.c
-extern SYM *makeStructPtr(std::string name);
+extern Symbol *makeStructPtr(std::string name);
 extern ENODE *makenode(int nt, ENODE *v1, ENODE *v2);
 extern ENODE *makeinode(int nt, int64_t v1);
 extern ENODE *makesnode(int nt, std::string *v1, std::string *v2, int64_t i);
 extern TYP *nameref(ENODE **node,int);
-extern int IsLValue(ENODE *node);
+extern bool IsLValue(ENODE *node);
 extern Operand *GenerateExpression(ENODE *node, int flags, int size);
 extern int GetNaturalSize(ENODE *node);
 extern TYP *asnop(ENODE **node);
@@ -390,7 +390,7 @@ extern void MakeLegalOperand(Operand *ap,int flags, int size);
 // List.c
 extern void ListTable(TABLE *t, int i);
 
-extern void GenerateFunction(SYM *sym);
+extern void GenerateFunction(Symbol *sym);
 extern void GenerateReturn(Statement *stmt);
 
 extern Operand *GenerateBitfieldDereference(ENODE *node, int flags, int size);

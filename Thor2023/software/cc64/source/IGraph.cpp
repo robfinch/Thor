@@ -335,7 +335,7 @@ void IGraph::InsertArgumentMoves()
 {
 	int nn, mm, blk;
 	Var *v;
-	Tree *t;
+	Range *t;
 
 	for (nn = regFirstArg; nn <= regLastArg; nn++) {
 		mm = map.newnums[nn];

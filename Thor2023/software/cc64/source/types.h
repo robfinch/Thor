@@ -35,7 +35,7 @@ class Var;
 class CSE;
 class CSETable;
 class Operand;
-class SYM;
+class Symbol;
 class Function;
 class OCODE;
 class PeepList;
@@ -204,20 +204,20 @@ public:
 	int head, tail;
 	int base;
 	int owner;
-	SYM* headp, * tailp;
-	SYM* basep;
-	SYM* ownerp;
-	static SYM *match[100];
+	Symbol* headp, * tailp;
+	Symbol* basep;
+	Symbol* ownerp;
+	static Symbol *match[100];
 	static int matchno;
 	TABLE();
 	static void CopySymbolTable(TABLE *dst, TABLE *src);
-	void insert(SYM* sp);
-	SYM *Find(std::string na,bool opt);
-	SYM* Find(std::string na, bool opt, e_bt bt);
+	void insert(Symbol* sp);
+	Symbol *Find(std::string na,bool opt);
+	Symbol* Find(std::string na, bool opt, e_bt bt);
 	int Find(std::string na);
 	int Find(std::string na,__int16,TypeArray *typearray, bool exact);
 	int FindRising(std::string na);
-	SYM** GetParameters();
+	Symbol** GetParameters();
 	TABLE *GetPtr(int n);
 	void SetOwner(int n) { owner = n; };
 	int GetHead() { return head; };
@@ -297,63 +297,67 @@ public:
 	void storeHex(txtoStream& ofs);
 };
 
+// Class holding information about functions or methods. These fields were part
+// of the Symbol class at one point, but moved to their own class to conserve
+// storage space. Many symbols are not functions.
+
 class Function
 {
 public:
 	unsigned short int number;
-	unsigned int valid : 1;
-	unsigned int IsPrototype : 1;
-	unsigned int IsTask : 1;
-	unsigned int IsInterrupt : 1;
-	unsigned int DoesContextSave : 1;
-	unsigned int IsNocall : 1;
-	unsigned int IsPascal : 1;
-	unsigned int IsLeaf : 1;
-	unsigned int IsFar : 1;
-	unsigned int DoesThrow : 1;
-	unsigned int doesJAL : 1;
-	unsigned int UsesNew : 1;
-	unsigned int UsesPredicate : 1;
-	unsigned int IsVirtual : 1;
-	unsigned int IsInline : 1;
-	unsigned int IsUnknown : 1;
-	unsigned int UsesTemps : 1;		// uses temporary registers
-	unsigned int UsesStackParms : 1;
-	unsigned int hasSPReferences : 1;
-	unsigned int hasBPReferences : 1;
-	unsigned int hasGPReferences : 1;
-	unsigned int has_rodata : 1;
-	unsigned int has_data : 1;
-	unsigned int didRemoveReturnBlock : 1;
-	unsigned int retGenerated : 1;
-	unsigned int alloced : 1;
-	unsigned int hasAutonew : 1;
-	unsigned int alstk : 1;		// stack space was allocated with link
-	unsigned int hasParameters : 1;
-	unsigned int hasDefaultCatch : 1;	// programmer coded a default catch
-	unsigned int IsCoroutine : 1;
-	unsigned int UsesLoopCounter : 1;
-	uint8_t NumRegisterVars;
-	__int8 NumParms;
+	bool valid;
+	bool IsPrototype;
+	bool IsTask;
+	bool IsInterrupt;
+	bool DoesContextSave;
+	bool IsNocall;							// has no calling conventions
+	bool IsPascal;
+	bool IsLeaf;
+	bool IsFar;
+	bool DoesThrow;
+	bool doesJAL;
+	bool UsesNew;
+	bool UsesPredicate;					// deprecated
+	bool IsVirtual;
+	bool IsInline;
+	bool IsUnknown;
+	bool UsesTemps;							// uses temporary registers
+	bool UsesStackParms;
+	bool hasSPReferences;
+	bool hasBPReferences;				// frame pointer references
+	bool hasGPReferences;				// global pointer references
+	bool has_rodata;
+	bool has_data;
+	bool didRemoveReturnBlock;
+	bool retGenerated;
+	bool alloced;
+	bool hasAutonew;
+	bool alstk;									// stack space was allocated with link
+	bool hasParameters;
+	bool hasDefaultCatch;				// programmer coded a default catch
+	bool IsCoroutine;
+	bool UsesLoopCounter;
+	uint16_t NumRegisterVars;
+	__int8 NumParms;						// 256 max parameters
 	__int8 NumFixedAutoParms;
-	__int8 numa;			// number of stack parameters (autos)
-	int stkspace;					// stack space used by function
-	int64_t sp_init;					// initial SP for interrupt functions
+	__int8 numa;								// number of stack parameters (autos)
+	int64_t stkspace;						// stack space used by function
+	int64_t sp_init;						// initial SP for interrupt functions
 	int64_t argbot;
 	int64_t tempbot;
 	int64_t regvarbot;
-	TABLE proto;
+	TABLE proto;								// Table holding protoype information
 	TABLE params;
-	Statement *prolog;
-	Statement *epilog;
+	Statement* prolog;					// Function prolog
+	Statement* epilog;
 	Statement* body;
-	unsigned int stksize;
+	uint64_t stksize;
 	CSETable *csetbl;
-	SYM *sym;
-	SYM *parms;					      // List of parameters associated with symbol
-	SYM *nextparm;
-	DerivedMethod *derivitives;
-	CSet *mask, *rmask;
+	Symbol *sym;								// Associated Symbol data
+	Symbol *parms;					    // List of parameters associated with symbol
+	Symbol *nextparm;
+	DerivedMethod *derivitives;	
+	CSet *mask, *rmask;					// Register saved/restored masks
 	CSet *fpmask, *fprmask;
 	CSet* pmask, * prmask;
 	CSet *vmask, *vrmask;
@@ -361,8 +365,8 @@ public:
 	BasicBlock *LastBlock;
 	BasicBlock *ReturnBlock;
 	Var *varlist;
-	PeepList pl;					// under construction
-	OCODE *spAdjust;				// place where sp adjustment takes place
+	PeepList pl;							// under construction
+	OCODE *spAdjust;					// place where sp adjustment takes place
 	OCODE *rcode;
 	int64_t defCatchLabel;
 	int64_t tryCount;
@@ -385,10 +389,10 @@ public:
 	bool ProtoTypesMatch(TypeArray *typearray);
 	bool ParameterTypesMatch(Function *sym);
 	bool ParameterTypesMatch(TypeArray *typearray);
-	int BPLAssignReg(SYM* sp1, int reg, bool* noParmOffset);
+	int BPLAssignReg(Symbol* sp1, int reg, bool* noParmOffset);
 	void BuildParameterList(int *num, int*numa, int* ellipos);
-	void AddParameters(SYM *list);
-	void AddProto(SYM *list);
+	void AddParameters(Symbol *list);
+	void AddProto(Symbol *list);
 	void AddProto(TypeArray *);
 	void AddDerived();
 	void DoFuncptrAssign(Function *);
@@ -450,17 +454,17 @@ private:
 	void StackGPRs();
 };
 
-class SYM {
+// Class representing compiler symbols.
+
+class Symbol {
 public:
 	int number;
 	int id;
 	int parent;
-	SYM* parentp;
+	Symbol* parentp;
 	int next;
-	SYM* nextp;
+	Symbol* nextp;
 	std::string *name;
-	std::string *name2;
-	std::string *name3;
 	std::string *shortname;
 	std::string *mangledName;
 	char nameext[4];
@@ -474,15 +478,15 @@ public:
 	Function *fi;
 	// Auto's are handled by compound statements
 	TABLE lsyms;              // local symbols (goto labels)
-	unsigned int IsParameter : 1;
-	unsigned int IsRegister : 1;
-	unsigned int IsAuto : 1;
-	unsigned int isConst : 1;
-	unsigned int IsKernel : 1;
-	unsigned int IsPrivate : 1;
-	unsigned int IsUndefined : 1;  // undefined function
-	unsigned int ctor : 1;
-	unsigned int dtor : 1;
+	bool IsParameter;
+	bool IsRegister;
+	bool IsAuto;
+	bool isConst;
+	bool IsKernel;
+	bool IsPrivate;
+	bool IsUndefined;					// undefined function
+	bool ctor;
+	bool dtor;
 	ENODE *initexp;
 	__int16 reg;
 	ENODE* defval;	// default value
@@ -504,25 +508,23 @@ public:
 
 	Function* MakeFunction(int symnum, bool isPascal);
 	bool IsTypedef();
-	static SYM *Copy(SYM *src);
-	SYM *Find(std::string name);
+	static Symbol *Copy(Symbol *src);
+	Symbol *Find(std::string name);
 	int FindNextExactMatch(int startpos, TypeArray *);
-	SYM *FindRisingMatch(bool ignore = false);
-	SYM* FindInUnion(std::string nme);
+	Symbol *FindRisingMatch(bool ignore = false);
+	Symbol* FindInUnion(std::string nme);
 	std::string *GetNameHash();
 	std::string *BuildSignature(int opt);
-	static SYM *GetPtr(int n);
-	SYM *GetParentPtr();
+	static Symbol *GetPtr(int n);
+	Symbol *GetParentPtr();
 	void SetName(std::string nm) {
-       name = new std::string(nm);
-       name2 = new std::string(nm);
-       name3 = new std::string(nm);
-	   if (mangledName == nullptr)
-		   mangledName = new std::string(nm);
+    name = new std::string(nm);
+		if (mangledName == nullptr)
+			mangledName = new std::string(nm);
 	};
 	void SetNext(int nxt) { next = nxt; };
 	int GetNext() { return next; };
-	SYM *GetNextPtr();
+	Symbol *GetNextPtr();
 	int GetIndex();
 	void SetType(TYP *t) { 
 		if (t == (TYP *)0x500000005) {
@@ -541,6 +543,8 @@ public:
 	int64_t GenerateT(ENODE* node);
 	void storeHex(txtoStream& ofs);
 };
+
+// Class representing compiler types.
 
 class TYP {
 public:
@@ -578,6 +582,7 @@ public:
 	static TYP *Make(int bt, int64_t siz);
 	static TYP *Copy(TYP *src);
 	bool IsScalar();
+	static bool IsScalar(e_sym kw);
 	bool IsFloatType() const { 
 		if (this == nullptr)
 			return (false);
@@ -606,11 +611,11 @@ public:
 
 	// Initialization
 	int64_t GenerateT(ENODE *node);
-	int64_t InitializeArray(int64_t sz, SYM* symi);
-	int64_t InitializeStruct(ENODE*, SYM* symi);
-	int64_t InitializeUnion(SYM* symi, ENODE* node);
-	int64_t Initialize(int64_t val, SYM* symi);
-	int64_t Initialize(ENODE* node, TYP *, int opt, SYM* symi);
+	int64_t InitializeArray(int64_t sz, Symbol* symi);
+	int64_t InitializeStruct(ENODE*, Symbol* symi);
+	int64_t InitializeUnion(Symbol* symi, ENODE* node);
+	int64_t Initialize(int64_t val, Symbol* symi);
+	int64_t Initialize(ENODE* node, TYP *, int opt, Symbol* symi);
 
 	// Serialization
 	void storeHex(txtoStream& ofs);
@@ -649,26 +654,27 @@ class ENODE {
 public:
 	static int segcount[16];
 public:
-	int number;
-	int order;
+	int number;										// number of this node for reference
+	int order;										// list ordering for initializers
 	enum e_node nodetype;
 	enum e_node new_nodetype;			// nodetype replaced by optimization
+
 	int etype;
 	TYP* etypep;
 	int64_t esize;
 	TYP* tp;
-	SYM* sym;
-	bool constflag;
+	Symbol* sym;									// pointer to symbol referenced by node
+	bool constflag;								// the node contains a constant value
 	unsigned int segment : 4;
-	unsigned int predreg : 4;
-	unsigned int isVolatile : 1;
-	unsigned int isIO : 1;
-	unsigned int isUnsigned : 1;
-	unsigned int isCheckExpr : 1;
-	unsigned int isPascal : 1;
-	unsigned int isAutonew : 1;
-	unsigned int isNeg : 1;
-	unsigned int argref : 1;		// argument reference
+	unsigned int predreg : 6;
+	bool isVolatile;
+	bool isIO;
+	bool isUnsigned;
+	bool isCheckExpr;
+	bool isPascal;
+	bool isAutonew;
+	bool isNeg;
+	bool argref;									// argument reference
 	ENODE* vmask;
 	ENODE* bit_width;
 	ENODE* bit_offset;
@@ -676,7 +682,9 @@ public:
 	short int rg;
 	// The following could be in a value union
 	// Under construction: use value class
-	Value val;
+//	Value val;
+	// The value information is represented directly in the class for several
+	// classes for convenience in referencing.
 	int64_t i;
 	double f;
 	double f1, f2;
@@ -688,7 +696,7 @@ public:
 	std::string* udnm;			// undecorated name
 	void* ctor;
 	void* dtor;
-	ENODE* p[5];
+	ENODE* p[4];
 	ENODE* pfl;			// postfix list
 
 	ENODE* Clone();
@@ -696,7 +704,7 @@ public:
 	void SetType(TYP* t) { 
 		if (t == (TYP*)1)
 			printf("hello");
-		if (this) { tp = t; if (t) etype = t->type; val.typ = tp; } };
+		if (this) { tp = t; if (t) etype = t->type; } };
 	bool IsPtr() { return (etype == bt_pointer || etype == bt_struct || etype == bt_union || etype == bt_class || nodetype == en_addrof); };
 	bool IsFloatType() { return (nodetype == en_addrof || nodetype == en_autofcon) ? false : (etype == bt_double || etype == bt_quad || etype == bt_float); };
 	bool IsPositType() {
@@ -801,6 +809,9 @@ public:
 	void Dump(int pn = 0);
 };
 
+// Class to allow representing a set of expression nodes as a linear list
+// rather than as a tree. Useful for initializations.
+
 class List
 {
 public:
@@ -863,34 +874,34 @@ public:
 private:
 	void SetRefType(ENODE** node);
 	ENODE* SetIntConstSize(TYP* tptr, int64_t val);
-	ENODE *ParseArgumentList(ENODE *hidden, TypeArray *typearray, SYM* symi);
+	ENODE *ParseArgumentList(ENODE *hidden, TypeArray *typearray, Symbol* symi);
 	TYP* ParseCharConst(ENODE** node, int sz);
-	ENODE* ParseStringConst(ENODE** node);
+	TYP* ParseStringConst(ENODE** node);
 	ENODE* ParseStringConstWithSizePrefix(ENODE** node);
 	ENODE* ParseInlineStringConst(ENODE** node);
 	TYP* ParseRealConst(ENODE** node);
-	ENODE* ParsePositConst(ENODE** node);
+	TYP* ParsePositConst(ENODE** node);
 	ENODE* ParseAggregateConst(ENODE** node);
 	TYP* ParseFloatMax(ENODE** node);
 	ENODE* ParseThis(ENODE** node);
-	TYP* ParseAggregate(ENODE** node, SYM* typi);
+	TYP* ParseAggregate(ENODE** node, Symbol* typi);
 	ENODE* ParseTypenum();
-	ENODE* ParseNew(bool autonew, SYM* symi);
-	ENODE* ParseDelete(SYM* symi);
-	ENODE* ParseAddressOf(SYM* symi);
-	ENODE* ParseMulf(SYM* symi);
-	ENODE* ParseBytndx(SYM* symi);
-	ENODE* ParseWydndx(SYM* symi);
+	ENODE* ParseNew(bool autonew, Symbol* symi);
+	ENODE* ParseDelete(Symbol* symi);
+	ENODE* ParseAddressOf(Symbol* symi);
+	ENODE* ParseMulf(Symbol* symi);
+	ENODE* ParseBytndx(Symbol* symi);
+	ENODE* ParseWydndx(Symbol* symi);
 	// Unary Expression Parsing
-	TYP* ParseMinus(ENODE** node, SYM* symi);
-	ENODE* ParseNot(SYM* symi);
-	ENODE* ParseCom(SYM* symi);
-	ENODE* ParseStar(SYM* symi);
-	ENODE* ParseSizeof(SYM* symi);
+	TYP* ParseMinus(ENODE** node, Symbol* symi);
+	ENODE* ParseNot(Symbol* symi);
+	ENODE* ParseCom(Symbol* symi);
+	TYP* ParseStar(ENODE** node, Symbol* symi);
+	ENODE* ParseSizeof(Symbol* symi);
 
-	ENODE* ParseDotOperator(TYP* tp1, ENODE* ep1, SYM* symi, ENODE* parent);
+	ENODE* ParseDotOperator(TYP* tp1, ENODE* ep1, Symbol* symi, ENODE* parent);
 	ENODE* ParsePointsTo(TYP* tp1, ENODE* ep1);
-	ENODE* ParseOpenpa(TYP* tp1, ENODE* ep1, SYM* symi);
+	ENODE* ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi);
 	ENODE* ParseOpenbr(TYP*tp1, ENODE* ep1);
 	ENODE* AdjustForBitArray(int pop, TYP* tp1, ENODE* ep1);
 
@@ -898,57 +909,58 @@ private:
 
 	TYP* deref(ENODE** node, TYP* tp);
 
-	TYP *ParsePrimaryExpression(ENODE **node, int got_pa, SYM* symi);
-	TYP *ParseCastExpression(ENODE **node, SYM* symi);
-	TYP *ParseMultOps(ENODE **node, SYM* symi);
-	TYP *ParseAddOps(ENODE **node, SYM* symi);
-	TYP *ParseShiftOps(ENODE **node, SYM* symi);
-	TYP *ParseRelationalOps(ENODE **node, SYM* symi);
-	TYP *ParseEqualOps(ENODE **node, SYM* symi);
-	TYP *ParseBitwiseAndOps(ENODE **node, SYM* symi);
-	TYP *ParseBitwiseXorOps(ENODE **node, SYM* symi);
-	TYP *ParseBitwiseOrOps(ENODE **node, SYM* symi);
-	TYP *ParseAndOps(ENODE **node, SYM* symi);
-	TYP *ParseSafeAndOps(ENODE **node, SYM* symi);
-	TYP *ParseOrOps(ENODE **node, SYM* symi);
-	TYP *ParseSafeOrOps(ENODE **node, SYM* symi);
-	TYP *ParseConditionalOps(ENODE **node, SYM* symi);
-	TYP *ParseCommaOp(ENODE **node, SYM* symi);
-	ENODE* MakeNameNode(SYM* sym);
-	ENODE* MakeStaticNameNode(SYM* sym);
-	ENODE* MakeThreadNameNode(SYM* sp);
-	ENODE* MakeGlobalNameNode(SYM* sp);
-	ENODE* MakeExternNameNode(SYM* sp);
-	ENODE* MakeConstNameNode(SYM* sp);
-	ENODE* MakeMemberNameNode(SYM* sp);
+	TYP *ParsePrimaryExpression(ENODE **node, int got_pa, Symbol* symi);
+	TYP *ParseCastExpression(ENODE **node, Symbol* symi);
+	TYP *ParseMultOps(ENODE **node, Symbol* symi);
+	TYP *ParseAddOps(ENODE **node, Symbol* symi);
+	TYP *ParseShiftOps(ENODE **node, Symbol* symi);
+	TYP *ParseRelationalOps(ENODE **node, Symbol* symi);
+	TYP *ParseEqualOps(ENODE **node, Symbol* symi);
+	TYP *ParseBitwiseAndOps(ENODE **node, Symbol* symi);
+	TYP *ParseBitwiseXorOps(ENODE **node, Symbol* symi);
+	TYP *ParseBitwiseOrOps(ENODE **node, Symbol* symi);
+	TYP *ParseAndOps(ENODE **node, Symbol* symi);
+	TYP *ParseSafeAndOps(ENODE **node, Symbol* symi);
+	TYP *ParseOrOps(ENODE **node, Symbol* symi);
+	TYP *ParseSafeOrOps(ENODE **node, Symbol* symi);
+	TYP *ParseConditionalOps(ENODE **node, Symbol* symi);
+	TYP *ParseCommaOp(ENODE **node, Symbol* symi);
+	ENODE* MakeNameNode(Symbol* sym);
+	ENODE* MakeStaticNameNode(Symbol* sym);
+	ENODE* MakeThreadNameNode(Symbol* sp);
+	ENODE* MakeGlobalNameNode(Symbol* sp);
+	ENODE* MakeExternNameNode(Symbol* sp);
+	ENODE* MakeConstNameNode(Symbol* sp);
+	ENODE* MakeMemberNameNode(Symbol* sp);
 	ENODE* MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArray* typearray, ENODE* args);
-	void DerefBit(ENODE** node, TYP* tp, SYM* sp);
-	void DerefByte(ENODE** node, TYP* tp, SYM* sp);
-	void DerefUnsignedByte(ENODE** node, TYP* tp, SYM* sp);
-	void DerefFloat(ENODE** node, TYP* tp, SYM* sp);
-	void DerefDouble(ENODE** node, TYP* tp, SYM* sp);
-	void DerefPosit(ENODE** node, TYP* tp, SYM* sp);
-	void DerefBitfield(ENODE** node, TYP* tp, SYM* sp);
+	void DerefBit(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefByte(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefUnsignedByte(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefFloat(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefDouble(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefPosit(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefBitfield(ENODE** node, TYP* tp, Symbol* sp);
 	ENODE* FindLastMulu(ENODE*, ENODE*);
 public:
 	Expression();
-	TYP* ParseNameRef(ENODE** node, SYM* symi);
-	TYP* ParseUnaryExpression(ENODE** node, int got_pa, SYM* symi);
+	TYP* ParseNameRef(ENODE** node, Symbol* symi);
+	TYP* ParseUnaryExpression(ENODE** node, int got_pa, Symbol* symi);
 	TYP* CondDeref(ENODE** node, TYP* tp);
-	ENODE* MakeAutoNameNode(SYM* sp);
-	TYP* nameref(ENODE** node, int nt, SYM* symi);
-	TYP* nameref2(std::string name, ENODE** node, int nt, bool alloc, TypeArray* typearray, TABLE* tbl, SYM* symi);
+	ENODE* MakeAutoNameNode(Symbol* sp);
+	TYP* nameref(ENODE** node, int nt, Symbol* symi);
+	TYP* nameref2(std::string name, ENODE** node, int nt, bool alloc, TypeArray* typearray, TABLE* tbl, Symbol* symi);
 	// The following is called from declaration processing, so is made public
-	TYP *ParseAssignOps(ENODE **node, SYM* symi);
-	TYP* ParsePostfixExpression(ENODE** node, int got_pa, SYM* symi);
-	TYP *ParseNonCommaExpression(ENODE **node, SYM* symi);
-	TYP* ParseNonAssignExpression(ENODE** node, SYM* symi);
+	TYP *ParseAssignOps(ENODE **node, Symbol* symi);
+	TYP* ParsePostfixExpression(ENODE** node, int got_pa, Symbol* symi);
+	TYP *ParseNonCommaExpression(ENODE **node, Symbol* symi);
+	TYP* ParseNonAssignExpression(ENODE** node, Symbol* symi);
 	//static TYP *ParseBinaryOps(ENODE **node, TYP *(*xfunc)(ENODE **), int nt, int sy);
-	TYP *ParseExpression(ENODE **node, SYM* symi);
-	Function* MakeFunction(int symnum, SYM* sp, bool isPascal);
-	SYM* FindMember(TYP* tp1, char* name);
-	SYM* FindMember(TABLE* tbl, char* name);
+	TYP *ParseExpression(ENODE **node, Symbol* symi);
+	Function* MakeFunction(int symnum, Symbol* sp, bool isPascal);
+	Symbol* FindMember(TYP* tp1, char* name);
+	Symbol* FindMember(TABLE* tbl, char* name);
 };
+
 
 class Operand : public CompilerType
 {
@@ -957,29 +969,29 @@ public:
 	unsigned int mode;
 	unsigned int preg : 12;		// primary virtual register number
 	unsigned int sreg : 12;		// secondary virtual register number (indexed addressing modes)
-	unsigned int pcolored : 1;
-	unsigned int scolored : 1;
+	bool pcolored;
+	bool scolored;
 	unsigned short int pregs;	// subscripted register number
 	unsigned short int sregs;
 	unsigned int segment : 4;
 	unsigned int defseg : 1;
-	unsigned int tempflag : 1;
-	unsigned int memref : 1;
-	unsigned int argref : 1;	// refers to a function argument
-	unsigned int preserveNextReg : 1;
+	bool tempflag;
+	bool memref;
+	bool argref;							// refers to a function argument
+	bool preserveNextReg;
 	unsigned int type : 16;
 	TYP* typep;
 	TYP* tp;
 	char FloatSize;
-	unsigned int isUnsigned : 1;
+	bool isUnsigned;
 	unsigned int lowhigh : 2;
-	unsigned int isVolatile : 1;
-	unsigned int isPascal : 1;
+	bool isVolatile;
+	bool isPascal;
 	unsigned int rshift : 8;
-	unsigned int isPtr : 1;
-	unsigned int isConst : 1;
-	unsigned int isBool : 1;
-	unsigned int rhs : 1;
+	bool isPtr;
+	bool isConst;
+	bool isBool;
+	bool rhs;
 	short int pdeep;		// previous stack depth on allocation
 	short int deep;           /* stack depth on allocation */
 	short int deep2;
@@ -1124,7 +1136,7 @@ public:
 class FunctionFactory : public Factory
 {
 public:
-	Function* MakeFunction(int symnum, SYM* sp, bool isPascal);
+	Function* MakeFunction(int symnum, Symbol* sp, bool isPascal);
 };
 
 class CodeGenerator
@@ -1429,8 +1441,8 @@ public:
 	int newnums[3072];
 };
 
-// A "tree" is a "range" in Briggs terminology
-class Tree : public CompilerType
+// A "range" in Briggs terminology
+class Range : public CompilerType
 {
 public:
 	int var;
@@ -1450,8 +1462,8 @@ public:
 	float cost;
 	static int treeno;
 public:
-	Tree() { };
-	static Tree *MakeNew();
+	Range() { };
+	static Range *MakeNew();
 	void ClearCosts();
 	float SelectRatio() { return (cost / (float)degree); };
 };
@@ -1460,7 +1472,7 @@ class Forest
 {
 public:
 	short int treecount;
-	Tree *trees[1032];
+	Range *trees[1032];
 	Function *func;
 	CSet low, high;
 	IntStack *stk;
@@ -1477,8 +1489,8 @@ public:
 	Var *var;
 public:
 	Forest();
-	Tree *MakeNewTree();
-	Tree *PlantTree(Tree *t);
+	Range *MakeNewTree();
+	Range *PlantTree(Range *t);
 	void ClearCosts() {
 		int r;
 		for (r = 0; r < treecount; r++)
@@ -1526,7 +1538,7 @@ public:
 	static int nvar;
 public:
 	static Var *MakeNew();
-	void GrowTree(Tree *, BasicBlock *);
+	void GrowTree(Range *, BasicBlock *);
 	// Create a forest for a specific Var
 	void CreateForest();
 	// Create a forest for each Var object
@@ -1834,10 +1846,10 @@ public:
 class Declaration
 {
 private:
-	void SetType(SYM* sp);
+	void SetType(Symbol* sp);
 	int decl_level; 
 	int pa_level;
-	SYM* CreateNonameVar();
+	Symbol* CreateNonameVar();
 	bool isTypedefs[100];
 public:
 	bool isTypedef;
@@ -1855,9 +1867,9 @@ public:
 	Declaration();
 	Declaration *next;
 	void AssignParameterName();
-	int declare(SYM *parent,TABLE *table,e_sc al,int ilc,int ztype, SYM** symo);
-	int declare(SYM* parent, int ilc, int ztype, SYM** symo);
-	void ParseEnumerationList(TABLE *table, int amt, SYM *parent, bool power);
+	int declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo);
+	int declare(Symbol* parent, int ilc, int ztype, Symbol** symo);
+	void ParseEnumerationList(TABLE *table, int amt, Symbol *parent, bool power);
 	void ParseEnum(TABLE *table);
 	void ParseVoid();
 	void ParseInterrupt();
@@ -1868,7 +1880,7 @@ public:
 	void ParseLong();
 	void ParseBool();
 	void ParseBit();
-	void ParseInt();
+	void ParseInt(bool nt = true);
 	void ParseInt64();
 	void ParseInt32();
 	void ParseChar();
@@ -1880,50 +1892,50 @@ public:
 	void ParseFloat128();
 	void ParsePosit();
 	void ParseClass();
-	int ParseStruct(TABLE* table, e_bt typ, SYM** sym);
+	int ParseStruct(TABLE* table, e_bt typ, Symbol** sym);
 	void ParseVector();
 	void ParseVectorMask();
-	SYM *ParseId();
-	void ParseDoubleColon(SYM *sp);
+	Symbol *ParseId();
+	void ParseDoubleColon(Symbol *sp);
 	void ParseBitfieldSpec(bool isUnion);
-	int ParseSpecifier(TABLE* table, SYM** sym, e_sc sc);
-	SYM *ParsePrefixId(SYM*);
-	SYM *ParsePrefixOpenpa(bool isUnion, SYM*);
-	SYM *ParsePrefix(bool isUnion,SYM*);
+	int ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc);
+	Symbol *ParsePrefixId(Symbol*);
+	Symbol *ParsePrefixOpenpa(bool isUnion, Symbol*);
+	Symbol *ParsePrefix(bool isUnion,Symbol*);
 	void ParseSuffixOpenbr();
 	Function* ParseSuffixOpenpa(Function *);
-	SYM *ParseSuffix(SYM *sp);
+	Symbol *ParseSuffix(Symbol *sp);
 	static void ParseFunctionAttribute(Function *sym);
-	int ParseFunction(TABLE* table, SYM* sp, e_sc al);
+	int ParseFunction(TABLE* table, Symbol* sp, e_sc al);
 	Function* ParseFunctionJ2(Function* fn);
 	void ParseCoroutine();
-	void ParseAssign(SYM *sp);
-	void DoDeclarationEnd(SYM *sp, SYM *sp1);
-	void DoInsert(SYM *sp, TABLE *table);
-	SYM *FindSymbol(SYM *sp, TABLE *table);
+	void ParseAssign(Symbol *sp);
+	void DoDeclarationEnd(Symbol *sp, Symbol *sp1);
+	void DoInsert(Symbol *sp, TABLE *table);
+	Symbol *FindSymbol(Symbol *sp, TABLE *table);
 
 	int GenerateStorage(int nbytes, int al, int ilc);
-	static Function* MakeFunction(int symnum, SYM* sym, bool isPascal, bool isInline);
-	static void MakeFunction(SYM* sp, SYM* sp1);
-	void FigureStructOffsets(int64_t bgn, SYM* sp);
+	static Function* MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline);
+	static void MakeFunction(Symbol* sp, Symbol* sp1);
+	void FigureStructOffsets(int64_t bgn, Symbol* sp);
 };
 
 class StructDeclaration : public Declaration
 {
 private:
-	SYM* isym;
+	Symbol* isym;
 private:
-	int ParseTag(TABLE* table, e_bt ztype, SYM** sym);
-	SYM* CreateSymbol(char* nmbuf, TABLE* table, e_bt ztype, int* ret);
+	int ParseTag(TABLE* table, e_bt ztype, Symbol** sym);
+	Symbol* CreateSymbol(char* nmbuf, TABLE* table, e_bt ztype, int* ret);
 public:
 	StructDeclaration() { Declaration(); };
 	void GetType(TYP** hd, TYP** tl) {
 		*hd = head; *tl = tail;
 	};
-	void ParseAttribute(SYM* sym);
-	void ParseAttributes(SYM* sym);
-	void ParseMembers(SYM* sym, int ztype);
-	int Parse(TABLE* table, int ztype, SYM** sym);
+	void ParseAttribute(Symbol* sym);
+	void ParseAttributes(Symbol* sym);
+	void ParseMembers(Symbol* sym, int ztype);
+	int Parse(TABLE* table, int ztype, Symbol** sym);
 };
 
 class ClassDeclaration : public Declaration
@@ -1932,14 +1944,14 @@ public:
 	void GetType(TYP** hd, TYP** tl) {
 		*hd = head; *tl = tail;
 	};
-	void ParseMembers(SYM * sym, int ztype);
+	void ParseMembers(Symbol * sym, int ztype);
 	int Parse(int ztype);
 };
 
 class AutoDeclaration : public Declaration
 {
 public:
-	ENODE* Parse(SYM *parent, TABLE *ssyms);
+	ENODE* Parse(Symbol *parent, TABLE *ssyms);
 };
 
 class ParameterDeclaration : public Declaration
@@ -1964,8 +1976,8 @@ public:
 	int typenum;
 	int symnum;
 	short int funcnum;
-	SYM symbolTable[32768];
-	SYM* symTables[10];
+	Symbol symbolTable[32768];
+	Symbol* symTables[10];
 	Function functionTable[3000];
 	TYP typeTable[32768];
 	OperandFactory of;

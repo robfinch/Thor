@@ -26,14 +26,14 @@
 #include "stdafx.h"
 
 extern char *prefix;
-SYM *search2(char *na,TABLE *tbl,TypeArray *typearray);
+Symbol *search2(char *na,TABLE *tbl,TypeArray *typearray);
 uint8_t hashadd(char *nm);
 
 #ifndef min
 int min (int a, int b) { return a < b ? a : b; }
 #endif
 
-SYM *TABLE::match[100];
+Symbol *TABLE::match[100];
 int TABLE::matchno;
 
 TABLE::TABLE()
@@ -51,7 +51,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 	int count = 0;
 	static int level = 0;
 
-	SYM *sp, *newsym, *first, *next;
+	Symbol *sp, *newsym, *first, *next;
 	level++;
 	dfs.puts("<CopySymbolTable>\n");
 	if (src) {
@@ -59,7 +59,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 		first = sp = sp->GetPtr(src->GetHead());
 		while (sp) {
   	  dfs.printf("B");
-			newsym = SYM::Copy(sp);
+			newsym = Symbol::Copy(sp);
   	  dfs.printf("C");
 			dst->insert(newsym);
 			if (newsym->tp->IsStructType()) {
@@ -83,7 +83,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 
 //Generic table insert routine, used for all inserts.
 
-void TABLE::insert(SYM *sp)
+void TABLE::insert(Symbol *sp)
 {
 	int nn;
 	TypeArray *ta = nullptr;
@@ -92,8 +92,8 @@ void TABLE::insert(SYM *sp)
 	TABLE *tab = this;
 	int s1,s2,s3;
 	std::string nm;
-	SYM *sp1;
-	SYM* sp2;
+	Symbol *sp1;
+	Symbol* sp2;
 //  std::string sig;
 
 	if (sp == nullptr || this == nullptr ) {
@@ -106,16 +106,16 @@ void TABLE::insert(SYM *sp)
   }
   else
     dfs.printf((char *)"Insert %s into %p", (char *)sp->name->c_str(), (char *)this);
-		sp2 = SYM::GetPtr(owner);
+		sp2 = Symbol::GetPtr(owner);
 		if (sp2 != nullptr)
 			if (sp2->name != nullptr)
-				dfs.printf("(%s)\n",owner ? (char *)SYM::GetPtr(owner)->name->c_str(): (char *)"");
+				dfs.printf("(%s)\n",owner ? (char *)Symbol::GetPtr(owner)->name->c_str(): (char *)"");
 //  sig = sp->BuildSignature();
 	if (tab==&gsyms[0]) {
 	  dfs.printf("Insert into global table\n");
 		s1 = hashadd((char *)sp->name->c_str());
-		s2 = hashadd((char *)sp->name2->c_str());
-		s3 = hashadd((char *)sp->name3->c_str());
+		//s2 = hashadd((char *)sp->name2->c_str());
+		//s3 = hashadd((char *)sp->name3->c_str());
 //		tab = &gsyms[(s1&s2)|(s1&s3)|(s2&s3)];
 		tab = &gsyms[s1];
 	}
@@ -177,7 +177,7 @@ j1:
 
 int TABLE::Find(std::string na,__int16 rettype, TypeArray *typearray, bool exact)
 {
-	SYM *thead, *first;
+	Symbol *thead, *first;
 	TypeArray *ta;
 	int s1,s2,s3;
 	std::string name;
@@ -212,12 +212,12 @@ int TABLE::Find(std::string na,__int16 rettype, TypeArray *typearray, bool exact
 		if (thead->name) {	// ???
     name = *thead->name;
 		s1 = thead->name->compare(na);
-		s2 = thead->name2->compare(na);
-		s3 = thead->name3->compare(na);
+		//s2 = thead->name2->compare(na);
+		//s3 = thead->name3->compare(na);
 //		dfs.printf("s1:%d ",s1);
 //		dfs.printf("s2:%d ",s2);
 //		dfs.printf("s3:%d\n",s3);
-		if(((s1&s2)|(s1&s3)|(s2&s3))==0) {
+		if (s1==0) { //((s1&s2)|(s1&s3)|(s2&s3))==0) {
 		  dfs.printf(":Match");
 			match[matchno] = thead;
 			matchno++;
@@ -286,10 +286,10 @@ int TABLE::Find(std::string na)
 int TABLE::FindRising(std::string na)
 {
 	int sp;
-  SYM *sym;
+  Symbol *sym;
   int bse;
-	SYM* bsep;
-  static SYM *mt[110];
+	Symbol* bsep;
+  static Symbol *mt[110];
   int nn, ii;
   int ndx;
   TypeArray *ta;
@@ -300,7 +300,7 @@ int TABLE::FindRising(std::string na)
     return 0;
 	sp = Find(na);
 	nn = min(100,ndx+TABLE::matchno);
-	memcpy(&mt[0],TABLE::match,nn*sizeof(SYM *));
+	memcpy(&mt[0],TABLE::match,nn*sizeof(Symbol *));
 	ndx += nn;
 	bse = base;
 	bsep = basep;
@@ -309,13 +309,13 @@ int TABLE::FindRising(std::string na)
 	  dfs.printf("Searching class:%s \n",(char *)sym->name->c_str());
 		sp = sym->tp->lst.Find(na);
   	nn = min(100,ndx+TABLE::matchno);
-  	memcpy(&mt[ndx],TABLE::match,nn*sizeof(SYM *));
+  	memcpy(&mt[ndx],TABLE::match,nn*sizeof(Symbol *));
   	ndx += nn;
 		bsep = sym->tp->lst.basep;
 	}
 	dfs.puts("</FindRising>");
 
-  memcpy(TABLE::match,mt,ndx*sizeof(SYM *));
+  memcpy(TABLE::match,mt,ndx*sizeof(Symbol *));
   TABLE::matchno = ndx;
   for (nn = 0; nn < ndx; nn++) {
     sym = TABLE::match[nn];
@@ -338,7 +338,7 @@ int TABLE::FindRising(std::string na)
   return (ndx);
 }
 
-SYM *TABLE::Find(std::string na, bool opt)
+Symbol *TABLE::Find(std::string na, bool opt)
 {
 	Find(na,(__int16)bt_int,nullptr,false);
 	if (matchno==0)
@@ -346,11 +346,11 @@ SYM *TABLE::Find(std::string na, bool opt)
 	return (match[matchno-1]);
 }
 
-SYM* TABLE::Find(std::string na, bool opt, e_bt bt)
+Symbol* TABLE::Find(std::string na, bool opt, e_bt bt)
 {
-	SYM* sp;
+	Symbol* sp;
 
-	for (sp = SYM::GetPtr(head); sp; sp = sp->GetNextPtr()) {
+	for (sp = Symbol::GetPtr(head); sp; sp = sp->GetNextPtr()) {
 		if (sp->name->compare(na) == 0) {
 			if (sp->tp) {
 				if (sp->tp->type == bt)
@@ -361,14 +361,14 @@ SYM* TABLE::Find(std::string na, bool opt, e_bt bt)
 	return (nullptr);
 }
 
-SYM** TABLE::GetParameters()
+Symbol** TABLE::GetParameters()
 {
-	static SYM* params[30];
+	static Symbol* params[30];
 
-	SYM* thead, * first;
+	Symbol* thead, * first;
 
 	ZeroMemory(&params, sizeof(params));
-	thead = SYM::GetPtr(head);
+	thead = Symbol::GetPtr(head);
 	first = thead;
 	while (thead != nullptr) {
 		if (thead->IsParameter) {
@@ -387,9 +387,9 @@ SYM** TABLE::GetParameters()
 
 void TABLE::AddTo(TABLE* dst)
 {
-	SYM* thead, * first, *next;
+	Symbol* thead, * first, *next;
 
-	thead = SYM::GetPtr(head);
+	thead = Symbol::GetPtr(head);
 	first = thead;
 	while (thead != nullptr) {
 		next = thead->GetNextPtr();

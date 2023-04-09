@@ -48,6 +48,29 @@ TYP *pop_typ()
 
 bool TYP::IsScalar()
 {
+	if (this == nullptr)
+		return (false);
+	return
+		type == bt_byte ||
+		type == bt_ichar ||
+		type == bt_char ||
+		type == bt_short ||
+		type == bt_int ||
+		type == bt_long ||
+		type == bt_ubyte ||
+		type == bt_iuchar ||
+		type == bt_uchar ||
+		type == bt_ushort ||
+		type == bt_uint ||
+		type == bt_ulong ||
+		type == bt_enum ||
+		type == bt_exception ||
+		type == bt_unsigned;
+}
+
+
+bool TYP::IsScalar(e_sym type)
+{
 	return
 		type == bt_byte ||
 		type == bt_ichar ||
@@ -749,7 +772,7 @@ chk:
 
 bool TYP::IsSameStructType(TYP* a, TYP* b)
 {
-	SYM* spA, * spB;
+	Symbol* spA, * spB;
 	int64_t maxa = 0, maxb = 0;
 
 	return (a->size == b->size);
@@ -771,7 +794,7 @@ bool TYP::IsSameStructType(TYP* a, TYP* b)
 
 bool TYP::IsSameUnionType(TYP* a, TYP* b)
 {
-	SYM* spA, * spB;
+	Symbol* spA, * spB;
 	int64_t maxa=0, maxb=0;
 
 	// union will match anything
@@ -793,7 +816,7 @@ bool TYP::IsSameUnionType(TYP* a, TYP* b)
 
 // Initialize the type. Unions can't be initialized. Oh yes they can.
 
-int64_t TYP::Initialize(ENODE* pnode, TYP *tp2, int opt, SYM* symi)
+int64_t TYP::Initialize(ENODE* pnode, TYP *tp2, int opt, Symbol* symi)
 {
 	int64_t nbytes;
 	TYP *tp;
@@ -910,7 +933,7 @@ j2:
 	return (nbytes);
 }
 
-int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
+int64_t TYP::InitializeArray(int64_t maxsz, Symbol* symi)
 {
 	int64_t nbytes;
 	int64_t size;
@@ -1434,9 +1457,10 @@ xit:
 	return (nbytes);
 }
 
-int64_t TYP::InitializeStruct(ENODE* node, SYM* symi)
+// Dead code
+int64_t TYP::InitializeStruct(ENODE* node, Symbol* symi)
 {
-	SYM *sp;
+	Symbol *sp;
 	int64_t nbytes;
 	int count;
 	
@@ -1551,9 +1575,10 @@ int64_t TYP::GenerateT(ENODE *node)
 	return (nbytes);
 }
 
-int64_t TYP::InitializeUnion(SYM* symi, ENODE* node)
+// Dead code
+int64_t TYP::InitializeUnion(Symbol* symi, ENODE* node)
 {
-	SYM *sp, *osp;
+	Symbol *sp, *osp;
 	int64_t nbytes;
 	int64_t val;
 	bool found = false;
@@ -1618,7 +1643,7 @@ j1:
 
 bool TYP::FindPointerInStruct()
 {
-	SYM *sp;
+	Symbol *sp;
 
 	sp = lst.headp;// sp->GetPtr(lst.GetHead());      // start at top of symbol table
 	while (sp != 0) {
@@ -1672,9 +1697,9 @@ bool TYP::IsSkippable()
 ENODE *TYP::BuildEnodeTree()
 {
 	ENODE *ep1, *ep2, *ep3;
-	SYM *thead, *first;
+	Symbol *thead, *first;
 
-	first = thead = SYM::GetPtr(lst.GetHead());
+	first = thead = Symbol::GetPtr(lst.GetHead());
 	ep1 = ep2 = nullptr;
 	while (thead) {
 		if (thead->tp->IsStructType()) {
@@ -1685,7 +1710,7 @@ ENODE *TYP::BuildEnodeTree()
 		ep1 = makenode(en_void, ep1, ep2);
 		ep1->SetType(thead->tp);
 		ep1->p[2] = ep3;
-		thead = SYM::GetPtr(thead->next);
+		thead = Symbol::GetPtr(thead->next);
 	}
 	return (ep1);
 }
@@ -1728,7 +1753,7 @@ int TYP::Alignment()
 
 int TYP::walignment()
 {
-	SYM *sp;
+	Symbol *sp;
 	int64_t retval = 0;
 	static int level = 0;
 
@@ -1766,7 +1791,7 @@ int TYP::walignment()
 	case bt_class:
 	case bt_struct:
 	case bt_union:
-		sp = (SYM *)sp->GetPtr(lst.GetHead());
+		sp = (Symbol *)sp->GetPtr(lst.GetHead());
 		worstAlignment = alignment;
 		if (worstAlignment == 0)
 			worstAlignment = 2;

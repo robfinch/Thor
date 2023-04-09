@@ -27,16 +27,16 @@
 
 #define EXPR_DEBUG
 #define NUM_DIMEN	20
-extern SYM *currentClass;
+extern Symbol *currentClass;
 extern int defaultcc;
 static unsigned char sizeof_flag = 0;
 extern void backup();
 extern int parsingParameterList;
-extern SYM *gsearch2(std::string , __int16, TypeArray *,bool);
-extern SYM *search2(std::string na,TABLE *tbl,TypeArray *typearray);
+extern Symbol *gsearch2(std::string , __int16, TypeArray *,bool);
+extern Symbol *search2(std::string na,TABLE *tbl,TypeArray *typearray);
 extern int round10(int n);
 ENODE* Autoincdec(TYP* tp, ENODE** node, int flag, bool isPostfix);
-extern SYM* FindEnum(char *);
+extern Symbol* FindEnum(char *);
 bool ExpressionHasReference = false;
 
 ENODE *pep1;
@@ -171,7 +171,7 @@ ENODE *makenode(int nt, ENODE *v1, ENODE *v2)
   return (ep);
 }
 
-ENODE *makefcnode(int nt, ENODE *v1, ENODE *v2, SYM *sp)
+ENODE *makefcnode(int nt, ENODE *v1, ENODE *v2, Symbol *sp)
 {
 	ENODE *ep;
 //  ep = (ENODE *)xalloc(sizeof(ENODE));
@@ -357,7 +357,7 @@ void Expression::SetRefType(ENODE** node)
 	(*node)->esize = sz;
 }
 
-void Expression::DerefBit(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefBit(ENODE** node, TYP* tp, Symbol* sp)
 {
 	ENODE* pnode;
 	*node = makenode(en_fieldref, *node, (ENODE*)NULL);
@@ -373,7 +373,7 @@ void Expression::DerefBit(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->bit_offset = tp->bit_offset;
 }
 
-void Expression::DerefByte(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefByte(ENODE** node, TYP* tp, Symbol* sp)
 {
 	SetRefType(node);
 	if (tp->isUnsigned)
@@ -388,7 +388,7 @@ void Expression::DerefByte(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->tp = tp;
 }
 
-void Expression::DerefUnsignedByte(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefUnsignedByte(ENODE** node, TYP* tp, Symbol* sp)
 {
 	SetRefType(node);
 	(*node)->isUnsigned = TRUE;
@@ -399,7 +399,7 @@ void Expression::DerefUnsignedByte(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->tp = tp;
 }
 
-void Expression::DerefFloat(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefFloat(ENODE** node, TYP* tp, Symbol* sp)
 {
 	SetRefType(node);
 	(*node)->esize = tp->size;
@@ -409,7 +409,7 @@ void Expression::DerefFloat(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->tp = tp;
 }
 
-void Expression::DerefBitfield(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefBitfield(ENODE** node, TYP* tp, Symbol* sp)
 {
 	*node = makenode(en_fieldref, *node, (ENODE*)NULL);
 	if (tp->isUnsigned)
@@ -426,7 +426,7 @@ void Expression::DerefBitfield(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->tp = tp;
 }
 
-void Expression::DerefDouble(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefDouble(ENODE** node, TYP* tp, Symbol* sp)
 {
 	SetRefType(node);
 	(*node)->esize = tp->size;
@@ -436,7 +436,7 @@ void Expression::DerefDouble(ENODE** node, TYP* tp, SYM* sp)
 	(*node)->tp = tp;
 }
 
-void Expression::DerefPosit(ENODE** node, TYP* tp, SYM* sp)
+void Expression::DerefPosit(ENODE** node, TYP* tp, Symbol* sp)
 {
 	SetRefType(node);
 	(*node)->esize = tp->size;
@@ -452,7 +452,7 @@ void Expression::DerefPosit(ENODE** node, TYP* tp, SYM* sp)
 //
 TYP* Expression::deref(ENODE **node, TYP *tp)
 {
-	SYM *sp;
+	Symbol *sp;
 
   dfs.printf("<Deref>");
   if (tp==nullptr || node==nullptr || *node==nullptr)
@@ -745,9 +745,9 @@ TYP *CondDeref(ENODE **node, TYP *tp)
  *      is coerced to an external function name. non-value references
  *      generate an additional level of indirection.
  */
-TYP *Expression::nameref2(std::string name, ENODE **node,int nt,bool alloc,TypeArray *typearray, TABLE *tbl, SYM* symi)
+TYP *Expression::nameref2(std::string name, ENODE **node,int nt,bool alloc,TypeArray *typearray, TABLE *tbl, Symbol* symi)
 {
-	SYM *sp = nullptr, *spf = nullptr;
+	Symbol *sp = nullptr, *spf = nullptr;
 	Function *fn;
 	TYP *tp;
 	std::string stnm;
@@ -879,11 +879,11 @@ xit:
 	return (tp);
 }
 
-TYP *Expression::nameref(ENODE **node,int nt, SYM* symi)
+TYP *Expression::nameref(ENODE **node,int nt, Symbol* symi)
 {
 	TYP *tp;
 	std::string str;
-	SYM* sp;
+	Symbol* sp;
 	int nn;
 
 	dfs.puts("<Nameref>");
@@ -934,7 +934,7 @@ TYP *Expression::nameref(ENODE **node,int nt, SYM* symi)
 // parsed. since parameters are generally pushed from right
 // to left we get just what we asked for...
 //
-ENODE *Expression::ParseArgumentList(ENODE *hidden, TypeArray *typearray, SYM* symi)
+ENODE *Expression::ParseArgumentList(ENODE *hidden, TypeArray *typearray, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *typ;
@@ -998,24 +998,24 @@ static int IsIntrinsicType(int st)
 				st == kw_const;
 }
 
-int IsBeginningOfTypecast(int st)
+bool IsBeginningOfTypecast(int st)
 {
-	SYM *sp;
+	Symbol *sp;
 	if (st==id) {
 		sp = tagtable.Find(lastid,false);
 		if (sp == nullptr)
 			sp = gsyms[0].Find(lastid,false);
 		if (sp)
 			return (sp->storage_class==sc_typedef || sp->storage_class==sc_type);
-		return (FALSE);
+		return (false);
 	}
 	else
 		return (IsIntrinsicType(st) || st==kw_volatile);
 }
 
-SYM *makeint2(std::string name)
+Symbol *makeint2(std::string name)
 {
-	SYM *sp;
+	Symbol *sp;
 	TYP *tp;
 	sp = allocSYM();
 	tp = TYP::Make(bt_int,2);
@@ -1027,9 +1027,9 @@ SYM *makeint2(std::string name)
 }
 
 
-SYM *makeStructPtr(std::string name)
+Symbol *makeStructPtr(std::string name)
 {
-	SYM *sp;
+	Symbol *sp;
 	TYP *tp,*tp2;
 	sp = allocSYM();
 	tp = TYP::Make(bt_pointer,sizeOfPtr);
@@ -1050,11 +1050,11 @@ SYM *makeStructPtr(std::string name)
 // This is needed in order to add a function to the tables if
 // the function hasn't been encountered before.
 
-SYM *CreateDummyParameters(ENODE *ep, SYM *parent, TYP *tp)
+Symbol *CreateDummyParameters(ENODE *ep, Symbol *parent, TYP *tp)
 {
 	int64_t poffset;
-	SYM *sp1;
-	SYM *list;
+	Symbol *sp1;
+	Symbol *list;
 	int nn;
 	ENODE *p;
 	static char buf[20];
@@ -1122,7 +1122,7 @@ SYM *CreateDummyParameters(ENODE *ep, SYM *parent, TYP *tp)
 //                      this
 //                      { aggregate }
 // ----------------------------------------------------------------------------
-TYP *Expression::ParsePrimaryExpression(ENODE **node, int got_pa, SYM* symi)
+TYP *Expression::ParsePrimaryExpression(ENODE **node, int got_pa, Symbol* symi)
 {
 	ENODE *pnode, *qnode1, *qnode2, * qnode3;
   TYP *tptr;
@@ -1217,7 +1217,8 @@ j1:
 				break;
 			}
 		}
-		currentSym = symi;
+		if (symi && symi->fi)
+			currentSym = symi;
 		tptr = ParseNameRef(&pnode, symi);
 		pnode->constflag = false;
 		if (tptr == nullptr) {
@@ -1251,34 +1252,26 @@ j1:
 
 	case kw_floatmax:
 		tptr = ParseFloatMax(&pnode);
-		if (tptr == nullptr) {
+		if (tptr == nullptr)
 			return (nullptr);
-		}
 		break;
 
   case rconst:
 		tptr = ParseRealConst(&pnode);
-		if (tptr == nullptr) {
+		if (tptr == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case pconst:
-		pnode = ParsePositConst(node);
-		tptr = &stdposit;
-		pnode->SetType(tptr);
-		if (tptr == nullptr) {
+		tptr = ParsePositConst(&pnode);
+		if (tptr == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case sconst:
-		pnode = ParseStringConst(node);
-		tptr = &stdstring;
-		pnode->SetType(tptr);
-		if (tptr == nullptr) {
+		tptr = ParseStringConst(&pnode);
+		if (tptr == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case asconst:
@@ -1330,9 +1323,6 @@ j1:
 	case kw_volatile:
 	case kw_const:
 		NextToken();
-		if (tptr == nullptr) {
-			return (nullptr);
-		}
 		goto j1;
 
   default:
@@ -1365,14 +1355,18 @@ j1:
 // not RValues. And we don't want to have to test everywhere for struct types,
 // so we just say it's an LValue.
 //
-int IsLValue(ENODE *node)
+bool IsLValue(ENODE *node)
 {
 	if (node==nullptr)
 		return FALSE;
 	switch (node->nodetype) {
+	// A typecast is just a node with an extra type tacked onto it. We want to 
+	// check the node of the cast.
+	case en_cast:
+		return (IsLValue(node->p[1]));
 	case en_ref:
 	case en_fieldref:
-		return (TRUE);
+		return (true);
 	case en_byt2wyde: case en_ubyt2wyde:
 	case en_byt2tetra: case en_ubyt2tetra:
 	case en_byt2octa: case en_ubyt2octa:
@@ -1583,7 +1577,7 @@ ENODE* Expression::AdjustForBitArray(int pop, TYP*tp1, ENODE* ep1)
 //		postfix_expression--
 // ----------------------------------------------------------------------------
 
-TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, SYM* symi)
+TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 {
 	TYP *tp1, *firstType = nullptr;
 	ENODE *ep1, *ep2;
@@ -1756,7 +1750,7 @@ j1:
  //                     new 
  *
  */
-TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, SYM* symi)
+TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 {
 	TYP *tp = nullptr;
   ENODE *ep1;
@@ -1851,8 +1845,7 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, SYM* symi)
 		break;
 
   case star:
-		ep1 = ParseStar(symi);
-		tp = ep1->tp;
+		tp = ParseStar(&ep1, symi);
 		if (ep1 == nullptr)
 			return (nullptr);
 		if (tp == nullptr) {
@@ -1952,12 +1945,12 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, SYM* symi)
 //		(type name)cast_expression
 //		(type name) { const list }
 // ----------------------------------------------------------------------------
-TYP *Expression::ParseCastExpression(ENODE **node, SYM* symi)
+TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 {
 	TYP *tp, *tp1, *tp2;
 	ENODE *ep1, *ep2;
 	Declaration decl;
-	SYM* sp;
+	Symbol* sp;
 	bool madenode;
 
   Enter("ParseCast ");
@@ -2012,7 +2005,8 @@ TYP *Expression::ParseCastExpression(ENODE **node, SYM* symi)
 			*/
 			// The following might promote the type.
 			opt_const(&ep1);
-			tp2 = ep1->tp;
+			if (ep1)
+				tp2 = ep1->tp;
 			if (tp == nullptr)
 				error(ERR_NULLPOINTER);
 			if (ep1 == nullptr) {
@@ -2119,7 +2113,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, SYM* symi)
  *              unary / unary
  *              unary % unary
  */
-TYP *Expression::ParseMultOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseMultOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2258,7 +2252,7 @@ TYP *Expression::ParseMultOps(ENODE **node, SYM* symi)
 // Addops handles the addition and subtraction operators.
 // ----------------------------------------------------------------------------
 
-TYP *Expression::ParseAddOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseAddOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2, *ep3, *ep4;
   TYP *tp1, *tp2;
@@ -2413,7 +2407,7 @@ xit:
 // ----------------------------------------------------------------------------
 // Shiftop handles the shift operators << and >>.
 // ----------------------------------------------------------------------------
-TYP *Expression::ParseShiftOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseShiftOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
   TYP *tp1, *tp2;
@@ -2478,7 +2472,7 @@ TYP *Expression::ParseShiftOps(ENODE **node, SYM* symi)
 //
 // relation handles the relational operators < <= > and >=.
 //
-TYP *Expression::ParseRelationalOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseRelationalOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
   TYP *tp1, *tp2;
@@ -2580,7 +2574,7 @@ xit:
 //
 // equalops handles the equality and inequality operators.
 //
-TYP *Expression::ParseEqualOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseEqualOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
   TYP *tp1, *tp2;
@@ -2679,7 +2673,7 @@ xit:
   return (tp1);
 }
 */
-TYP *Expression::ParseBitwiseAndOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseBitwiseAndOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2715,7 +2709,7 @@ xit:
 	return (tp1);
 }
 
-TYP *Expression::ParseBitwiseXorOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseBitwiseXorOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2751,7 +2745,7 @@ xit:
 	return (tp1);
 }
 
-TYP *Expression::ParseBitwiseOrOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseBitwiseOrOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2, *ep3;
 	TYP *tp1, *tp2;
@@ -2846,7 +2840,7 @@ xit:
 }
 
 
-TYP *Expression::ParseAndOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseAndOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2882,7 +2876,7 @@ xit:
 	return (tp1);
 }
 
-TYP *Expression::ParseSafeAndOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseSafeAndOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2918,7 +2912,7 @@ xit:
 	return (tp1);
 }
 
-TYP *Expression::ParseOrOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseOrOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -2954,7 +2948,7 @@ xit:
 	return (tp1);
 }
 
-TYP *Expression::ParseSafeOrOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseSafeOrOps(ENODE **node, Symbol* symi)
 {
 	ENODE *ep1, *ep2;
 	TYP *tp1, *tp2;
@@ -3025,7 +3019,7 @@ TYP *safe_orop(ENODE **node)
 //
 //      this routine processes the hook operator.
 //
-TYP *Expression::ParseConditionalOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseConditionalOps(ENODE **node, Symbol* symi)
 {
 	TYP *tp1, *tp2, *tp3;
   ENODE *ep1, *ep2, *ep3;
@@ -3087,11 +3081,11 @@ xit:
 //      asnop handles the assignment operators. currently only the
 //      simple assignment is implemented.
 // ----------------------------------------------------------------------------
-TYP *Expression::ParseAssignOps(ENODE **node, SYM* symi)
+TYP *Expression::ParseAssignOps(ENODE **node, Symbol* symi)
 {      
 	ENODE *ep1, *ep2, *ep3;
   TYP *tp1, *tp2;
-	SYM* sp;
+	Symbol* sp;
   int op;
 	bool madenode;
 
@@ -3149,7 +3143,10 @@ ascomm3:
 				NextToken();
 				tp2 = ParseAssignOps(&ep2, symi);
 				if(tp1->type == bt_pointer) {
-					ep3 = makeinode(en_icon, tp1->btpp->size);
+					if (tp1->btpp)
+						ep3 = makeinode(en_icon, tp1->btpp->size);
+					else
+						ep3 = makeinode(en_icon, 16);
 					ep3->esize = sizeOfPtr;
 					ep2 = makenode(en_mul, ep2, ep3);
 					ep2->esize = sizeOfPtr;
@@ -3215,7 +3212,7 @@ xit:
 // ----------------------------------------------------------------------------
 // Evaluate an expression where the assignment operator is not legal.
 // ----------------------------------------------------------------------------
-TYP *Expression::ParseNonAssignExpression(ENODE **node, SYM* symi)
+TYP *Expression::ParseNonAssignExpression(ENODE **node, Symbol* symi)
 {
 	TYP *tp;
 	pep1 = nullptr;
@@ -3238,7 +3235,7 @@ TYP *Expression::ParseNonAssignExpression(ENODE **node, SYM* symi)
 // Externally visible entry point for GetIntegerExpression() and
 // ArgumentList().
 // ----------------------------------------------------------------------------
-TYP *Expression::ParseNonCommaExpression(ENODE **node, SYM* symi)
+TYP *Expression::ParseNonCommaExpression(ENODE **node, Symbol* symi)
 {
 	TYP *tp;
 	ENODE *o_pfl = postfixList;
@@ -3263,7 +3260,7 @@ TYP *Expression::ParseNonCommaExpression(ENODE **node, SYM* symi)
  *      evaluate the comma operator. comma operators are kept as
  *      void nodes.
  */
-TYP *Expression::ParseCommaOp(ENODE **node, SYM* symi)
+TYP *Expression::ParseCommaOp(ENODE **node, Symbol* symi)
 {
 	TYP *tp1,*tp2;
 	ENODE *ep1,*ep2;
@@ -3329,7 +3326,7 @@ static void Safize(ENODE* nd)
 // Evaluate an expression where all operators are legal.
 // ----------------------------------------------------------------------------
 
-TYP *Expression::ParseExpression(ENODE **node, SYM* symi)
+TYP *Expression::ParseExpression(ENODE **node, Symbol* symi)
 {
 	TYP *tp;
 
@@ -3353,7 +3350,7 @@ TYP *Expression::ParseExpression(ENODE **node, SYM* symi)
   return tp;
 }
 
-TYP *expression(ENODE **node, SYM* symi)
+TYP *expression(ENODE **node, Symbol* symi)
 {
 	Expression k;
 	return (k.ParseExpression(node, symi));

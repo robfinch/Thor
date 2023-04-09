@@ -475,7 +475,7 @@ Operand *GetTempVectorRegister()
 Operand *GetTempVectorMaskRegister()
 {
 	Operand *ap;
-    SYM *sym = currentFn->sym;
+    Symbol *sym = currentFn->sym;
 
 	if (vmreg_in_use[next_vmreg] >= 0) {
 //		GenerateTempVectorMaskRegPush(next_vreg, am_reg, vreg_in_use[next_vreg],0);

@@ -428,7 +428,8 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 			case bt_long:		return (dsttp);
 			case bt_ulong:	return (dsttp);
 			case bt_pointer:
-				typ = dsttp->btpp->type;
+				if (dsttp->btpp)
+					typ = dsttp->btpp->type;
 				/**dstnode = *srcnode;*/
 				return (dsttp);
 			case bt_ubitfield:
@@ -444,6 +445,8 @@ TYP *forcefit(ENODE **srcnode, TYP *srctp, ENODE **dstnode, TYP *dsttp, bool pro
 				return (dsttp);
 			case bt_func:
 			case bt_ifunc:	return (dsttp);
+			// void source inherits destination type.
+			case bt_void:		return (dsttp);
 			default:	
 				goto j1;
 			}

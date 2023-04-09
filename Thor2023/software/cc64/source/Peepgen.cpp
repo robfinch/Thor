@@ -375,7 +375,7 @@ void RemoveCode()
 {
 	int nn,mm;
 	Var *v;
-	Tree *t;
+	Range *t;
 	OCODE *p;
 	int count;
 	int rg1, rg2;

@@ -17,13 +17,13 @@ Declaration::Declaration()
 	isTypedef = false;
 }
 
-Function* Declaration::MakeFunction(int symnum, SYM* sym, bool isPascal, bool isInline) {
+Function* Declaration::MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline) {
 	Function* fn = compiler.ff.MakeFunction(symnum, sym, isPascal);
 	fn->IsInline = isInline;
 	return (fn);
 };
 
-void Declaration::MakeFunction(SYM* sp, SYM* sp1)
+void Declaration::MakeFunction(Symbol* sp, Symbol* sp1)
 {
 	dfs.printf("<MakeFunction>");
 	sp1->SetType(sp->tp);

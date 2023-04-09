@@ -124,7 +124,7 @@ int doinclude()
 
 int dodefine()
 {   
-	SYM *sp;
+	Symbol *sp;
 	
     NextToken();               /* get past #define */
     if( lastst != id ) {
@@ -142,7 +142,7 @@ int dodefine()
 
 int doifdef()
 {
-	SYM *sp;
+	Symbol *sp;
 	int rv;
 	char *lne;
 
@@ -164,7 +164,7 @@ int doifdef()
 
 int doifndef()
 {
-	SYM *sp;
+	Symbol *sp;
 	int rv;
 
 	NextToken();
