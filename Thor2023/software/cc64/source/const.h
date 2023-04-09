@@ -85,7 +85,7 @@ enum e_node {
 		en_fadd, en_fsub, en_fmul, en_fdiv,
 		en_padd, en_psub, en_pmul, en_pdiv, en_ptoi, en_itop, en_peq, en_pne, en_plt, en_ple, en_pcon, en_pgt, en_pge,
 		en_d2t, en_d2q, en_t2q, en_p2d,
-		en_i2d, en_i2t, en_i2q, en_d2i, en_q2i, en_s2q, en_t2i, // 63<-
+		en_i2d, en_i2q, en_d2i, en_q2i, en_s2q, en_t2i, // 63<-
         en_div, en_asl, en_shl, en_shlu, en_shr, en_shru, en_asr, en_rol, en_ror, en_ext, en_extu,
 		en_cond, en_safe_cond, en_assign, 
         en_asadd, en_assub, en_asmul, en_asdiv, en_asdivu, en_asmod, en_asmodu,
@@ -185,6 +185,7 @@ enum e_op {
 	op_nand, op_nor, op_xnor,
 	op_asr, op_asri, op_stpl, op_stpr, op_stpru, op_ror, op_rol,
 	op_stpli, op_stpri, op_stprui, op_stplu, op_stplui, op_rori, op_roli,
+	op_lslor,
 	op_bfclr, op_bfext, op_bfextu, op_bfins, op_bfset, op_dep,
 	op_jmp, op_jsr, op_mului, op_mod, op_modu,
 	op_bmi, op_subu, op_lddr, op_stdc, op_loop, op_iret,
@@ -461,6 +462,7 @@ enum e_hint {
 #define ERR_TOOMANY_DESIGNATORS	68
 #define ERR_NOT_STRUCT	69
 #define ERR_INT0255			70
+#define ERR_CLOSEPA			71
 #define ERR_NULLPOINTER		1000
 #define ERR_CIRCULAR_LIST 1001
 #define ERR_MISSING_HIDDEN_STRUCTPTR	1002

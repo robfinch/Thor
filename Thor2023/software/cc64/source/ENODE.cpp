@@ -29,6 +29,8 @@ int ENODE::segcount[16];
 CSet* ru;
 CSet* rru;
 
+List* sortedList(List* head, ENODE* root);
+
 void swap_nodes(ENODE *node)
 {
 	ENODE *temp;
@@ -187,7 +189,10 @@ int ENODE::GetNaturalSize()
 	case en_autofcon:
 		return (sizeOfWord);
 	case en_ref:
-		return (tp->size);
+		if (tp)
+			return (tp->size);
+		else
+			return (sizeOfPtr);
 	case en_byt2wyde: case en_ubyt2wyde: return (2);
 	case en_byt2tetra:	return (4);
 	case en_wyde2tetra:	return (4);
@@ -260,7 +265,6 @@ int ENODE::GetNaturalSize()
 	case en_i2p:
 	case en_i2d:
 		return (sizeOfWord);
-	case en_i2t:
 	case en_d2t:
 		return (sizeOfFPT);
 	case en_i2q:
@@ -448,69 +452,254 @@ void ENODE::AddToList(ENODE* ele)
 }
 
 
-// Assign a type to a whole list.
+static void ListNodes(ENODE* node)
+{
+	int level, nn;
+	List* lst;
 
-bool ENODE::AssignTypeToList(TYP *tp)
+	level = 0;
+	for (lst = (List*)node->p[1]; lst; lst = lst->nxt) {
+		if (lst->node == nullptr)
+			break;
+		for (nn = 0; nn < level * 2; nn++)
+			dfs.printf(" ");
+		dfs.printf("Node %d:\n", lst->node->number);
+		for (nn = 0; nn < level * 2; nn++)
+			dfs.printf(" ");
+		dfs.printf("nodetype: %d: ", lst->node->nodetype);
+		dfs.printf("%s\n", (char*)lst->node->nodetypeStr().c_str());
+		for (nn = 0; nn < level * 2; nn++)
+			dfs.printf(" ");
+		dfs.printf("rg: %d\n", lst->node->rg);
+		if (lst->node->nodetype == en_aggregate) {
+			level += 3;
+			ListNodes(lst->node);
+			level -= 3;
+		}
+	}
+}
+
+// Assign a type to a whole list of nodes.
+
+static void AssignTypeToArray(ENODE* node, TYP* btp)
+{
+	ENODE* ep;
+	List* lst;
+
+	if (node == nullptr)
+		return;
+	lst = sortedList(nullptr, node);
+
+	for (; lst; lst = lst->nxt) {
+		ep = lst->node;
+		ep->tp = btp;
+		ep->esize = btp->size;
+		if (!ep->constflag)
+			isConst = false;
+		if (btp->isArray) {
+			ep->tp->btp = btp->btp;
+			if (!ep->AssignTypeToList(btp))
+				isConst = false;
+		}
+		else if (btp->IsAggregateType()) {
+			if (!ep->AssignTypeToList(btp))
+				isConst = false;
+		}
+	}
+}
+
+static void AssignTypeToAggregateHelper(ENODE* node, SYM* thead)
+{
+	ENODE* ep;
+	List* lst;
+
+	if (node == nullptr)
+		return;
+
+	lst = sortedList(nullptr, node);
+	for (; lst; lst = lst->nxt) {
+		ep = node;
+		if (TYP::IsSameType(ep->tp, thead->tp->btpp, false)) {
+			ep->tp = thead->tp;
+			ep->esize = thead->tp->size;
+		}
+		else
+			break;
+	}
+}
+
+static void AssignTypeToAggregate(ENODE* node, SYM* thead)
+{
+	ENODE* ep;
+	List* lst; 
+
+	// If we run out of aggregate initializers, okay.
+	if (node == nullptr)
+		return;
+	if (thead == nullptr)
+		return;
+
+	lst = sortedList(nullptr, node);
+	for (; lst; lst = lst->nxt) {
+		ep = lst->node;
+		if (!ep->constflag)
+			isConst = false;
+		if (thead->tp->isArray || thead->tp->IsAggregateType()) {
+			if (ep->nodetype == en_aggregate) {
+				if (!ep->AssignTypeToList(thead->tp))
+					isConst = false;
+				ep->tp = thead->tp;
+				ep->esize = thead->tp->size;
+			}
+			else if (TYP::IsSameType(ep->tp, thead->tp->btpp, false))
+				AssignTypeToAggregateHelper(ep, thead);
+		}
+		thead = thead->nextp;
+		if (thead == nullptr)
+			return;
+	}
+}
+
+bool ENODE::AssignTypeToList(TYP *ptp)
 {
 	ENODE *ep;
 	bool isConst = true;
 	TYP *btp;
-	int ne, cnt;
+	int level;
+	bool ary;
 
-	if (nodetype != en_aggregate)
+	if (this == nullptr)
 		return (false);
+	if (nodetype != en_aggregate)
+		if (this)
+			return (this->constflag);
+		else
+			return (false);
 
 	esize = 0;
-	this->tp = tp;
-	this->esize = tp->size;
-	if (tp->isArray) {
-		ne = tp->numele;
-		cnt = 0;
-		btp = tp->btpp;
-		for (ep = p[0]->p[2]; ep; ep = ep->p[2]) {
-			cnt++;
-			ep->tp = btp;
-			ep->esize = btp->size;
-			//if (!ep->tp->isConst)
-			//	isConst = false;
-			if (btp->isArray) {
-				if (ep->nodetype == en_aggregate) {
-					if (!ep->AssignTypeToList(btp))
-						isConst = false;
-				}
-			}
-			else if (btp->IsAggregateType()) {
-				if (ep->nodetype == en_aggregate) {
-					if (!ep->AssignTypeToList(btp))
-						isConst = false;
-				}
-			}
-		}
-		//if (cnt < tp->numele) {
+	ary = tp->isArray;
+	if (ptp->isArray) {
+		btp = ptp->btpp;
+		ep = this;
+		AssignTypeToArray(ep, btp);
+	//if (cnt < tp->numele) {
 		//	esize += (tp->numele - cnt) * btp->size;
 		//}
+		tp = ptp;
+		esize = ptp->size;
 	}
-	else if (tp->IsAggregateType()) {
+	else if (ptp->IsAggregateType()) {
 		SYM *thead;
 
-		thead = SYM::GetPtr(tp->lst.GetHead());
-		for (ep = p[0]->p[2]; thead && ep; ) {
+		ep = this;
+		thead = ptp->lst.headp;
+		// Thought it was a struct during parsing, but it is really a union, fixup.
+		if (tp->type == bt_struct && ptp->type == bt_union)
+			tp->type = bt_union;
+		AssignTypeToAggregate(ep, thead);
+		tp = ptp;
+		esize = ptp->size;
+	}
+	// Else there is just one type to assign.
+	else {
+		SYM* thead;
+
+		thead = tp->lst.headp;
+		ep = this;
+		if (ep) {
 			ep->tp = thead->tp;
+			ep->tp->btp = thead->tp->btp;
 			ep->esize = thead->tp->size;
-			if (thead->tp->IsAggregateType()) {
-				if (ep->nodetype == en_aggregate) {
-					if (!ep->AssignTypeToList(thead->tp))
-						isConst = false;
-				}
-			}
-			ep = ep->p[2];
-			thead = SYM::GetPtr(thead->next);
 		}
 	}
+	//this->Dump(0);
+	level = 0;
+	ListNodes(this);
 	return (isConst);
 }
 
+// Function to create Linked list from given binary tree
+List* sortedList(List* head, ENODE* root)
+{
+	if (root == nullptr)
+		return (head);
 
+	// First make the sorted linked list
+	// of the left sub-tree
+	head = sortedList(head, root->p[0]);
+	List* newNode = new List(root);
+	List* temp = head;
+	List* prev = nullptr;
+
+	// If linked list is empty add the
+	// node to the head
+	if (temp == nullptr)
+		head = newNode;
+	else {
+
+		// Find the correct position of the node
+		// in the given linked list
+		while (temp != NULL) {
+			if (temp->node->order > root->order) {
+				break;
+			}
+			else {
+				prev = temp;
+				temp = temp->nxt;
+			}
+		}
+
+		// Given node is to be attached
+		// at the end of the list
+		if (temp == NULL) {
+			prev->nxt = newNode;
+		}
+		else {
+
+			// Given node is to be attached
+			// at the head of the list
+			if (prev == NULL) {
+				newNode->nxt = temp;
+				head = newNode;
+			}
+			else {
+
+				// Insertion in between the list
+				newNode->nxt = temp;
+				prev->nxt = newNode;
+			}
+		}
+	}
+
+	// Now add the nodes of the right sub-tree
+	// to the sorted linked list
+	head = sortedList(head, root->p[1]);
+	return (head);
+}
+
+// Driver code
+/*
+int main()
+{
+	   Tree:
+			 10
+			/  \
+		15    2
+	 /  \
+	1    5
+
+	treeNode* root = new treeNode(10);
+	root->left = new treeNode(15);
+	root->right = new treeNode(2);
+	root->left->left = new treeNode(1);
+	root->left->right = new treeNode(5);
+
+	Node* head = sortedList(NULL, root);
+	print(head);
+
+	return 0;
+}
+*/
 // ============================================================================
 // ============================================================================
 // Optimization
@@ -675,12 +864,16 @@ void ENODE::repexpr()
 	case en_uminus:
 	case en_abs:
 	case en_sxb: case en_sxh: case en_sxc:
-	case en_compl:
+		p[0]->repexpr();
+		break;
 	case en_chk:
 		p[0]->repexpr();
 		p[1]->repexpr();
 		break;
-	case en_not:    
+	case en_compl:
+		p[0]->repexpr();
+		break;
+	case en_not:
 		p[0]->repexpr();
 		p[1]->repexpr();
 		break;
@@ -2145,8 +2338,12 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 {
 	// ASM statment text (up to 3500 chars) may be placed in the following buffer.
 	static char buf[4000];
+	int ndx;
 	Posit16 pos16;
 	Posit32 pos32;
+
+	if (i128.high != 0 && i128.high != 0xffffffffffffffffLL)
+		display_opt = 16;
 
 	// Used only by lea for subtract
 	if (isNeg)
@@ -2162,7 +2359,10 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		if (!opt)
 			goto j1;
 		// The following spits out a warning, but is okay.
-		sprintf_s(buf, sizeof(buf), "0x%llx", f);
+		if (this->tp->type == bt_quad)
+			sprintf_s(buf, sizeof(buf), "%.16s", f128.ToString());
+		else
+			sprintf_s(buf, sizeof(buf), "0x%llx", f);
 		ofs.write(buf);
 		break;
 	case en_pcon:
@@ -2189,17 +2389,38 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 			ofs.write(buf);
 		}
 		else {
-			char buf[65];
+			char buf[150];
 			switch (display_opt) {
 			case 1:
 				ofs.write("%");
-				sprintf_s(buf, sizeof(buf), "%s", _itoa_s((int)i, buf, sizeof(buf), 2));
+				ZeroMemory(buf, sizeof(buf));
+				if (i128.high != 0 && i128.high != 0xffffffffffffffffLL)
+					_itoa_s((int)i128.high, buf, sizeof(buf), 2);
+				ndx = strlen(buf);
+				_itoa_s((int)i128.low, &buf[ndx], sizeof(buf) - 66, 2);
+				if (strlen(&buf[ndx]) < 64) {
+					memmove(&buf[ndx + 64 - strlen(&buf[ndx])], &buf[ndx], strlen(&buf[ndx]));
+					memset(&buf[ndx], '0', 64 - strlen(&buf[ndx]));
+				}
+				ofs.write(buf);
 				break;
 			case 16:
-				sprintf_s(buf, sizeof(buf), "$%08I64X", i);
+				if (syntax == MOT) {
+					buf[0] = '$';
+					ndx = 1;
+				}
+				else {
+					buf[0] = '0';
+					buf[1] = 'x';
+					ndx = 2;
+				}
+				if (i128.high != 0 && i128.high != 0xffffffffffffffffLL)
+					sprintf_s(&buf[ndx], sizeof(buf) - 3, "%08I64X%08I64X", i128.high, i128.low);
+				else
+					sprintf_s(&buf[ndx], sizeof(buf) - 3, "%08I64X", i128.low);
 				break;
 			default:
-				sprintf_s(buf, sizeof(buf), "%lld", i);
+				sprintf_s(buf, sizeof(buf), "%lld", i128.low);
 			}
 			ofs.write(buf);
 		}
@@ -2528,6 +2749,7 @@ int ENODE::PutStructConst(txtoStream& ofs)
 	ENODE *ep = this;
 	bool isStruct;
 	bool isArray;
+	List* lst;
 
 	if (ep == nullptr)
 		return (0);
@@ -2538,7 +2760,9 @@ int ENODE::PutStructConst(txtoStream& ofs)
 	isArray = ep->tp->type == bt_array;
 	if (isArray)
 		ofs.printf("\talign %ld\n", (int)ep->p[0]->p[2]->tp->walignment());
-	for (n = 0, ep1 = ep->p[0]->p[2]; ep1; ep1 = ep1->p[2]) {
+	lst = (List*)p[1];
+	for (n = 0; lst; lst = lst->nxt) {
+		ep1 = lst->node;
 		if (ep1->nodetype == en_aggregate) {
 			k = ep1->PutStructConst(ofs);
 		}
@@ -2594,6 +2818,7 @@ std::string ENODE::nodetypeStr()
 	case en_cast: return "en_cast";
 	case en_asadd: return "en_asadd";
 	case en_icon: return "en_icon";
+	case en_fcon: return "en_fcon";
 	case en_assign: return "en_assign";
 	case en_eq: return "en_eq";
 	case en_land: return "en_land";
@@ -2603,6 +2828,11 @@ std::string ENODE::nodetypeStr()
 	case en_sub: return "en_sub";
 	case en_assub: return "en_assub";
 	case en_div: return "en_div";
+	case en_fmul: return "en_fmul";
+	case en_type: return "en_type";
+	case en_compl: return "en_compl";
+	case en_i2q: return "en_i2q";
+	case en_list: return "en_list";
 	default:
 		if (IsRefType()) {
 			return "en_ref";
@@ -2612,17 +2842,19 @@ std::string ENODE::nodetypeStr()
 	return "???";
 }
 
-void ENODE::Dump()
+void ENODE::Dump(int pn)
 {
 	int nn;
 	static int level = 0;
+	List* lst;
 
 	//return;
 	if (this == nullptr)
 		return;
 	for (nn = 0; nn < level * 2; nn++)
 		dfs.printf(" ");
-	dfs.printf("Node:%d\n", number);
+	dfs.printf("Node%d:", pn);
+	dfs.printf("%d\n", number);
 	for (nn = 0; nn < level * 2; nn++)
 		dfs.printf(" ");
 	dfs.printf("nodetype: %d: ", nodetype);
@@ -2630,14 +2862,19 @@ void ENODE::Dump()
 	for (nn = 0; nn < level * 2; nn++)
 		dfs.printf(" ");
 	dfs.printf("rg: %d\n", rg);
-	level++;
 	if (p[0])
-		p[0]->Dump();
-	if (p[1])
-		p[1]->Dump();
-	if (p[2])
-		p[2]->Dump();
-	level--;
+		p[0]->Dump(0);
+	if (nodetype != en_aggregate) {
+		if (p[1])
+			p[1]->Dump(1);
+	}
+	else {
+		for (lst = (List*)p[1]; lst; lst = lst->nxt) {
+			level += 3;
+			lst->node->Dump(0);
+			level -= 3;
+		}
+	}
 }
 
 void ENODE::CountSegments()
@@ -2645,9 +2882,11 @@ void ENODE::CountSegments()
 	if (this) {
 		segcount[segment]++;
 		if (p[0])	p[0]->CountSegments();
-		if (p[1])	p[1]->CountSegments();
-		if (p[2])	p[2]->CountSegments();
-		if (p[3])	p[3]->CountSegments();
+		if (nodetype != en_aggregate) {
+			if (p[1])	p[1]->CountSegments();
+			if (p[2])	p[2]->CountSegments();
+			if (p[3])	p[3]->CountSegments();
+		}
 	}
 }
 

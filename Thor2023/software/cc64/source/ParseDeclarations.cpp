@@ -1314,7 +1314,7 @@ void Declaration::ParseSuffixOpenbr()
 	NextToken();
 	temp1 = (TYP *)TYP::Make(bt_pointer,sizeOfPtr);
 	temp1->val_flag = 1;
-	temp1->isArray = TRUE;
+	temp1->isArray = true;
 	temp1->btp = head->GetIndex();
 	temp1->btpp = head;
 	if(lastst == closebr) {
@@ -1778,7 +1778,7 @@ void Declaration::ParseAssign(SYM *sp)
 		// Move vars with initialization data over to the data segment.
 		if (ep1->segment == bssseg)
 			ep1->segment = dataseg;
-		sp->initexp = ep1;
+		sp->initexp = makenode(en_void, nullptr, ep1);
 	}
 }
 
@@ -1812,7 +1812,7 @@ void Declaration::DoDeclarationEnd(SYM *sp, SYM *sp1)
 					ep1 = makenode(en_fcall, ep1, ep2);
 					//ep1->p[2] = tp1;
 				}
-				sp->initexp = ep1;
+				sp->initexp = makenode(en_void, nullptr, ep1);
 			}
 		}
 		/*
@@ -2050,7 +2050,7 @@ void Declaration::FigureStructOffsets(int64_t bgn, SYM* sp)
 
 	ps = bgn;
 	level++;
-	for (hd = SYM::GetPtr(sp->tp->lst.head); hd; hd = hd->GetNextPtr()) {
+	for (hd = sp->tp->lst.headp; hd; hd = hd->nextp) {
 		hd->value.i = ps;
 		hd->tp->struct_offset = ps;
 		if (hd->tp->IsStructType()) {
@@ -2058,8 +2058,9 @@ void Declaration::FigureStructOffsets(int64_t bgn, SYM* sp)
 				break;
 			FigureStructOffsets(ps, hd);
 		}
-		if (hd->tp->bit_offset->i > 0)
-			continue;
+		if (hd->tp->bit_offset)
+			if (hd->tp->bit_offset->i > 0)
+				continue;
 		if (sp->tp->type != bt_union)
 			ps = ps + hd->tp->size;
 		count++;
@@ -2616,10 +2617,8 @@ xit:
 	;
 	ep1 = nullptr;
 	for (sp = SYM::GetPtr(ssyms->GetHead()); sp; sp = sp->GetNextPtr()) {
-		if (sp->initexp) {
-			ep1 = makenode(en_list, ep1, nullptr);
-			ep1->p[3] = sp->initexp;
-		}
+		if (sp->initexp) 
+			ep1 = makenode(en_void, ep1, sp->initexp);
 	}
 	return (ep1);
 //	printf("Leave ParseAutoDecls\r\n");

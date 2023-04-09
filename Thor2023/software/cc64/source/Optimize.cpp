@@ -54,6 +54,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, &ep->p[0]->i128);
 		else
 			Int128::Sub(&ep->i128, Int128::Zero(), &ep->p[0]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_add:
 		if (ep->p[0]->nodetype == en_icon) {
@@ -66,6 +67,7 @@ void dooper(ENODE *node)
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
 			ep->posit.Add(ep->p[0]->posit, ep->p[1]->posit);
+			ep->p[0] = ep->p[1] = nullptr;
 		}
 		break;
 	case en_ptrdif:
@@ -73,6 +75,7 @@ void dooper(ENODE *node)
 		ep->i = (ep->p[0]->i - ep->p[1]->i) >> ep->p[4]->i;
 		Int128::Sub(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
 		Int128::Shr(&ep->i128, &ep->i128, ep->p[4]->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_sub:
 		if (ep->p[0]->nodetype == en_icon) {
@@ -85,6 +88,7 @@ void dooper(ENODE *node)
 		if (ep->p[0]->nodetype == en_pcon) {
 			ep->nodetype = en_pcon;
 			ep->posit.Sub(ep->p[0]->posit, ep->p[1]->posit);
+			ep->p[0] = ep->p[1] = nullptr;
 		}
 		break;
 	case en_mul:
@@ -92,17 +96,20 @@ void dooper(ENODE *node)
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i * ep->p[1]->i;
 		Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_mulf:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i * ep->p[1]->i;
 		Int128::Mul(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_div:
 	case en_udiv:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i / ep->p[1]->i;
 		Int128::Div(&ep->i128, &rm, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_i2d:
@@ -113,6 +120,17 @@ void dooper(ENODE *node)
 		//ep->i = quadlit(&ep->f128);
 		ep->i = NumericLiteral(ep);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
+		break;
+	case en_i2q:
+		ep->nodetype = en_fcon;
+		ep->tp = &stdquad;// ep->p[0]->tp;
+		ep->f = (double)ep->p[0]->i;
+		Float128::IntToFloat(&ep->f128, ep->p[0]->i);
+		//ep->i = quadlit(&ep->f128);
+		ep->i = NumericLiteral(ep);
+		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_i2p:
 		ep->nodetype = en_pcon;
@@ -120,6 +138,7 @@ void dooper(ENODE *node)
 		ep->tp = &stdposit;// ep->p[0]->tp;
 		ep->posit.IntToPosit(ep->p[0]->i);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_fadd:
@@ -130,6 +149,7 @@ void dooper(ENODE *node)
 		//ep->i = quadlit(&ep->f128);
 		ep->i = NumericLiteral(ep);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fsub:
 		ep->nodetype = en_fcon;
@@ -139,6 +159,7 @@ void dooper(ENODE *node)
 		ep->i = NumericLiteral(ep);
 		//ep->i = quadlit(&ep->f128);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fmul:
 		ep->nodetype = en_fcon;
@@ -148,6 +169,7 @@ void dooper(ENODE *node)
 		ep->i = NumericLiteral(ep);
 		//		ep->i = quadlit(&ep->f128);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fdiv:
 		ep->nodetype = en_fcon;
@@ -157,27 +179,32 @@ void dooper(ENODE *node)
 		ep->i = NumericLiteral(ep);
 		//		ep->i = quadlit(&ep->f128);
 		ep->SetType(ep->tp);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_padd:
 		ep->nodetype = en_pcon;
 		ep->tp = ep->p[0]->tp;
 		ep->posit.Add(ep->p[0]->posit, ep->p[1]->posit);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_psub:
 		ep->nodetype = en_pcon;
 		ep->tp = ep->p[0]->tp;
 		ep->posit.Sub(ep->p[0]->posit, ep->p[1]->posit);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_pmul:
 		ep->nodetype = en_pcon;
 		ep->tp = ep->p[0]->tp;
 		ep->posit.Multiply(ep->p[0]->posit, ep->p[1]->posit);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_pdiv:
 		ep->nodetype = en_pcon;
 		ep->tp = ep->p[0]->tp;
 		ep->posit.Divide(ep->p[0]->posit, ep->p[1]->posit);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_asl:
@@ -193,22 +220,26 @@ void dooper(ENODE *node)
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i >> ep->p[1]->i;
 		Int128::Shr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_shr:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i >> (unsigned)ep->p[1]->i;
 		Int128::Lsr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_shru:
 		ep->nodetype = en_icon;
 		ep->i = (unsigned)ep->p[0]->i >> (unsigned)ep->p[1]->i;
 		Int128::Lsr(&ep->i128, &ep->p[0]->i128, ep->p[1]->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_and:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i & ep->p[1]->i;
 		Int128::BitAnd(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_or:
 		ep->nodetype = en_icon;
@@ -221,18 +252,21 @@ void dooper(ENODE *node)
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i ^ ep->p[1]->i;
 		Int128::BitXor(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_land_safe:
 	case en_land:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i && ep->p[1]->i;
 		Int128::LogAnd(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_lor_safe:
 	case en_lor:
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i || ep->p[1]->i;
 		Int128::LogOr(&ep->i128, &ep->p[0]->i128, &ep->p[1]->i128);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_ult:
@@ -242,6 +276,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_ule:
 		ep->nodetype = en_icon;
@@ -250,6 +285,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_ugt:
 		ep->nodetype = en_icon;
@@ -258,6 +294,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_uge:
 		ep->nodetype = en_icon;
@@ -266,6 +303,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_lt:
 		ep->nodetype = en_icon;
@@ -274,6 +312,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_le:
 		ep->nodetype = en_icon;
@@ -282,6 +321,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_gt:
 		ep->nodetype = en_icon;
@@ -290,6 +330,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_ge:
 		ep->nodetype = en_icon;
@@ -298,6 +339,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_eq:
 		ep->nodetype = en_icon;
@@ -306,6 +348,7 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_ne:
 		ep->nodetype = en_icon;
@@ -314,40 +357,47 @@ void dooper(ENODE *node)
 			Int128::Assign(&ep->i128, Int128::One());
 		else
 			Int128::Assign(&ep->i128, Int128::Zero());
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_feq:
 		ep->nodetype = en_icon;
 		ep->i = Float128::IsEqual(&ep->p[0]->f128, &ep->p[1]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fne:
 		ep->nodetype = en_icon;
 		ep->i = !Float128::IsEqual(&ep->p[0]->f128, &ep->p[1]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_flt:
 		ep->nodetype = en_icon;
 		//		ep->i = ep->p[0]->f < ep->p[1]->f;
 		ep->i = Float128::IsLessThan(&ep->p[0]->f128, &ep->p[1]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fle:
 		ep->nodetype = en_icon;
 		ep->i = Float128::IsLessThan(&ep->p[0]->f128, &ep->p[1]->f128)
 			|| Float128::IsEqual(&ep->p[0]->f128, &ep->p[1]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fgt:
 		ep->nodetype = en_icon;
 		ep->i = Float128::IsLessThan(&ep->p[1]->f128, &ep->p[0]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fge:
 		ep->nodetype = en_icon;
 		ep->i = Float128::IsLessThan(&ep->p[1]->f128, &ep->p[0]->f128)
 			|| Float128::IsEqual(&ep->p[0]->f128, &ep->p[1]->f128);
 		ep->i128 = Int128::Convert(ep->i);
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_safe_cond:
@@ -359,6 +409,7 @@ void dooper(ENODE *node)
 		else
 			Int128::Assign(&ep->i128, &ep->p[1]->p[1]->i128);
 		ep->sp = ep->p[0]->i ? ep->p[1]->p[0]->sp : ep->p[1]->p[1]->sp;
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_sxb:
@@ -370,6 +421,7 @@ void dooper(ENODE *node)
 			ep->i128.low = ep->p[0]->i;
 			ep->i128.low |= 0xffffffffffffff00LL;
 		}
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_sxc:
 		ep->nodetype = en_icon;
@@ -380,6 +432,7 @@ void dooper(ENODE *node)
 			ep->i128.low = ep->p[0]->i;
 			ep->i128.low |= 0xffffffffffff0000LL;
 		}
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_sxh:
 		ep->nodetype = en_icon;
@@ -390,6 +443,7 @@ void dooper(ENODE *node)
 			ep->i128.low = ep->p[0]->i;
 			ep->i128.low |= 0xffffffff00000000LL;
 		}
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_zxb:
@@ -398,6 +452,7 @@ void dooper(ENODE *node)
 		ep->i128 = Int128(ep->p[0]->i);
 		ep->i128.high = 0;
 		ep->i128.low &= 0xffLL;
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_zxc:
 		ep->nodetype = en_icon;
@@ -405,6 +460,7 @@ void dooper(ENODE *node)
 		ep->i128 = Int128(ep->p[0]->i);
 		ep->i128.high = 0;
 		ep->i128.low &= 0xffffLL;
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_zxh:
 		ep->nodetype = en_icon;
@@ -412,6 +468,7 @@ void dooper(ENODE *node)
 		ep->i128 = Int128(ep->p[0]->i);
 		ep->i128.high = 0;
 		ep->i128.low &= 0xffffffffLL;
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
 	case en_isnullptr:
@@ -421,9 +478,17 @@ void dooper(ENODE *node)
 		ep->i128.high = 0;
 		if (Int128::IsEQ(&ep->p[0]->i128, Int128::Zero()))
 			ep->i128.low = 1;
+		ep->p[0] = ep->p[1] = nullptr;
+		break;
+
+	case en_compl:
+		ep->nodetype = en_icon;
+		ep->i = ~ep->p[0]->i;
+		ep->i128.low = ~ep->p[0]->i128.low;
+		ep->i128.high = ~ep->p[0]->i128.high;
+		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	}
-
 	//r = CheckIMatch(node);
 	//if (!r)
 	//	printf("hi");
@@ -535,7 +600,7 @@ static void Opt0_multiply(ENODE** node)
 		}
 		if (Int128::IsEQ(&val, Int128::One())) {
 			*node = ep->p[1];
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
 		sc = val.pwrof2();
@@ -545,7 +610,7 @@ static void Opt0_multiply(ENODE** node)
 			ep->p[1]->i = sc.low;
 			ep->p[1]->i128 = sc;
 			ep->nodetype = en_shl;
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
 		// Place constant as oper2
@@ -555,12 +620,12 @@ static void Opt0_multiply(ENODE** node)
 		val = ep->p[1]->i128;
 		if (Int128::IsEQ(&val, Int128::Zero())) {
 			*node = ep->p[1];
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
 		if (Int128::IsEQ(&val, Int128::One())) {
 			*node = ep->p[0];
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
 		sc = val.pwrof2();
@@ -569,9 +634,54 @@ static void Opt0_multiply(ENODE** node)
 			ep->p[1]->i = sc.low;
 			ep->p[1]->i128 = sc;
 			ep->nodetype = en_shl;
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
+	}
+}
+
+// Complement of an immediate: do the operation
+// Complement of a complement: convert to nop
+
+static void Opt0_compl(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon) {
+		dooper(*node);
+		ooptimized = true;
+	}
+	if (ep->p[0]) {
+		if (ep->p[0]->nodetype == en_compl) {
+			ep->nodetype = en_nop;
+			ep->p[0]->nodetype = en_nop;
+			ooptimized = true;
+		}
+	}
+}
+
+// Minus of an immediate: do the operation
+// Minus of a minus: convert to nop
+
+static void Opt0_uminus(ENODE** node)
+{
+	ENODE* ep;
+
+	ep = *node;
+	opt0(&(ep->p[0]));
+	if (ep->p[0]->nodetype == en_icon)
+	{
+		ep->nodetype = en_icon;
+		ep->i = -ep->p[0]->i;
+		Int128::Sub(&ep->i128, Int128::Zero(), &ep->p[0]->i128);
+		ooptimized = true;
+	}
+	else if (ep->p[0]->nodetype == en_uminus) {
+		ep->nodetype = en_nop;
+		ep->p[0]->nodetype = en_nop;
+		ooptimized = true;
 	}
 }
 
@@ -589,7 +699,7 @@ static void Opt0_logic(ENODE** node)
 		dooper(*node);
 	else if (ep->p[0]->nodetype == en_icon) {
 		swap_nodes(ep);
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -609,7 +719,7 @@ static void Opt0_shift(ENODE** node)
 	else if (ep->p[1]->nodetype == en_icon) {
 		if (Int128::IsEQ(&ep->p[1]->i128, Int128::Zero())) {
 			*node = ep->p[0];
-			ooptimized++;
+			ooptimized = true;
 			return;
 		}
 	}
@@ -629,7 +739,7 @@ static void Opt0_releq(ENODE** node)
 		dooper(*node);
 	else if (ep->p[0]->nodetype == en_icon) {
 		swap_nodes(ep);
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -663,7 +773,7 @@ static void Opt0_byt2hexi(ENODE* ep)
 			ep->i128.high = 0;
 			ep->i128.low = ep->p[0]->i128.low & 0xffLL;
 		}
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -676,7 +786,7 @@ static void Opt0_ubyt2hexi(ENODE* ep)
 		ep->i = ep->p[0]->i & 0xffLL;
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffLL;
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -696,7 +806,7 @@ static void Opt0_wyde2hexi(ENODE* ep)
 			ep->i128.high = 0;
 			ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
 		}
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -709,7 +819,7 @@ static void Opt0_uwyde2hexi(ENODE* ep)
 		ep->i = ep->p[0]->i & 0xffffLL;
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -729,7 +839,7 @@ static void Opt0_tetra2hexi(ENODE* ep)
 			ep->i128.high = 0;
 			ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
 		}
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -742,7 +852,7 @@ static void Opt0_utetra2hexi(ENODE* ep)
 		ep->i = ep->p[0]->i & 0xffffffffLL;
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -750,7 +860,7 @@ static void Opt0_octa2hexi(ENODE* ep)
 {
 	opt0(&(ep->p[0]));
 	if (ep->p[0]->nodetype == en_icon) {
-		ep->esize = sizeOfWord;
+		ep->esize = 16;
 		ep->nodetype = en_icon;
 		ep->i = ep->p[0]->i;
 		if (ep->i & 0x8000000000000000LL) {
@@ -761,7 +871,7 @@ static void Opt0_octa2hexi(ENODE* ep)
 			ep->i128.high = 0;
 			ep->i128.low = ep->p[0]->i128.low;
 		}
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -774,7 +884,7 @@ static void Opt0_uocta2hexi(ENODE* ep)
 		ep->i = ep->p[0]->i;
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low;
-		ooptimized++;
+		ooptimized = true;
 	}
 }
 
@@ -873,7 +983,7 @@ static void opt0(ENODE **node)
 			ep->nodetype = en_icon;
 			ep->i = ep->p[0]->i;
 			ep->i128 = ep->p[0]->i128;
-			ooptimized++;
+			ooptimized = true;
 		}
 		return;
 
@@ -954,17 +1064,11 @@ static void opt0(ENODE **node)
     if( ep->p[0]->nodetype == en_icon )
 			dooper(*node);
 		return;
+
 	case en_compl:
-    opt0( &(ep->p[0]));
-    if( ep->p[0]->nodetype == en_icon )
-    {
-      ep->nodetype = en_icon;
-      ep->i = ~ep->p[0]->i;
-			ep->i128.low = ~ep->p[0]->i128.low;
-			ep->i128.high = ~ep->p[0]->i128.high;
-			ooptimized++;
-		}
+		Opt0_compl(node);
     return;
+
 	case en_not:
     opt0( &(ep->p[0]));
     if( ep->p[0]->nodetype == en_icon )
@@ -972,24 +1076,19 @@ static void opt0(ENODE **node)
       ep->nodetype = en_icon;
       ep->i = !ep->p[0]->i;
 			ep->i128 = Int128::IsEQ(&ep->p[0]->i128, Int128::Zero()) ? Int128(1) : Int128(0);
-			ooptimized++;
-		}
-    return;
-  case en_uminus:
-    opt0( &(ep->p[0]));
-    if( ep->p[0]->nodetype == en_icon )
-    {
-      ep->nodetype = en_icon;
-      ep->i = -ep->p[0]->i;
-			Int128::Sub(&ep->i128, Int128::Zero(), &ep->p[0]->i128);
-			ooptimized++;
+			ooptimized = true;
+			ep->p[0] = nullptr;
 		}
     return;
 
-		// A en_type node should not be hit because it is always part of a typecast,
-		// and processed by en_cast. It is a compiler error if it is hit.
-    case en_type:
-			return;
+  case en_uminus:
+		Opt0_uminus(node);
+    return;
+
+	// A en_type node should not be hit because it is always part of a typecast,
+	// and processed by en_cast. It is a compiler error if it is hit.
+  case en_type:
+		return;
 
             case en_tempfpref:
               opt0( &(ep->p[0]));
@@ -998,7 +1097,7 @@ static void opt0(ENODE **node)
                 ep->nodetype = en_fcon;
                 ep->f = ep->p[0]->f;
 								Float128::Assign(&ep->f128,&ep->p[0]->f128);
-								ooptimized++;
+								ooptimized = true;
 							}
               return;
 						case en_temppref:
@@ -1007,7 +1106,7 @@ static void opt0(ENODE **node)
 							{
 								ep->nodetype = en_pcon;
 								ep->posit = ep->p[0]->posit;
-								ooptimized++;
+								ooptimized = true;
 							}
 							return;
 						case en_vadd:
@@ -1065,8 +1164,9 @@ static void opt0(ENODE **node)
 								}
 							}
 							break;
-						case en_i2p:
-						case en_i2d:
+			case en_i2p:
+			case en_i2d:
+			case en_i2q:
 				opt0(&(ep->p[0]));
 				if (ep->p[0]->nodetype == en_icon) {
 					dooper(*node);
@@ -1079,7 +1179,7 @@ static void opt0(ENODE **node)
 					ep->i = (long)ep->p[0]->f;
 					ep->i128 = Int128::Convert(ep->i);
 					ep->nodetype = en_icon;
-					ooptimized++;
+					ooptimized = true;
 					return;
 				}
 				break;
@@ -1190,7 +1290,7 @@ static void opt0(ENODE **node)
           }
           if( ep->p[0]->i == 0 ) {    /* 0/x */
 						*node = ep->p[0];
-						ooptimized++;
+						ooptimized = true;
 						return;
           }
         }
@@ -1198,7 +1298,7 @@ static void opt0(ENODE **node)
           val = ep->p[1]->i;
           if( val == 1 ) {        /* x/1 */
             *node = ep->p[0];
-						ooptimized++;
+						ooptimized = true;
 						return;
           }
           sc = pwrof2(val);
@@ -1211,7 +1311,7 @@ static void opt0(ENODE **node)
 							ep->nodetype = en_shru;
 						else
 							ep->nodetype = en_shr;// ep->p[0]->isUnsigned ? en_shru : en_shr;???B
-						ooptimized++;
+						ooptimized = true;
 					}
         }
         break;
@@ -1231,7 +1331,7 @@ static void opt0(ENODE **node)
                                     ep->p[1]->i = mod_mask(sc);
 																		ep->p[1]->i128 = Int128(mod_mask(sc));
                                     ep->nodetype = en_and;
-																		ooptimized++;
+																		ooptimized = true;
 														}
                             }
                     break;
@@ -1334,34 +1434,51 @@ static void opt0(ENODE **node)
 	// The value for a cast is really ep->p[1]
 	// The type of the cast is from ep->p[0]
 	case en_cast:
+		opt0(&(ep->p[0]));
 		opt0(&(ep->p[1]));
 		//(*node)->nodetype = ep->p[1]->nodetype;
 		*node = ep->p[1];
 		if (ep->p[0]) {
-			(*node)->tp = ep->p[0]->tp;
+			ep->tp = ep->p[0]->tp;
 			if (ep->p[0]->constflag) {
 				if (ep->p[0]->tp->IsScalar())
-					(*node)->nodetype = en_icon;
+					ep->nodetype = en_icon;
 				else if (ep->p[0]->tp->IsFloatType())
-					(*node)->nodetype = en_fcon;
-				(*node)->constflag = true;
+					ep->nodetype = en_fcon;
+				ep->constflag = true;
 			}
 			if (ep->constflag) {
 				if (ep->tp->IsScalar())
-					(*node)->nodetype = en_icon;
+					ep->nodetype = en_icon;
 				else if (ep->tp->IsFloatType())
-					(*node)->nodetype = en_fcon;
+					ep->nodetype = en_fcon;
 			}
+			ep->p[0] = nullptr;
 		}
-		ooptimized++;
+		ooptimized = true;
 		break;
 
 	case en_addrof:
 		opt0(&(ep->p[0]));
 		break;
 	case en_list:
-		for (ep = ep->p[2]; ep; ep = ep->p[2])
+		for (ep = ep->p[2]; ep; ep = ep->p[2]) {
 			opt0(&(ep->p[0]));
+			opt0(&(ep->p[1]));
+			opt0(&(ep->p[2]));
+		}
+		break;
+
+	case en_aggregate:
+		opt0(&(ep->p[0]));
+		break;
+
+	case en_nop:
+		opt0(&(ep->p[0]));
+		opt0(&(ep->p[1]));
+		*node = ep->p[0];
+		ep->p[0] = nullptr;
+		ooptimized = true;
 		break;
 	}
 }
@@ -1627,16 +1744,20 @@ static bool CheckIMatch(ENODE* node)
 
 void opt_const_unchecked(ENODE **node)
 {
+	int pass;
 	//bool r;
 	//bool s = CheckIMatch(*node);
 
 	dfs.printf("<OptConst2>");
 	opt0(node);
-	fold_const(node);
+//	fold_const(node);
+	pass = 1;
 	do {
 		ooptimized = false;
 		opt0(node);
-	} while (ooptimized);
+//		fold_const(node);
+		pass++;
+	} while (ooptimized && pass < 500);
 	dfs.printf("</OptConst2>");
 
 	//r = CheckIMatch(*node);
@@ -1649,17 +1770,21 @@ void opt_const_unchecked(ENODE **node)
 //
 void opt_const(ENODE **node)
 {
+	int pass;
 	//bool r;
 	//bool s = CheckIMatch(*node);
 
 	dfs.printf("<OptConst>");
     if (opt_noexpr==FALSE) {
     	opt0(node);
-    	fold_const(node);
+//    	fold_const(node);
+			pass = 1;
 			do {
 				ooptimized = false;
 				opt0(node);
-			} while (ooptimized);
+//				fold_const(node);
+				pass++;
+			} while (ooptimized && pass < 500);
 		}
 	dfs.printf("</OptConst>");
 

@@ -106,6 +106,11 @@ Operand *OperandFactory::MakeImmediate(int64_t i, int display_opt)
 	ep = allocEnode();
 	ep->nodetype = en_icon;
 	ep->i = i;
+	ep->i128.low = i;
+	if (i & 0x8000000000000000LL)
+		ep->i128.high = 0xffffffffffffffffLL;
+	else
+		ep->i128.high = 0x0LL;
 	ap = allocOperand();
 	ap->mode = am_imm;
 	ap->offset = ep;
@@ -121,24 +126,12 @@ Operand* OperandFactory::MakeImmediate(Int128 i, int display_opt)
 	ep = allocEnode();
 	ep->nodetype = en_icon;
 	ep->i128 = i;
-	ep->i = i.low & 0xffffffLL;
+	ep->i = i.low;
 	ep->esize = 16LL;
 	ap = allocOperand();
 	ap->mode = am_imm;
 	ap->offset = ep;
 	ap->display_opt = display_opt;
-	if (!i.IsNBit(24)) {
-		if (i.IsNBit(80)) {
-			Int128::Lsr(&k, &i, 24);
-			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
-		}
-		else {
-			Int128::Lsr(&k, &i, 80);
-			GenerateMonadic(op_exim, 0, MakeImmediate(k.low));
-			Int128::Lsr(&k, &i, 24);
-			GenerateMonadic(op_exi56, 0, MakeImmediate(k.low));
-		}
-	}
 	return (ap);
 }
 

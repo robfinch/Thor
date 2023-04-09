@@ -59,6 +59,8 @@ TIME:	$(ASMS)
 	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
 	
 clean:
+	del *.o
+	del *.lst
 	del *.t64
 	del *.lis
 	del *.c.xml

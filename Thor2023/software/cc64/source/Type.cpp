@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -381,6 +381,72 @@ bool TYP::IsSameType(TYP *a, TYP *b, bool exact)
 		}
 		goto chk;
 
+	case bt_int:
+		if (b->type == bt_int)
+			return (true);
+		if (!exact) {
+			if (b->type == bt_long)
+				return (true);
+			if (b->type == bt_ulong)
+				return (true);
+			if (b->type == bt_short)
+				return (true);
+			if (b->type == bt_ushort)
+				return (true);
+			if (b->type == bt_int)
+				return (true);
+			if (b->type == bt_uint)
+				return (true);
+			if (b->type == bt_char)
+				return (true);
+			if (b->type == bt_uchar)
+				return (true);
+			if (b->type == bt_ichar)
+				return (true);
+			if (b->type == bt_iuchar)
+				return (true);
+			if (b->type == bt_byte)
+				return (true);
+			if (b->type == bt_ubyte)
+				return (true);
+			if (b->type == bt_enum)
+				return (true);
+		}
+		goto chk;
+
+	case bt_uint:
+		if (b->type == bt_uint)
+			return (true);
+		if (!exact) {
+			if (b->type == bt_long)
+				return (true);
+			if (b->type == bt_ulong)
+				return (true);
+			if (b->type == bt_short)
+				return (true);
+			if (b->type == bt_ushort)
+				return (true);
+			if (b->type == bt_int)
+				return (true);
+			if (b->type == bt_uint)
+				return (true);
+			if (b->type == bt_char)
+				return (true);
+			if (b->type == bt_uchar)
+				return (true);
+			if (b->type == bt_ichar)
+				return (true);
+			if (b->type == bt_iuchar)
+				return (true);
+			if (b->type == bt_byte)
+				return (true);
+			if (b->type == bt_ubyte)
+				return (true);
+			if (b->type == bt_enum)
+				return (true);
+		}
+		goto chk;
+
 	case bt_short:
 		if (b->type == bt_short)
 			return (true);
@@ -687,15 +753,15 @@ bool TYP::IsSameStructType(TYP* a, TYP* b)
 	int64_t maxa = 0, maxb = 0;
 
 	return (a->size == b->size);
-	spA = spA->GetPtr(a->lst.GetHead());      /* start at top of symbol table */
+	spA = a->lst.headp;      /* start at top of symbol table */
 	while (spA != nullptr) {
 		maxa = maxa + spA->tp->size;
-		spA = spA->GetNextPtr();
+		spA = spA->nextp;
 	}
-	spB = spB->GetPtr(b->lst.GetHead());      /* start at top of symbol table */
+	spB = b->lst.headp;      /* start at top of symbol table */
 	while (spB != nullptr) {
 		maxb = maxb + spB->tp->size;
-		spB = spB->GetNextPtr();
+		spB = spB->nextp;
 	}
 	return (maxa == maxb);
 }
@@ -748,18 +814,20 @@ int64_t TYP::Initialize(ENODE* pnode, TYP *tp2, int opt, SYM* symi)
 		sizes[nn] = sizes[nn - 1] * typ_vector[nn]->numele;
 
 j1:
+	/*
 	while (lastst == begin) {
 		brace_level++;
 		NextToken();
 	}
+	*/
 	if (tp2)
 		tp = tp2;
 	else {
 		tp = typ_vector[max(base-brace_level,0)];
 	}
 	do {
-		if (lastst == assign)
-			NextToken();
+		//if (lastst == assign)
+		//	NextToken();
 		switch (tp->type) {
 		case bt_ubyte:
 		case bt_byte:
@@ -772,11 +840,11 @@ j1:
 			break;
 		case bt_ushort:
 		case bt_short:
-			nbytes = initshort(symi, opt);
+//			nbytes = initshort(symi, opt);
 			break;
 		case bt_uint:
 		case bt_int:
-			nbytes = initint(symi, opt);
+			nbytes = initint(symi, symi->value.i, opt);
 			break;
 		case bt_pointer:
 			if (tp->val_flag)
@@ -797,7 +865,7 @@ j1:
 			nbytes = tp->InitializeStruct(pnode,symi);
 			break;
 		case bt_union:
-			nbytes = tp->InitializeUnion(symi);
+			nbytes = tp->InitializeUnion(symi,pnode);
 			break;
 		case bt_quad:
 			nbytes = initquad(symi,opt);
@@ -879,7 +947,8 @@ int64_t TYP::InitializeArray(int64_t maxsz, SYM* symi)
 	*/
 	// Fill in the elements as encountered.
 	nbytes = 0;
-	values = new Value[100];
+//	values = new Value[100];
+	values = (Value*)allocx(100 * sizeof(Value));
 	buckets = new int64_t[100];
 	ZeroMemory(buckets, 100 * sizeof(int64_t));
 	bucketshi = new int64_t[100];
@@ -1405,14 +1474,17 @@ int64_t TYP::InitializeStruct(ENODE* node, SYM* symi)
 	return (size);
 }
 
-int64_t TYP::GenerateT(TYP *tp, ENODE *node)
+int64_t TYP::GenerateT(ENODE *node)
 {
 	int64_t nbytes;
 	int64_t val;
 	int64_t n, nele;
 	ENODE *nd;
+	List* lst;
 
-	switch (tp->type) {
+	if (this == nullptr)
+		return (0);
+	switch (type) {
 	case bt_byte:
 		val = node->i;
 		nbytes = 1; GenerateByte(val);
@@ -1436,9 +1508,15 @@ int64_t TYP::GenerateT(TYP *tp, ENODE *node)
 	case bt_ushort:
 		val = node->i;
 		nbytes = 4; GenerateHalf(val); break;
+	case bt_int:
+		val = node->i;
+		nbytes = 8; GenerateInt(val); break;
+	case bt_uint:
+		val = node->i;
+		nbytes = 16; GenerateInt(val); break;
 	case bt_long:
 		val = node->i;
-		nbytes = 8; GenerateLong(val); break;
+		nbytes = 16; GenerateLong(val); break;
 	case bt_ulong:
 		val = node->i;
 		nbytes = 8; GenerateLong(val); break;
@@ -1451,16 +1529,17 @@ int64_t TYP::GenerateT(TYP *tp, ENODE *node)
 	case bt_posit:
 		nbytes = 8; GeneratePosit(node->posit); break;
 	case bt_pointer:
-		if (tp->val_flag) {
+		if (val_flag) {
 			nbytes = 0;
-			nele = tp->numele;
-			tp = tp->btpp;
-			nd = node->p[0]->p[2];
-			for (n = 0; n < nele; n++) {
+			nele = numele;
+			lst = sortedList(nullptr, node);
+			for (n = 0; lst && n < nele; n++) {
+				nd = lst->node;
 				if (nd == nullptr)
 					break;
-				nbytes += GenerateT(tp,nd);
+				nbytes += btpp->GenerateT(nd);
 				nd = nd->p[2];
+				lst = lst->nxt;
 			}
 		}
 		else {
@@ -1472,18 +1551,17 @@ int64_t TYP::GenerateT(TYP *tp, ENODE *node)
 	return (nbytes);
 }
 
-int64_t TYP::InitializeUnion(SYM* symi)
+int64_t TYP::InitializeUnion(SYM* symi, ENODE* node)
 {
 	SYM *sp, *osp;
 	int64_t nbytes;
 	int64_t val;
-	ENODE *node = nullptr;
 	bool found = false;
 	TYP *tp, *ntp;
 	int count;
 
 	nbytes = 0;
-	val = GetConstExpression(&node, symi).low;
+//	val = GetConstExpression(&node, symi).low;
 	if (node == nullptr)	// syntax error in GetConstExpression()
 		return (0);
 	sp = lst.headp;      /* start at top of symbol table */
@@ -1493,12 +1571,15 @@ int64_t TYP::InitializeUnion(SYM* symi)
 		// Detect array of values
 		if (sp->tp->type == bt_pointer && sp->tp->val_flag) {
 			tp = sp->tp->btpp;
+			if (node->tp == nullptr)
+				break;
 			ntp = node->tp->btpp;
 			if (IsSameType(tp, ntp, false))
 			{
 				nbytes = node->esize;
-				nbytes = GenerateT(tp, node);
+				nbytes = GenerateT(node);
 				found = true;
+				/*
 				while (lastst == comma && count < sp->tp->numele) {
 					NextToken();
 					val = GetConstExpression(&node, symi).low;
@@ -1508,12 +1589,13 @@ int64_t TYP::InitializeUnion(SYM* symi)
 				}
 				if (count >= sp->tp->numele)
 					error(ERR_INITSIZE);
+				*/
 				goto j1;
 			}
 		}
 		if (IsSameType(sp->tp, node->tp, false)) {
 			nbytes = node->esize;
-			nbytes = GenerateT(sp->tp, node);
+//			nbytes = GenerateT(sp->tp, node);
 			found = true;
 			break;
 		}
@@ -1538,11 +1620,11 @@ bool TYP::FindPointerInStruct()
 {
 	SYM *sp;
 
-	sp = sp->GetPtr(lst.GetHead());      // start at top of symbol table
+	sp = lst.headp;// sp->GetPtr(lst.GetHead());      // start at top of symbol table
 	while (sp != 0) {
 		if (sp->tp->FindPointer())
 			return (true);
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;// sp->GetNextPtr();
 	}
 	return (false);
 }

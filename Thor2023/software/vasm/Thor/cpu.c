@@ -62,7 +62,7 @@ mnemonic mnemonics[]={
 	"andn", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(8LL)|SB(1)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
 	
 	"asl", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(0LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
-	"asl", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(8)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"asl", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(8LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
 	
 	"bbc",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,COND(8LL)|OPC(27LL),5,SZ_UNSIZED,0},
 	"bbc",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,COND(6LL)|OPC(27LL),5,SZ_UNSIZED,0},
@@ -314,13 +314,24 @@ mnemonic mnemonics[]={
 	"load",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,SZ(4)|OPC(16),5, SZ_INTALL, SZ_HEXI},
 	"load",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,SZ(4)|OPC(16),5, SZ_INTALL, SZ_HEXI},
 
+	"lsl", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(2LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"lsl", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(10LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+
+	"lsr", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(3LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"lsr", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(11LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+
 	"max",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x520000000002LL,6},	
 	"memdb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF9,2},
 	"memsb",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,0xF8,2},
 	"min",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x500000000002LL,6},	
 
-	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,4},	
-	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,4},	
+	"mod", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(7)|OPC(2)|0x200000000LL,5,SZ_INTALL,SZ_HEXI},
+	"mod", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,FUNC(7)|OPC(2)|0x200000000LL,5,SZ_INTALL,SZ_HEXI},
+	"modu", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(7)|OPC(2)|0x300000000LL,5,SZ_INTALL,SZ_HEXI},
+	"modu", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,FUNC(7)|OPC(2)|0x300000000LL,5,SZ_INTALL,SZ_HEXI},
+
+	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,5, SZ_INTALL,SZ_HEXI},	
+	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,5},	
 //	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 //	"move",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A120E0000AALL,6},
@@ -439,19 +450,11 @@ mnemonic mnemonics[]={
 
 	"rte",	{OP_IMM,OP_REG,0,0,0},{RTE,CPU_ALL,0,0x260000000007LL,6},	
 
-	"rol",	{OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x860000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x860000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x860000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x860000000002LL,6},	
-	"rol",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x860000000002LL,6},
-	"rol",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5B,4},
+	"rol", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(4LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"rol", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(12LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"ror", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(5LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
+	"ror", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,FUNC(13LL)|OPC(14LL),5,SZ_INTALL,SZ_HEXI},	
 
-	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x880000000002LL,6},	
-	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x880000000002LL,6},	
-	"ror",	{OP_REG,OP_REG,OP_REG|OP_IMM7,OP_VMREG,0}, {R3,CPU_ALL,0,0x880000000002LL,6},	
-	"ror",	{OP_REG,OP_REG,OP_IMM,0,0}, {SHIFTI,CPU_ALL,0,0x880000000002LL,6},
-	"ror",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,0x5C,4},
-	
 	"rti",	{OP_IMM,0,0,0,0}, {RTS,CPU_ALL,0,0x00F0LL, 2},
 	"rti",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x00F0LL, 2},
 
@@ -2208,6 +2211,18 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			if (insn)
 				*insn = *insn | ((val.lo & 0x7fffffLL) << 9LL);
 		}
+		else if (mnemo->ext.format==RIL) {
+			if (postfix1)
+				*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffLL) << 8LL) | OPC(31);
+			if (!is_nbit(hval,32LL)) {
+				if (postfix2)
+					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffLL) << 8LL) | OPC(31) | SZ(1);
+			}
+			if (!is_nbit(hval,64LL)) {
+				if (postfix3)
+					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+		}
 		else {
 			/*
 			if (!is_nbit(hval,80)) {
@@ -2231,7 +2246,7 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
 			if (!is_nbit(hval,16LL)) {
 				if (postfix1)
-					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffLL) << 8LL) | OPC(31);
+					*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffLL) << 8LL) | OPC(31);
 			}
 			if (!is_nbit(hval,32LL)) {
 				if (postfix2)
@@ -2297,8 +2312,20 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
 			if (!is_nbit(hval,16LL)) {
 				if (postfix1)
-					*postfix1 = (5LL << 48LL) | (((val.lo >> 8LL) & 0xffffffffLL) << 8LL) | OPC(31);
+					*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffLL) << 8LL) | OPC(31);
 			}
+			if (!is_nbit(hval,32LL)) {
+				if (postfix2)
+					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffLL) << 8LL) | OPC(31) | SZ(1);
+			}
+			if (!is_nbit(hval,64LL)) {
+				if (postfix3)
+					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+		}
+		else if (mnemo->ext.format==RIL) {
+			if (postfix1)
+				*postfix1 = (5LL << 48LL) | ((val.lo & 0xffffffffLL) << 8LL) | OPC(31);
 			if (!is_nbit(hval,32LL)) {
 				if (postfix2)
 					*postfix2 = (5LL << 48LL) | ((val2.lo & 0xffffffffLL) << 8LL) | OPC(31) | SZ(1);

@@ -666,9 +666,11 @@ int SYM::AdjustNbytes(int nbytes, int al, int ztype)
 }
 
 // Initialize the type. Unions can't be initialized. Oh yes they can.
+// The node list coming in already has proper types assigned to it.
 
 int64_t SYM::Initialize(ENODE* pnode, TYP* tp2, int opt)
 {
+	static int level = 0;
 	int64_t nbytes;
 	int base, nn;
 	int64_t sizes[100];
@@ -677,36 +679,11 @@ int64_t SYM::Initialize(ENODE* pnode, TYP* tp2, int opt)
 	Expression exp;
 	bool init_array = false;
 
-	for (base = typ_sp - 1; base >= 0; base--) {
-		if (typ_vector[base]->isArray)
-			break;
-		if (typ_vector[base]->IsStructType())
-			break;
-	}
-	sizes[0] = typ_vector[min(base + 1, typ_sp - 1)]->size * typ_vector[0]->numele;
-	for (nn = 1; nn <= base; nn++)
-		sizes[nn] = sizes[nn - 1] * typ_vector[nn]->numele;
-
-	init_array = tp->type == bt_pointer && tp->val_flag;
-j1:
-	if (init_array) {
-		while (lastst == begin) {
-			brace_level++;
-			NextToken();
-		}
-	}
-	if (tp2)
-		tp = tp2;
-	else {
-		tp = typ_vector[max(base - brace_level, 0)];
-	}
-	// xisdst.c ultimately an object is being pointed to.
-	if (typ_vector[0]->type == bt_pointer) {
-		tp = typ_vector[0];
-	}
+	return (GenerateT(pnode));
+	/*
 	do {
-		if (lastst == assign)
-			NextToken();
+		//if (lastst == assign)
+		//	NextToken();
 		switch (tp->type) {
 		case bt_ubyte:
 		case bt_byte:
@@ -719,15 +696,15 @@ j1:
 			break;
 		case bt_ushort:
 		case bt_short:
-			nbytes = initshort(this,opt);
+			nbytes = initshort(this, pnode ? pnode->i : 0, opt);
 			break;
 		case bt_uint:
 		case bt_int:
-			nbytes = initint(this, opt);
+			nbytes = initint(this, pnode ? pnode->i : 0, opt);// (this, opt);
 			break;
 		case bt_pointer:
 			if (tp->val_flag)
-				nbytes = tp->InitializeArray(sizes[max(base - brace_level, 0)], this);
+				nbytes = InitializeArray(pnode);
 			else
 				nbytes = InitializePointer(tp, opt, this);
 			break;
@@ -744,7 +721,7 @@ j1:
 			nbytes = InitializeStruct(pnode);
 			break;
 		case bt_union:
-			nbytes = tp->InitializeUnion(this);
+			nbytes = InitializeUnion(pnode);
 			break;
 		case bt_quad:
 			nbytes = initquad(this, opt);
@@ -760,11 +737,6 @@ j1:
 			error(ERR_NOINIT);
 			nbytes = 0;
 		}
-		//if (brace_level > 0) {
-		//	if (typ_vector[brace_level - 1]->val_flag) {
-
-		//	}
-		//}
 		if (tp2 != nullptr)
 			return (nbytes);
 		if (lastst != comma || brace_level == 0)
@@ -773,7 +745,9 @@ j1:
 		if (lastst == end)
 			break;
 	} while (0);
+	*/
 j2:
+	/*
 	if (init_array) {
 		while (lastst == end) {
 			brace_level--;
@@ -788,73 +762,222 @@ j2:
 			}
 		}
 	}
+	*/
 	return (nbytes);
 }
 
-int64_t SYM::InitializeStruct(ENODE* node)
+int64_t SYM::InitializeArray(ENODE* rootnode)
 {
-	SYM* sp, *hd;
 	int64_t nbytes;
-	int count;
-	Expression exp;
-	TYP* typ;
-	ENODE* node2;
+	int64_t count;
+	List* lst;
+	ENODE* node;
 
-	//	needpunc(begin, 25);
 	nbytes = 0;
-	//sp = sp->GetPtr(tp->lst.GetHead());      /* start at top of symbol table */
-	hd = sp = this->GetPtr(this->tp->lst.GetHead());
-	count = 0;
-	typ = nullptr;
-	exp.ParseExpression(&node2, this);
-	if (lastst != end && lastst != semicolon)
-		error(ERR_PUNCT);
-	while (sp != 0) {
-		while (nbytes < sp->value.i) {     /* align properly */
+	node = rootnode;
+	if (node->nodetype == en_aggregate)
+		node = node->p[0];
+	lst = sortedList(nullptr, node);
+	for (count = tp->numele; count && lst != nullptr; lst = lst->nxt, count--) {
+		node = lst->node;
+		/*
+		while (nbytes < sp->tp->size) {// sp->value.i) {     // align properly
 											 //                    nbytes += GenerateByte(0);
 			GenerateByte(0);
 			nbytes++;
 		}
-		currentSym = sp;
-		/*
-		if (typ == nullptr) {
-			typ = exp.ParsePostfixExpression(&node2, false);
-		}
-		if (typ != nullptr) {
-			if (lastst == assign)
-				NextToken();
-			if (node2->nodetype == en_ref && node2->sym != nullptr) {
-				if (node2->sym->name->compare(sp->name->c_str()) == 0) {
-					nbytes += sp->Initialize(node, sp->tp, 1);
-				}
-				else
-					nbytes += sp->Initialize(node, sp->tp, 0);
-			}
-			else
-				nbytes += sp->Initialize(node, sp->tp, 1);
-			typ = nullptr;
-		}
-		else
 		*/
-			nbytes += sp->Initialize(node, sp->tp, 0);
-		sp = sp->GetNextPtr();
-		if (sp == hd)
+		if (node == nullptr || node==rootnode)
+			break;
+		nbytes += Initialize(node, tp, 0);
+	}
+	if (nbytes < tp->size)
+		genstorage(tp->size - nbytes);
+	return (tp->size);
+}
+
+int64_t SYM::InitializeStruct(ENODE* node)
+{
+	static int level = 0;
+	SYM* sp, *hd;
+	int64_t nbytes;
+	int count;
+	TYP* typ;
+	ENODE* node2;
+	TABLE* tbl;
+	List* lst;
+
+	level++;
+	nbytes = 0;
+	//sp = sp->GetPtr(tp->lst.GetHead());      /* start at top of symbol table */
+	tbl = &this->tp->lst;
+	hd = sp = tbl->headp;// this->GetPtr(tbl->GetHead());
+	count = 0;
+	typ = nullptr;
+	lst = sortedList(nullptr, node);
+	if (node->nodetype == en_aggregate)
+		node = node->p[0];
+	for (; sp != 0 && lst != nullptr; lst = lst->nxt) {
+		node = lst->node;
+		/*
+		while (nbytes < sp->tp->size) {// sp->value.i) {     // align properly
+											 //                    nbytes += GenerateByte(0);
+			GenerateByte(0);
+			nbytes++;
+		}
+		*/
+		currentSym = sp;
+		if (node == nullptr)
+			break;
+		nbytes += sp->Initialize(node, sp->tp, 0);
+		sp = sp->nextp;
+		if (sp == hd || sp == nullptr)
 			break;
 		count++;
-	}
-	if (sp == nullptr) {
-		if (lastst != end && lastst != semicolon) {
-			error(ERR_INITSIZE);
-			while (lastst != end && lastst != semicolon && lastst != end)
-				NextToken();
-		}
 	}
 	if (nbytes < tp->size)
 		genstorage(tp->size - nbytes);
 	//	needpunc(end, 26);
+	level--;
 	return (tp->size);
 }
 
+int64_t SYM::InitializeUnion(ENODE* node)
+{
+	SYM* sp, * osp;
+	int64_t nbytes;
+	int64_t val;
+	bool found = false;
+	TYP* ntp;
+	int count;
+	ENODE* pnode;
+	List* lst;
+
+	nbytes = 0;
+	if (node == nullptr)	// syntax error in GetConstExpression()
+		return (0);
+	      /* start at top of symbol table */
+	count = 0;
+	// An array of values matching a union?
+	ntp = node->tp;
+	if (ntp->type == bt_pointer && ntp->val_flag) {
+		ntp = ntp->btpp;
+		for (count = 0; count < ntp->numele; count++)
+			nbytes += ntp->GenerateT(node);
+	}
+	else if (ntp->type != bt_union) {
+		pnode = node;
+		if (TYP::IsSameType(ntp, tp->btpp, false)) {
+			lst = sortedList(nullptr, node);
+			do {
+				pnode = lst->node;
+				nbytes += ntp->GenerateT(pnode);
+				ntp = pnode->tp;
+				lst = lst->nxt;
+			} while (lst && TYP::IsSameType(ntp, tp->btpp, false));
+		}
+	}
+	else {
+		for (osp = sp = tp->lst.headp; sp != 0; sp = sp->nextp) {
+			// Detect array of values
+			if (TYP::IsSameType(sp->tp, node->tp, false)) {
+				nbytes = sp->tp->GenerateT(node);
+				found = true;
+				break;
+			}
+			if (sp == osp)
+				break;
+		}
+		if (!found)
+			error(ERR_INIT_UNION);
+		if (lastst != semicolon && lastst != comma && lastst != end)
+			error(ERR_PUNCT);
+	}
+	if (nbytes < tp->size)
+		genstorage(tp->size - nbytes);
+	return (tp->size);
+}
+
+int64_t SYM::GenerateT(ENODE* node)
+{
+	int64_t nbytes;
+	int64_t val;
+
+	if (node == nullptr)
+		return (0);
+	if (!node->constflag)
+		;
+	if (node->nodetype==en_ref)
+		;
+	switch (tp->type) {
+	case bt_byte:
+		val = node->i;
+		nbytes = 1; GenerateByte(val);
+		break;
+	case bt_ubyte:
+		val = node->i;
+		nbytes = 1;
+		GenerateByte(val);
+		break;
+	case bt_ichar:
+	case bt_char:
+	case bt_enum:
+		val = node->i;
+		nbytes = 2; GenerateChar(val); break;
+	case bt_iuchar:
+	case bt_uchar:
+		val = node->i;
+		nbytes = 2; GenerateChar(val); break;
+	case bt_short:
+		val = node->i;
+		nbytes = 4; GenerateHalf(val); break;
+	case bt_ushort:
+		val = node->i;
+		nbytes = 4; GenerateHalf(val); break;
+	case bt_int:
+	case bt_uint:
+		val = node->i;
+		nbytes = 8; GenerateInt(val); break;
+	case bt_long:
+		val = node->i;
+		nbytes = 8; GenerateLong(val); break;
+	case bt_exception:
+	case bt_ulong:
+		val = node->i;
+		nbytes = 8; GenerateLong(val); break;
+	case bt_float:
+		nbytes = 8; GenerateFloat((Float128*)&node->f128); break;
+	case bt_double:
+		nbytes = 8; GenerateFloat((Float128*)&node->f128); break;
+	case bt_quad:
+		nbytes = 16; GenerateQuad((Float128*)&node->f128); break;
+	case bt_posit:
+		nbytes = 8; GeneratePosit(node->posit); break;
+	case bt_struct:
+		nbytes = InitializeStruct(node);
+		break;
+	case bt_union:
+		nbytes = InitializeUnion(node);
+		break;
+	case bt_pointer:
+		// Is it an array?
+		if (tp->val_flag)
+			nbytes = InitializeArray(node);
+		else {
+			val = node->i;
+			nbytes = sizeOfPtr;
+			switch (sizeOfPtr) {
+			case 4: GenerateHalf(val); break;
+			case 8: GenerateInt(val); break;
+			case 16: GenerateLong(val); break;
+			}
+		}
+		//case bt_struct:	nbytes = InitializeStruct(); break;
+	default:
+		;
+	}
+	return (nbytes);
+}
 
 
 void SYM::storeHex(txtoStream& ofs)

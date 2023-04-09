@@ -101,7 +101,8 @@ static const char *errtextstr[] = {
 	"E Unsupported precision.",
 	"E Too many designators.",
 	"E The dot operator must reference a struct / union or class.",
-	"E Integer constant between 0 and 255 required."
+	"E Integer constant between 0 and 255 required.",
+	"E Extra ')'."
 };
 
 static const char *errtext1000[] =

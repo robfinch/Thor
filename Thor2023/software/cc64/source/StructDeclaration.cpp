@@ -297,7 +297,7 @@ isStructDecl = psd;
 
 void StructDeclaration::ParseMembers(SYM *sym, int ztype)
 {
-	int slc;
+	size_t slc;
 	bool priv;
   SYM* sp;
   char nmbuf[300];

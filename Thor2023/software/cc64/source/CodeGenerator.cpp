@@ -1200,9 +1200,13 @@ Operand *CodeGenerator::GenerateAssignMultiply(ENODE *node,int flags, int size, 
 			}
 	}
 	else if (ap1->tp->IsFloatType()) {
-	    GenerateTriadic(op,ssize==4?'s':ssize==8?'d':ssize==12?'t':ssize==16 ? 'q' : 'd',ap1,ap1,ap2);
-	    ReleaseTempReg(ap2);
-	    ap1->MakeLegal(flags,size);
+		ap3 = GetTempRegister();
+		GenerateLoad(ap3, ap1, ssize, ssize);
+	  GenerateTriadic(op,0, ap3,ap3,ap2);
+		GenerateStore(ap3, ap1, ssize);
+		ReleaseTempRegister(ap3);
+	  ReleaseTempReg(ap2);
+	  ap1->MakeLegal(flags,size);
 		return (ap1);
 	}
 	else if (ap1->tp->IsPositType()) {
@@ -1344,7 +1348,7 @@ void DumpStructEnodes(ENODE *node)
 		}
 		if (head->nodetype==en_icon)
 			lfs.printf((char *)"%d", head->i);
-		head = head->p[2];
+		head = head->p[1];
 	}
 	lfs.printf("}");
 }
@@ -2208,7 +2212,11 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ReleaseTempReg(ap2);
 		goto retpt;
   case en_ref:
-		ap1 = GenerateDereference(node, flags, node->tp->size, !node->isUnsigned, (flags & am_bf_assign) ? 0 : 1, rhs);
+		if (node->tp == nullptr)
+			tpsz = sizeOfWord;
+		else
+			tpsz = node->tp->size;
+		ap1 = GenerateDereference(node, flags, tpsz, !node->isUnsigned, (flags & am_bf_assign) ? 0 : 1, rhs);
 		ap1->isPtr = TRUE;
 		ap1->rhs = rhs;
 		goto retpt;
@@ -2341,15 +2349,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		GenerateZeradic(op_nop);
 		GenerateZeradic(op_nop);
     GenerateDiadic(op_itof,'q',ap1,makereg(63));
-    ReleaseTempReg(ap2);
-		goto retpt;
-  case en_i2t:
-    ap1 = GetTempFPRegister();	
-    ap2 = GenerateExpression(node->p[0],am_reg,8,rhs);
-		GenerateTriadic(op_csrrw,0,makereg(0),MakeImmediate(0x18),ap2);
-		GenerateZeradic(op_nop);
-		GenerateZeradic(op_nop);
-    GenerateDiadic(op_itof,'t',ap1,makereg(63));
     ReleaseTempReg(ap2);
 		goto retpt;
   case en_d2i:
@@ -3121,5 +3120,235 @@ Operand* CodeGenerator::GenerateTrinary(ENODE* node, int flags, int size, int op
 		ReleaseTempReg(ap1);
 	ap3->MakeLegal(flags, size);
 	return (ap3);
+}
+
+// Return true if the expression tree has isPascal set anywhere.
+// Only needed for indirect function calls.
+extern int defaultcc;
+bool CodeGenerator::IsPascal(ENODE* ep)
+{
+	if (ep == nullptr)
+		return (defaultcc == 1);
+	if (ep->isPascal)
+		return (true);
+	if (IsPascal(ep->p[0]) || IsPascal(ep->p[1]) || IsPascal(ep->p[2]))
+		return (true);
+	return (false);
+}
+
+int CodeGenerator::GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp)
+{
+	int i;
+
+	if (sym)
+		sym->SaveTemporaries(sp, fsp, psp);
+	if (currentFn->HasRegisterParameters())
+		if (sym)
+			sym->SaveRegisterArguments();
+	i = PushArguments(sym, node->p[1]);
+	// If the symbol is unknown, assume a throw is present
+	if (sym) {
+		if (sym->DoesThrow)
+			currentFn->DoesThrow = true;
+	}
+	else
+		currentFn->DoesThrow = true;
+	return (i);
+}
+
+void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
+{
+	Function* o_fn;
+	CSet* mask, * fmask, * pmask;
+	int ps;
+
+	o_fn = currentFn;
+	mask = save_mask;
+	fmask = fpsave_mask;
+	pmask = psave_mask;
+	currentFn = sym;
+	ps = pass;
+	// Each function has it's own peeplist. The generated peeplist for an
+	// inline function must be appended onto the peeplist of the current
+	// function.
+	sym->pl.head = sym->pl.tail = nullptr;
+	sym->Generate();
+	pass = ps;
+	currentFn = o_fn;
+	currentFn->pl.tail->fwd = sym->pl.head;
+	currentFn->pl.tail = sym->pl.tail;
+	if (node->isAutonew)
+		currentFn->hasAutonew = true;
+	fpsave_mask = fmask;
+	save_mask = mask;
+	psave_mask = pmask;
+}
+
+Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
+{
+	Operand* ap, * ap2, * ap3;
+	Function* sym;
+	Function* o_fn;
+	SYM* s;
+	int i;
+	int sp = 0;
+	int fsp = 0;
+	int psp = 0;
+	int ps;
+	TypeArray* ta = nullptr;
+	CSet* mask, * fmask, * pmask;
+	char buf[300];
+
+	sym = nullptr;
+	ap = nullptr;
+
+	// Call the function
+	GenerateHint(begin_func_call);
+	i = 0;
+	if (node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon) {
+		if (node->p[2])
+			currentSym = node->p[2]->sym;
+		s = gsearch(*node->p[0]->sp);
+		sym = s->fi;
+		/*
+				if ((sym->tp->btpp->type==bt_struct || sym->tp->btpp->type==bt_union) && sym->tp->btpp->size > 8) {
+							nn = tmpAlloc(sym->tp->btpp->size) + lc_auto + roundWord(sym->tp->btpp->size);
+							GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
+							i = 1;
+					}
+	*/
+		i += GeneratePrepareFunctionCall(node, sym, &sp, &fsp, &psp);
+
+		if (sym && sym->IsInline)
+			GenerateInlineCall(node, sym);
+		else
+			GenerateDirectJump(node, ap, sym, flags, lab);
+	}
+	else
+	{
+		/*
+			if ((node->p[0]->tp->btpp->type==bt_struct || node->p[0]->tp->btpp->type==bt_union) && node->p[0]->tp->btpp->size > 8) {
+						nn = tmpAlloc(node->p[0]->tp->btpp->size) + lc_auto + roundWord(node->p[0]->tp->btpp->size);
+						GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
+						i = 1;
+				}
+		 */
+		ap = GenerateExpression(node->p[0], am_reg, sizeOfPtr, 0);
+		if (ap->offset) {
+			if (ap->offset->sym)
+				sym = ap->offset->sym->fi;
+		}
+
+		i += GeneratePrepareFunctionCall(node, sym, &sp, &fsp, &psp);
+
+		ap->mode = am_ind;
+		ap->offset = 0;
+		if (sym && sym->IsInline)
+			GenerateInlineCall(node, sym);
+		else
+			GenerateIndirectJump(node, ap, sym, flags, lab);
+	}
+
+	GenerateInlineArgumentList(sym, node->p[1]);
+	PopArguments(sym, i, IsPascal(node));
+	if (currentFn->HasRegisterParameters())
+		if (sym)
+			sym->RestoreRegisterArguments();
+	if (sym)
+		sym->RestoreTemporaries(sp, fsp, psp);
+	if (ap)
+		ReleaseTempRegister(ap);
+	/*
+	if (sym) {
+		 if (sym->tp->type==bt_double)
+					 result = GetTempFPRegister();
+		 else
+					 result = GetTempRegister();
+		}
+		else {
+				if (node->etype==bt_double)
+						result = GetTempFPRegister();
+				else
+						result = GetTempRegister();
+		}
+	*/
+	if (sym
+		&& sym->sym
+		&& sym->sym->tp
+		&& sym->sym->tp->btpp
+		&& sym->sym->tp->btpp->IsFloatType()) {
+		GenerateHint(end_func_call);
+		if (!(flags & am_novalue))
+			return (makereg(cpu.argregs[0]));
+		else
+			return (makereg(regZero));
+	}
+	if (sym
+		&& sym->sym
+		&& sym->sym->tp
+		&& sym->sym->tp->btpp
+		&& sym->sym->tp->btpp->IsVectorType()) {
+		GenerateHint(end_func_call);
+		if (!(flags & am_novalue))
+			return (makevreg(1));
+		else
+			return (makevreg(0));
+	}
+	if (sym
+		&& sym->sym
+		&& sym->sym->tp
+		&& sym->sym->tp->btpp
+		) {
+		if (!(flags & am_novalue)) {
+			if (sym->sym->tp->btpp->type != bt_void) {
+				ap = GetTempRegister();
+				GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
+				regs[1].modified = true;
+			}
+			else
+				ap = makereg(regZero);
+			ap->isPtr = sym->sym->tp->btpp->type == bt_pointer;
+		}
+		else {
+			GenerateHint(end_func_call);
+			return(makereg(regZero));
+		}
+	}
+	else {
+		if (!(flags & am_novalue)) {
+			ap = GetTempRegister();
+			GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
+			regs[cpu.argregs[0]].modified = true;
+		}
+		else {
+			GenerateHint(end_func_call);
+			return(makereg(regZero));
+		}
+	}
+	GenerateHint(end_func_call);
+	return (ap);
+	/*
+	else {
+		if( result->preg != 1 || (flags & am_reg) == 0 ) {
+			if (sym) {
+				if (sym->tp->btpp->type==bt_void)
+					;
+				else {
+										if (sym->tp->type==bt_double)
+							GenerateDiadic(op_fdmov,0,result,makefpreg(1));
+										else
+							GenerateDiadic(op_mov,0,result,makereg(1));
+								}
+			}
+			else {
+								if (node->etype==bt_double)
+							GenerateDiadic(op_fdmov,0,result,makereg(1));
+								else
+						GenerateDiadic(op_mov,0,result,makereg(1));
+						}
+		}
+	}
+		return result;
+	*/
 }
 

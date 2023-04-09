@@ -62,9 +62,44 @@ static bool IsFuncptrAssign(SYM* sp)
 	return (false);
 }
 
+static void ProcessInitExp(SYM* sp, ENODE* n2)
+{
+	int64_t val;
+	Int128 val128;
+
+	if (n2 == nullptr)
+		return;
+	opt_const_unchecked(&n2);	// This should reduce to a single integer expression
+	if (n2->nodetype == en_add) {
+		if (n2->p[0]->nodetype == en_labcon && n2->p[1]->nodetype == en_icon) {
+			val = n2->i;
+			val128 = n2->i128;
+		}
+		if (n2->p[0]->nodetype == en_icon && n2->p[1]->nodetype == en_labcon) {
+			val = n2->i;
+			val128 = n2->i128;
+		}
+	}
+	if (n2->nodetype != en_icon && n2->nodetype != en_cnacon && n2->nodetype != en_labcon) {
+		// A type cast is represented by a tempref node associated with a value.
+		// There may be an integer typecast to another value that can be used.
+		if (n2->nodetype == en_void || n2->nodetype == en_cast) {
+			if (n2->p[0]->nodetype == en_type) {
+				if (n2->p[1]->nodetype == en_icon) {
+					val = n2->i;
+					val128 = n2->i128;
+				}
+			}
+		}
+	}
+	ProcessInitExp(sp, n2->p[0]);
+	ProcessInitExp(sp, n2->p[1]);
+}
+
 void doinit(SYM *sp)
 {
 	static bool first = true;
+	static char workbuf[5000];
 	char lbl[200];
   int algn;
   enum e_sg oseg;
@@ -74,6 +109,7 @@ void doinit(SYM *sp)
 	TYP *tp;
 	int n;
 	ENODE* node;
+	Expression exp;
 
 	sp->storage_pos = ofs.tellp();
   hasPointer = false;
@@ -220,10 +256,10 @@ void doinit(SYM *sp)
 					strcpy_s(buf2, sizeof(buf2), "");
 				switch (syntax) {
 				case MOT:
-					sprintf_s(buf, sizeof(buf), "%s:\ndc.q %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, lbl);
+					sprintf_s(buf, sizeof(buf), "%s\n\tdc.q %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
 					break;
 				default:
-					sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, lbl);
+					sprintf_s(buf, sizeof(buf), "%s\n\t.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
 				}
 				ofs.seekp(lblpoint);
 				ofs.write(buf);
@@ -245,31 +281,8 @@ void doinit(SYM *sp)
 			else
 				strcpy_s(buf2, sizeof(buf2), "");
 			if (sp->initexp) {
-				n2 = sp->initexp;
-				opt_const_unchecked(&n2);	// This should reduce to a single integer expression
-				n2 = n2->p[1];
-				if (n2->nodetype == en_add) {
-					if (n2->p[0]->nodetype == en_labcon && n2->p[1]->nodetype == en_icon) {
-						val = n2->i;
-						val128 = n2->i128;
-					}
-					if (n2->p[0]->nodetype == en_icon && n2->p[1]->nodetype == en_labcon) {
-						val = n2->i;
-						val128 = n2->i128;
-					}
-				}
-				if (n2->nodetype != en_icon && n2->nodetype != en_cnacon && n2->nodetype != en_labcon) {
-					// A type cast is represented by a tempref node associated with a value.
-					// There may be an integer typecast to another value that can be used.
-					if (n2->nodetype == en_void || n2->nodetype == en_cast) {
-						if (n2->p[0]->nodetype == en_type) {
-							if (n2->p[1]->nodetype == en_icon) {
-								val = n2->i;
-								val128 = n2->i128;
-							}
-						}
-					}
-				}
+				n2 = sp->initexp->p[1];
+				ProcessInitExp(sp, n2);
 				switch (syntax) {
 				case MOT:
 					sprintf_s(buf, sizeof(buf), "%s:\ndc.q ", lbl);
@@ -309,7 +322,12 @@ void doinit(SYM *sp)
 			strncpy_s(lastid, sizeof(lastid), sp->name->c_str(), sizeof(lastid));
 			//gNameRefNode = exp.ParseNameRef(sp);
 			currentSym = sp;
-			sp->Initialize(nullptr, nullptr, 1);
+			exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
+			opt_const_unchecked(&node);			// This should reduce to a single integer expression
+			if (!node->AssignTypeToList(sp->tp)) {
+				error(ERR_CASTAGGR);
+			}
+			sp->Initialize(node, nullptr, 1);
 			if (sp->tp->numele == 0) {
 				if (sp->tp->btpp) {
 					if (sp->tp->btpp->type == bt_char || sp->tp->btpp->type == bt_uchar
@@ -396,15 +414,15 @@ int64_t initchar(SYM* symi, int opt)
     return (2LL);
 }
 
-int64_t initshort(SYM* symi, int opt)
+int64_t initshort(SYM* symi, int64_t i, int opt)
 {
-	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
+	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : i);
     return (4LL);
 }
 
-int64_t initint(SYM* symi, int opt)
+int64_t initint(SYM* symi, int64_t i, int opt)
 {
-	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : symi->enode ? symi->enode->i : 0);
+	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : i);
 	return (8LL);
 }
 
@@ -422,7 +440,7 @@ int64_t initquad(SYM* symi, int opt)
 
 int64_t initfloat(SYM* symi, int opt)
 {
-	GenerateFloat(opt ? GetFloatExpression((ENODE **)NULL, symi): Float128::Zero());
+	GenerateFloat(opt ? GetFloatExpression((ENODE **)NULL, symi): symi->enode ? &symi->enode->f128 : &symi->f128);
 	return (8LL);
 }
 

@@ -118,44 +118,44 @@ void ThorCodeGenerator::GenerateBitfieldInsert(Operand* ap1, Operand* ap2, int o
 	int nn;
 	uint64_t mask;
 
-	if (cpu.SupportsBitfield) {
-		ap1->MakeLegal(am_reg, sizeOfWord);
-		ap2->MakeLegal(am_reg, sizeOfWord);
-		Generate4adic(op_dep, 0, ap1, ap2, MakeImmediate(offset), MakeImmediate((int64_t)width - 1));
-		return;
-	}
-	for (mask = nn = 0; nn < width; nn++)
-		mask = (mask << 1) | 1;
-	mask = ~mask;
-	GenerateTriadic(op_and, 0, ap2, ap2, MakeImmediate((int64_t)~mask));		// clear unwanted bits in source
-	if (offset > 0)
-		GenerateTriadic(op_ror, 0, ap1, ap1, MakeImmediate((int64_t)offset));
-	GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate(mask));		// clear bits in target field
-	GenerateTriadic(op_or, 0, ap1, ap1, ap2);
-	if (offset > 0)
-		GenerateTriadic(op_rol, 0, ap1, ap1, MakeImmediate((int64_t)offset));
+	ap1->MakeLegal(am_reg, sizeOfWord);
+	ap2->MakeLegal(am_reg, sizeOfWord);
+	//Generate4adic(op_dep, 0, ap1, ap2, MakeImmediate(offset), MakeImmediate((int64_t)width - 1));
+	Generate4adic(op_clr, 0, ap1, ap1, MakeImmediate(offset), MakeImmediate((int64_t)width - 1));
+	GenerateTriadic(op_lslor, 0, ap1, ap2, MakeImmediate(offset));
 }
 
+
+static Operand* CombineOffsetWidth(Operand* offset, Operand* width)
+{
+	Operand* ap3;
+
+	// Combine offset,width into one register.
+	ap3 = GetTempRegister();
+	if (width->mode == am_imm)
+		GenerateDiadic(op_ldi, 0, ap3, cg.MakeImmediate(width->offset->i << 8LL));
+	else
+		GenerateTriadic(op_asl, 0, ap3, width, cg.MakeImmediate(8));
+	GenerateTriadic(op_or, 0, ap3, ap3, offset);
+	return (ap3);
+}
 
 void ThorCodeGenerator::GenerateBitfieldInsert(Operand* ap1, Operand* ap2, Operand* offset, Operand* width)
 {
 	int nn;
 	uint64_t mask;
+	Operand* ap3;
 
-	if (cpu.SupportsBitfield) {
-		ap1->MakeLegal(am_reg, sizeOfWord);
-		ap2->MakeLegal(am_reg, sizeOfWord);
-		Generate4adic(op_dep, 0, ap1, ap2, offset, width);
+	if (offset->mode == am_imm && width->mode == am_imm) {
+		GenerateBitfieldInsert(ap1, ap2, offset->offset->i, width->offset->i);
 		return;
 	}
-	for (mask = nn = 0; nn < width->offset->i; nn++)
-		mask = (mask << 1) | 1;
-	mask = ~mask;
-	GenerateTriadic(op_and, 0, ap2, ap2, MakeImmediate((int64_t)~mask));		// clear unwanted bits in source
-	GenerateTriadic(op_ror, 0, ap1, ap1, offset);
-	GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate(mask));		// clear bits in target field
-	GenerateTriadic(op_or, 0, ap1, ap1, ap2);
-	GenerateTriadic(op_rol, 0, ap1, ap1, offset);
+
+	// Combine offset,width into one register.
+	ap3 = CombineOffsetWidth(offset, width);
+
+	GenerateTriadic(op_clr, 0, ap1, ap1, ap3);
+	GenerateTriadic(op_lslor, 0, ap1, ap2, offset);
 }
 
 
@@ -166,36 +166,9 @@ void ThorCodeGenerator::GenerateBitfieldInsert(Operand* ap1, Operand* ap2, ENODE
 	Operand* ap3, * ap4;
 	OCODE* ip;
 
-	if (cpu.SupportsBitfield) {
-		ap1->MakeLegal(am_reg, sizeOfWord);
-		ap2->MakeLegal(am_reg, sizeOfWord);
-		ip = currentFn->pl.tail;
-		// Try and get immediate operands for both offset and width
-		ap3 = GenerateExpression(offset, am_reg | am_imm | am_imm0, sizeOfWord, 1);
-		ap4 = GenerateExpression(width, am_reg | am_imm | am_imm0, sizeOfWord, 1);
-		if (ap3->mode != ap4->mode) {
-			ReleaseTempReg(ap4);
-			ReleaseTempReg(ap3);
-			currentFn->pl.tail = ip;
-			ap3 = GenerateExpression(offset, am_reg, sizeOfWord, 1);
-			ap4 = GenerateExpression(width, am_reg, sizeOfWord, 1);
-		}
-		Generate4adic(op_dep, 0, ap1, ap2, ap3, ap4);
-		ReleaseTempReg(ap4);
-		ReleaseTempReg(ap3);
-		return;
-	}
-	
 	ap3 = GenerateExpression(offset, am_reg | am_imm | am_imm0, sizeOfWord, 1);
 	ap4 = GenerateExpression(width, am_reg | am_imm | am_imm0, sizeOfWord, 1);
-	for (mask = nn = 0; nn < ap4->offset->i; nn++)
-		mask = (mask << 1) | 1;
-	mask = ~mask;
-	GenerateTriadic(op_and, 0, ap2, ap2, MakeImmediate((int64_t)~mask));		// clear unwanted bits in source
-	GenerateTriadic(op_ror, 0, ap1, ap1, ap3);
-	GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate(mask));		// clear bits in target field
-	GenerateTriadic(op_or, 0, ap1, ap1, ap2);
-	GenerateTriadic(op_rol, 0, ap1, ap1, ap3);
+	GenerateBitfieldInsert(ap1, ap2, ap3, ap4);
 	ReleaseTempReg(ap4);
 	ReleaseTempReg(ap3);
 }
@@ -203,40 +176,17 @@ void ThorCodeGenerator::GenerateBitfieldInsert(Operand* ap1, Operand* ap2, ENODE
 
 Operand* ThorCodeGenerator::GenerateBitfieldExtract(Operand* ap, Operand* offset, Operand* width)
 {
-	Operand* ap1;
-	int64_t wid;
+	Operand* ap1, * ap3;
 
 	ap1 = GetTempRegister();
-	wid = width->offset->i;
-	if (isSigned) {
-		if (cpu.ext_op >= 0)
-			Generate4adic(op_ext, 0, ap1, ap, offset, width);
-		else {
-			uint64_t mask;
-			int bit_offset = offset->offset->i;
-
-			mask = 0;
-			while (wid-- >= 0)	mask = mask + mask + 1;
-			if (bit_offset > 0)
-				GenerateTriadic(op_srl, 0, ap1, ap, offset);
-			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-			SignExtendBitfield(ap1, mask);
-		}
+	if (offset->mode == am_imm && width->mode == am_imm) {
+		Generate4adic(isSigned ? op_ext : op_extu, 0, ap1, ap, offset, width);
+		return (ap1);
 	}
-	else {
-		if (cpu.extu_op >= 0)
-			Generate4adic(op_extu, 0, ap1, ap, offset, width);
-		else {
-			uint64_t mask;
-			int bit_offset = offset->offset->i;
-
-			mask = 0;
-			while (wid-- >= 0)	mask = mask + mask + 1;
-			if (bit_offset > 0)
-				GenerateTriadic(op_srl, 0, ap1, ap, offset);
-			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-		}
-	}
+	// Combine offset,width into one register.
+	ap3 = CombineOffsetWidth(offset, width);
+	GenerateTriadic(isSigned ? op_ext : op_extu, 0, ap1, ap, ap3);
+	ReleaseTempRegister(ap3);
 	return (ap1);
 }
 
@@ -245,51 +195,11 @@ Operand* ThorCodeGenerator::GenerateBitfieldExtract(Operand* ap, ENODE* offset, 
 	Operand* ap1;
 	Operand* ap2;
 	Operand* ap3;
-	OCODE* ip;
-	int wd;
 
 	ap1 = GetTempRegister();
-	ip = currentFn->pl.tail;
 	ap2 = GenerateExpression(offset, am_reg | am_imm | am_imm0, sizeOfWord, 1);
 	ap3 = GenerateExpression(width, am_reg | am_imm | am_imm0, sizeOfWord, 1);
-	//if (ap2->mode != ap3->mode) {
-	//	currentFn->pl.tail = ip;
-	//	ReleaseTempReg(ap3);
-	//	ReleaseTempReg(ap2);
-	//	ap2 = GenerateExpression(offset, am_reg, sizeOfWord, 1);
-	//	ap3 = GenerateExpression(width, am_reg, sizeOfWord, 1);
-	//}
-
-	if (isSigned) {
-		if (cpu.ext_op >= 0)
-			Generate4adic(cpu.ext_op, 0, ap1, ap, ap2, ap3);
-		else {
-			uint64_t mask;
-
-			mask = 0;
-			wd = ap3->offset->i;
-			while (wd-- >= 0)	mask = mask + mask + 1;
-			if (ap2->offset->i > 0)
-				GenerateTriadic(op_srl, 0, ap1, ap, ap2);
-			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-			SignExtendBitfield(ap1, mask);
-		}
-	}
-	else {
-		if (cpu.extu_op >= 0)
-			Generate4adic(cpu.extu_op, 0, ap1, ap, ap2, ap3);
-		else {
-			uint64_t mask;
-
-			mask = 0;
-			wd = ap3->offset->i;
-			while (wd-- >= 0)	mask = mask + mask + 1;
-			if (ap2->offset->i > 0)
-				GenerateTriadic(op_srl, 0, ap1, ap, ap2);
-			GenerateTriadic(op_and, 0, ap1, ap1, MakeImmediate((int64_t)mask));
-		}
-	}
-
+	ap1 = GenerateBitfieldExtract(ap, ap2, ap3);
 	ReleaseTempReg(ap3);
 	ReleaseTempReg(ap2);
 	return (ap1);
@@ -1274,7 +1184,7 @@ static void RestoreRegisterVars()
 	if( save_mask->NumMember()) {
 		if (cpu.SupportsLDM && save_mask->NumMember() > 2) {
 			mask = 0;
-			for (nn = 0; nn < 32; nn++)
+			for (nn = 0; nn < 64; nn++)
 				if (save_mask->isMember(nn))
 					mask = mask | (1LL << nn);
 			GenerateMonadic(op_reglist, 0, cg.MakeImmediate(mask, 1));
@@ -1336,7 +1246,7 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 	}
 	if (ep->tp) {
 		if (ep->tp->IsFloatType())
-			ap = cg.GenerateExpression(ep,am_reg,sizeOfFP,1);
+			ap = cg.GenerateExpression(ep,am_reg,sizeOfFPQ,1);
 		else if (ep->tp->IsPositType())
 			ap = cg.GenerateExpression(ep, am_preg, sizeOfPosit,1);
 		else
@@ -1591,20 +1501,6 @@ void ThorCodeGenerator::PopArguments(Function *fnc, int howMany, bool isPascal)
 }
 
 
-// Return true if the expression tree has isPascal set anywhere.
-// Only needed for indirect function calls.
-extern int defaultcc;
-bool ThorCodeGenerator::IsPascal(ENODE *ep)
-{
-	if (ep == nullptr)
-		return (defaultcc==1);
-	if (ep->isPascal)
-		return (true);
-	if (IsPascal(ep->p[0]) || IsPascal(ep->p[1]) || IsPascal(ep->p[2]))
-		return (true);
-	return (false);
-}
-
 void ThorCodeGenerator::LinkAutonew(ENODE *node)
 {
 	if (node->isAutonew) {
@@ -1612,294 +1508,59 @@ void ThorCodeGenerator::LinkAutonew(ENODE *node)
 	}
 }
 
-Operand *ThorCodeGenerator::GenerateFunctionCall(ENODE *node, int flags, int lab)
-{ 
-	Operand *ap, *ap2,* ap3;
-	Function *sym;
-	Function *o_fn;
-	SYM *s;
-    int i;
-	int sp = 0;
-	int fsp = 0;
-	int psp = 0;
-	int ps;
-	TypeArray *ta = nullptr;
-	CSet *mask, *fmask, *pmask;
-	char buf[300];
+void ThorCodeGenerator::GenerateDirectJump(ENODE* node, Operand* ap, Function* sym, int flags, int lab)
+{
+	char buf[500];
 
-	sym = nullptr;
-
-	// Call the function
-	GenerateHint(begin_func_call);
-	if( node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon ) {
-		if (node->p[2])
-			currentSym = node->p[2]->sym;
-		s = gsearch(*node->p[0]->sp);
- 		sym = s->fi;
-        i = 0;
-  /*
-    	if ((sym->tp->btpp->type==bt_struct || sym->tp->btpp->type==bt_union) && sym->tp->btpp->size > 8) {
-            nn = tmpAlloc(sym->tp->btpp->size) + lc_auto + roundWord(sym->tp->btpp->size);
-            GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
-            i = 1;
-        }
-*/
-//		ReleaseTempRegister(ap);
-		sym->SaveTemporaries(&sp, &fsp, &psp);
-		if (currentFn->HasRegisterParameters())
-			sym->SaveRegisterArguments();
-		// If the symbol is unknown, assume a throw is present
-		if (sym) {
-			if (sym->DoesThrow)
-				currentFn->DoesThrow = true;
-		}
+	if (sym && sym->IsLeaf) {
+		sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
+		if (flags & am_jmp)
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
 		else
-			currentFn->DoesThrow = true;
-		i = i + PushArguments(sym, node->p[1]);
-		if (sym && sym->IsInline) {
-			o_fn = currentFn;
-			mask = save_mask;
-			fmask = fpsave_mask;
-			pmask = psave_mask;
-			currentFn = sym;
-			ps = pass;
-			// Each function has it's own peeplist. The generated peeplist for an
-			// inline function must be appended onto the peeplist of the current
-			// function.
-			sym->pl.head = sym->pl.tail = nullptr;
-			sym->Generate();
-			pass = ps;
-			currentFn = o_fn;
-			currentFn->pl.tail->fwd = sym->pl.head;
-			currentFn->pl.tail = sym->pl.tail;
-			LinkAutonew(node);
-			fpsave_mask = fmask;
-			save_mask = mask;
-			psave_mask = pmask;
-		}
-		else {
-			if (sym && sym->IsFar) {
-				GenerateDiadic(op_mfbase, 0, makereg(regRS), makereg(regCS));
-				ap2 = GetTempRegister();
-				sprintf_s(buf, sizeof(buf), "%s_cs", sym->sym->name->c_str());
-				GenerateDiadic(cpu.ldi_op, 0, ap2, MakeStringAsNameConst(buf, codeseg));
-				GenerateDiadic(op_mtbase, 0, makereg(regCS), ap2);
-				ReleaseTempRegister(ap2);
-			}
-			if (sym && sym->IsLeaf) {
-				sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
-				if (flags & am_jmp)
-					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
-				else
-					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
-				currentFn->doesJAL = true;
-			}
-			else if (sym) {
-				if (flags & am_jmp)
-					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
-				else
-					GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
-				currentFn->doesJAL = true;
-			}
-			else {
-				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
-				else
-					GenerateMonadic(op_jsr, 0, MakeDirect(node->p[0]));
-				currentFn->doesJAL = true;
-			}
-			GenerateMonadic(op_bex,0,MakeDataLabel(throwlab,regZero));
-			if (lab)
-				GenerateLabel(lab);
-			LinkAutonew(node);
-		}
-		GenerateInlineArgumentList(sym, node->p[1]);
-		PopArguments(sym, i);
-		if (currentFn->HasRegisterParameters())
-			if (sym)
-				sym->RestoreRegisterArguments();
-		if (sym)
-			sym->RestoreTemporaries(sp, fsp, psp);
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
+		currentFn->doesJAL = true;
 	}
-    else
-    {
-        i = 0;
-    /*
-    	if ((node->p[0]->tp->btpp->type==bt_struct || node->p[0]->tp->btpp->type==bt_union) && node->p[0]->tp->btpp->size > 8) {
-            nn = tmpAlloc(node->p[0]->tp->btpp->size) + lc_auto + roundWord(node->p[0]->tp->btpp->size);
-            GenerateMonadic(op_pea,0,MakeIndexed(-nn,regFP));
-            i = 1;
-        }
-     */
-		ap = cg.GenerateExpression(node->p[0],am_reg,sizeOfWord,0);
-		if (ap->offset) {
-			if (ap->offset->sym)
-				sym = ap->offset->sym->fi;
-		}
-		if (sym)
-			sym->SaveTemporaries(&sp, &fsp, &psp);
-		if (currentFn->HasRegisterParameters())
-			if (sym)
-				sym->SaveRegisterArguments();
-		i = i + PushArguments(sym, node->p[1]);
-		// If the symbol is unknown, assume a throw is present
-		if (sym) {
-			if (sym->DoesThrow)
-				currentFn->DoesThrow = true;
-		}
+	else if (sym) {
+		if (flags & am_jmp)
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
 		else
-			currentFn->DoesThrow = true;
-		ap->mode = am_ind;
-		ap->offset = 0;
-		if (sym && sym->IsInline) {
-			o_fn = currentFn;
-			mask = save_mask;
-			fmask = fpsave_mask;
-			pmask = psave_mask;
-			currentFn = sym;
-			ps = pass;
-			sym->pl.head = sym->pl.tail = nullptr;
-			sym->Generate();
-			pass = ps;
-			currentFn = o_fn;
-			currentFn->pl.tail->fwd = sym->pl.head;
-			currentFn->pl.tail = sym->pl.tail;
-			LinkAutonew(node);
-			fpsave_mask = fmask;
-			save_mask = mask;
-			psave_mask = pmask;
-		}
-		else {
-			if (sym && sym->IsFar) {
-				GenerateDiadic(op_mfbase, 0, makereg(regRS), makereg(regCS));
-				ap2 = GetTempRegister();
-				sprintf_s(buf, sizeof(buf), "#%s_cs", sym->sym->name->c_str());
-				GenerateDiadic(cpu.ldi_op, 0, ap2, MakeStringAsNameConst(buf, codeseg));
-				GenerateDiadic(op_mtbase, 0, makereg(regCS), ap2);
-				ReleaseTempRegister(ap2);
-			}
-			ap->MakeLegal(am_reg, sizeOfWord);
-			GenerateTriadic(op_csrrw, 0, makereg(0), ap, MakeImmediate(0x3108));	// ca4
-			if (sym && sym->IsLeaf) {
-				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, MakeIndirect(136));
-				else
-					GenerateMonadic(op_jsr, 0, MakeIndirect(136));
-				currentFn->doesJAL = true;
-			}
-			else {
-				if (flags & am_jmp)
-					GenerateMonadic(op_jmp, 0, MakeIndirect(136));
-				else
-					GenerateMonadic(op_jsr, 0, MakeIndirect(136));
-				currentFn->doesJAL = true;
-			}
-			GenerateMonadic(op_bex,0,MakeDataLabel(throwlab,regZero));
-			if (lab)
-				GenerateLabel(lab);
-			LinkAutonew(node);
-		}
-		GenerateInlineArgumentList(sym, node->p[1]);
-		PopArguments(sym, i, IsPascal(node));
-		if (currentFn->HasRegisterParameters())
-			if (sym)
-				sym->RestoreRegisterArguments();
-		if (sym)
-			sym->RestoreTemporaries(sp, fsp, psp);
-		ReleaseTempRegister(ap);
-	}
-	/*
-	if (sym) {
-	   if (sym->tp->type==bt_double)
-           result = GetTempFPRegister();
-	   else
-           result = GetTempRegister();
-    }
-    else {
-        if (node->etype==bt_double)
-            result = GetTempFPRegister();
-        else
-            result = GetTempRegister();
-    }
-	*/
-	if (sym
-		&& sym->sym
-		&& sym->sym->tp 
-		&& sym->sym->tp->btpp
-		&& sym->sym->tp->btpp->IsFloatType()) {
-		GenerateHint(end_func_call);
-		if (!(flags & am_novalue))
-			return (makereg(cpu.argregs[0]));
-		else
-			return (makereg(regZero));
-	}
-	if (sym
-		&& sym->sym
-		&& sym->sym->tp
-		&& sym->sym->tp->btpp
-		&& sym->sym->tp->btpp->IsVectorType()) {
-		GenerateHint(end_func_call);
-		if (!(flags & am_novalue))
-			return (makevreg(1));
-		else
-			return (makevreg(0));
-	}
-	if (sym
-		&& sym->sym
-		&& sym->sym->tp
-		&& sym->sym->tp->btpp
-		) {
-		if (!(flags & am_novalue)) {
-			if (sym->sym->tp->btpp->type != bt_void) {
-				ap = GetTempRegister();
-				GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
-				regs[1].modified = true;
-			}
-			else
-				ap = makereg(regZero);
-			ap->isPtr = sym->sym->tp->btpp->type == bt_pointer;
-		}
-		else {
-			GenerateHint(end_func_call);
-			return(makereg(regZero));
-		}
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
+		currentFn->doesJAL = true;
 	}
 	else {
-		if (!(flags & am_novalue)) {
-			ap = GetTempRegister();
-			GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
-			regs[cpu.argregs[0]].modified = true;
-		}
-		else {
-			GenerateHint(end_func_call);
-			return(makereg(regZero));
-		}
+		if (flags & am_jmp)
+			GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
+		else
+			GenerateMonadic(op_jsr, 0, MakeDirect(node->p[0]));
+		currentFn->doesJAL = true;
 	}
-	GenerateHint(end_func_call);
-	return (ap);
-	/*
+	GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
+	if (lab)
+		GenerateLabel(lab);
+	LinkAutonew(node);
+}
+
+void ThorCodeGenerator::GenerateIndirectJump(ENODE* node, Operand* ap, Function* sym, int flags, int lab)
+{
+	ap->MakeLegal(am_reg, sizeOfWord);
+	if (sym && sym->IsLeaf) {
+		if (flags & am_jmp)
+			GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+		else
+			GenerateMonadic(op_jsr, 0, MakeIndirect(ap->preg));
+		currentFn->doesJAL = true;
+	}
 	else {
-		if( result->preg != 1 || (flags & am_reg) == 0 ) {
-			if (sym) {
-				if (sym->tp->btpp->type==bt_void)
-					;
-				else {
-                    if (sym->tp->type==bt_double)
-					    GenerateDiadic(op_fdmov,0,result,makefpreg(1));
-                    else
-					    GenerateDiadic(op_mov,0,result,makereg(1));
-                }
-			}
-			else {
-                if (node->etype==bt_double)
-      				GenerateDiadic(op_fdmov,0,result,makereg(1));
-                else
-		     		GenerateDiadic(op_mov,0,result,makereg(1));
-            }
-		}
+		if (flags & am_jmp)
+			GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+		else
+			GenerateMonadic(op_jsr, 0, MakeIndirect(ap->preg));
+		currentFn->doesJAL = true;
 	}
-    return result;
-	*/
+	GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
+	if (lab)
+		GenerateLabel(lab);
+	LinkAutonew(node);
 }
 
 void ThorCodeGenerator::GenerateUnlink(int64_t amt)

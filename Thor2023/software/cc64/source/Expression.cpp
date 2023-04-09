@@ -62,7 +62,7 @@ ENODE* Expression::SetIntConstSize(TYP* tptr, int64_t val)
 }
 
 
-ENODE* Expression::ParseCharConst(ENODE** node, int sz)
+TYP* Expression::ParseCharConst(ENODE** node, int sz)
 {
 	ENODE* pnode;
 	TYP* tptr;
@@ -73,36 +73,37 @@ ENODE* Expression::ParseCharConst(ENODE** node, int sz)
 	pnode->esize = sz;
 	pnode->SetType(tptr);
 	NextToken();
-	return (pnode);
+	*node = pnode;
+	return (tptr);
 }
 
-ENODE* Expression::ParseFloatMax()
+TYP* Expression::ParseFloatMax(ENODE** node)
 {
 	ENODE* pnode;
 	TYP* tptr;
 
 	tptr = &stdquad;
-	pnode = compiler.ef.Makefnode(en_fcon, rval);
+	pnode = compiler.ef.Makefqnode(en_fcon, rval128);
 	pnode->constflag = TRUE;
 	pnode->SetType(tptr);
-//	pnode->i = NumericLiteral(Float128::FloatMax());
+	//pnode->i = NumericLiteral(Float128::FloatMax());
 	if (parsingAggregate == 0 && sizeof_flag == 0)
 		pnode->i = NumericLiteral(pnode);
 	NextToken();
-	return (pnode);
+	*node = pnode;
+	return (tptr);
 }
 
-ENODE* Expression::ParseRealConst(ENODE** node)
+TYP* Expression::ParseRealConst(ENODE** node)
 {
 	ENODE* pnode;
 	TYP* tptr;
 
-	pnode = compiler.ef.Makefnode(en_fcon, rval);
+	pnode = compiler.ef.Makefqnode(en_fcon, rval128);
 	pnode->constflag = TRUE;
 	//pnode->i = quadlit(&rval128);
-	pnode->f128 = rval128;
-	if (parsingAggregate == 0 && sizeof_flag == 0)
-		pnode->i = NumericLiteral(pnode);
+	//if (parsingAggregate == 0 && sizeof_flag == 0)
+	pnode->i = NumericLiteral(pnode);
 	pnode->segment = rodataseg;
 	switch (float_precision) {
 	case 'Q': case 'q':
@@ -110,9 +111,6 @@ ENODE* Expression::ParseRealConst(ENODE** node)
 		break;
 	case 'D': case 'd':
 		tptr = &stddouble;
-		break;
-	case 'T': case 't':
-		tptr = &stdtriple;
 		break;
 	case 'S': case 's':
 		tptr = &stdflt;
@@ -123,7 +121,7 @@ ENODE* Expression::ParseRealConst(ENODE** node)
 	}
 	pnode->SetType(tptr);
 	NextToken();
-	return (pnode);
+	return (tptr);
 }
 
 ENODE* Expression::ParsePositConst(ENODE** node)
@@ -300,84 +298,100 @@ ENODE* Expression::ParseThis(ENODE** node)
 	return (pnode);
 }
 
-ENODE* Expression::ParseAggregate(ENODE** node, SYM* symi)
+TYP* Expression::ParseAggregate(ENODE** node, SYM* symi)
 {
 	ENODE* pnode;
 	TYP* tptr;
 	int64_t sz = 0;
-	ENODE* list, * cnode;
+	ENODE* cnode;
 	bool cnst = true;
 	bool consistentType = true;
 	TYP* tptr2;
 	int64_t n;
 	int64_t pos = 0;
 	SYM* sp;
-	TABLE* tbl;
 	int count;
 
+	NextToken();
 	pnode = nullptr;
 	parsingAggregate++;
-	NextToken();
 	head = tail = nullptr;
-	list = makenode(en_list, nullptr, nullptr);
 	tptr2 = nullptr;
-	//tbl = symi->tp->lst.GetPtr(symi->tp->lst.GetHead());
 	for (count = 0; lastst != end; count++) {
-		if (lastst == openbr) {
-			n = GetConstExpression(&cnode, symi).low;
-			needpunc(closebr,49);
-			while (pos < n && pos < 1000000) {
-				pnode = makenode(en_void, nullptr, nullptr);
-				pnode->SetType(tptr2);
-				list->AddToList(pnode);
-				pos++;
+		if (lastst == begin)
+			tptr = ParseAggregate(&cnode, symi);
+		else {
+			if (lastst == openbr) {
+				NextToken();
+				n = GetConstExpression(&cnode, symi).low;
+				needpunc(closebr, 49);
+				while (pos < n && pos < 1000000) {
+					pnode = makenode(en_void, pnode, nullptr);
+					pnode->SetType(tptr2);
+					pnode->order = pnode->p[0]->order + 1;
+					pos++;
+				}
 			}
+			tptr = ParseNonCommaExpression(&cnode, symi);
+			opt_const(&cnode);
 		}
-		pnode = nullptr;
-		tptr = ParseNonCommaExpression(&pnode, symi);
-		if (pnode == nullptr)
+		if (cnode == nullptr)
 			return (nullptr);
-		if (!pnode->constflag)
+		if (!cnode->constflag)
 			cnst = false;
-		if (tptr2 != nullptr && tptr->type != tptr2->type)
+		if (tptr2 != nullptr && !TYP::IsSameType(tptr, tptr2, false))
 			consistentType = false;
-		pnode->SetType(tptr);
+		cnode->SetType(tptr);
 		//sz = sz + tptr->size;
-		sz = sz + pnode->esize;
-		list->esize = pnode->esize;
-		list->AddToList(pnode);
+		sz = sz + cnode->esize;
+		if (pnode == nullptr) {
+			pnode = makenode(en_void, cnode, nullptr);
+			cnode->order = 0;
+			pnode->order = 1;
+			pnode->SetType(cnode->tp);
+		}
+		else {
+			cnode->order = pnode->order + 1;
+			pnode = makenode(en_void, pnode, cnode);
+			pnode->order = cnode->order + 1;
+			pnode->SetType(pnode->p[0]->tp);
+		}
 		pos++;
+		tptr2 = tptr;
+
 		if (lastst != comma)
 			break;
 		NextToken();
-		tptr2 = tptr;
 	}
 	needpunc(end, 9);
 	// If we specifed an aggregate with just a single value, return the type of
 	// the value, not an aggregate list.
 	if (count < 2) {
 		*node = pnode;
-		return (pnode);
+		return (pnode->tp);
 	}
-	pnode = makenode(en_aggregate, list, nullptr);
+	pnode = makenode(en_aggregate, pnode, nullptr);
 	pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
+	pnode->order = pnode->p[0]->order + 1;
 	if (consistentType)
 		pnode->tp->btpp = tptr2;
 	pnode->esize = sz;
 	pnode->i = litlist(pnode);
 	pnode->segment = cnst ? rodataseg : dataseg;
-	list->i = pnode->i;
-	list->segment = pnode->segment;
+	pnode->constflag = true;
 	parsingAggregate--;
 	*node = pnode;
-	return (pnode);
+	//pnode->Dump(0);
+	return (pnode->tp);
 }
 
-ENODE* Expression::ParseNameRef(SYM* symi)
+TYP* Expression::ParseNameRef(ENODE** node, SYM* symi)
 {
 	ENODE* pnode;
 	TYP* tptr;
 
+	// Try and find the name, if it is not found then see if it could be the
+	// current symbol.
 	tptr = nameref(&pnode, TRUE, symi);
 	if (tptr == nullptr) {
 		if (currentSym) {
@@ -400,7 +414,6 @@ ENODE* Expression::ParseNameRef(SYM* symi)
 		//	goto j2;
 		//}
 	}
-	pnode->SetType(tptr);
 	//pnode->p[3] = (ENODE *)tptr->size;
 	//				if (pnode->nodetype==en_nacon)
 	//					pnode->p[0] = makenode(en_list,tptr->BuildEnodeTree(),nullptr);
@@ -433,27 +446,30 @@ ENODE* Expression::ParseNameRef(SYM* symi)
 			}
 			else
 	*/
-	/*
-	if (tptr==NULL) {
+
+	// If tptr is still null, assume an integer.
+	if (tptr==nullptr) {
 		tptr = allocTYP();
-		tptr->type = bt_long;
-		tptr->typeno = bt_long;
+		tptr->type = bt_int;
+		tptr->typeno = bt_int;
 		tptr->alignment = 8;
 		tptr->bit_offset = 0;
 		tptr->btpp = nullptr;
 		tptr->isArray = false;
-		tptr->isConst = false;
 		tptr->isIO = false;
 		tptr->isShort = false;
 		tptr->isUnsigned = false;
 		tptr->size = 8;
-		tptr->sname = my_strdup(lastid);
+		tptr->sname = new std::string(lastid);
 	}
-	*/
-	return (pnode);
+
+	pnode->SetType(tptr);
+	pnode->constflag = false;
+	*node = pnode;
+	return (tptr);
 }
 
-ENODE* Expression::ParseMinus(SYM* symi)
+TYP* Expression::ParseMinus(ENODE** node, SYM* symi)
 {
 	ENODE* ep1;
 	TYP* tp;
@@ -483,8 +499,9 @@ ENODE* Expression::ParseMinus(SYM* symi)
 		ep1->esize = tp->size;
 		ep1->etype = (e_bt)tp->type;
 	}
+	*node = ep1;
 	ep1->SetType(tp);
-	return (ep1);
+	return (tp);
 }
 
 ENODE* Expression::ParseNot(SYM* symi)
@@ -1185,6 +1202,8 @@ ENODE* Expression::ParsePointsTo(TYP* tp1, ENODE* ep1)
 				ep1->isPascal = ep1->p[0]->isPascal;
 			}
 			ep1->tp = tp2;
+			if (ep1->tp == nullptr)
+				printf("hi");
 	}
 xit:
 	//	if (ep1) ep1->tp = tp1;

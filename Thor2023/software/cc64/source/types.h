@@ -223,12 +223,14 @@ public:
 	int GetHead() { return head; };
 	void SetHead(int p) { head = p; };
 	void SetTail(int p) { tail = p; };
-	void Clear() { head = tail = base = 0; headp = nullptr; tailp = nullptr; };
+	void Clear() { head = tail = base = 0; headp = nullptr; tailp = nullptr; basep = nullptr; };
 	void CopyTo(TABLE *dst) {
 		dst->head = head;
 		dst->tail = tail;
+		dst->base = base;
 		dst->headp = headp;
 		dst->tailp = tailp;
+		dst->basep = basep;
 	};
 	void AddTo(TABLE* dst);
 	void MoveTo(TABLE *dst) {
@@ -368,8 +370,8 @@ public:
 public:
 	Function();
 	void RemoveDuplicates();
-	int GetTempBot() { return (tempbot); };
-	int GetTempTop() { return (argbot); };
+	int64_t GetTempBot() { return (tempbot); };
+	int64_t GetTempTop() { return (argbot); };
 	void CheckParameterListMatch(Function *s1, Function *s2);
 	bool CheckSignatureMatch(Function *a, Function *b) const;
 	TypeArray *GetParameterTypes();
@@ -533,7 +535,10 @@ public:
 	void SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype);
 	int AdjustNbytes(int nbytes, int al, int ztype);
 	int64_t Initialize(ENODE* pnode, TYP* tp2, int opt);
+	int64_t InitializeArray(ENODE*);
 	int64_t InitializeStruct(ENODE*);
+	int64_t InitializeUnion(ENODE*);
+	int64_t GenerateT(ENODE* node);
 	void storeHex(txtoStream& ofs);
 };
 
@@ -600,10 +605,10 @@ public:
 	ENODE *BuildEnodeTree();
 
 	// Initialization
-	int64_t GenerateT(TYP *tp, ENODE *node);
+	int64_t GenerateT(ENODE *node);
 	int64_t InitializeArray(int64_t sz, SYM* symi);
 	int64_t InitializeStruct(ENODE*, SYM* symi);
-	int64_t InitializeUnion(SYM* symi);
+	int64_t InitializeUnion(SYM* symi, ENODE* node);
 	int64_t Initialize(int64_t val, SYM* symi);
 	int64_t Initialize(ENODE* node, TYP *, int opt, SYM* symi);
 
@@ -645,6 +650,7 @@ public:
 	static int segcount[16];
 public:
 	int number;
+	int order;
 	enum e_node nodetype;
 	enum e_node new_nodetype;			// nodetype replaced by optimization
 	int etype;
@@ -703,8 +709,12 @@ public:
 	bool IsRefType() {
 		if (this) {
 			// This hack to get exit() to work, which uses an array of function pointers.
-			if (nodetype == en_ref)
-				return (tp->type != bt_void && p[0]->nodetype != en_regvar);
+			if (nodetype == en_ref) {
+				if (tp)
+					return (tp->type != bt_void && p[0]->nodetype != en_regvar);
+				else
+					return (true);
+			}
 			return (nodetype == en_ref || etype == bt_struct || etype == bt_union || etype == bt_class);
 		}
 		else return (false);
@@ -788,9 +798,19 @@ public:
 
 	// Debugging
 	std::string nodetypeStr();
-	void Dump();
+	void Dump(int pn = 0);
 };
 
+class List
+{
+public:
+	List(ENODE *nd) {
+		nxt = nullptr;
+		node = nd;
+	};
+	List* nxt;
+	ENODE* node;
+};
 
 // Under construction
 class INODE : public CompilerType
@@ -817,6 +837,7 @@ public:
 	ENODE* Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3, ENODE* v4);
 	ENODE* Makenode(int nt, ENODE* v1, ENODE* v2, ENODE* v3);
 	ENODE* Makenode(int nt, ENODE* v1, ENODE* v2);
+	ENODE* Makefqnode(int nt, Float128 v1);
 	ENODE* Makefnode(int nt, double v1);
 	ENODE* Makepnode(int nt, Posit64 v1);
 	ENODE* Makenode();
@@ -843,16 +864,16 @@ private:
 	void SetRefType(ENODE** node);
 	ENODE* SetIntConstSize(TYP* tptr, int64_t val);
 	ENODE *ParseArgumentList(ENODE *hidden, TypeArray *typearray, SYM* symi);
-	ENODE* ParseCharConst(ENODE** node, int sz);
+	TYP* ParseCharConst(ENODE** node, int sz);
 	ENODE* ParseStringConst(ENODE** node);
 	ENODE* ParseStringConstWithSizePrefix(ENODE** node);
 	ENODE* ParseInlineStringConst(ENODE** node);
-	ENODE* ParseRealConst(ENODE** node);
+	TYP* ParseRealConst(ENODE** node);
 	ENODE* ParsePositConst(ENODE** node);
 	ENODE* ParseAggregateConst(ENODE** node);
-	ENODE* ParseFloatMax();
+	TYP* ParseFloatMax(ENODE** node);
 	ENODE* ParseThis(ENODE** node);
-	ENODE* ParseAggregate(ENODE** node, SYM* typi);
+	TYP* ParseAggregate(ENODE** node, SYM* typi);
 	ENODE* ParseTypenum();
 	ENODE* ParseNew(bool autonew, SYM* symi);
 	ENODE* ParseDelete(SYM* symi);
@@ -861,7 +882,7 @@ private:
 	ENODE* ParseBytndx(SYM* symi);
 	ENODE* ParseWydndx(SYM* symi);
 	// Unary Expression Parsing
-	ENODE* ParseMinus(SYM* symi);
+	TYP* ParseMinus(ENODE** node, SYM* symi);
 	ENODE* ParseNot(SYM* symi);
 	ENODE* ParseCom(SYM* symi);
 	ENODE* ParseStar(SYM* symi);
@@ -911,7 +932,7 @@ private:
 	ENODE* FindLastMulu(ENODE*, ENODE*);
 public:
 	Expression();
-	ENODE* ParseNameRef(SYM* symi);
+	TYP* ParseNameRef(ENODE** node, SYM* symi);
 	TYP* ParseUnaryExpression(ENODE** node, int got_pa, SYM* symi);
 	TYP* CondDeref(ENODE** node, TYP* tp);
 	ENODE* MakeAutoNameNode(SYM* sp);
@@ -1109,6 +1130,7 @@ public:
 class CodeGenerator
 {
 public:
+	bool IsPascal(ENODE* ep);
 	Operand *MakeDataLabel(int lab, int ndxreg);
 	Operand *MakeCodeLabel(int lab);
 	Operand *MakeStringAsNameConst(char *s, e_sg seg);
@@ -1187,11 +1209,16 @@ public:
 	int GenerateInlineArgumentList(Function *func, ENODE *plist);
 	virtual int PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat) { return(0); };
 	virtual int PushArguments(Function *func, ENODE *plist) { return (0); };
-	virtual void PopArguments(Function *func, int howMany) {};
-	virtual Operand *GenerateFunctionCall(ENODE *node, int flags) { return (nullptr); };
+	virtual void PopArguments(Function *func, int howMany, bool isPascal = true) {};
+	virtual void GenerateIndirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0) {};
+	virtual void GenerateDirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0) {};
+	virtual void GenerateInlineCall(ENODE* node, Function* func);
+	virtual Operand *GenerateFunctionCall(ENODE *node, int flags, int lab=0);
+	virtual int GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp);
 	void GenerateFunction(Function *fn) { fn->Generate(); };
 	Operand* GenerateTrinary(ENODE* node, int flags, int size, int op);
 	virtual void GenerateUnlink(int64_t amt);
+	virtual void RestoreRegisterVars() {};
 };
 
 class ThorCodeGenerator : public CodeGenerator
@@ -1233,13 +1260,13 @@ public:
 	Operand* GenerateFgt(ENODE* node);
 	Operand* GenerateFge(ENODE* node);
 	Operand *GenExpr(ENODE *node);
-	bool IsPascal(ENODE *ep);
 	void LinkAutonew(ENODE *node);
 	int PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat, int* push_count, bool large_argcount=true);
 	int PushArguments(Function *func, ENODE *plist);
 	void PopArguments(Function *func, int howMany, bool isPascal = true);
 	Operand* GenerateSafeLand(ENODE *, int flags, int op);
-	Operand *GenerateFunctionCall(ENODE *node, int flags, int lab=0);
+	void GenerateIndirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0);
+	void GenerateDirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0);
 	void SignExtendBitfield(Operand* ap3, uint64_t mask);
 	void GenerateBitfieldInsert(Operand* dst, Operand* src, int offset, int width);
 	void GenerateBitfieldInsert(Operand* dst, Operand* src, Operand* offset, Operand* width);

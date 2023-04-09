@@ -113,8 +113,8 @@ extern void GeneratePosit(Posit64 val);
 
 extern int64_t initbyte(SYM* symi, int opt);
 extern int64_t initchar(SYM* symi, int opt);
-extern int64_t initshort(SYM* symi, int opt);
-extern int64_t initint(SYM* symi, int opt);
+extern int64_t initshort(SYM* symi, int64_t i, int opt);
+extern int64_t initint(SYM* symi, int64_t i, int opt);
 extern int64_t initlong(SYM* symi, int opt);
 extern int64_t initquad(SYM* symi, int opt);
 extern int64_t initfloat(SYM* symi, int opt);
@@ -129,4 +129,7 @@ extern void GenerateStrLabel(char* str);
 
 void fatal(char*);
 void fatal(const char*);
+
+List* sortedList(List* head, ENODE* root);
+
 #endif

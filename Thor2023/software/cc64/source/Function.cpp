@@ -279,10 +279,11 @@ void Function::DoFuncptrAssign(Function *sp)
 	// Move vars with initialization data over to the data segment.
 	if (ep1->segment == bssseg)
 		ep1->segment = dataseg;
-	if (sp->sym->initexp)
-		sp->sym->initexp->p[0] = ep1;
-	else
-		sp->sym->initexp = ep1;
+//	if (sp->sym->initexp)
+		sp->sym->initexp = makenode(en_void, sp->sym->initexp, ep1);
+//		sp->sym->initexp->p[0] = ep1;
+//	else
+//		sp->sym->initexp = ep1;
 	doinit(sp->sym);
 }
 
@@ -407,7 +408,7 @@ int Function::Parse()
 			node = makesnode(en_cnacon, new std::string(*UnknownFuncName()), new std::string(*UnknownFuncName()), stringlit((char *)UnknownFuncName()->c_str()));
 			node2 = makesnode(en_cnacon, new std::string(*UnknownFuncName()), new std::string(*UnknownFuncName()), stringlit((char*)UnknownFuncName()->c_str()));
 			node = makenode(en_assign, node, node2);
-			sp->sym->initexp = node;
+			sp->sym->initexp = makenode(en_void, nullptr, node);
 			doinit(sp->sym);
 			goto j2;
 		}
@@ -659,7 +660,7 @@ int Function::RestoreGPRegisterVars()
 	if (save_mask->NumMember()) {
 		if (cpu.SupportsLDM && save_mask->NumMember() > 2) {
 			mask = 0;
-			for (nn = 0; nn < 32; nn++)
+			for (nn = 0; nn < 64; nn++)
 				if (save_mask->isMember(nn))
 					mask = mask | (1LL << (nn-1));
 			//GenerateMonadic(op_reglist, 0, cg.MakeImmediate(mask, 16));
@@ -1008,7 +1009,10 @@ void Function::GenerateReturn(Statement* stmt)
 							GenerateDiadic(cpu.sto_op, 0, ap2, MakeIndexed(sizeOfWord * 2, regSP));
 						}
 						ReleaseTempReg(ap2);
-						GenerateMonadic(op_call, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));
+						if (isRiscv)
+							GenerateMonadic(op_call, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));
+						else
+							GenerateMonadic(op_jsr, 0, MakeStringAsNameConst((char*)"__aacpy", codeseg));
 						GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
 						if (!IsPascal)
 							GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));

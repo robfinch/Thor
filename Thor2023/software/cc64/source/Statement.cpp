@@ -1981,7 +1981,7 @@ void Statement::GenerateCompound()
 	while (sp) {
 		if (sp->initexp) {
 			initstack();
-			ReleaseTempRegister(cg.GenerateExpression(sp->initexp, am_all, 8, 0));
+			ReleaseTempRegister(cg.GenerateExpression(sp->initexp->p[1], am_all, 8, 0));
 		}
 		sp = sp->GetNextPtr();
 	}
@@ -2000,7 +2000,7 @@ void Statement::GenerateFuncBody()
 	while (sp) {
 		if (sp->initexp) {
 			initstack();
-			ReleaseTempRegister(cg.GenerateExpression(sp->initexp, am_all, sizeOfWord, 0));
+			ReleaseTempRegister(cg.GenerateExpression(sp->initexp->p[1], am_all, sizeOfWord, 0));
 		}
 		sp = sp->GetNextPtr();
 	}
@@ -2247,20 +2247,20 @@ void Statement::Dump()
 			break;
 		case st_return:
 		case st_throw:
-			block->exp->Dump();
+			block->exp->Dump(0);
 			break;
 		case st_check:
-			block->exp->Dump();
+			block->exp->Dump(0);
 			break;
 		case st_expr:
 			dfs.printf("st_expr\n");
-			block->exp->Dump();
+			block->exp->Dump(0);
 			break;
 		case st_while:
 		case st_until:
 		case st_dowhile:
 		case st_dountil:
-			block->exp->Dump();
+			block->exp->Dump(0);
 		case st_do:
 		case st_doloop:
 		case st_forever:
@@ -2268,18 +2268,18 @@ void Statement::Dump()
 			block->s2->Dump();
 			break;
 		case st_for:
-			block->initExpr->Dump();
-			block->exp->Dump();
+			block->initExpr->Dump(0);
+			block->exp->Dump(0);
 			block->s1->Dump();
-			block->incrExpr->Dump();
+			block->incrExpr->Dump(0);
 			break;
 		case st_if:
-			block->exp->Dump();
+			block->exp->Dump(0);
 			block->s1->Dump();
 			block->s2->Dump();
 			break;
 		case st_switch:
-			block->exp->Dump();
+			block->exp->Dump(0);
 			block->s1->Dump();
 			break;
 		case st_try:
@@ -2313,7 +2313,7 @@ void Statement::CheckCompoundReferences(int* psp, int* pbp, int* pgp, int* pgp1)
 	SYM* spp;
 	int sp, bp, gp, gp1;
 
-	spp = spp->GetPtr(ssyms.GetHead());
+	spp = ssyms.headp;
 	while (spp) {
 		if (spp->initexp) {
 			spp->initexp->ResetSegmentCount();
@@ -2323,7 +2323,7 @@ void Statement::CheckCompoundReferences(int* psp, int* pbp, int* pgp, int* pgp1)
 			*pgp += exp->segcount[dataseg];
 			*pgp1 += exp->segcount[rodataseg];
 		}
-		spp = spp->GetNextPtr();
+		spp = spp->nextp;
 	}
 	s1->CheckReferences(&sp, &bp, &gp, &gp1);
 	*psp += sp;
