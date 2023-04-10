@@ -18,8 +18,8 @@ public:
 	void write(const char* buf) {
 		write((char*)buf);
 	};
-	void printf(char *str) { if (level) write(str); };
-	void printf(const char *str) { if (level) write((char *)str); };
+	void printf(char *str) { if (level && str != nullptr) write(str); };
+	void printf(const char *str) { if (level && str != nullptr) write((char *)str); };
 	void printf(char *fmt, char *str);
 	void printf(const char* fmt, char* str) {
 		printf((char*)fmt, str);

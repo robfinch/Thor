@@ -1226,13 +1226,11 @@ void Function::GenerateReturn(Statement* stmt)
 		}
 		else {
 			if (toAdd > 0) {
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
+				GenerateTriadic(op_rtd, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
 				toAdd = 0;
 			}
-			if (currentFn->IsFar)
-				GenerateMonadic(op_bra, 0, MakeStringAsNameConst((char *)"_FAR_RET", codeseg));
 			else
-				GenerateZeradic(currentFn->IsLeaf ? op_ret : op_ret);// , MakeImmediate(toAdd));
+				GenerateZeradic(op_rts);
 		}
 	}
 	else

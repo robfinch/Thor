@@ -1787,7 +1787,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 	tp = node->p[0]->tp;
 	if (tp) {
 		if (tp->size > sizeOfWord) {
-			if (node->p[0]->tp->IsAggregateType() || node->p[1]->nodetype == en_list || node->p[1]->nodetype == en_aggregate)
+			if (node->p[0]->tp->IsAggregateType() || node->p[1]->nodetype == en_list || node->p[1]->nodetype == en_end_aggregate)
 				return GenerateAggregateAssign(node->p[0], node->p[1]);
 		}
 	}
@@ -2055,6 +2055,8 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	int ndxreg;
 	ENODE* n2, * n3;
 	size_t tpsz;
+	Symbol* sym;
+	char nmbuf[200];
 
   Enter((char *)"<GenerateExpression>"); 
   if( node == (ENODE *)NULL )
@@ -2071,14 +2073,35 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   switch( node->nodetype )
   {
 	case en_aggregate:
-		ap1 = GenerateExpression(node->p[0], flags, size, rhs);
+	case en_end_aggregate:
+		if (pass == 1) {
+			sym = allocSYM();
+			sprintf_s(nmbuf, sizeof(nmbuf), "__aggregate_tag", sym->acnt);
+			sym->tp = node->tp;
+			sym->storage_class = sc_global;
+			node->AssignTypeToList(sym->tp);
+			ofs.puts("\n");
+			put_label(sym->acnt, nmbuf, nmbuf, 'D', sym->tp->size);
+			sprintf_s(nmbuf, sizeof(nmbuf), "__aggregate_tag_%d", sym->acnt);
+			sym->SetName(std::string((char*)nmbuf));
+			sym->Initialize(node, sym->tp, 1);
+			ofs.puts("\n\n");
+			node->sp = sym->name;
+		}
+//		GenerateReference(sym, 0);
+		ap1 = GetTempRegister();
+		GenerateDiadic(op_lea, 0, ap1, MakeStringAsNameConst((char *)node->sp->c_str(), rodataseg));
+		ap1->isPtr = true;
+		sym->acnt++;
+		/*
 		ap2 = allocOperand();
-		ap2->mode = am_ind;
+		ap2->mode = am_reg;
 		ap2->preg = ap1->preg;
 		if (node->tp->IsScalar())
 			GenerateLoad(ap1, ap2, size, size);
 		else
 			ap1->isPtr = true;
+		*/
 		goto retpt;
 		//ap1 = allocOperand();
 		//ap1->offset = node;

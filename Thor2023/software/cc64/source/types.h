@@ -40,6 +40,7 @@ class Function;
 class OCODE;
 class PeepList;
 class Var;
+class List;
 
 typedef struct tagCase {
 	bool first;
@@ -458,6 +459,8 @@ private:
 
 class Symbol {
 public:
+	static int acnt;
+public:
 	int number;
 	int id;
 	int parent;
@@ -540,7 +543,7 @@ public:
 	int64_t InitializeArray(ENODE*);
 	int64_t InitializeStruct(ENODE*);
 	int64_t InitializeUnion(ENODE*);
-	int64_t GenerateT(ENODE* node);
+	int64_t GenerateT(ENODE* node, TYP* tp);
 	void storeHex(txtoStream& ofs);
 };
 
@@ -653,6 +656,7 @@ public:
 class ENODE {
 public:
 	static int segcount[16];
+	static CSet initializedSet;
 public:
 	int number;										// number of this node for reference
 	int order;										// list ordering for initializers
@@ -750,6 +754,7 @@ public:
 	void update();
 
 	// Code generation
+	List* ReverseList(ENODE*);
 	bool FindLoopVar(int64_t);
 
 	Operand *MakeDataLabel(int lab, int ndxreg);
@@ -807,6 +812,7 @@ public:
 	// Debugging
 	std::string nodetypeStr();
 	void Dump(int pn = 0);
+	void DumpAggregate();
 };
 
 // Class to allow representing a set of expression nodes as a linear list
@@ -815,6 +821,10 @@ public:
 class List
 {
 public:
+	List() {
+		nxt = nullptr;
+		node = nullptr;
+	};
 	List(ENODE *nd) {
 		nxt = nullptr;
 		node = nd;

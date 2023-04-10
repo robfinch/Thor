@@ -820,7 +820,7 @@ j1:
 		case bt_ifunc:
 			return (srctp);
 		case bt_struct:
-			if ((*dstnode)->nodetype == en_list || (*dstnode)->nodetype == en_aggregate)
+			if ((*dstnode)->nodetype == en_list || (*dstnode)->nodetype == en_end_aggregate)
 				return (srctp);
 			break;
 		case bt_posit:

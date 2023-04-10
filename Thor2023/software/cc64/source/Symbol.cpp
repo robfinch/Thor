@@ -30,6 +30,7 @@ n = 0; \
 for (nn = TABLE::matchno; gSearchCnt < 100 && nn > 0; nn--) \
 	gSearchSyms[gSearchCnt++] = TABLE::match[n++];
 
+int Symbol::acnt = 0;
 char *prefix;
 extern int nparms;
 extern bool isRegister;
@@ -250,7 +251,7 @@ j1:
 //        			dfs.puts("</gsearch2>\n");
 //      				return (sp);
       			}
-						q = q->GetPtr(p->parent);
+						q = p->parentp;
 						if (q)
 							dfs.printf("Looking at parents params %p\n", (char*)&q->fi->params);
 						while (q) {
@@ -525,7 +526,7 @@ std::string *TypenoToChars(int typeno)
 	str->append(c);
 	dfs.printf("%s",(char *)str->c_str());
   dfs.puts("</TypenoToChars>");
-	return str;
+	return (str);
 }
 
 // Get the mangled name for the function
@@ -547,12 +548,12 @@ std::string *Symbol::GetNameHash()
   sp = GetParentPtr();
   if (sp) {
      nh->append(*sp->GetNameHash());
-	   sp = GetPtr(sp->tp->lst.base);
+	   sp = sp->tp->lst.basep;
      dfs.putch('B');
    	 for (nn = 0; sp && nn < 200; nn++) {
   	   dfs.putch('.');
   	   nh->append(*sp->GetNameHash());
-       sp = GetPtr(sp->tp->lst.base);
+			 sp = sp->tp->lst.basep;
   	 }
 	   if (nn >= 200) {
 	     error(ERR_CIRCULAR_LIST);
@@ -565,7 +566,7 @@ std::string *Symbol::GetNameHash()
 	}
 */
   dfs.puts("</GetNameHash>\n");
-	return nh;
+	return (nh);
 }
 
 // Build a function signature string including
@@ -679,7 +680,9 @@ int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
 	Expression exp;
 	bool init_array = false;
 
-	return (GenerateT(pnode));
+	if (ENODE::initializedSet.isMember(pnode->number))
+		return (0);
+	return (GenerateT(pnode, tp2));
 	/*
 	do {
 		//if (lastst == assign)
@@ -770,15 +773,13 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 {
 	int64_t nbytes;
 	int64_t count;
-	List* lst;
-	ENODE* node;
+	ENODE* node, *temp;
+	List* lst, *hlst;
 
 	nbytes = 0;
 	node = rootnode;
-	if (node->nodetype == en_aggregate)
-		node = node->p[0];
-	lst = sortedList(nullptr, node);
-	for (count = tp->numele; count && lst != nullptr; lst = lst->nxt, count--) {
+	hlst = lst = node->ReverseList(node);
+	for (count = tp->numele; count && lst != nullptr; lst = lst->nxt) {
 		node = lst->node;
 		/*
 		while (nbytes < sp->tp->size) {// sp->value.i) {     // align properly
@@ -787,25 +788,30 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 			nbytes++;
 		}
 		*/
-		if (node == nullptr || node==rootnode)
-			break;
-		nbytes += Initialize(node, tp, 0);
+		if (node != nullptr && node != rootnode) {
+			if (!ENODE::initializedSet.isMember(node->number)) {
+				nbytes += Initialize(node, node->tp, 0);
+				ENODE::initializedSet.add(node->number);
+			}
+			count--;
+		}
 	}
 	if (nbytes < tp->size)
 		genstorage(tp->size - nbytes);
+	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeStruct(ENODE* node)
+int64_t Symbol::InitializeStruct(ENODE* rootnode)
 {
 	static int level = 0;
 	Symbol* sp, *hd;
 	int64_t nbytes;
 	int count;
 	TYP* typ;
-	ENODE* node2;
 	TABLE* tbl;
-	List* lst;
+	List* lst, *hlst;
+	ENODE* node, *temp;
 
 	level++;
 	nbytes = 0;
@@ -814,9 +820,8 @@ int64_t Symbol::InitializeStruct(ENODE* node)
 	hd = sp = tbl->headp;// this->GetPtr(tbl->GetHead());
 	count = 0;
 	typ = nullptr;
-	lst = sortedList(nullptr, node);
-	if (node->nodetype == en_aggregate)
-		node = node->p[0];
+	node = rootnode;
+	hlst = lst = node->ReverseList(node);
 	for (; sp != 0 && lst != nullptr; lst = lst->nxt) {
 		node = lst->node;
 		/*
@@ -828,8 +833,18 @@ int64_t Symbol::InitializeStruct(ENODE* node)
 		*/
 		//currentSym = sp;
 		if (node == nullptr)
-			break;
-		nbytes += sp->Initialize(node, sp->tp, 0);
+			continue;
+		if (node != nullptr && node != rootnode) {
+			if (!ENODE::initializedSet.isMember(node->number)) {
+				nbytes += sp->Initialize(node, sp->tp, 0);
+				ENODE::initializedSet.add(node->number);
+			}
+		}
+		else {
+			temp = makeinode(en_icon, 0);
+			temp->tp = &stdint;
+			nbytes += sp->Initialize(temp, sp->tp, 0);
+		}
 		sp = sp->nextp;
 		if (sp == hd || sp == nullptr)
 			break;
@@ -839,24 +854,26 @@ int64_t Symbol::InitializeStruct(ENODE* node)
 		genstorage(tp->size - nbytes);
 	//	needpunc(end, 26);
 	level--;
+	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeUnion(ENODE* node)
+int64_t Symbol::InitializeUnion(ENODE* rootnode)
 {
 	Symbol* sp, * osp;
 	int64_t nbytes;
-	int64_t val;
 	bool found = false;
 	TYP* ntp;
 	int count;
-	ENODE* pnode;
-	List* lst;
+	List* lst, *hlst;
+	ENODE* node;
 
 	nbytes = 0;
+	node = rootnode;
 	if (node == nullptr)	// syntax error in GetConstExpression()
 		return (0);
 	      /* start at top of symbol table */
+	hlst = lst = node->ReverseList(node);
 	count = 0;
 	// An array of values matching a union?
 	ntp = node->tp;
@@ -864,52 +881,70 @@ int64_t Symbol::InitializeUnion(ENODE* node)
 		ntp = ntp->btpp;
 		for (count = 0; count < ntp->numele; count++)
 			nbytes += ntp->GenerateT(node);
+		ENODE::initializedSet.add(node->number);
 	}
 	else if (ntp->type != bt_union) {
-		pnode = node;
 		if (TYP::IsSameType(ntp, tp->btpp, false)) {
-			lst = sortedList(nullptr, node);
 			do {
-				pnode = lst->node;
-				nbytes += ntp->GenerateT(pnode);
-				ntp = pnode->tp;
+				if (lst->node == rootnode)
+					continue;
+				if (!ENODE::initializedSet.isMember(lst->node->number)) {
+					nbytes += GenerateT(lst->node, ntp);
+					ENODE::initializedSet.add(lst->node->number);
+				}
+				ntp = lst->node->tp;
+				if (lst->node)
+					if (!TYP::IsSameType(lst->node->tp, tp->btpp, false))
+						break;
 				lst = lst->nxt;
-			} while (lst && TYP::IsSameType(ntp, tp->btpp, false));
+			} while (lst);
 		}
 	}
 	else {
-		for (osp = sp = tp->lst.headp; sp != 0; sp = sp->nextp) {
-			// Detect array of values
-			if (TYP::IsSameType(sp->tp, node->tp, false)) {
-				nbytes = sp->tp->GenerateT(node);
-				found = true;
-				break;
+		for (; lst; lst = lst->nxt) {
+			node = lst->node;
+			if (node == rootnode)
+				continue;
+			for (osp = sp = tp->lst.headp; sp != 0; sp = sp->nextp) {
+				// Detect array of values
+				if (TYP::IsSameType(sp->tp, node->tp, false)) {
+					if (!ENODE::initializedSet.isMember(lst->node->number)) {
+						nbytes = GenerateT(node, sp->tp);
+						ENODE::initializedSet.add(lst->node->number);
+					}
+					found = true;
+					break;
+				}
+				if (sp == osp || sp == tp->lst.tailp)
+					break;
 			}
-			if (sp == osp)
-				break;
+			if (!found)
+				error(ERR_INIT_UNION);
+			if (lastst != semicolon && lastst != comma && lastst != end)
+				error(ERR_PUNCT);
 		}
-		if (!found)
-			error(ERR_INIT_UNION);
-		if (lastst != semicolon && lastst != comma && lastst != end)
-			error(ERR_PUNCT);
 	}
 	if (nbytes < tp->size)
 		genstorage(tp->size - nbytes);
+	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::GenerateT(ENODE* node)
+int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 {
 	int64_t nbytes;
 	int64_t val;
 
+	nbytes = 0;
 	if (node == nullptr)
 		return (0);
 	if (!node->constflag)
 		;
 	if (node->nodetype==en_ref)
 		;
-	switch (tp->type) {
+	if (ENODE::initializedSet.isMember(node->number))
+		return (0);
+	switch (ptp->type) {
 	case bt_byte:
 		val = node->i;
 		nbytes = 1; GenerateByte(val);
@@ -961,7 +996,7 @@ int64_t Symbol::GenerateT(ENODE* node)
 		break;
 	case bt_pointer:
 		// Is it an array?
-		if (tp->val_flag)
+		if (ptp->val_flag)
 			nbytes = InitializeArray(node);
 		else {
 			val = node->i;
@@ -972,10 +1007,15 @@ int64_t Symbol::GenerateT(ENODE* node)
 			case 16: GenerateLong(val); break;
 			}
 		}
+		break;
+	case bt_array:
+		nbytes = InitializeArray(node);
+		break;
 		//case bt_struct:	nbytes = InitializeStruct(); break;
 	default:
 		;
 	}
+	ENODE::initializedSet.add(node->number);
 	return (nbytes);
 }
 

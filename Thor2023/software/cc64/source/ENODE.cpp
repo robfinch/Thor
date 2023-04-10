@@ -26,6 +26,7 @@
 #include "stdafx.h"
 
 int ENODE::segcount[16];
+CSet ENODE::initializedSet;
 CSet* ru;
 CSet* rru;
 
@@ -280,6 +281,7 @@ int ENODE::GetNaturalSize()
 	case en_wydendx:
 		return (2);
 	case en_aggregate:
+	case en_end_aggregate:
 		return (p[0]->GetNaturalSize());
 	case en_list:
 		if (p[1])
@@ -369,6 +371,7 @@ bool ENODE::IsEqual(ENODE *node1, ENODE *node2, bool lit)
 	case en_cnacon:
 		return (node1->sp->compare(*node2->sp) == 0);
 	case en_aggregate:
+	case en_end_aggregate:
 		return (IsEqual(node1->p[0], node2->p[0], lit));
 	case en_list:
 		for (ep1 = node1->p[2],
@@ -451,7 +454,6 @@ void ENODE::AddToList(ENODE* ele)
 		this->p[2] = ele;
 }
 
-
 static void ListNodes(ENODE* node)
 {
 	int level, nn;
@@ -484,14 +486,17 @@ static void ListNodes(ENODE* node)
 static void AssignTypeToArray(ENODE* node, TYP* btp)
 {
 	ENODE* ep;
-	List* lst;
+	List* lst, *hlst;
 
 	if (node == nullptr)
 		return;
-	lst = sortedList(nullptr, node);
+
+	hlst = lst = node->ReverseList(node);
 
 	for (; lst; lst = lst->nxt) {
 		ep = lst->node;
+		if (ep == nullptr)
+			continue;
 		ep->tp = btp;
 		ep->esize = btp->size;
 		if (!ep->constflag)
@@ -506,17 +511,18 @@ static void AssignTypeToArray(ENODE* node, TYP* btp)
 				isConst = false;
 		}
 	}
+	delete[] hlst;
 }
 
 static void AssignTypeToAggregateHelper(ENODE* node, Symbol* thead)
 {
 	ENODE* ep;
-	List* lst;
+	List* lst, *hlst;
 
 	if (node == nullptr)
 		return;
 
-	lst = sortedList(nullptr, node);
+	hlst = lst = node->ReverseList(node);
 	for (; lst; lst = lst->nxt) {
 		ep = node;
 		if (TYP::IsSameType(ep->tp, thead->tp->btpp, false)) {
@@ -526,12 +532,13 @@ static void AssignTypeToAggregateHelper(ENODE* node, Symbol* thead)
 		else
 			break;
 	}
+	delete[] hlst;
 }
 
 static void AssignTypeToAggregate(ENODE* node, Symbol* thead)
 {
 	ENODE* ep;
-	List* lst; 
+	List* lst, *hlst; 
 
 	// If we run out of aggregate initializers, okay.
 	if (node == nullptr)
@@ -539,25 +546,30 @@ static void AssignTypeToAggregate(ENODE* node, Symbol* thead)
 	if (thead == nullptr)
 		return;
 
-	lst = sortedList(nullptr, node);
+	hlst = lst = node->ReverseList(node);
 	for (; lst; lst = lst->nxt) {
 		ep = lst->node;
-		if (!ep->constflag)
-			isConst = false;
-		if (thead->tp->isArray || thead->tp->IsAggregateType()) {
-			if (ep->nodetype == en_aggregate) {
-				if (!ep->AssignTypeToList(thead->tp))
-					isConst = false;
-				ep->tp = thead->tp;
-				ep->esize = thead->tp->size;
+		if (ep) {
+			if (!ep->constflag)
+				isConst = false;
+			if (thead->tp->isArray || thead->tp->IsAggregateType()) {
+				if (ep->nodetype == en_end_aggregate) {
+					if (!ep->AssignTypeToList(thead->tp))
+						isConst = false;
+					ep->tp = thead->tp;
+					ep->esize = thead->tp->size;
+				}
+				else if (TYP::IsSameType(ep->tp, thead->tp->btpp, false))
+					AssignTypeToAggregateHelper(ep, thead);
 			}
-			else if (TYP::IsSameType(ep->tp, thead->tp->btpp, false))
-				AssignTypeToAggregateHelper(ep, thead);
+			else
+				ep->tp = thead->tp;
+			thead = thead->nextp;
+			if (thead == nullptr)
+				break;
 		}
-		thead = thead->nextp;
-		if (thead == nullptr)
-			return;
 	}
+	delete[] hlst;
 }
 
 bool ENODE::AssignTypeToList(TYP *ptp)
@@ -570,11 +582,14 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 
 	if (this == nullptr)
 		return (false);
-	if (nodetype != en_aggregate)
-		if (this)
+	if (nodetype != en_end_aggregate) {
+		if (this) {
+			this->tp = ptp;
 			return (this->constflag);
+		}
 		else
 			return (false);
+	}
 
 	esize = 0;
 	ary = tp->isArray;
@@ -617,6 +632,70 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 	ListNodes(this);
 	return (isConst);
 }
+
+void ENODE::DumpAggregate()
+{
+	static int level = 0;
+	List* hlst, * lst;
+	ENODE* node;
+
+	if (level == 0)
+		dfs.puts("<Aggregate>");
+	dfs.puts("{ ");
+	hlst = this->ReverseList(this);
+	for (lst = hlst; lst; lst = lst->nxt) {
+		node = lst->node;
+		if (node != nullptr) {
+			if (node->nodetype == en_end_aggregate && lst != hlst) {
+				level++;
+				node->DumpAggregate();
+				level--;
+			}
+			else {
+				node->PutConstant(dfs, 0, 0, false, 0);
+				dfs.puts(", ");
+			}
+		}
+	}
+	dfs.puts(" }");
+	if (level == 0)
+		dfs.puts("</Aggregate>\n");
+	delete[] hlst;
+}
+
+
+List* ENODE::ReverseList(ENODE* node)
+{
+	List* lst;
+	ENODE* pnode;
+	int64_t count, cnt2, cnt1;
+
+	// Trap single non-list items.
+	if (node->nodetype != en_end_aggregate) {
+		lst = new List[1];
+		lst[0].node = node;
+		lst[0].nxt = nullptr;
+		return (lst);
+	}
+
+	// Count the number of node we need.
+	count = 0;
+	for (pnode = node; pnode; pnode = pnode->p[0])
+		count++;
+
+	// Allocate
+	lst = new List[count];
+	cnt2 = count - 1;
+	// Copy node pointers to array in reverse order.
+	for (pnode = node; pnode && cnt2 >= 0; pnode = pnode->p[0]) {
+		lst[cnt2].node = pnode->p[1];
+		lst[cnt2].nxt = &lst[cnt2 + 1];
+		cnt2 = cnt2 - 1;
+	}
+	lst[count - 1].nxt = nullptr;
+	return (&lst[0]);
+}
+
 
 // Function to create Linked list from given binary tree
 List* sortedList(List* head, ENODE* root)
@@ -939,6 +1018,7 @@ void ENODE::repexpr()
 	case en_asmod:  case en_aslsh:
 	case en_asrsh:
 	case en_aggregate:
+	case en_end_aggregate:
 	case en_void:
 		p[0]->repexpr();
 	case en_cast:
@@ -1199,6 +1279,7 @@ void ENODE::scanexpr(int duse)
 	case en_cond:	case en_safe_cond:
 	case en_void:
 	case en_aggregate:
+	case en_end_aggregate:
 		p[0]->scanexpr(0);
 	case en_cast:
 		p[1]->scanexpr(0);
@@ -2356,8 +2437,12 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		ofs.write(buf);
 		break;
 	case en_fcon:
-		if (!opt)
-			goto j1;
+		if (!opt) {
+			sprintf_s(buf, sizeof(buf), "%s_%lld", GetNamespace(), i);
+			DataLabels[i] = true;
+			ofs.write(buf);
+			break;
+		}
 		// The following spits out a warning, but is okay.
 		if (this->tp->type == bt_quad)
 			sprintf_s(buf, sizeof(buf), "%.16s", f128.ToString());
@@ -2753,7 +2838,7 @@ int ENODE::PutStructConst(txtoStream& ofs)
 
 	if (ep == nullptr)
 		return (0);
-	if (ep->nodetype != en_aggregate)
+	if (ep->nodetype != en_end_aggregate)
 		return (0);
 
 	isStruct = ep->tp->IsStructType();
@@ -2763,7 +2848,7 @@ int ENODE::PutStructConst(txtoStream& ofs)
 	lst = (List*)p[1];
 	for (n = 0; lst; lst = lst->nxt) {
 		ep1 = lst->node;
-		if (ep1->nodetype == en_aggregate) {
+		if (ep1->nodetype == en_end_aggregate) {
 			k = ep1->PutStructConst(ofs);
 		}
 		else {

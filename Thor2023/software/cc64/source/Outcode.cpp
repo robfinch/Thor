@@ -285,7 +285,7 @@ Instruction opl[329] =
 { "ret", op_ret,1,0,am_imm,0,0,0 },
 { "rol", op_rol,2,1,false,am_reg,am_reg,am_reg | am_ui6,0 },
 { "ror", op_ror,2,1,false,am_reg,am_reg,am_reg | am_ui6,0 },
-{ "rtd", op_rtd },
+{ "rtd", op_rtd,1,0,false,am_reg,am_reg,am_reg,am_reg|am_imm },
 { "rte", op_rte,2,0 },
 { "rti", op_rti,2,0 },
 { "rtl", op_rtl,1,0,am_imm,0,0,0 },
@@ -766,11 +766,11 @@ void GenerateFloat(Float128 *val)
 	if (val==nullptr)
 		return;
 	if (syntax == MOT) {
-		ofs.printf("\r\n\talign 2\r\n");
+		//ofs.printf("\r\n\talign 2\r\n");
 		ofs.printf("\tdc.l\t%s", val->ToString(64));
 	}
 	else {
-		ofs.printf("\r\n\t.align 2\r\n");
+		//ofs.printf("\r\n\t.align 2\r\n");
 		ofs.printf("\t.4byte\t%s", val->ToString(64));
 	}
   gentype = longgen;
@@ -783,11 +783,11 @@ void GenerateQuad(Float128 *val)
 	if (val==nullptr)
 		return;
 	if (syntax == MOT) {
-		ofs.printf("\r\n\t.align 2\r\n");
+		//ofs.printf("\r\n\t.align 2\r\n");
 		ofs.printf("\tdc.l\t%s", val->ToString(128));
 	}
 	else {
-		ofs.printf("\r\n\t.align 3\r\n");
+		//ofs.printf("\r\n\t.align 2\r\n");
 		ofs.printf("\t.4byte\t%s", val->ToString(128));
 	}
   gentype = longgen;
@@ -798,11 +798,11 @@ void GenerateQuad(Float128 *val)
 void GeneratePosit(Posit64 val)
 {
 	if (syntax == MOT) {
-		ofs.printf("\r\n\talign 3\r\n");
+		//ofs.printf("\r\n\talign 3\r\n");
 		ofs.printf("\t.dc.q\t%s", val.ToString());
 	}
 	else {
-		ofs.printf("\r\n\t.align 3\r\n");
+		//ofs.printf("\r\n\t.align 3\r\n");
 		ofs.printf("\t.8byte\t%s", val.ToString());
 	}
 	gentype = longgen;
@@ -1072,8 +1072,9 @@ int quadlit(Float128 *f128)
 
 int NumericLiteral(ENODE* node)
 {
-	struct nlit* lp;
+	struct nlit* lp, *pp;
 	lp = numeric_tab;
+	pp = nullptr;
 	// First search for the same literal constant and it's label if found.
 	while (lp) {
 		if (lp->typ == node->etype) {
@@ -1100,6 +1101,7 @@ int NumericLiteral(ENODE* node)
 				break;
 			}
 		}
+		pp = lp;
 		lp = lp->next;
 	}
 	lp = (struct nlit*)allocx(sizeof(struct nlit));
@@ -1114,7 +1116,11 @@ int NumericLiteral(ENODE* node)
 		lp->precision = node->tp->precision;
 	else
 		lp->precision = 64;
-	numeric_tab = lp;
+	if (pp == nullptr)
+		numeric_tab = lp;
+	else
+		pp->next = lp;
+	lp->next = nullptr;
 	return (lp->label);
 }
 
@@ -1181,6 +1187,8 @@ void dumplits()
 	} Flt;
 	union _tagFlt uf;
 	int ln;
+	struct nlit* lp;
+	lp = numeric_tab;
 
 	dfs.printf("<Dumplits>\n");
 	roseg();
@@ -1204,70 +1212,70 @@ void dumplits()
 		align(8);
 		nl();
 	}
-	while (numeric_tab != nullptr) {
+	while (lp != nullptr) {
 		nl();
-		if (DataLabels[numeric_tab->label])
-			switch (numeric_tab->typ) {
+		if (DataLabels[lp->label])
+			switch (lp->typ) {
 			case bt_float:
 			case bt_double:
-				put_label(numeric_tab->label, (char *)"", numeric_tab->nmspace, 'D', sizeOfFPD);
+				put_label(lp->label, (char *)"", lp->nmspace, 'D', sizeOfFPD);
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
 					ofs.printf("\t.4byte\t");
-				numeric_tab->f128.Pack(64);
-				ofs.printf("%s", numeric_tab->f128.ToString(64));
+				lp->f128.Pack(64);
+				ofs.printf("%s", lp->f128.ToString(64));
 				outcol += 35;
 				break;
 			case bt_quad:
-				put_label(numeric_tab->label, (char *)"", numeric_tab->nmspace, 'D', sizeOfFPQ);
+				put_label(lp->label, (char *)"", lp->nmspace, 'D', sizeOfFPQ);
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
 					ofs.printf("\t.4byte\t");
-				numeric_tab->f128.Pack(64);
-				ofs.printf("%s", numeric_tab->f128.ToString(64));
+				lp->f128.Pack(64);
+				ofs.printf("%s", lp->f128.ToString(64));
 				outcol += 35;
 				break;
 			case bt_posit:
-				switch (numeric_tab->precision) {
+				switch (lp->precision) {
 				case 16:
-					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 2);
+					put_label(lp->label, "", lp->nmspace, 'D', 2);
 					if (syntax == MOT)
 						ofs.printf("\tdc.w\t");
 					else
 						ofs.printf("\t.2byte\t");
-					ofs.printf("0x%04X\n", (int)(numeric_tab->p.val & 0xffffLL));
+					ofs.printf("0x%04X\n", (int)(lp->p.val & 0xffffLL));
 					outcol += 35;
 					break;
 				case 32:
-					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 4);
+					put_label(lp->label, "", lp->nmspace, 'D', 4);
 					if (syntax == MOT)
 						ofs.printf("\tdc.l\t");
 					else
 						ofs.printf("\t.4byte\t");
-					ofs.printf("0x%08X\n", (int)(numeric_tab->p.val & 0xffffffffLL));
+					ofs.printf("0x%08X\n", (int)(lp->p.val & 0xffffffffLL));
 					outcol += 35;
 					break;
 				default:
-					put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 8);
+					put_label(lp->label, "", lp->nmspace, 'D', 8);
 					if (syntax == MOT)
 						ofs.printf("\tdc.q\t");
 					else
 						ofs.printf("\t.8byte\t");
-					ofs.printf("0x%016I64X\n", numeric_tab->p.val);
+					ofs.printf("0x%016I64X\n", lp->p.val);
 					outcol += 35;
 					break;
 				}
 				break;
 			case bt_void:
-				put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 0);
+				put_label(lp->label, "", lp->nmspace, 'D', 0);
 				break;
 			default:
-				put_label(numeric_tab->label, "", numeric_tab->nmspace, 'D', 0);
+				put_label(lp->label, "", lp->nmspace, 'D', 0);
 				;// printf("hi");
 			}
-		numeric_tab = numeric_tab->next;
+		lp = lp->next;
 	}
 
 	if (quadtab) {

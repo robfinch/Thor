@@ -119,6 +119,7 @@ TYP* Expression::ParseRealConst(ENODE** node)
 		tptr = &stddouble;
 		break;
 	}
+	*node = pnode;
 	pnode->SetType(tptr);
 	NextToken();
 	return (tptr);
@@ -305,7 +306,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 	ENODE* pnode;
 	TYP* tptr;
 	int64_t sz = 0;
-	ENODE* cnode;
+	ENODE* cnode, *hnode, *qnode;
 	bool cnst = true;
 	bool consistentType = true;
 	TYP* tptr2;
@@ -313,15 +314,21 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 	int64_t pos = 0;
 	Symbol* sp;
 	int count;
+	static int level = 0;
 
 	NextToken();
-	cnode = pnode = nullptr;
+	hnode = pnode = makenode(en_aggregate, nullptr, nullptr);
+	pnode->order = 0;
 	parsingAggregate++;
 	head = tail = nullptr;
 	tptr2 = nullptr;
 	for (count = 0; lastst != end; count++) {
-		if (lastst == begin)
+		cnode = nullptr;
+		if (lastst == begin) {
+			level++;
 			tptr = ParseAggregate(&cnode, symi);
+			level--;
+		}
 		else {
 			if (lastst == openbr) {
 				NextToken();
@@ -350,7 +357,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 		//sz = sz + tptr->size;
 		sz = sz + cnode->esize;
 		if (pnode == nullptr) {
-			pnode = makenode(en_void, cnode, nullptr);
+			pnode = makenode(en_void, nullptr, cnode);
 			cnode->order = 0;
 			pnode->order = 1;
 			pnode->SetType(cnode->tp);
@@ -371,6 +378,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 	needpunc(end, 9);
 	// If we specifed an aggregate with just a single value, return the type of
 	// the value, not an aggregate list.
+	/*
 	if (count < 2) {
 		*node = pnode;
 		if (pnode != nullptr && pnode->tp)
@@ -378,17 +386,33 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 		else
 			return (nullptr);
 	}
-	pnode = makenode(en_aggregate, pnode, nullptr);
+	*/
+	pnode = makenode(en_end_aggregate, pnode, nullptr);
+	hnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
 	pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
-	pnode->order = pnode->p[0]->order + 1;
-	if (consistentType)
+	if (consistentType) {
+		hnode->tp->btpp = tptr2;
 		pnode->tp->btpp = tptr2;
+		hnode->tp->isArray = true;
+		pnode->tp->isArray = true;
+		count = 0;
+		for (qnode = pnode->p[0]; qnode; qnode = qnode->p[0])
+			count++;
+		hnode->tp->numele = count-1;
+		pnode->tp->numele = count-1;
+	}
+	hnode->esize = sz;
 	pnode->esize = sz;
+	hnode->i = litlist(pnode);
 	pnode->i = litlist(pnode);
+	hnode->segment = cnst ? rodataseg : dataseg;
 	pnode->segment = cnst ? rodataseg : dataseg;
+	hnode->constflag = true;
 	pnode->constflag = true;
 	parsingAggregate--;
 	*node = pnode;
+	if (level==0)
+		pnode->DumpAggregate();
 	//pnode->Dump(0);
 	return (pnode->tp);
 }
@@ -471,6 +495,8 @@ TYP* Expression::ParseNameRef(ENODE** node, Symbol* symi)
 		tptr->sname = new std::string(lastid);
 	}
 
+	if (pnode == nullptr)
+		return (nullptr);
 	pnode->SetType(tptr);
 	pnode->constflag = false;
 	*node = pnode;

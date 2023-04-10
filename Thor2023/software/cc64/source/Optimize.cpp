@@ -118,8 +118,8 @@ void dooper(ENODE *node)
 		ep->tp = &stddouble;// ep->p[0]->tp;
 		Float128::IntToFloat(&ep->f128, ep->p[0]->i);
 		//ep->i = quadlit(&ep->f128);
-		ep->i = NumericLiteral(ep);
 		ep->SetType(ep->tp);
+		ep->i = NumericLiteral(ep);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_i2q:
@@ -128,8 +128,8 @@ void dooper(ENODE *node)
 		ep->f = (double)ep->p[0]->i;
 		Float128::IntToFloat(&ep->f128, ep->p[0]->i);
 		//ep->i = quadlit(&ep->f128);
-		ep->i = NumericLiteral(ep);
 		ep->SetType(ep->tp);
+		ep->i = NumericLiteral(ep);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_i2p:
@@ -147,8 +147,8 @@ void dooper(ENODE *node)
 		ep->tp = ep->p[0]->tp;
 		Float128::Add(&ep->f128, &ep->p[0]->f128, &ep->p[1]->f128);
 		//ep->i = quadlit(&ep->f128);
-		ep->i = NumericLiteral(ep);
 		ep->SetType(ep->tp);
+		ep->i = NumericLiteral(ep);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fsub:
@@ -156,9 +156,9 @@ void dooper(ENODE *node)
 		ep->f = ep->p[0]->f - ep->p[1]->f;
 		ep->tp = ep->p[0]->tp;
 		Float128::Sub(&ep->f128, &ep->p[0]->f128, &ep->p[1]->f128);
+		ep->SetType(ep->tp);
 		ep->i = NumericLiteral(ep);
 		//ep->i = quadlit(&ep->f128);
-		ep->SetType(ep->tp);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fmul:
@@ -166,9 +166,9 @@ void dooper(ENODE *node)
 		ep->f = ep->p[0]->f * ep->p[1]->f;
 		ep->tp = ep->p[0]->tp;
 		Float128::Mul(&ep->f128, &ep->p[0]->f128, &ep->p[1]->f128);
+		ep->SetType(ep->tp);
 		ep->i = NumericLiteral(ep);
 		//		ep->i = quadlit(&ep->f128);
-		ep->SetType(ep->tp);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 	case en_fdiv:
@@ -176,9 +176,9 @@ void dooper(ENODE *node)
 		ep->f = ep->p[0]->f / ep->p[1]->f;
 		ep->tp = ep->p[0]->tp;
 		Float128::Div(&ep->f128, &ep->p[0]->f128, &ep->p[1]->f128);
+		ep->SetType(ep->tp);
 		ep->i = NumericLiteral(ep);
 		//		ep->i = quadlit(&ep->f128);
-		ep->SetType(ep->tp);
 		ep->p[0] = ep->p[1] = nullptr;
 		break;
 
@@ -1470,6 +1470,7 @@ static void opt0(ENODE **node)
 		break;
 
 	case en_aggregate:
+	case en_end_aggregate:
 		opt0(&(ep->p[0]));
 		break;
 

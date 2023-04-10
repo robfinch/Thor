@@ -1503,46 +1503,76 @@ int64_t TYP::GenerateT(ENODE *node)
 	int64_t nbytes;
 	int64_t val;
 	int64_t n, nele;
-	ENODE *nd;
+	ENODE *nd, *pnode;
 	List* lst;
 
 	if (this == nullptr)
 		return (0);
 	switch (type) {
 	case bt_byte:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 1; GenerateByte(val);
 		break;
 	case bt_ubyte:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 1;
 		GenerateByte(val);
 		break;
 	case bt_ichar:
 	case bt_char:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 2; GenerateChar(val); break;
 	case bt_iuchar:
 	case bt_uchar:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 2; GenerateChar(val); break;
 	case bt_short:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 4; GenerateHalf(val); break;
 	case bt_ushort:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 4; GenerateHalf(val); break;
 	case bt_int:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 8; GenerateInt(val); break;
 	case bt_uint:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 16; GenerateInt(val); break;
 	case bt_long:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 16; GenerateLong(val); break;
 	case bt_ulong:
-		val = node->i;
+		if (node == nullptr)
+			val = 0;
+		else
+			val = node->i;
 		nbytes = 8; GenerateLong(val); break;
 	case bt_float:
 		nbytes = 8; GenerateFloat((Float128 *)&node->f128); break;
@@ -1556,18 +1586,18 @@ int64_t TYP::GenerateT(ENODE *node)
 		if (val_flag) {
 			nbytes = 0;
 			nele = numele;
-			lst = sortedList(nullptr, node);
-			for (n = 0; lst && n < nele; n++) {
-				nd = lst->node;
+			for (n = 0, pnode = node; pnode && n < nele; n++, pnode = pnode->p[0]) {
+				nd = pnode->p[1];
 				if (nd == nullptr)
 					break;
 				nbytes += btpp->GenerateT(nd);
-				nd = nd->p[2];
-				lst = lst->nxt;
 			}
 		}
 		else {
-			val = node->i;
+			if (node == nullptr)
+				val = 0;
+			else
+				val = node->i;
 			nbytes = sizeOfPtr;
 		}
 		//case bt_struct:	nbytes = InitializeStruct(); break;

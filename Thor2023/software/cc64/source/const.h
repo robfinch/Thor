@@ -46,7 +46,7 @@ enum e_node {
 				en_cast,				/* typecast */
 				en_nop,
 
-		en_list, en_aggregate,
+		en_list, en_aggregate, en_end_aggregate,
 
 		en_ubyt2wyde,
 		en_ubyt2tetra, en_uwyde2tetra,

@@ -956,7 +956,7 @@ ENODE *Expression::ParseArgumentList(ENODE *hidden, TypeArray *typearray, Symbol
 			else
 				dfs.printf("%03d ", 0);
 			if (ep2 == nullptr) {
-				ep2 = makeinode(en_icon, 0);
+				ep2 = makei128node(en_icon, *Int128::Zero());
 				ep2->etype = bt_none;
 			}
 			if (typ == nullptr) {
@@ -1220,17 +1220,15 @@ j1:
 		if (symi && symi->fi)
 			currentSym = symi;
 		tptr = ParseNameRef(&pnode, symi);
-		pnode->constflag = false;
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
+		pnode->constflag = false;
 		break;
 
 	case cconst:
 		tptr = ParseCharConst(&pnode, 1);
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case iconst:
@@ -1245,77 +1243,70 @@ j1:
 		}
 		pnode->SetType(tptr);
     NextToken();
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case kw_floatmax:
 		tptr = ParseFloatMax(&pnode);
-		if (tptr == nullptr)
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
 		break;
 
   case rconst:
 		tptr = ParseRealConst(&pnode);
-		if (tptr == nullptr)
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
 		break;
 
 	case pconst:
 		tptr = ParsePositConst(&pnode);
-		if (tptr == nullptr)
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
 		break;
 
 	case sconst:
 		tptr = ParseStringConst(&pnode);
-		if (tptr == nullptr)
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
 		break;
 
 	case asconst:
 		pnode = ParseStringConstWithSizePrefix(node);
 		tptr = &stdstring;
-		pnode->SetType(tptr);
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
+		pnode->SetType(tptr);
 		break;
 
 	case isconst:
 		pnode = ParseInlineStringConst(node);
 		tptr = &stdstring;
-		pnode->SetType(tptr);
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
+		pnode->SetType(tptr);
 		break;
 
   case openpa:
     NextToken();
     tptr = expression(&pnode, symi);
-		if (pnode)
-			pnode->SetType(tptr);
     needpunc(closepa,8);
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
+		pnode->SetType(tptr);
 		break;
 
   case kw_this:
 		pnode = ParseThis(node);
 		tptr = currentSym->tp;
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case begin:
 		tptr = ParseAggregate(&pnode, symi);
-		if (tptr == nullptr) {
+		if (tptr == nullptr || pnode == nullptr)
 			return (nullptr);
-		}
 		break;
 
 	case kw_restrict:
@@ -2014,7 +2005,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 				ep1 = compiler.ef.Makenode();
 			}
 			// This is a bad idea
-			if (ep1->nodetype == en_aggregate) {
+			if (ep1->nodetype == en_end_aggregate) {
 				if (!ep1->AssignTypeToList(tp)) {
 					error(ERR_CASTAGGR);
 				}
@@ -3316,7 +3307,7 @@ static void Safize(ENODE* nd)
 	else if (nd->nodetype == en_land)
 		nd->nodetype = en_land_safe;
 	Safize(nd->p[0]);
-	if (nd->nodetype != en_aggregate)
+	if (nd->nodetype != en_end_aggregate)
 		Safize(nd->p[1]);
 	//Safize(nd->p[2]);
 	//Safize(nd->p[3]);

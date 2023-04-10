@@ -423,7 +423,7 @@ void BasicBlock::ExpandReturnBlocks()
 {
 	BasicBlock *bb;
 	Edge *p;
-	OCODE *ip, *nc, *oc, *bk;
+	OCODE *ip, *oc, *bk;
 
 	if (currentFn->ReturnBlock == nullptr)
 		return;

@@ -198,6 +198,14 @@ void doinit(Symbol *sp)
 		}
 		switch (syntax) {
 		case MOT:
+			ofs.puts("\talign 4\n");
+			break;
+		case STD:
+			ofs.puts("\t.align 4\n");
+			break;
+		}
+		switch (syntax) {
+		case MOT:
 			if (curseg == bssseg)
 				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "comm %s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
 			else {
@@ -220,10 +228,10 @@ void doinit(Symbol *sp)
 			patchpoint = ofs.tellp();
 			switch (syntax) {
 			case MOT:
-				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t$FFF0200000000001\n");
+				sprintf_s(buf, sizeof(buf), "\tdc.q\t$FFF0200000000001\n");
 				break;
 			default:
-				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t$FFF0200000000001\n");
+				sprintf_s(buf, sizeof(buf), "\t.8byte\t$FFF0200000000001\n");
 			}
 			ofs.printf(buf);
 		}
@@ -330,7 +338,9 @@ void doinit(Symbol *sp)
 				error(ERR_CASTAGGR);
 			}
 			currentSym = s2;
-			sp->Initialize(node, nullptr, 1);
+			ENODE::initializedSet.clear();
+			if (node != nullptr)
+				sp->Initialize(node, sp->tp, 1);
 			if (sp->tp->numele == 0) {
 				if (sp->tp->btpp) {
 					if (sp->tp->btpp->type == bt_char || sp->tp->btpp->type == bt_uchar
@@ -348,10 +358,10 @@ void doinit(Symbol *sp)
 		ofs.seekp(patchpoint);
 		switch (syntax) {
 		case MOT:
-			sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+			sprintf_s(buf, sizeof(buf), "\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
 			break;
 		default:
-			sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+			sprintf_s(buf, sizeof(buf), "\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
 		}
 		ofs.printf(buf);
 		ofs.seekp(endpoint);
@@ -362,10 +372,10 @@ void doinit(Symbol *sp)
 		ofs.seekp(patchpoint);
 		switch (syntax) {
 		case MOT:
-			sprintf_s(buf, sizeof(buf), "\talign\t3\n\t  \t                 \n");
+			sprintf_s(buf, sizeof(buf), "\t  \t                 \n");
 			break;
 		default:
-			sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t  \t                 \n");
+			sprintf_s(buf, sizeof(buf), "\t  \t                 \n");
 		}
 		ofs.printf(buf);
 		ofs.seekp(endpoint);

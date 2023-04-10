@@ -1358,12 +1358,12 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 						nn = 1;
 					}
 					else {
-						if (ap->typep==&stddouble || ap->mode==am_reg) {
+						if (ap->tp->IsFloatType()) {
 							*isFloat = true;
 							cg.GenerateStore(ap,MakeIndexed(stkoffs,regSP),sizeOfWord);
-							nn = sz/sizeOfWord;
+							nn = 1;// sz / sizeOfWord;
 						}
-						else if (ap->typep == &stdposit || ap->mode == am_reg) {
+						else if (ap->type==bt_posit) {
 							cg.GenerateStore(ap, MakeIndexed(stkoffs, regSP), sizeOfWord);
 							nn = 1;
 						}
@@ -1418,7 +1418,7 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	// to what is needed. So always use store instructions for now.
 	if (nn > 4)
 		large_argcount = true;
-//	large_argcount = true;	// disable for now
+	large_argcount = true;	// disable for now
 	maxnn = nn;
 	for(nn = large_argcount ? nn-1 : 0, i = 0; large_argcount ? nn >= 0 : nn < maxnn; large_argcount ? nn-- : nn++,i++ )
   {
