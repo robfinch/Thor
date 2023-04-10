@@ -610,7 +610,7 @@ void Operand::store(txtoStream& ofs)
 	case am_reg:
 		if (typep == &stdvector)
 			ofs.printf("v%d", (int)preg);
-		else if (typep == stdvectormask)
+		else if (typep == &stdvectormask)
 			ofs.printf("vm%d", (int)preg);
 		else {
 			ofs.write(RegMoniker(preg));

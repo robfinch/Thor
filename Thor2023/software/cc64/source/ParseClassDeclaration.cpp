@@ -79,7 +79,7 @@ int ClassDeclaration::Parse(int ztype)
 		error(ERR_SYNTAX);
 		goto lxit;
 	}
-//	ws = allocSYM();
+//	ws = Symbol::alloc();
 	idsave = my_strdup(lastid);
 //	ws->name = idsave;
 //	ws->storage_class = sc_typedef;
@@ -96,7 +96,7 @@ int ClassDeclaration::Parse(int ztype)
   dfs.printf("Class decl:%s\n", lastid);
   dfs.printf("---------------------------------");
 	if((sp = tagtable.Find(std::string(lastid),false)) == NULL) {
-    sp = allocSYM();
+    sp = Symbol::alloc();
     sp->SetName(*(new std::string(lastid)));
 		sp->tp = nullptr;
     NextToken();
@@ -240,7 +240,7 @@ void ClassDeclaration::ParseMembers(Symbol *sym, int ztype)
 	// number is used during virtual function calls to determine which
 	// method to call. This is the first field in the class so it can be
 	// refeerenced as 0[r25].
-	hsym = allocSYM();
+	hsym = Symbol::alloc();
 	name = new std::string("_typeno");
   hsym->SetName(*name);
 	hsym->storage_class = sc_member;

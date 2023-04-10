@@ -203,6 +203,8 @@ Statement *Function::ParseBody()
 
 		PeepOpt();
 		FlushPeep();
+		if (!IsInline && pl.Count(pl.head) < compiler.autoInline)
+			IsInline = true;
 		switch (syntax) {
 		case MOT:
 			break;
@@ -384,7 +386,7 @@ int Function::Parse()
 		//	NextToken();
 		if (lastst == openpa) {
 			int np, na;
-			Symbol* sp = (Symbol*)allocSYM();
+			Symbol* sp = (Symbol*)Symbol::alloc();
 			Function* fn = compiler.ff.MakeFunction(sym->number, sp, false);
 			fn->BuildParameterList(&np, &na, &ellipos);
 			if (ellipos >= 0)
@@ -1368,8 +1370,8 @@ void Function::Generate()
 		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);
 	}
-	if (!IsInline)
-		GenerateMonadic(op_hint, 0, MakeImmediate(start_funcbody));
+//	if (!IsInline)
+	GenerateMonadic(op_hint, 0, MakeImmediate(start_funcbody));
 
 	if (optimize) {
 		if (currentFn->csetbl == nullptr)
@@ -1844,7 +1846,7 @@ void Function::AddProto(TypeArray *ta)
 	char buf[20];
 
 	for (nn = 0; nn < ta->length; nn++) {
-		sym = allocSYM();
+		sym = Symbol::alloc();
 		sprintf_s(buf, sizeof(buf), "_p%d", nn);
 		sym->SetName(std::string(buf));
 		sym->tp = TYP::Make(ta->types[nn], TYP::GetSize(ta->types[nn]));

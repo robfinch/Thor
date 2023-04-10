@@ -236,74 +236,103 @@ int64_t TYP::GetElementSize()
 	return n;
 }
 
+char* TYP::ToString(int ndx)
+{
+	static char buf[1000];
+	switch (type) {
+	case bt_exception:
+		strcpy_s(&buf[ndx], sizeof(buf), "Exception");
+		return (buf);
+	case bt_byte:
+		strcpy_s(&buf[ndx], sizeof(buf), "Byte");
+		return (buf);
+	case bt_ubyte:
+		strcpy_s(&buf[ndx], sizeof(buf), "Unsigned Byte");
+		return (buf);
+	case bt_char:
+	case bt_ichar:
+		strcpy_s(&buf[ndx], sizeof(buf), "Char");
+		return (buf);
+	case bt_uchar:
+	case bt_iuchar:
+		strcpy_s(&buf[ndx], sizeof(buf), "Unsigned Char");
+		return (buf);
+	case bt_short:
+		strcpy_s(&buf[ndx], sizeof(buf), "Short Integer");
+		return (buf);
+	case bt_ushort:
+		strcpy_s(&buf[ndx], sizeof(buf), "Unsigned Short Integer");
+		return (buf);
+	case bt_int:
+		strcpy_s(&buf[ndx], sizeof(buf), "Integer");
+		return (buf);
+	case bt_uint:
+		strcpy_s(&buf[ndx], sizeof(buf), "Unsigned Integer");
+		return (buf);
+	case bt_long:
+		strcpy_s(&buf[ndx], sizeof(buf), "Long Integer");
+		return (buf);
+	case bt_ulong:
+		strcpy_s(&buf[ndx], sizeof(buf), "Unsigned Long Integer");
+		return (buf);
+	case bt_enum:
+		strcpy_s(&buf[ndx], sizeof(buf), "Enumeration");
+		return (buf);
+	case bt_float:
+		strcpy_s(&buf[ndx], sizeof(buf), "Float");
+		return (buf);
+	case bt_double:
+		strcpy_s(&buf[ndx], sizeof(buf), "Double");
+		return (buf);
+	case bt_quad:
+		strcpy_s(&buf[ndx], sizeof(buf), "Long Double");
+		return (buf);
+	case bt_posit:
+		strcpy_s(&buf[ndx], sizeof(buf), "Posit");
+		return (buf);
+	case bt_pointer:
+		if (val_flag) {
+			strcpy_s(&buf[ndx], sizeof(buf), "Array of ");
+			btpp->ToString(ndx + 9);
+		}
+		else {
+			strcpy_s(&buf[ndx], sizeof(buf), "Pointer to ");
+			btpp->ToString(ndx + 11);
+		}
+		return (buf);
+	case bt_func:
+	case bt_ifunc:
+		strcpy_s(&buf[ndx], sizeof(buf), "Function returning ");
+		btpp->ToString(ndx + 19);
+		return (buf);
+	case bt_class:
+		strcpy_s(&buf[ndx], sizeof(buf), "Class ");
+		ndx += 6;
+		goto j1;
+	case bt_struct:
+		strcpy_s(&buf[ndx], sizeof(buf), "Struct ");
+		ndx += 7;
+		goto j1;
+	case bt_union:
+		strcpy_s(&buf[ndx], sizeof(buf), "Union ");
+		ndx += 6;
+		goto j1;
+	}
+	return ((char *)"<unknown>");
+j1:
+	if (sname->length() == 0)
+		strcpy_s(&buf[ndx], sizeof(buf), "<no name>");
+	else
+		strcpy_s(&buf[ndx], sizeof(buf), (char *)sname->c_str());
+	return (buf);
+}
+
 void TYP::put_ty()
 {
-	switch(type) {
-	case bt_exception:
-            lfs.printf("Exception");
-            break;
-	case bt_byte:
-            lfs.printf("Byte");
-            break;
-	case bt_ubyte:
-            lfs.printf("Unsigned Byte");
-            break;
-	case bt_uchar:
-	case bt_ichar:
-	case bt_iuchar:
-    case bt_char:
-            lfs.printf("Char");
-            break;
-    case bt_short:
-            lfs.printf("Short");
-            break;
-		case bt_int:
-			lfs.printf("Int");
-			break;
-		case bt_enum:
-            lfs.printf("enum ");
-            goto ucont;
-    case bt_long:
-            lfs.printf("Long");
-            break;
-    case bt_unsigned:
-            lfs.printf("unsigned long");
-            break;
-    case bt_float:
-            lfs.printf("Float");
-            break;
-    case bt_double:
-            lfs.printf("Double");
-            break;
-		case bt_posit:
-			lfs.printf("Posit");
-			break;
-		case bt_pointer:
-            if( val_flag == 0)
-                    lfs.printf("Pointer to ");
-            else
-                    lfs.printf("Array of ");
-            btpp->put_ty();
-            break;
-    case bt_class:
-            lfs.printf("class ");
-            goto ucont;
-    case bt_union:
-            lfs.printf("union ");
-            goto ucont;
-    case bt_struct:
-            lfs.printf("struct ");
-ucont:                  if(sname->length() == 0)
-                    lfs.printf("<no name> ");
-            else
-                    lfs.printf("%s ",(char *)sname->c_str());
-            break;
-    case bt_ifunc:
-    case bt_func:
-            lfs.printf("Function returning ");
-            btpp->put_ty();
-            break;
-    }
+	char* str;
+
+	str = ToString(0);
+	lfs.puts(str);
 }
 
 bool TYP::IsSameType(TYP *a, TYP *b, bool exact)

@@ -387,7 +387,7 @@ Symbol *Symbol::Copy(Symbol *src)
 
   dfs.printf("Enter Symbol::Copy\n");
 	if (src) {
-		dst = allocSYM();
+		dst = Symbol::alloc();
 		dfs.printf("A");
 		memcpy(dst, src, sizeof(Symbol));
 //		dst->tp = TYP::Copy(src->tp);

@@ -586,7 +586,7 @@ Operand* CodeGenerator::GenerateAutovmconDereference(ENODE* node, TYP* tp, bool 
 	else
 		ap1->FloatSize = 'd';
 	ap1->segment = stackseg;
-	ap1->typep = stdvectormask;
+	ap1->typep = &stdvectormask;
 	//	    ap1->MakeLegal(flags,siz1);
 	ap1->MakeLegal(flags, size);
 	return (ap1);
@@ -2075,7 +2075,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	case en_aggregate:
 	case en_end_aggregate:
 		if (pass == 1) {
-			sym = allocSYM();
+			sym = Symbol::alloc();
 			sprintf_s(nmbuf, sizeof(nmbuf), "__aggregate_tag", sym->acnt);
 			sym->tp = node->tp;
 			sym->storage_class = sc_global;
@@ -2219,7 +2219,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		break;
 
 	case en_autovcon:	return GenAutocon(node, flags, size, &stdvector);
-    case en_autovmcon:	return GenAutocon(node, flags, size, stdvectormask);
+    case en_autovmcon:	return GenAutocon(node, flags, size, &stdvectormask);
   case en_classcon:
     ap1 = GetTempRegister();
     ap2 = allocOperand();
@@ -3184,6 +3184,7 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	Function* o_fn;
 	CSet* mask, * fmask, * pmask;
 	int ps;
+	OCODE* ip, *pip;
 
 	o_fn = currentFn;
 	mask = save_mask;
@@ -3194,12 +3195,17 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	// Each function has it's own peeplist. The generated peeplist for an
 	// inline function must be appended onto the peeplist of the current
 	// function.
-	sym->pl.head = sym->pl.tail = nullptr;
-	sym->Generate();
+	//sym->pl.head = sym->pl.tail = nullptr;
+	for (ip = sym->pl.head; ip; ip = pip) {
+		if (ip->opcode != op_fnname)
+			o_fn->pl.Add(ip->Clone(ip));
+		pip = ip->fwd;
+	}
+	//sym->Generate();
 	pass = ps;
 	currentFn = o_fn;
-	currentFn->pl.tail->fwd = sym->pl.head;
-	currentFn->pl.tail = sym->pl.tail;
+	//currentFn->pl.tail->fwd = sym->pl.head;
+	//currentFn->pl.tail = sym->pl.tail;
 	if (node->isAutonew)
 		currentFn->hasAutonew = true;
 	fpsave_mask = fmask;

@@ -58,7 +58,7 @@ static Symbol *makeint(char *name)
 	Symbol *sp;
 	TYP *tp;
 
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	tp = TYP::Make(bt_int, sizeOfInt);
 	tp->sname = new std::string("");
 	tp->isUnsigned = FALSE;
@@ -241,7 +241,7 @@ Statement *Statement::ParseFirstcall()
 
 	dfs.puts("<ParseFirstcall>");
 	snp = MakeStatement(st_firstcall, TRUE);
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	//	sp->SetName(*(new std::string(snp->fcname)));
 	sp->storage_class = sc_static;
 	sp->value.i = nextlabel++;
@@ -654,7 +654,7 @@ Statement *Statement::ParseLabel(bool pt)
 
 	snp = MakeStatement(st_label, FALSE);
 	if ((sp = currentFn->sym->lsyms.Find(lastid, false, bt_label)) == NULL) {
-		sp = allocSYM();
+		sp = Symbol::alloc();
 		sp->SetName(*(new std::string(lastid)));
 		sp->storage_class = sc_label;
 		sp->tp = TYP::Make(bt_label, 0);
@@ -692,7 +692,7 @@ Statement *Statement::ParseGoto()
 	}
 	snp = MakeStatement(st_goto, FALSE);
 	if ((sp = currentFn->sym->lsyms.Find(lastid, false, bt_label)) == NULL) {
-		sp = allocSYM();
+		sp = Symbol::alloc();
 		sp->SetName(*(new std::string(lastid)));
 		sp->value.i = nextlabel++;
 		sp->storage_class = sc_ulabel;
@@ -1688,7 +1688,7 @@ void Statement::GenerateDoLoop()
 //    if( sp == NULL )
 //    {
 //		++global_flag;
-//		sp = allocSYM();
+//		sp = Symbol::alloc();
 //		sp->tp = &stdfunc;
 //		sp->name = lib_name;
 //		sp->storage_class = sc_external;

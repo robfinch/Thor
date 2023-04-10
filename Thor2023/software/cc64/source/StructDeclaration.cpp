@@ -42,7 +42,7 @@ int StructDeclaration::ParseTag(TABLE* table, e_bt ztype, Symbol** sym)
   int ret = 0;
 
   if ((sp = tagtable.Find(lastid, false)) == NULL) {
-    sp = allocSYM();
+    sp = Symbol::alloc();
     sp->SetName(*(new std::string(lastid)));
     sp->tp = allocTYP();
     sp->tp->type = (e_bt)ztype;
@@ -158,7 +158,7 @@ Symbol* StructDeclaration::CreateSymbol(char *nmbuf, TABLE* table, e_bt ztype, i
   ENODE nd;
   ENODE* pnd = &nd;
 
-  sp = allocSYM();
+  sp = Symbol::alloc();
   sp->SetName(*(new std::string(nmbuf)));
   sp->tp = allocTYP();
   sp->tp->type = (e_bt)ztype;
@@ -325,7 +325,7 @@ void StructDeclaration::ParseMembers(Symbol *sym, int ztype)
   if (lastst != id) {
     sprintf_s(nmbuf, sizeof(nmbuf), "__noname_struct%d", nmx);
     nmx++;
-    isym = allocSYM();
+    isym = Symbol::alloc();
     isym->SetName(*(new std::string(nmbuf)));
     isym->tp = sym->tp;
   }

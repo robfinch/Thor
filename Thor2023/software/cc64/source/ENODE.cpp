@@ -622,9 +622,15 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 		thead = tp->lst.headp;
 		ep = this;
 		if (ep) {
-			ep->tp = thead->tp;
-			ep->tp->btp = thead->tp->btp;
-			ep->esize = thead->tp->size;
+			if (thead) {
+				ep->tp = thead->tp;
+				ep->tp->btp = thead->tp->btp;
+				ep->esize = thead->tp->size;
+			}
+			else {
+				ep->tp = &stdint;
+				ep->esize = 8;
+			}
 		}
 	}
 	//this->Dump(0);

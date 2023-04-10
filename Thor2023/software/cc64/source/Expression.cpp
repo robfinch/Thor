@@ -400,9 +400,11 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi)
 			count++;
 		hnode->tp->numele = count-1;
 		pnode->tp->numele = count-1;
+		hnode->tp->size = (count - 1) * tptr2->size;
+		pnode->tp->size = (count - 1) * tptr2->size;
 	}
-	hnode->esize = sz;
-	pnode->esize = sz;
+	hnode->esize = hnode->tp->size;
+	pnode->esize = pnode->tp->size;
 	hnode->i = litlist(pnode);
 	pnode->i = litlist(pnode);
 	hnode->segment = cnst ? rodataseg : dataseg;
@@ -1307,7 +1309,7 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi)
 		sp = gsearch2(name,bt_long,&typearray,true);
 	*/
 	if (sp == nullptr) {
-		sp = allocSYM();
+		sp = Symbol::alloc();
 		sp->fi = MakeFunction(sp->id, sp, defaultcc == 1);
 		sp->storage_class = sc_external;
 		sp->SetName(name);
@@ -1790,7 +1792,7 @@ ENODE* Expression::MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArr
 	ENODE* node, * namenode;
 	Symbol* sp;
 
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	sp->fi = compiler.ff.MakeFunction(sp->id, sp, defaultcc == 1);
 	sp->tp = &stdfunc;
 	sp->tp->btp = bt_int;

@@ -46,23 +46,17 @@ void *allocx(int sz)
 void *MBlk::alloc(int sz)
 {
   MBlk* p;
-  std::exception e;
 
 //  dfs.printf("Enter MBlk::alloc()\n");
   p = nullptr;
-  try {
-    p = (MBlk*)new char[sz + sizeof(MBlk) + 15];
-  }
-  catch (std::exception& e) {
-    printf("hi");
-  }
-	if (p==0)
-	   return p;
+  p = (MBlk*)new char[sz + sizeof(MBlk) + 15];
+	if (p==nullptr)
+	   return (nullptr);
 	ZeroMemory((void *)p,sz+sizeof(MBlk));
 	p->next = first;
 	first = p;
 //  dfs.printf("Leave MBlk::alloc()\n");
-	return &p[1];
+	return (&p[1]);
 }
 
 void MBlk::ReleaseAll()
@@ -182,7 +176,8 @@ void ReleaseGlobalMemory()
  dfs.printf("Leave ReleaseGlobalMemory\n");
 }
 
-Symbol *allocSYM() {
+Symbol* Symbol::alloc()
+{
   if (compiler.symTables[compiler.symnum >> 15] == nullptr) {
     if ((compiler.symnum >> 15) > 9) {
       dfs.printf("Too many symbols.\n");
@@ -190,14 +185,18 @@ Symbol *allocSYM() {
     }
     compiler.symTables[compiler.symnum >> 15] = (Symbol*)calloc(32768, sizeof(Symbol));
   }
-	Symbol *sym = (Symbol *)&compiler.symbolTable[compiler.symnum];
-	ZeroMemory(sym,sizeof(Symbol));
-	sym->id = compiler.symnum;
-	sym->name = new std::string("");
-	sym->shortname = new std::string("");
-	sym->lsyms.SetOwner(compiler.symnum);
-  	compiler.symnum++;
-	return (sym);
+  Symbol* sym = (Symbol*)&compiler.symbolTable[compiler.symnum];
+  ZeroMemory(sym, sizeof(Symbol));
+  sym->id = compiler.symnum;
+  sym->name = new std::string("");
+  sym->shortname = new std::string("");
+  sym->lsyms.SetOwner(compiler.symnum);
+  compiler.symnum++;
+  return (sym);
+}
+
+Symbol *allocSYM() {
+  return (Symbol::alloc());
 };
 
 void FreeFunction(Function *fn)

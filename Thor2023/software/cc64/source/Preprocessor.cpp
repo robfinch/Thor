@@ -132,7 +132,7 @@ int dodefine()
             return getline(incldepth == 0);
             }
     ++global_flag;          /* always do #define as globals */
-    sp = allocSYM();
+    sp = Symbol::alloc();
     sp->SetName(std::string(lastid));
     sp->value.s = my_strdup(lptr-1);
     defsyms.insert(sp);

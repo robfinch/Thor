@@ -352,17 +352,21 @@ int PeepList::CountSPReferences()
 		}
 		if (!inFuncBody)
 			continue;
+		/*
 		if (ip->opcode == op_call || ip->opcode == op_jal || ip->opcode == op_jsr) {
 			refSP++;
 			continue;
 		}
+		*/
 		if (ip->opcode != op_label && ip->opcode != op_nop
-			&& ip->opcode != op_link && ip->opcode != op_unlk) {
+			&& ip->opcode != op_link && ip->opcode != op_unlk
+			&& ip->opcode != op_rtd
+			) {
 			if (ip->insn) {
 				if (ip->insn->opcode == op_push || ip->insn->opcode == op_pop || ip->insn->opcode == op_leave || ip->insn->opcode == op_leave_far) {
 					refSP++;
 				}
-				else if (ip->insn->opcode != op_add && ip->insn->opcode != op_sub && ip->insn->opcode != op_gcsub && ip->insn->opcode != cpu.mov_op) {
+				else if (ip->insn->opcode != op_add && ip->insn->opcode != op_sub && ip->insn->opcode != cpu.mov_op) {
 					if (ip->oper1) {
 						if (ip->oper1->preg == regSP || ip->oper1->sreg == regSP)
 							refSP++;
@@ -1188,9 +1192,16 @@ void PeepList::RemoveStackCode()
 					ip->MarkRemove();
 			}
 		}
-		if (ip->opcode == op_ret || ip->opcode == op_rts)
-			if (ip->oper1)
-				ip->oper1->offset->i = 0;
+		if (ip->opcode == op_ret || ip->opcode == op_rts || ip->opcode == op_rtd) {
+			if (ip->opcode == op_rtd) {
+				ip->opcode = op_rts;
+				ip->insn = Instruction::Get(op_rts);
+			}
+			ip->oper1 = nullptr;
+			ip->oper2 = nullptr;
+			ip->oper3 = nullptr;
+			ip->oper4 = nullptr;
+		}
 	}
 }
 
@@ -1200,7 +1211,7 @@ void PeepList::RemoveStackAlloc()
 
 	for (ip = head; ip; ip = ip->fwd) {
 		if (ip->insn) {
-			if ((ip->opcode == op_add || ip->opcode == op_sub || ip->opcode == op_gcsub) &&
+			if ((ip->opcode == op_add || ip->opcode == op_sub) &&
 				ip->oper1->mode == am_reg && ip->oper1->preg == regSP) {
 				ip->MarkRemove();
 			}

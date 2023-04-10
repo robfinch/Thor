@@ -457,9 +457,10 @@ private:
 
 // Class representing compiler symbols.
 
-class Symbol {
+class Symbol : public CompilerType {
 public:
 	static int acnt;
+	static Symbol* alloc();
 public:
 	int number;
 	int id;
@@ -621,6 +622,7 @@ public:
 	int64_t Initialize(ENODE* node, TYP *, int opt, Symbol* symi);
 
 	// Serialization
+	char* ToString(int ndx = 0);
 	void storeHex(txtoStream& ofs);
 
 	// GC support
@@ -943,13 +945,30 @@ private:
 	ENODE* MakeConstNameNode(Symbol* sp);
 	ENODE* MakeMemberNameNode(Symbol* sp);
 	ENODE* MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArray* typearray, ENODE* args);
-	void DerefBit(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefByte(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefUnsignedByte(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefFloat(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefDouble(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefPosit(ENODE** node, TYP* tp, Symbol* sp);
-	void DerefBitfield(ENODE** node, TYP* tp, Symbol* sp);
+	void DerefBit(ENODE** node, TYP* tp);
+	void DerefByte(ENODE** node, TYP* tp);
+	void DerefUnsignedByte(ENODE** node, TYP* tp);
+	void DerefChar(ENODE** node, TYP* tp);
+	void DerefUnsignedChar(ENODE** node, TYP* tp);
+	void DerefIChar(ENODE** node, TYP* tp);
+	void DerefUnsignedIChar(ENODE** node, TYP* tp);
+	void DerefEnum(ENODE** node, TYP* tp);
+	void DerefShort(ENODE** node, TYP* tp);
+	void DerefUnsignedShort(ENODE** node, TYP* tp);
+	void DerefInt(ENODE** node, TYP* tp);
+	void DerefUnsignedInt(ENODE** node, TYP* tp);
+	void DerefLong(ENODE** node, TYP* tp);
+	void DerefUnsignedLong(ENODE** node, TYP* tp);
+	void DerefException(ENODE** node, TYP* tp);
+	void DerefPointer(ENODE** node, TYP* tp);
+	void DerefFloat(ENODE** node, TYP* tp);
+	void DerefDouble(ENODE** node, TYP* tp);
+	void DerefQuad(ENODE** node, TYP* tp);
+	void DerefPosit(ENODE** node, TYP* tp);
+	void DerefBitfield(ENODE** node, TYP* tp);
+	void DerefVector(ENODE** node, TYP* tp);
+	void DerefVectorMask(ENODE** node, TYP* tp);
+	void DerefVoid(ENODE** node, TYP* tp);
 	ENODE* FindLastMulu(ENODE*, ENODE*);
 public:
 	Expression();
@@ -1879,7 +1898,7 @@ public:
 	void AssignParameterName();
 	int declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo);
 	int declare(Symbol* parent, int ilc, int ztype, Symbol** symo);
-	void ParseEnumerationList(TABLE *table, int amt, Symbol *parent, bool power);
+	void ParseEnumerationList(TABLE *table, Float128 amt, Symbol *parent, bool power);
 	void ParseEnum(TABLE *table);
 	void ParseVoid();
 	void ParseInterrupt();
@@ -1999,6 +2018,7 @@ public:
 	bool nogcskips;
 	bool os_code;
 	int pollCount;
+	short int autoInline;
 public:
 	Compiler() { 
 		int i;
@@ -2007,6 +2027,7 @@ public:
 			symTables[i] = nullptr;
 		symTables[0] = &symbolTable[0];
 		typenum = 0; ipoll = false; pollCount = 33;
+		autoInline = 5;
 	};
 	GlobalDeclaration *decls;
 	void compile();

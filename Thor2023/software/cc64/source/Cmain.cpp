@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -253,6 +253,9 @@ int	options(char *s)
 			cnt = atoi(&s[6]);
 			if (cnt > 0)
 				compiler.pollCount = cnt;
+		}
+		if (strncmp(&s[2], "inline", 6) == 0) {
+			compiler.autoInline = atoi(&s[8]);
 		}
 		if (strncmp(&s[2], "os_code", 7) == 0) {
 			compiler.os_code = true;

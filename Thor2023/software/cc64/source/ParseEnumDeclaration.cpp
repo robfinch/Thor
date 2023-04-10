@@ -46,12 +46,12 @@ void Declaration::ParseEnum(TABLE *table)
 {   
 	Symbol *sp;
   TYP *tp;
-	int amt = 1;
+	Float128 amt = Float128::One();
   bool power = false;
 
   if(lastst == id) {
     if((sp = search(std::string(lastid),&tagtable)) == NULL) {
-      sp = allocSYM();
+      sp = Symbol::alloc();
       sp->tp = TYP::Make(bt_enum,1);
       sp->storage_class = sc_type;
       sp->SetName(*(new std::string(lastid)));
@@ -63,7 +63,7 @@ void Declaration::ParseEnum(TABLE *table)
           NextToken();
           power = true;
         }
-        amt = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 0).low;
+        amt = GetFloatExpression((ENODE**)NULL, nullptr);
         needpunc(closepa, 10);
       }
       if (lastst != begin)
@@ -88,7 +88,7 @@ void Declaration::ParseEnum(TABLE *table)
         NextToken();
         power = true;
       }
-      amt = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0).low;
+      amt = GetFloatExpression((ENODE **)NULL,nullptr);
 			needpunc(closepa,10);
 		}
     if( lastst != begin)
@@ -101,19 +101,20 @@ void Declaration::ParseEnum(TABLE *table)
   }
 }
 
-void Declaration::ParseEnumerationList(TABLE *table, int amt, Symbol *parent, bool power)
+void Declaration::ParseEnumerationList(TABLE *table, Float128 amt, Symbol *parent, bool power)
 {
-	int16_t evalue;
+	Float128 evalue, temp;
+  int64_t i64;
   Symbol *sp;
   if (power)
-    evalue = 1;
+    evalue = Float128::One();
   else
-    evalue = 0;
+    evalue = Float128::Zero();
   while(lastst == id) {
-    sp = allocSYM();
+    sp = Symbol::alloc();
     sp->SetName(*(new std::string(lastid)));
     sp->storage_class = sc_const;
-    sp->tp = &stdconst;
+    sp->tp = &stdenum;
 		if (parent)
 			sp->parent = parent->id;
 		else
@@ -122,19 +123,21 @@ void Declaration::ParseEnumerationList(TABLE *table, int amt, Symbol *parent, bo
     NextToken();
 		if (lastst==assign) {
 			NextToken();
-			sp->value.i = GetIntegerExpression((ENODE **)NULL,sp,0).low;
-			evalue = (int)sp->value.i;
+			sp->f128 = GetFloatExpression((ENODE **)NULL,sp);
 		}
-		else
-			sp->value.i = evalue;
+    else
+      sp->f128 = evalue;
+    Float128::FloatToInt(&i64, &sp->f128);
+    Float128::Float128ToDouble(&sp->value.f, &sp->f128);
+    sp->value.i = i64;
     if(lastst == comma)
       NextToken();
     else if(lastst != end)
       break;
     if (power)
-      evalue *= amt;
+      Float128::Mul(&evalue, &evalue, &amt);
     else
-      evalue += amt;
+      Float128::Add(&evalue, &evalue, &amt);
   }
   needpunc(end,48);
 }

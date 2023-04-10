@@ -32,7 +32,7 @@ TABLE tagtable;
 TABLE scrap_table;
 TYP stdconst;
 TYP stdvector;
-TYP *stdvectormask;
+TYP stdvectormask;
 Stringx names[20];
 int nparms = 0;
 int funcdecl = 0;		//0,1, or 2
@@ -991,7 +991,7 @@ Symbol *Declaration::ParsePrefixId(Symbol* symi)
 		sp = symi;
 	}
 	else {
-		sp = allocSYM();
+		sp = Symbol::alloc();
 		dfs.printf("C");
 		if (funcdecl == 1) {
 			sp->fi = MakeFunction(sp->id, sp, defaultcc == 1, false);
@@ -1080,7 +1080,7 @@ Symbol* Declaration::CreateNonameVar()
 	Symbol* sp;
 
 	sprintf_s(nmbuf, sizeof(nmbuf), "__noname_var%d", varno);
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	sp->SetName(nmbuf);
 	sp->tp = head;
 	sp->storage_class = sc_member;
@@ -1174,7 +1174,7 @@ j1:
 			goto lxit;
 		}
 		if (sp == nullptr) {
-			sp = allocSYM();
+			sp = Symbol::alloc();
 			sp->SetName(*UnknownFuncName());
 		}
 		if (sp->fi == nullptr) {
@@ -1205,7 +1205,7 @@ j1:
 			funcdecl = 1;
 			NextToken();
 			if (sp == nullptr) {
-				sp = allocSYM();
+				sp = Symbol::alloc();
 			}
 			if (sp->fi == nullptr) {
 				sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
@@ -1440,7 +1440,7 @@ Function* Declaration::ParseFunctionJ2(Function* sp)
 	// Parse parameter list for a function pointer defined within
 	// a structure.
 	if (parsingParameterList || isStructDecl) {
-		//sym = allocSYM();
+		//sym = Symbol::alloc();
 		//sym->fi = MakeFunction(sym->id, sym, defaultcc == 1, isInline);
 		//sym->SetName(*UnknownFuncName());
 		dfs.printf("s ");
@@ -1683,7 +1683,7 @@ Symbol *Declaration::ParseSuffix(Symbol *sp)
 			// to stuff the parameter / protoype list so we may as well create
 			// the symbol here if it isn't yet defined.
 			if (sp == nullptr) {
-				sp1 = allocSYM();
+				sp1 = Symbol::alloc();
 				sp1->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
 				sp1->name = UnknownFuncName();
 			}
@@ -1695,7 +1695,7 @@ Symbol *Declaration::ParseSuffix(Symbol *sp)
 					sp1->SetName(*sp->name);
 			}
 			//else {
-			//	sp1 = allocSYM();
+			//	sp1 = Symbol::alloc();
 			//	sp1->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
 			//	sp1->name = UnknownFuncName();
 			//	sp1->parent = sp->id;
@@ -1967,7 +1967,7 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, e_sc al)
 			NextToken();
 			if (lastst == openpa) {
 				int np, na, ellipos;
-				Symbol* sp = (Symbol*)allocSYM();
+				Symbol* sp = (Symbol*)Symbol::alloc();
 				NextToken();
 				Function* fn = compiler.ff.MakeFunction(sp->number, sp, false);
 				fn->BuildParameterList(&np, &na, &ellipos);
@@ -2160,7 +2160,7 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 		dfs.printf("C");
 		if (declid->length() > 0 || classname->length() != 0 || (sp && sp->name && sp->name->length() != 0)) {      // otherwise just struct tag...
 			if (sp == nullptr) {
-				sp = allocSYM();
+				sp = Symbol::alloc();
 				sp->name = declid;
 				//if (funcdecl > 0)
 				//	sp->fi = MakeFunction(sp->id, sp, isPascal, isInline);

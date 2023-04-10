@@ -361,7 +361,7 @@ void Compiler::AddStandardTypes()
 	p->size = 32;
 	p->bit_width = nullptr;
 	p->precision = 32;
-	stdvectormask = p;
+	stdvectormask = *p;
 
 	p = allocTYP();
 	p->type = bt_void;
@@ -371,6 +371,24 @@ void Compiler::AddStandardTypes()
 	p->bit_width = nullptr;
 	p->precision = 64;
 	stdvoid = *p;
+
+	p = allocTYP();
+	p->type = bt_enum;
+	p->typeno = bt_enum;
+	p->val_flag = 1;
+	p->size = 2;
+	p->bit_width = nullptr;
+	p->precision = 16;
+	stdenum = *p;
+
+	p = allocTYP();
+	p->type = bt_pointer;
+	p->typeno = bt_pointer;
+	p->val_flag = 1;
+	p->size = sizeOfPtr;
+	p->bit_width = nullptr;
+	p->precision = sizeOfPtr * 8;
+	stdptr = *p;
 }
 
 // Actually compiler support routines
@@ -380,7 +398,7 @@ void Compiler::AddBuiltinFunctions()
 	Symbol *sp;
 	TypeArray tanew, tadelete;
 
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	sp->SetName("__new");
 	sp->fi = sp->MakeFunction(sp->id, true);
 	tanew.Add(bt_long, regFirstArg);
@@ -390,7 +408,7 @@ void Compiler::AddBuiltinFunctions()
 	sp->tp = &stdvoid;
 	gsyms->insert(sp);
 
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	sp->SetName("__autonew");
 	sp->fi = sp->MakeFunction(sp->id, true);
 	//tanew.Add(bt_long, 0);
@@ -400,7 +418,7 @@ void Compiler::AddBuiltinFunctions()
 	sp->tp = &stdvoid;
 	gsyms->insert(sp);
 
-	sp = allocSYM();
+	sp = Symbol::alloc();
 	sp->SetName("__delete");
 	sp->fi = sp->MakeFunction(sp->id, true);
 	tadelete.Add(bt_pointer, regFirstArg);

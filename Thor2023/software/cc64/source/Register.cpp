@@ -486,7 +486,7 @@ Operand *GetTempVectorMaskRegister()
     ap->mode = am_vmreg;
     ap->preg = next_vmreg;
     ap->deep = vmreg_alloc_ptr;
-	ap->typep = stdvectormask;
+		ap->typep = &stdvectormask;
     vmreg_alloc[vmreg_alloc_ptr].reg = next_vmreg;
     vmreg_alloc[vmreg_alloc_ptr].Operand = ap;
     vmreg_alloc[vmreg_alloc_ptr].f.isPushed = 'F';
@@ -1008,7 +1008,7 @@ void ReleaseTempRegister(Operand *ap)
 */
 Operand *GetTempReg(TYP* typ)
 {
-	if (typ==stdvectormask)
+	if (typ==&stdvectormask)
 		return (GetTempVectorMaskRegister());
 	else if (typ==&stdvector)
 		return (GetTempVectorRegister());
@@ -1032,7 +1032,7 @@ void ReleaseTempReg(Operand *ap)
 {
 	if (ap==nullptr)
 		return;
-	if (ap->typep==stdvectormask)
+	if (ap->typep==&stdvectormask)
 		ReleaseTempVectorMaskRegister();
 	else if (ap->typep==&stdvector)
 		ReleaseTempVectorRegister();

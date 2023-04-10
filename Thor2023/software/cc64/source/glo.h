@@ -229,7 +229,9 @@ extern TYP stdexception;
 extern TYP stdconst;
 extern TYP stdquad;
 extern TYP stdvector;
-extern TYP *stdvectormask;
+extern TYP stdvectormask;
+extern TYP stdenum;
+extern TYP stdptr;
 
 extern std::string *declid;
 extern Compiler compiler;

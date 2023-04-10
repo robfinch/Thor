@@ -117,6 +117,10 @@ Float128 *GetFloatExpression(ENODE **pnode, Symbol* symi)
 				*pnode = node;
 			return (flt);
 		}
+		if (node->nodetype == en_icon) {
+			Float128::IntToFloat(flt, node->i);
+			node->f128 = flt;
+		}
 	}
 	if (pnode)
 		*pnode = node;
