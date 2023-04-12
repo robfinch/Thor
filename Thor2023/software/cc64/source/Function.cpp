@@ -1355,6 +1355,8 @@ void Function::Generate()
 	if (!IsNocall && !prolog)
 		SetupReturnBlock();
 	stmt->CheckReferences(&sp, &bp, &gp, &gp1);
+	//	if (!IsInline)
+	GenerateMonadic(op_hint, 0, MakeImmediate(start_funcbody));
 	if (gp != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__data_base", dataseg), ap);
@@ -1362,7 +1364,8 @@ void Function::Generate()
 		//GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
 		ReleaseTempRegister(ap);
 	}
-	if (gp1 != 0) {
+	// Compiler now uses PC relative addressing for the rodataseg
+	if (false && gp1 != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
 		GenerateDiadic(op_lea, 0, makereg(regGP1), MakeStringAsNameConst((char *)"_rodata_start", dataseg));
@@ -1370,8 +1373,6 @@ void Function::Generate()
 		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);
 	}
-//	if (!IsInline)
-	GenerateMonadic(op_hint, 0, MakeImmediate(start_funcbody));
 
 	if (optimize) {
 		if (currentFn->csetbl == nullptr)

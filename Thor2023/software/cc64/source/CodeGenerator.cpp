@@ -510,7 +510,7 @@ Operand* CodeGenerator::GenerateNaconDereference(ENODE* node, TYP* tp, bool isRe
 		ap1->mode = am_indx;
 		switch (node->segment) {
 		case dataseg:	ap1->preg = regGP; break;
-		case rodataseg: ap1->preg = regGP1; break;
+		case rodataseg: ap1->preg = regPC; break;
 		case tlsseg:	ap1->preg = regTP; break;
 		default:	ap1->preg = regPP; break;
 		}
@@ -663,7 +663,7 @@ Operand* CodeGenerator::GenerateLabconDereference(ENODE* node, TYP* tp, bool isR
 		ap1->mode = am_indx;
 		switch (node->segment) {
 		case dataseg:	ap1->preg = regGP; break;
-		case rodataseg: ap1->preg = regGP1; break;
+		case rodataseg: ap1->preg = regPC; break;
 		case tlsseg:	ap1->preg = regTP; break;
 		default:	ap1->preg = regPP; break;
 		}
@@ -904,7 +904,7 @@ Operand *CodeGenerator::GenerateDereference(ENODE *node,int flags,int size, int 
 					//        ap1->mode = am_ind;
 					if (use_gp) {
 						ap1->mode = am_indx;
-						ap1->preg = node->segment == rodataseg ? regGP1 : regGP;
+						ap1->preg = node->segment == rodataseg ? regPC : regGP;
 					}
 					else
 						ap1->mode = am_ind;
@@ -946,7 +946,7 @@ Operand *CodeGenerator::GenerateDereference(ENODE *node,int flags,int size, int 
 	//	ap1->segment = dataseg;
 	if (use_gp) {
     ap1->mode = am_indx;
-    ap1->preg = node->segment==rodataseg ? regGP1 : regGP;
+    ap1->preg = node->segment==rodataseg ? regPC : regGP;
     ap1->segment = dataseg;
   }
   else {
@@ -1456,6 +1456,48 @@ void CodeGenerator::GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Ope
 }
 
 
+OCODE* CodeGenerator::GenerateLoadFloatConst(Operand* ap1, Operand* ap2)
+{
+	float f;
+	double d, * pd;
+	int32_t* pi;
+	float* pf = &f;
+	int32_t i;
+	OCODE* ip;
+
+	pi = (int32_t*)pf;
+	i = *pi;
+	Float128 f128;
+	Float128::Float128ToSingle(&f, &ap1->offset->f128);
+	ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(0));
+	if (ap1->offset->f128.IsSingle())
+		GenerateMonadic(op_pfx0, 0, MakeImmediate(i));
+	else {
+		int64_t i;
+		int64_t* pi;
+
+		pi = (int64_t*)&d;
+		i = *pi;
+		if (ap1->offset->f128.IsDouble()) {
+			Float128::Float128ToDouble(&d, &ap1->offset->f128);
+			GenerateMonadic(op_pfx0, 0, MakeImmediate(0xffffffffLL & i));
+			GenerateMonadic(op_pfx1, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
+		}
+		else {
+			int64_t i;
+			int64_t* pi;
+
+			pi = (int64_t*)&ap1->offset->f128;
+			i = pi[0];
+			GenerateMonadic(op_pfx0, 0, MakeImmediate(i & 0xffffffffLL));
+			GenerateMonadic(op_pfx1, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
+			i = pi[1];
+			GenerateMonadic(op_pfx2, 0, MakeImmediate(i & 0xffffffffLL));
+			GenerateMonadic(op_pfx3, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
+		}
+	}
+	return (ip);
+}
 
 // Generate an assignment to an array.
 void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
@@ -1475,35 +1517,28 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 	}
 	else {
 		OCODE* ip;
-		//if (ap2->mode == am_fpreg) {
-		//	ap3 = GetTempRegister();
-		//	GenerateDiadic(op_ldi, 0, ap3, ap1);
-		//	GenerateDiadic(op_mov, 0, ap2, ap3);
-		//	ReleaseTempRegister(ap3);
-		//}
-		//else if (ap2->mode == am_preg) {
-		//	GenerateDiadic(op_ldi, 0, ap3, ap1);
-		//	GenerateDiadic(op_mov, 0, ap2, ap3);
-		//	ReleaseTempRegister(ap3);
-		//}
-		//else
+
 		if (ap1->offset->esize <= 8)
 			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
-		else
-			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i128));
+		else {
+			// Try to compress a float into the smallest representation.
+			if (ap1->tp->IsFloatType())
+				ip = GenerateLoadFloatConst(ap1, ap2);
+			else {
+				ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i128.low & 0xffffLL));
+				if (!ap1->offset->i128.IsNBit(16))
+					GenerateMonadic(op_pfx0, 0, MakeImmediate(ap1->offset->i128.low & 0xfffffffffLL));
+				if (!ap1->offset->i128.IsNBit(32))
+					GenerateMonadic(op_pfx1, 0, MakeImmediate(ap1->offset->i128.low >> 32LL));
+				if (!ap1->offset->i128.IsNBit(64))
+					GenerateMonadic(op_pfx2, 0, MakeImmediate(ap1->offset->i128.high & 0xffffffffLL));
+				if (!ap1->offset->i128.IsNBit(96))
+					GenerateMonadic(op_pfx3, 0, MakeImmediate(ap1->offset->i128.high >> 32LL));
+			}
+		}
 		if (ip->oper2)
 			ip->oper2->offset->constflag = true;
 		regs[ap2->preg].isConst = true;
-		/*
-		if (ap1->offset->i128.IsNBit(64))
-			GenerateDiadic(cpu.ldi_op, 0, ap2, ap1);
-		else {
-			Int128 a(ap1->offset->i128);
-			GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(a.high));
-			GenerateTriadic(op_sllh, 0, ap2, ap2, MakeImmediate(64));
-			GenerateTriadic(op_or, 0, ap2, ap2, MakeImmediate(ap1->offset->i128.low));
-		}
-		*/
 			if (ap2->tp) {
 //				ap2->tp->type = bt_long;
 //				ap2->tp->size = 16;
@@ -1957,8 +1992,13 @@ Operand* CodeGenerator::GenFloatcon(ENODE* node, int flags, int64_t size)
 	Operand* ap1, * ap2;
 
 	ap1 = allocOperand();
+	ap1->mode = am_imm;
+	ap1->offset = node;
+	ap1->tp = node->tp;
+	return (ap1);
+	ap1 = allocOperand();
 	ap1->isPtr = node->IsPtr();
-	if (node->constflag == TRUE && node->f128.IsZero()) {
+	if (node->constflag && node->f128.IsZero()) {
 		ap1->mode = am_reg;
 		ap1->isConst = true;
 		ap1->preg = regZero;
@@ -1966,7 +2006,7 @@ Operand* CodeGenerator::GenFloatcon(ENODE* node, int flags, int64_t size)
 	else {
 		if (use_gp) {
 			ap1->mode = am_indx;
-			ap1->preg = node->segment == rodataseg ? regGP1 : regGP;
+			ap1->preg = node->segment == rodataseg ? regPC : regGP;
 		}
 		else
 			ap1->mode = am_direct;
@@ -1990,7 +2030,7 @@ Operand* CodeGenerator::GenPositcon(ENODE* node, int flags, int64_t size)
 	ap1->isPtr = node->IsPtr();
 	if (use_gp) {
 		ap1->mode = am_indx;
-		ap1->preg = node->segment == rodataseg ? regGP1 : regGP;
+		ap1->preg = node->segment == rodataseg ? regPC : regGP;
 	}
 	else
 		ap1->mode = am_direct;
@@ -2016,7 +2056,7 @@ Operand* CodeGenerator::GenLabelcon(ENODE* node, int flags, int64_t size)
 		switch (node->segment) {
 		case tlsseg:	ap2->preg = regTP; break;
 		case dataseg:	ap2->preg = regGP; break;
-		case rodataseg: ap2->preg = regGP1; break;
+		case rodataseg: ap2->preg = regPC; break;
 		default:	ap2->preg = regPP;
 		}
 		ap2->offset = node;     // use as constant node
@@ -2132,6 +2172,35 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		Leave((char *)"GenExpression",3);
 		goto retpt;
 
+	case en_pfx0:
+		ap1 = allocOperand();
+		ap1->mode = am_imm;
+		ap1->offset = node;
+		ap1->tp = node->tp;
+		GenerateMonadic(op_pfx0, 0, ap1);
+		goto retpt2;
+	case en_pfx1:
+		ap1 = allocOperand();
+		ap1->mode = am_imm;
+		ap1->offset = node;
+		ap1->tp = node->tp;
+		GenerateMonadic(op_pfx1, 0, ap1);
+		goto retpt2;
+	case en_pfx2:
+		ap1 = allocOperand();
+		ap1->mode = am_imm;
+		ap1->offset = node;
+		ap1->tp = node->tp;
+		GenerateMonadic(op_pfx2, 0, ap1);
+		goto retpt2;
+	case en_pfx3:
+		ap1 = allocOperand();
+		ap1->mode = am_imm;
+		ap1->offset = node;
+		ap1->tp = node->tp;
+		GenerateMonadic(op_pfx3, 0, ap1);
+		goto retpt2;
+
 	case en_labcon:
 		ap1 = GenLabelcon(node, flags, size);
 		goto retpt;
@@ -2141,7 +2210,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
       ap1 = GetTempRegister();
       ap2 = allocOperand();
       ap2->mode = am_indx;
-      ap2->preg = node->segment==rodataseg ? regGP1 : regGP;      // global pointer
+      ap2->preg = node->segment==rodataseg ? regPC : regGP;      // global pointer
 			//if (node->segment != rodataseg) {
 			//	n2 = makeinode(en_icon, 2048LL);
 			//	ap2->offset = makenode(en_add, ap2->offset, n2);
@@ -2750,7 +2819,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		if (use_gp) {
 			switch (node->segment) {
 			case dataseg:	ndxreg = regGP; break;
-			case rodataseg: ndxreg = regGP1; break;
+			case rodataseg: ndxreg = regPC; break;
 			case tlsseg:	ndxreg = regTP; break;
 			default:	ndxreg = regPP; break;
 			}
@@ -3197,7 +3266,10 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	// function.
 	//sym->pl.head = sym->pl.tail = nullptr;
 	for (ip = sym->pl.head; ip; ip = pip) {
-		if (ip->opcode != op_fnname)
+		if (ip->opcode != op_fnname &&
+			ip->opcode != op_rts &&
+			ip->opcode != op_rtd &&
+			ip->opcode != op_ret)
 			o_fn->pl.Add(ip->Clone(ip));
 		pip = ip->fwd;
 	}
@@ -3331,9 +3403,10 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		) {
 		if (!(flags & am_novalue)) {
 			if (sym->sym->tp->btpp->type != bt_void) {
-				ap = GetTempRegister();
-				GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
-				regs[1].modified = true;
+				//ap = GetTempRegister();
+				ap = makereg(cpu.argregs[0]);
+				//GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
+				regs[cpu.argregs[0]].modified = true;
 			}
 			else
 				ap = makereg(regZero);
@@ -3346,8 +3419,9 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	}
 	else {
 		if (!(flags & am_novalue)) {
-			ap = GetTempRegister();
-			GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
+			//ap = GetTempRegister();
+			ap = makereg(cpu.argregs[0]);
+			//GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
 			regs[cpu.argregs[0]].modified = true;
 		}
 		else {

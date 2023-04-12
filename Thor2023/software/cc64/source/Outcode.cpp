@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[329] =
+Instruction opl[333] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -264,6 +264,10 @@ Instruction opl[329] =
 { "pea", op_pea },
 { "pea",op_pea },
 { "pfi", op_pfi, 1, 1, false, 0, 0, 0, 0 },
+{ "pfx0", op_pfx0, 1, 1, false, am_imm, 0, 0, 0 },
+{ "pfx1", op_pfx1, 1, 1, false, am_imm, 0, 0, 0 },
+{ "pfx2", op_pfx2, 1, 1, false, am_imm, 0, 0, 0 },
+{ "pfx3", op_pfx3, 1, 1, false, am_imm, 0, 0, 0 },
 { "phi", op_phi },
 { "pldo", op_pldo,4,1,true,am_reg,am_mem,0,0 },
 { "pldt", op_pldt,4,1,true,am_reg,am_mem,0,0 },
@@ -434,7 +438,9 @@ char *RegMoniker(int regno)
 //		else if (regno == regAFP)
 //			sprintf_s(&buf[n][0], 20, "$afp");
 		else if (regno==regGP)
-		sprintf_s(&buf[n][0], 20, "gp");
+			sprintf_s(&buf[n][0], 20, "gp");
+		else if (regno==regPC)
+			sprintf_s(&buf[n][0], 20, "pc");
 		else if (regno == regGP1)
 			sprintf_s(&buf[n][0], 20, "gp1");
 		else if (regno==regXLR)
@@ -500,6 +506,8 @@ char *RegMoniker2(int regno)
 //		sprintf_s(&buf[n][0], 20, "$afp");
 	else if (regno == regGP)
 		sprintf_s(&buf[n][0], 20, "gp");
+	else if (regno == regPC)
+		sprintf_s(&buf[n][0], 20, "pc");
 	else if (regno == regGP1)
 		sprintf_s(&buf[n][0], 20, "gp1");
 	else if (regno == regXLR)
@@ -1075,6 +1083,10 @@ int NumericLiteral(ENODE* node)
 	struct nlit* lp, *pp;
 	lp = numeric_tab;
 	pp = nullptr;
+	if (node) {
+		node->constflag = true;
+		node->segment = rodataseg;
+	}
 	// First search for the same literal constant and it's label if found.
 	while (lp) {
 		if (lp->typ == node->etype) {

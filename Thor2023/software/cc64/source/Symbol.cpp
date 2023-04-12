@@ -44,6 +44,21 @@ Function* Symbol::MakeFunction(int symnum, bool isPascal) {
 	return (fn);
 };
 
+Symbol* Symbol::GetTemp()
+{
+	static int64_t i=0;
+	Symbol* sym;
+	char buf[100];
+
+	sym = allocSYM();
+	sprintf_s(buf, sizeof(buf), "__tempsym%d", i);
+	i++;
+	sym->SetName(buf);
+	sym->tp = allocTYP();
+	sym->tp->type = bt_aggregate;
+	return (sym);
+}
+
 Symbol *Symbol::GetPtr(int n)
 { 
 	Symbol* p1;
@@ -791,7 +806,7 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 		if (node != nullptr && node != rootnode) {
 			if (!ENODE::initializedSet.isMember(node->number)) {
 				nbytes += Initialize(node, node->tp, 0);
-				ENODE::initializedSet.add(node->number);
+//				ENODE::initializedSet.add(node->number);
 			}
 			count--;
 		}
@@ -802,7 +817,7 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeStruct(ENODE* rootnode)
+int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
 {
 	static int level = 0;
 	Symbol* sp, *hd;
@@ -816,7 +831,8 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode)
 	level++;
 	nbytes = 0;
 	//sp = sp->GetPtr(tp->lst.GetHead());      /* start at top of symbol table */
-	tbl = &this->tp->lst;
+	//tbl = &this->tp->lst;
+	tbl = &tp->lst;
 	hd = sp = tbl->headp;// this->GetPtr(tbl->GetHead());
 	count = 0;
 	typ = nullptr;
@@ -836,8 +852,8 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode)
 			continue;
 		if (node != nullptr && node != rootnode) {
 			if (!ENODE::initializedSet.isMember(node->number)) {
-				nbytes += sp->Initialize(node, sp->tp, 0);
-				ENODE::initializedSet.add(node->number);
+				nbytes += sp->Initialize(node, node->tp, 0);
+//				ENODE::initializedSet.add(node->number);
 			}
 		}
 		else {
@@ -858,7 +874,7 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode)
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeUnion(ENODE* rootnode)
+int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 {
 	Symbol* sp, * osp;
 	int64_t nbytes;
@@ -877,11 +893,12 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode)
 	count = 0;
 	// An array of values matching a union?
 	ntp = node->tp;
+	ntp = tp;
 	if (ntp->type == bt_pointer && ntp->val_flag) {
 		ntp = ntp->btpp;
 		for (count = 0; count < ntp->numele; count++)
 			nbytes += ntp->GenerateT(node);
-		ENODE::initializedSet.add(node->number);
+//		ENODE::initializedSet.add(node->number);
 	}
 	else if (ntp->type != bt_union) {
 		if (TYP::IsSameType(ntp, tp->btpp, false)) {
@@ -890,7 +907,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode)
 					continue;
 				if (!ENODE::initializedSet.isMember(lst->node->number)) {
 					nbytes += GenerateT(lst->node, ntp);
-					ENODE::initializedSet.add(lst->node->number);
+//					ENODE::initializedSet.add(lst->node->number);
 				}
 				ntp = lst->node->tp;
 				if (lst->node)
@@ -910,7 +927,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode)
 				if (TYP::IsSameType(sp->tp, node->tp, false)) {
 					if (!ENODE::initializedSet.isMember(lst->node->number)) {
 						nbytes = GenerateT(node, sp->tp);
-						ENODE::initializedSet.add(lst->node->number);
+//						ENODE::initializedSet.add(lst->node->number);
 					}
 					found = true;
 					break;
@@ -989,22 +1006,30 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 	case bt_posit:
 		nbytes = 8; GeneratePosit(node->posit); break;
 	case bt_struct:
-		nbytes = InitializeStruct(node);
+		nbytes = InitializeStruct(node, ptp);
 		break;
 	case bt_union:
-		nbytes = InitializeUnion(node);
+		nbytes = InitializeUnion(node, ptp);
 		break;
 	case bt_pointer:
 		// Is it an array?
 		if (ptp->val_flag)
 			nbytes = InitializeArray(node);
 		else {
-			val = node->i;
-			nbytes = sizeOfPtr;
-			switch (sizeOfPtr) {
-			case 4: GenerateHalf(val); break;
-			case 8: GenerateInt(val); break;
-			case 16: GenerateLong(val); break;
+			if (ptp->btpp->IsAggregateType()) {
+				if (ptp->btpp->type == bt_union)
+					InitializeUnion(node, ptp->btpp);
+				else if (ptp->btpp->type == bt_struct)
+					InitializeStruct(node, ptp->btpp);
+			}
+			else {
+				val = node->i;
+				nbytes = sizeOfPtr;
+				switch (sizeOfPtr) {
+				case 4: GenerateHalf(val); break;
+				case 8: GenerateInt(val); break;
+				case 16: GenerateLong(val); break;
+				}
 			}
 		}
 		break;
@@ -1015,7 +1040,7 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 	default:
 		;
 	}
-	ENODE::initializedSet.add(node->number);
+//	ENODE::initializedSet.add(node->number);
 	return (nbytes);
 }
 

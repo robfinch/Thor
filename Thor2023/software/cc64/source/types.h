@@ -517,6 +517,7 @@ public:
 	int FindNextExactMatch(int startpos, TypeArray *);
 	Symbol *FindRisingMatch(bool ignore = false);
 	Symbol* FindInUnion(std::string nme);
+	static Symbol* GetTemp();
 	std::string *GetNameHash();
 	std::string *BuildSignature(int opt);
 	static Symbol *GetPtr(int n);
@@ -542,8 +543,8 @@ public:
 	int AdjustNbytes(int nbytes, int al, int ztype);
 	int64_t Initialize(ENODE* pnode, TYP* tp2, int opt);
 	int64_t InitializeArray(ENODE*);
-	int64_t InitializeStruct(ENODE*);
-	int64_t InitializeUnion(ENODE*);
+	int64_t InitializeStruct(ENODE*, TYP*);
+	int64_t InitializeUnion(ENODE*, TYP*);
 	int64_t GenerateT(ENODE* node, TYP* tp);
 	void storeHex(txtoStream& ofs);
 };
@@ -823,6 +824,8 @@ public:
 class List
 {
 public:
+	static int64_t numele;
+public:
 	List() {
 		nxt = nullptr;
 		node = nullptr;
@@ -896,7 +899,10 @@ private:
 	ENODE* ParseAggregateConst(ENODE** node);
 	TYP* ParseFloatMax(ENODE** node);
 	ENODE* ParseThis(ENODE** node);
-	TYP* ParseAggregate(ENODE** node, Symbol* typi);
+	void ParseAggregateHelper(ENODE** node, ENODE* cnode);
+	bool ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp);
+	void ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp);
+	TYP* ParseAggregate(ENODE** node, Symbol* typi, TYP* tp);
 	ENODE* ParseTypenum();
 	ENODE* ParseNew(bool autonew, Symbol* symi);
 	ENODE* ParseDelete(Symbol* symi);
@@ -906,7 +912,7 @@ private:
 	ENODE* ParseWydndx(Symbol* symi);
 	// Unary Expression Parsing
 	TYP* ParseMinus(ENODE** node, Symbol* symi);
-	ENODE* ParseNot(Symbol* symi);
+	TYP* ParseNot(ENODE** node, Symbol* symi);
 	ENODE* ParseCom(Symbol* symi);
 	TYP* ParseStar(ENODE** node, Symbol* symi);
 	ENODE* ParseSizeof(Symbol* symi);
@@ -1244,6 +1250,7 @@ public:
 	void GenerateTrueJump(ENODE *node, int label, unsigned int prediction);
 	void GenerateFalseJump(ENODE *node, int label, unsigned int prediction);
 	virtual Operand *GenExpr(ENODE *node) { return (nullptr); };
+	OCODE* GenerateLoadFloatConst(Operand* ap1, Operand* ap2);
 	void GenerateLoadConst(Operand *ap1, Operand *ap2);
 	void SaveTemporaries(Function *sym, int *sp, int *fsp, int* psp);
 	void RestoreTemporaries(Function *sym, int sp, int fsp, int psp);

@@ -480,6 +480,112 @@ void Float128::Float128ToDouble(double *d, Float128 *a)
 	*di |= (__int64)a->man[FLT128_WORDS-2] >> 10;
 }
 
+void Float128::FloatDoubleToQuad(Float128* d, double* a)
+{
+	bool sign;
+	unsigned __int16 exp;
+	__int64 man;
+	__int64* aa;
+
+	aa = (__int64*)a;
+	sign = *aa >> 63LL;
+	exp = (*aa >> 53L) & 0x7ff;
+	man = *aa & 0x1fffffffffffffLL;
+	d->sign = sign;
+	// Zero?
+	if (*a == 0.0) {
+		d->exp = 0;
+		d->man[0] = 0;
+		d->man[1] = 0;
+		d->man[2] = 0;
+		d->man[3] = 0;
+		return;
+	}
+	// Infinite?
+	if (exp == 0x7ff && man == 0LL) {
+		d->exp = 0x7fffL;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		return;
+	}
+	d->exp = exp + bias - 0x7ff;
+	d->man[3] = man >> 37LL;
+	d->man[2] = (man >> 5LL) & 0xffffffffLL;
+	d->man[1] = (man & 0x1fLL) << 27LL;
+	d->man[0] = 0;
+}
+
+void Float128::FloatSingleToQuad(Float128* d, float* a)
+{
+	bool sign;
+	unsigned __int8 exp;
+	__int32 man;
+	__int32* aa;
+
+	aa = (__int32*)a;
+	sign = *aa >> 31LL;
+	exp = (*aa >> 23L) & 0x7f;
+	man = *aa & 0x7fffffL;
+	d->sign = sign;
+	// Zero?
+	if (*a == 0.0) {
+		d->exp = 0;
+		d->man[0] = 0;
+		d->man[1] = 0;
+		d->man[2] = 0;
+		d->man[3] = 0;
+		return;
+	}
+	// Infinite?
+	if (exp == 0xff && man == 0L) {
+		d->exp = 0xffffL;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		return;
+	}
+	d->exp = exp + bias - 0x7f;
+	d->man[3] = (man << 7L)|0x40000000L;
+	d->man[2] = 0L;
+	d->man[1] = 0L;
+	d->man[0] = 0L;
+}
+
+void Float128::Float128ToSingle(float* d, Float128* a)
+{
+	bool sgn;
+	unsigned __int16 exp;
+	__int32* di = (__int32*)d;
+
+	// Do we have a zero ?
+	if (a->IsZero()) {
+		*di = a->sign ? 0x80000000L : 0x00000000L;
+		return;
+	}
+	// Or an infinite number ?
+	if (a->IsInfinite()) {
+		*di = a->sign ? 0xFF800000L : 0x7F800000L;
+		return;
+	}
+	// Too large a number -> infinity
+	if (a->exp > a->bias + 0x80) {
+		*di = a->sign ? 0xFF800000L : 0x7F800000L;
+		return;
+	}
+	// Too small a number -> zero
+	if (a->exp < a->bias - 0x7f) {
+		*di = a->sign ? 0x80000000L : 0x00000000L;
+	}
+	sgn = a->sign;
+	exp = a->exp - bias + 0x7f;
+	*di = (__int32)sgn << 31;
+	*di |= (__int32)exp << 23;
+	*di |= (__int32)(a->man[FLT128_WORDS - 1] & 0x3fffffffL) >> 8L;
+}
+
 void Float128::Pack(int prec)
 {
 	Float128 a;
@@ -639,3 +745,102 @@ bool Float128::IsLessThan(Float128 *a, Float128 *b)
 		return (false);
 	return (ManGT(b, a));
 }
+
+bool Float128::IsSingle()
+{
+	Float128 f128;
+	float f;
+	double d, * pd;
+	int32_t* pi;
+	float* pf = &f;
+	int32_t i;
+
+	pi = (int32_t*)pf;
+	i = *pi;
+	Float128::Float128ToSingle(&f, this);
+	Float128::FloatSingleToQuad(&f128, &f);
+	return (IsEqual(&f128, this));
+}
+
+bool Float128::IsDouble()
+{
+	int64_t i;
+	int64_t* pi;
+	Float128 f128;
+	double d;
+
+	pi = (int64_t*)&d;
+	i = *pi;
+	Float128::Float128ToDouble(&d, this);
+	Float128::FloatDoubleToQuad(&f128, &d);
+	return (IsEqual(&f128, this));
+}
+
+char* Float128::ToCompressedString()
+{
+	float f;
+	double d, * pd;
+	int32_t* pi;
+	int32_t i, n;
+	float* pf = &f;
+	OCODE* ip;
+	static char buf[4][100];
+	static char str[100];
+	std::string* s1;
+
+	Float128 f128;
+	memset(&buf[0], '\0', sizeof(buf[0]));
+	if (IsSingle()) {
+		Float128::Float128ToSingle(&f, this);
+		pi = (int32_t*)pf;
+		i = pi[0];
+		buf[0][0] = '0';
+		buf[0][1] = 'x';
+		_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+		s1 = new std::string((char *)buf[0]);
+		return ((char*)s1->c_str());
+	}
+	if (IsDouble()) {
+		pi = (int32_t*)&d;
+		i = pi[0];
+		Float128::Float128ToDouble(&d, this);
+		buf[0][0] = '0';
+		buf[0][1] = 'x';
+		_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+
+		i = pi[1];
+		_itoa_s((int64_t)i, str, sizeof(str), 16);
+		for (n = i = 16 - strlen(str); i >= 0; i--)
+			buf[0][18 + i] = '0';
+		strcat_s((char *)&buf[0], 30, str);
+		s1 = new std::string((char*)buf[0]);
+		return ((char *)s1->c_str());
+	}
+	pi = (int32_t*)&f128;
+	i = pi[0];
+	buf[0][0] = '0';
+	buf[0][1] = 'x';
+	_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+
+	i = pi[1];
+	_itoa_s((int64_t)i, str, sizeof(str), 16);
+	for (n = i = 16 - strlen(str); i >= 0; i--)
+		buf[0][18 + i] = '0';
+	strcat_s((char *)&buf[0], 30, str);
+
+	i = pi[2];
+	_itoa_s((int64_t)i, str, sizeof(str), 16);
+	for (i = 16 - strlen(str); i >= 0; i--)
+		buf[0][34 + i] = '0';
+	strcat_s((char*)&buf[0], 30, str);
+
+	i = pi[3];
+	_itoa_s((int64_t)i, str, sizeof(str), 16);
+	for (i = 16 - strlen(str); i >= 0; i--)
+		buf[0][50 + i] = '0';
+	strcat_s((char*)&buf[0], 30, str);
+	s1 = new std::string((char*)buf[0]);
+	return ((char*)s1->c_str());
+}
+
+

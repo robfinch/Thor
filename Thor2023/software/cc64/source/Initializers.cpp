@@ -334,9 +334,9 @@ void doinit(Symbol *sp)
 			//currentSym = sp;
 			exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
 			opt_const_unchecked(&node);			// This should reduce to a single integer expression
-			if (!node->AssignTypeToList(sp->tp)) {
-				error(ERR_CASTAGGR);
-			}
+			//if (!node->AssignTypeToList(sp->tp)) {
+			//	error(ERR_CASTAGGR);
+			//}
 			currentSym = s2;
 			ENODE::initializedSet.clear();
 			if (node != nullptr)

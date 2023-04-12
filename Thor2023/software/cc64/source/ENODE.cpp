@@ -657,7 +657,7 @@ void ENODE::DumpAggregate()
 				node->DumpAggregate();
 				level--;
 			}
-			else {
+			else if (node->nodetype != en_end_aggregate) {
 				node->PutConstant(dfs, 0, 0, false, 0);
 				dfs.puts(", ");
 			}
@@ -676,6 +676,7 @@ List* ENODE::ReverseList(ENODE* node)
 	ENODE* pnode;
 	int64_t count, cnt2, cnt1;
 
+	List::numele = 0;
 	// Trap single non-list items.
 	if (node->nodetype != en_end_aggregate) {
 		lst = new List[1];
@@ -699,6 +700,7 @@ List* ENODE::ReverseList(ENODE* node)
 		cnt2 = cnt2 - 1;
 	}
 	lst[count - 1].nxt = nullptr;
+	List::numele = count;
 	return (&lst[0]);
 }
 
@@ -2443,15 +2445,16 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		ofs.write(buf);
 		break;
 	case en_fcon:
-		if (!opt) {
+		// Floats support immediate mode
+		if (false && !opt) {
 			sprintf_s(buf, sizeof(buf), "%s_%lld", GetNamespace(), i);
 			DataLabels[i] = true;
 			ofs.write(buf);
 			break;
 		}
 		// The following spits out a warning, but is okay.
-		if (this->tp->type == bt_quad)
-			sprintf_s(buf, sizeof(buf), "%.16s", f128.ToString());
+		if (true || this->tp->type == bt_quad)
+ 			sprintf_s(buf, sizeof(buf), "%.16s", f128.ToCompressedString());
 		else
 			sprintf_s(buf, sizeof(buf), "0x%llx", f);
 		ofs.write(buf);
@@ -2593,7 +2596,8 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		ofs.write(RegMoniker(rg));
 		break;
 	default:
-		printf("DIAG - illegal constant node.\n");
+		if (nodetype != en_assign)
+			printf("DIAG - illegal constant node.\n");
 		break;
 	}
 }
@@ -2684,7 +2688,8 @@ void ENODE::PutConstantHex(txtoStream& ofs, unsigned int lowhigh, unsigned int r
 		p[0]->PutConstantHex(ofs, 0, 0);
 		break;
 	default:
-		printf("DIAG - illegal constant node.\n");
+		if (nodetype != en_assign)
+			printf("DIAG - illegal constant node.\n");
 		break;
 	}
 }

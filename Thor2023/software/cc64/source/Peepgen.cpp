@@ -304,6 +304,7 @@ void Function::PeepOpt()
 	pl.RemoveCompilerHints();
 	pl.Remove();
 
+	/*
 	if (!hasSPReferences && !hasBPReferences) {
 		if (pl.Count(pl.head) < compiler.autoInline) {
 			for (ip = pl.head; ip; ip = ip->fwd)
@@ -312,7 +313,7 @@ void Function::PeepOpt()
 			pl.Remove();
 		}
 	}
-
+	*/
 	RootBlock = pl.Blockize();
 	pl.Dump((char *)"===== After peephole optimizations =====");
 	forest.func = this;

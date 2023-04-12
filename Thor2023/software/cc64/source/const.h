@@ -34,7 +34,7 @@ enum e_bt {
 	bt_ichar, bt_iuchar, bt_i128,
 	bt_uchar, bt_ushort, bt_uint, bt_ulong,
   bt_unsigned, bt_vector, bt_vector_mask,
-  bt_array, bt_struct, bt_union, bt_class, bt_enum, bt_void,
+  bt_aggregate, bt_array, bt_struct, bt_union, bt_class, bt_enum, bt_void,
   bt_func, bt_ifunc, bt_label,
 	bt_interrupt, bt_oscall, bt_pascal, bt_kernel, bt_bitfield, bt_ubitfield,
 	bt_exception, bt_ellipsis,
@@ -105,7 +105,7 @@ enum e_node {
 		en_autovcon, en_autovmcon, en_vector_ref, en_vex, en_veins,
 		en_vadd, en_vsub, en_vmul, en_vdiv,
 		en_vadds, en_vsubs, en_vmuls, en_vdivs,
-		en_mulf, en_isnullptr, 
+		en_mulf, en_isnullptr, en_pfx0, en_pfx1, en_pfx2, en_pfx3,
 		en_object_list
 		};
 
@@ -220,6 +220,7 @@ enum e_op {
 	op_bhi, op_bhs, op_blo, op_bls, op_ext, op_extu, op_lea, op_stdap,
 	op_neg, op_not, op_com, op_cmp, op_clr, op_link, op_unlk, op_label,
 	op_pea, op_cmpi, op_dc, op_asm, op_stop, op_fnname,
+	op_pfx0, op_pfx1, op_pfx2, op_pfx3,
 	// FISA64
 	op_ldw0i, op_ldw1i, op_ldw2i, op_ldw3i, op_chk, op_chki,
 	op_cmpu, op_bsr, op_bun,

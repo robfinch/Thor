@@ -375,7 +375,7 @@ Operand* ThorCodeGenerator::GenerateFeq(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fseq, 0, ap3, ap1, ap2);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
@@ -390,7 +390,7 @@ Operand* ThorCodeGenerator::GenerateFne(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fsne, 0, ap3, ap1, ap2);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
@@ -405,7 +405,7 @@ Operand* ThorCodeGenerator::GenerateFlt(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fslt, 0, ap3, ap1, ap2);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
@@ -420,7 +420,7 @@ Operand* ThorCodeGenerator::GenerateFle(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fsle, 0, ap3, ap1, ap2);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
@@ -435,7 +435,7 @@ Operand* ThorCodeGenerator::GenerateFgt(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fslt, 0, ap3, ap2, ap1);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
@@ -450,7 +450,7 @@ Operand* ThorCodeGenerator::GenerateFge(ENODE* node)
 	size = node->GetNaturalSize();
 	ap3 = GetTempRegister();
 	ap1 = cg.GenerateExpression(node->p[0], am_reg, node->p[0]->GetNaturalSize(), 1);
-	ap2 = cg.GenerateExpression(node->p[1], am_reg, node->p[1]->GetNaturalSize(), 1);
+	ap2 = cg.GenerateExpression(node->p[1], am_reg|am_imm, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_fsle, 0, ap3, ap2, ap1);
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);

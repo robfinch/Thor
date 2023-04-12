@@ -33,6 +33,7 @@
 #include <iomanip>
 #include <string>
 #include <math.h>
+#include <stdlib.h>
 
 #define snprintf	sprintf_s
 
