@@ -1261,7 +1261,6 @@ j1:
 			if (lastch == '\'') {
 				NextToken();
 				tptr = ParseCharConst(&pnode, sizeOfWord);
-				CheckPtr(tptr);
 				break;
 			}
 		}
@@ -1269,7 +1268,6 @@ j1:
 			if (lastch == '\'') {
 				NextToken();
 				tptr = ParseCharConst(&pnode, 1);
-				CheckPtr(tptr);
 				break;
 			}
 		}
@@ -1277,7 +1275,6 @@ j1:
 			if (lastch == '\'') {
 				NextToken();
 				tptr = ParseCharConst(&pnode, 2);
-				CheckPtr(tptr);
 				break;
 			}
 		}
@@ -1285,7 +1282,6 @@ j1:
 			if (lastch == '\'') {
 				NextToken();
 				tptr = ParseCharConst(&pnode, 4);
-				CheckPtr(tptr);
 				break;
 			}
 		}
@@ -1293,7 +1289,6 @@ j1:
 			if (lastch == '\'') {
 				NextToken();
 				tptr = ParseCharConst(&pnode, 8);
-				CheckPtr(tptr);
 				break;
 			}
 		}
@@ -1307,7 +1302,6 @@ j1:
 
 	case cconst:
 		tptr = ParseCharConst(&pnode, 1);
-		CheckPtr(tptr);
 		break;
 
 	case iconst:
@@ -1322,46 +1316,33 @@ j1:
 		}
 		pnode->SetType(tptr);
     NextToken();
-		CheckPtr(pnode);
 		break;
 
 	case kw_floatmax:
 		tptr = ParseFloatMax(&pnode);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
   case rconst:
 		tptr = ParseRealConst(&pnode);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
 	case pconst:
 		tptr = ParsePositConst(&pnode);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
 	case sconst:
 		tptr = ParseStringConst(&pnode);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
 	case asconst:
 		pnode = ParseStringConstWithSizePrefix(node);
 		tptr = &stdstring;
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		pnode->SetType(tptr);
 		break;
 
 	case isconst:
 		pnode = ParseInlineStringConst(node);
 		tptr = &stdstring;
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		pnode->SetType(tptr);
 		break;
 
@@ -1369,24 +1350,18 @@ j1:
     NextToken();
     tptr = expression(&pnode, symi);
     needpunc(closepa,8);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		pnode->SetType(tptr);
 		break;
 
   case kw_this:
 		pnode = ParseThis(node);
 		tptr = currentSym->tp;
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
 	case begin:
 		if (symi == nullptr)
 			symi = Symbol::GetTemp();
 		tptr = ParseAggregate(&pnode, symi, symi->tp);
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		break;
 
 	case kw_restrict:
@@ -1404,7 +1379,6 @@ j1:
 		//ep1->sym->parent = ep2->sym->GetIndex();
 		pnode->constflag = true;
 		tptr = pnode->tp;
-		CheckPtr(tptr);
 		break;
 
 	case openbr:
@@ -1413,13 +1387,11 @@ j1:
 		pnode = ParseOpenbr(tptr, pnode);
 		tptr = pnode->tp;
 		wasBr = true;
-		CheckPtr(tptr);
-		CheckPtr(pnode);
 		goto j1;
 
+	// A null pointer may be validly returned here, as the expression could be empty.
 	default:
     Leave("ParsePrimary", 0);
-		printf("Unprocessed token:%d\n", lastst);
 		return (nullptr);
   }
 	pep1 = pnode;
@@ -1683,8 +1655,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
   Enter("<ParsePostfix>");
   *node = (ENODE *)NULL;
 	tp1 = ParsePrimaryExpression(&ep1, got_pa, symi);
-	CheckPtr(tp1);
-	CheckPtr(ep1);
 	if (ep1 == NULL) {
 			//		ep1 = makeinode(en_icon, 0);
 			//		goto j1;
@@ -1713,8 +1683,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			ep1 = ParseOpenbr(tp1, ep1);
 			tp1 = ep1->tp;
 			wasBr = true;
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		case openpa:
@@ -1724,8 +1692,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			NextToken();
 			ep1 = ParseOpenpa(tp1, ep1, symi);
 			tp1 = ep1->tp;
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		case pointsto:
@@ -1739,8 +1705,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			tp1 = ep1->tp;
 			//ep1->sym->parent = ep2->sym->GetIndex();
 			ep1->constflag = true;
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		case dot:
@@ -1752,8 +1716,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			//ep1->sym->parent = ep2->sym->GetIndex();
 			ep1->constflag = true;
 			tp1 = ep1->tp;
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		case autodec:
@@ -1762,8 +1724,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			ep1 = AdjustForBitArray(pop, tp1, ep1);
 			NextToken();
 			Autoincdec(tp1,&ep1,1,true);
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		case autoinc:
@@ -1772,8 +1732,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			ep1 = AdjustForBitArray(pop, tp1, ep1);
 			NextToken();
 			Autoincdec(tp1,&ep1,0,true);
-			CheckPtr(tp1);
-			CheckPtr(ep1);
 			break;
 
 		default:
@@ -1788,8 +1746,6 @@ j1:
 	*node = ep1;
 //	if (ep1)
 //		tp1 = ep1->tp;
-	CheckPtr(tp1);
-	CheckPtr(ep1);
 	if (tp1)
 	Leave("</ParsePostfix>", tp1->type);
 	else
@@ -1847,16 +1803,12 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 		NextToken();
 		tp = ParseUnaryExpression(&ep1, got_pa, symi);
 		Autoincdec(tp,&ep1,1,false);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case autoinc:
 		NextToken();
 		tp = ParseUnaryExpression(&ep1, got_pa, symi);
 		Autoincdec(tp,&ep1,0,false);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	case plus:
@@ -1866,70 +1818,50 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
       error(ERR_IDEXPECT);
       return (TYP *)NULL;
     }
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	// Negative constants are trapped here and converted to proper form.
   case minus:
 		tp = ParseMinus(&ep1, symi);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case nott:
   case kw_not:
 		tp = ParseNot(&ep1, symi);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case cmpl:
 		ep1 = ParseCom(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case star:
 		tp = ParseStar(&ep1, symi);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case bitandd:
 		ep1 = ParseAddressOf(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	case kw_mulf:
 		ep1 = ParseMulf(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	case kw_bytendx:
 		ep1 = ParseBytndx(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	case kw_wydendx:
 		ep1 = ParseWydndx(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
   case kw_sizeof:
 		ep1 = ParseSizeof(symi);
 		tp = ep1->tp;
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
 
 	case kw_auto:
@@ -1956,12 +1888,8 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
   default:
     tp = ParsePostfixExpression(&ep1, got_pa, symi);
 		if (ep1) ep1->SetType(tp);
-		CheckPtr(tp);
-		CheckPtr(ep1);
 		break;
   }
-	CheckPtr(tp);
-	CheckPtr(ep1);
 	*node = ep1;
   Leave("</ParseUnary>", 0);
   return (ep1 ? ep1->tp : nullptr);
@@ -2119,7 +2047,6 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 	}
 	*node = ep1;
 	if (tp == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2265,7 +2192,6 @@ TYP *Expression::ParseMultOps(ENODE **node, Symbol* symi)
                 PromoteConstFlag(ep1);
                 }
 								if (tp1 == nullptr) {
-									printf("type null");
 									*node = nullptr;
 									return (nullptr);
 								}
@@ -2422,7 +2348,6 @@ TYP *Expression::ParseAddOps(ENODE **node, Symbol* symi)
   *node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2487,7 +2412,6 @@ TYP *Expression::ParseShiftOps(ENODE **node, Symbol* symi)
     *node = ep1;
  xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2589,7 +2513,6 @@ TYP *Expression::ParseRelationalOps(ENODE **node, Symbol* symi)
 fini: *node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2655,7 +2578,6 @@ TYP *Expression::ParseEqualOps(ENODE **node, Symbol* symi)
   *node = ep1;
  xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2727,7 +2649,6 @@ TYP *Expression::ParseBitwiseAndOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2763,7 +2684,6 @@ TYP *Expression::ParseBitwiseXorOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2857,7 +2777,6 @@ xit1:
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2894,7 +2813,6 @@ TYP *Expression::ParseAndOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2930,7 +2848,6 @@ TYP *Expression::ParseSafeAndOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -2966,7 +2883,6 @@ TYP *Expression::ParseOrOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -3002,7 +2918,6 @@ TYP *Expression::ParseSafeOrOps(ENODE **node, Symbol* symi)
 	*node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -3095,7 +3010,6 @@ TYP *Expression::ParseConditionalOps(ENODE **node, Symbol* symi)
 cexit:  *node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -3227,7 +3141,6 @@ ascomm3:
 asexit: *node = ep1;
 xit:
 	if (tp1 == nullptr) {
-		printf("type null");
 		*node = nullptr;
 		return (nullptr);
 	}
@@ -3248,7 +3161,6 @@ TYP *Expression::ParseNonAssignExpression(ENODE **node, Symbol* symi)
     *node = (ENODE *)NULL;
     tp = ParseConditionalOps(node, symi);
 		if (tp == nullptr) {
-			printf("type null");
 			*node = nullptr;
 			return (nullptr);
 		}
@@ -3296,7 +3208,6 @@ TYP *Expression::ParseCommaOp(ENODE **node, Symbol* symi)
   *node = (ENODE *)NULL;
 	tp1 = ParseNonCommaExpression(&ep1, symi);
 	if (tp1 == (TYP*)NULL) {
-		printf("type null");
 		return (TYP*)NULL;
 	}
 	while(1) {

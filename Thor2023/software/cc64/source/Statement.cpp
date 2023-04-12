@@ -190,8 +190,8 @@ Statement *Statement::ParseFor()
 	if ((iflevel > maxPn - 1) && isThor)
 		error(ERR_OUTOFPREDS);
 	needpunc(openpa, 16);
-	if (expression(&(snp->initExpr),nullptr) == NULL)
-		snp->initExpr = (ENODE *)NULL;
+	if (expression(&(snp->initExpr),nullptr) == nullptr)
+		snp->initExpr = nullptr;
 	needpunc(semicolon, 32);
 	if (expression(&(snp->exp),nullptr) == NULL)
 		snp->exp = (ENODE *)NULL;

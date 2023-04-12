@@ -2596,7 +2596,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		ofs.write(RegMoniker(rg));
 		break;
 	default:
-		if (nodetype != en_assign)
+		if (nodetype != en_assign && nodetype != en_unknown)
 			printf("DIAG - illegal constant node.\n");
 		break;
 	}
