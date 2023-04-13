@@ -175,7 +175,7 @@ Statement *Function::ParseBody()
 	stmtdepth = 0;
 	ZeroMemory(regs, sizeof(regs));
 	initRegStack();
-	body = sym->stmt = sym->stmt->ParseCompound();
+	sym->stmt = sym->stmt->ParseCompound(true);
 	if (lastst == kw_catch) {
 		int lab1;
 		Statement stmt;

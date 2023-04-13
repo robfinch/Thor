@@ -572,7 +572,7 @@ Statement *Statement::ParseExpression()
 
 // Parse a compound statement.
 
-Statement *Statement::ParseCompound()
+Statement *Statement::ParseCompound(bool assign_cf)
 {
 	Statement *snp;
 	Statement *head, *tail;
@@ -584,6 +584,10 @@ Statement *Statement::ParseCompound()
 	p = currentStmt;
 	tail = nullptr;
 	snp = MakeStatement(st_compound, FALSE);
+	if (assign_cf) {
+		snp->fi = currentFn;
+		snp->fi->body = snp;
+	}
 	currentStmt = snp;
 	head = 0;
 	if (lastst == colon) {
@@ -750,7 +754,7 @@ j1:
 	case begin:
 		NextToken();
 		stmtdepth++;
-		snp = ParseCompound();
+		snp = ParseCompound(false);
 		currentStmt = snp;
 		stmtdepth--;
 		return snp;

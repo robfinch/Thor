@@ -199,8 +199,6 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 	gSearchCnt = 0;
 	ZeroMemory(gSearchSyms, sizeof(gSearchSyms));
 	dfs.printf("\n<gsearch2> for: |%s|\n", (char *)na.c_str());
-	if (na.compare("_g") == 0)
-		printf("hi");
 	prefix = nullptr;
 	sp = currentSym;
 	if (sp) {
@@ -219,7 +217,7 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 	sp = nullptr;
 	// There might not be a current statement if global declarations are
 	// being processed.
-	if (currentStmt==NULL) {
+	if (currentStmt==nullptr) {
 	  dfs.printf("Stmt=null, looking in global table\n");
 		if (gsyms[0].Find(na,rettype,typearray,exact)) {
 			sp = TABLE::match[TABLE::matchno-1];
@@ -230,172 +228,166 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 		dfs.puts("</gsearch2>\n");
 		return (nullptr);
 	}
-	else {
-    dfs.printf("Looking in statement table\n");
-		if (currentStmt->ssyms.Find(na,rettype,typearray,exact)) {
+
+	/*
+	if (currentStmt->ssyms.ownerp) {
+		sp = currentStmt->ssyms.ownerp;
+		if (sp->Find(na)) {	// Will search parent tables
+			sp = TABLE::match[TABLE::matchno - 1];
+			ADD_SYMS
+			dfs.printf("Found as an auto var\n");
+		}
+	}
+	*/
+	// Look in progressively more outer statements for the symbol.
+	for (st = currentStmt; st && gSearchCnt < 100; st = st->outer) {
+		dfs.printf("Looking in statement table\n");
+		if (st->ssyms.Find(na,rettype,typearray,exact)) {
 			sp = TABLE::match[TABLE::matchno-1];
 			ADD_SYMS
 			dfs.printf("Found as an auto var\n");
-//			dfs.puts("</gsearch2>\n");
-//			return (sp);
 		}
-		if (currentStmt->ssyms.ownerp) {
-			sp = currentStmt->ssyms.ownerp;
-			if (sp->Find(na)) {	// Will search parent tables
+		// If the statment is a function body
+		if (st->fi) {
+			dfs.printf("Looking at params %p\n", (char*)&st->fi->params);
+			if (st->fi->params.Find(na, rettype, typearray, exact)) {
 				sp = TABLE::match[TABLE::matchno - 1];
 				ADD_SYMS
-				dfs.printf("Found as an auto var\n");
+				dfs.printf("Found as parameter\n");
 			}
 		}
-		st = currentStmt->outer;
-		while (st && gSearchCnt < 100) {
-			dfs.printf("Looking in outer statement table\n");
-			if (st->ssyms.Find(na,rettype,typearray,exact)) {
-				sp = TABLE::match[TABLE::matchno-1];
+	}
+
+j1:
+	/*
+	p = nullptr;
+	if (currentFn->sym->fi) {
+		if (currentFn->sym->fi->body)
+			p = currentFn->sym->fi->body->ssyms.headp;
+	}
+	else
+	*/
+	/*
+	p = currentFn->sym;
+	if (p) {
+		while (p) {
+			
+			dfs.printf("Looking in function's symbol table\n");
+  		if (p->lsyms.Find(na,rettype,typearray,exact)) {
+  			sp = TABLE::match[TABLE::matchno-1];
 				ADD_SYMS
-				dfs.printf("Found as an auto var\n");
-//  			dfs.puts("</gsearch2>\n");
-//				return (sp);
-			}
-			st = st->outer;
-		}
-	j1:
-		/*
-		p = nullptr;
-		if (currentFn->sym->fi) {
-			if (currentFn->sym->fi->body)
-				p = currentFn->sym->fi->body->ssyms.headp;
-		}
-		else
-		*/
-		p = currentFn->sym;
-		if (p) {
-			while (p) {
-				dfs.printf("Looking in function's symbol table\n");
-  			if (p->lsyms.Find(na,rettype,typearray,exact)) {
-  				sp = TABLE::match[TABLE::matchno-1];
-					ADD_SYMS
-					dfs.printf("Found in function symbol table (a label)\n");
-  				//dfs.puts("</gsearch2>\n");
-  				//return (sp);
-  			}
-  			dfs.printf((char *)"Searching method/class:%s|%p\n",(char *)p->name->c_str(),(char *)p);
-  			if (p->tp) {
-    			if (p->tp->type != bt_class) {
-      			dfs.printf("Looking at params %p\n",(char *)&p->fi->params);
-      			if (p->fi->params.Find(na,rettype,typearray,exact)) {
-      				sp = TABLE::match[TABLE::matchno-1];
+				dfs.printf("Found in function symbol table (a label)\n");
+  			//dfs.puts("</gsearch2>\n");
+  			//return (sp);
+  		}
+			
+  		dfs.printf((char *)"Searching method/class:%s|%p\n",(char *)p->name->c_str(),(char *)p);
+  		if (p->tp) {
+    		if (p->tp->type != bt_class) {
+      		dfs.printf("Looking at params %p\n",(char *)&p->fi->params);
+      		if (p->fi->params.Find(na,rettype,typearray,exact)) {
+      			sp = TABLE::match[TABLE::matchno-1];
+						ADD_SYMS
+						dfs.printf("Found as parameter\n");
+      		}
+					q = p->parentp;
+					if (q)
+						dfs.printf("Looking at params %p\n", (char*)&q->fi->params);
+					while (q) {
+						if (q->fi->params.Find(na, rettype, typearray, exact)) {
+							sp = TABLE::match[TABLE::matchno - 1];
 							ADD_SYMS
 							dfs.printf("Found as parameter\n");
-//        			dfs.puts("</gsearch2>\n");
-//      				return (sp);
-      			}
-						q = p->parentp;
-						if (q)
-							dfs.printf("Looking at parents params %p\n", (char*)&q->fi->params);
-						while (q) {
-							if (q->fi->params.Find(na, rettype, typearray, exact)) {
-								sp = TABLE::match[TABLE::matchno - 1];
-								ADD_SYMS
-								dfs.printf("Found as parameter\n");
-//								dfs.puts("</gsearch2>\n");
-//								return (sp);
-							}
-							q = q->parentp;
 						}
-						q = p->lsyms.headp;
-						if (q) {
-							dfs.printf("Looking at childs params %p\n", (char*)&q->fi->params);
-						}
-						while (q) {
-							if (q->fi->params.Find(na, rettype, typearray, exact)) {
-								sp = TABLE::match[TABLE::matchno - 1];
-								ADD_SYMS
-								dfs.printf("Found as parameter\n");
-//								dfs.puts("</gsearch2>\n");
-//								return (sp);
-							}
-							q = q->nextp;
-							if (q == p->lsyms.headp)
-								break;
-						}
-    		  }
-    			// Search for class member
-    			dfs.printf("Looking at class members %p\n",(char *)&p->tp->lst);
-    			if (p->tp->type == bt_class) {
-    			  Symbol *tab;
-    			  int nn;
-    				if (p->tp->lst.Find(na,rettype,typearray,exact)) {
-    					sp = TABLE::match[TABLE::matchno-1];
+						q = q->parentp;
+					}
+					q = p->lsyms.headp;
+					if (q) {
+						dfs.printf("Looking at childs params %p\n", (char*)&q->fi->params);
+					}
+					while (q) {
+						if (q->fi->params.Find(na, rettype, typearray, exact)) {
+							sp = TABLE::match[TABLE::matchno - 1];
 							ADD_SYMS
-							dfs.printf("Found in class\n");
-//        			dfs.puts("</gsearch2>\n");
-//    					return (sp);
-    				}
-    				dfs.printf("Base=%p",(char *)p->tp->lst.basep);
-    				tab = p->tp->lst.basep;
-    				dfs.printf("Base=%p",(char *)tab);
-    				if (tab) {
-    				  dfs.puts("Has a base class");
-    				  if (tab->tp) {
-           			dfs.printf("Looking at base class members:%p\n",(char *)tab);
-        				nn = tab->tp->lst.FindRising(na);
-        				if (nn > 0) {
-                 	dfs.printf("Found in base class\n");
-        				  if (exact) {
-           				  //sp = sp->FindRisingMatch();
-        				    sp = Function::FindExactMatch(TABLE::matchno, na, bt_int, typearray)->sym;
-        				    if (sp) {
-											if (gSearchCnt < 100) {
-												gSearchSyms[gSearchCnt] = sp;
-												gSearchCnt++;
-											}
-                			dfs.puts("</gsearch2>\n");
-        				      return (sp);
-      				      }
-        				  }
-        				  else {
-    				        sp = TABLE::match[0];
-										ADD_SYMS
-//										dfs.puts("</gsearch2>\n");
-//    				        return (sp);
-    				      }
+							dfs.printf("Found as parameter\n");
+						}
+						q = q->nextp;
+						if (q == p->lsyms.headp)
+							break;
+					}
+    		}
+    		// Search for class member
+    		dfs.printf("Looking at class members %p\n",(char *)&p->tp->lst);
+    		if (p->tp->type == bt_class) {
+    			Symbol *tab;
+    			int nn;
+    			if (p->tp->lst.Find(na,rettype,typearray,exact)) {
+    				sp = TABLE::match[TABLE::matchno-1];
+						ADD_SYMS
+						dfs.printf("Found in class\n");
+    			}
+    			dfs.printf("Base=%p",(char *)p->tp->lst.basep);
+    			tab = p->tp->lst.basep;
+    			dfs.printf("Base=%p",(char *)tab);
+    			if (tab) {
+    				dfs.puts("Has a base class");
+    				if (tab->tp) {
+           		dfs.printf("Looking at base class members:%p\n",(char *)tab);
+        			nn = tab->tp->lst.FindRising(na);
+        			if (nn > 0) {
+                dfs.printf("Found in base class\n");
+        				if (exact) {
+           				//sp = sp->FindRisingMatch();
+        				  sp = Function::FindExactMatch(TABLE::matchno, na, bt_int, typearray)->sym;
+        				  if (sp) {
+										if (gSearchCnt < 100) {
+											gSearchSyms[gSearchCnt] = sp;
+											gSearchCnt++;
+										}
+                		dfs.puts("</gsearch2>\n");
+        				    return (sp);
+      				    }
+        				}
+        				else {
+    				      sp = TABLE::match[0];
+									ADD_SYMS
     				    }
-      				}
-    			  }
-  			  }
+    				  }
+      			}
+    			}
   			}
-				if (p->nextp)
-					p = p->nextp;
-				else
-	  			p = p->parentp;
   		}
+			if (p->nextp)
+				p = p->nextp;
+			else
+	  		p = p->parentp;
   	}
-		// Finally, look in the global symbol table
-		dfs.printf("Looking at global symbols\n");
-		if (gsyms[0].Find(na,rettype,typearray,exact)) {
-			sp = TABLE::match[TABLE::matchno-1];
-			ADD_SYMS
-			dfs.printf("Found in global symbol table\n");
+  }
+	*/
+	// Finally, look in the global symbol table
+	dfs.printf("Looking at global symbols\n");
+	if (gsyms[0].Find(na,rettype,typearray,exact)) {
+		sp = TABLE::match[TABLE::matchno-1];
+		ADD_SYMS
+		dfs.printf("Found in global symbol table\n");
 //			dfs.puts("</gsearch2>\n");
 //			return (sp);
-		}
-		// Second finally, search for an enum
-		dfs.printf("Looking at enums\n");
-		for (n = 0; n < 32768*10; n++) {
-			sp1 = compiler.symTables[n >> 15];
-			if (sp1) {
-				sp = &compiler.symTables[n >> 15][n & 0x7fff];
-				if (sp->name) {
-					if (sp->name->compare(na) == 0) {
-						if (sp->tp == &stdconst) {
-							if (gSearchCnt < 100) {
-								gSearchSyms[gSearchCnt] = sp;
-								gSearchCnt++;
-							}
-							TABLE::match[0] = sp;
-							TABLE::matchno = 1;
+	}
+	// Second finally, search for an enum
+	dfs.printf("Looking at enums\n");
+	for (n = 0; n < 32768*10; n++) {
+		sp1 = compiler.symTables[n >> 15];
+		if (sp1) {
+			sp = &compiler.symTables[n >> 15][n & 0x7fff];
+			if (sp->name) {
+				if (sp->name->compare(na) == 0) {
+					if (sp->tp == &stdconst) {
+						if (gSearchCnt < 100) {
+							gSearchSyms[gSearchCnt] = sp;
+							gSearchCnt++;
 						}
+						TABLE::match[0] = sp;
+						TABLE::matchno = 1;
 					}
 				}
 			}

@@ -1727,6 +1727,7 @@ public:
 	Statement *next;
 	Statement *prolog;
 	Statement *epilog;
+	Function* fi;				// Function connected to statement
 	bool nkd;
 	int predreg;		// assigned predicate register
 	ENODE *exp;         // condition or expression
@@ -1756,7 +1757,7 @@ public:
 	Statement* ParseDefault();
 	Statement* ParseCheckStatement();
 	Statement *ParseStop();
-	Statement *ParseCompound();
+	Statement *ParseCompound(bool assign_func);
 	Statement *ParseDo();
 	Statement *ParseFor();
 	Statement *ParseForever();
