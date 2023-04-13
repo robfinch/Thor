@@ -202,9 +202,6 @@ class Factory : public CompilerType
 
 class TABLE {
 public:
-	int head, tail;
-	int base;
-	int owner;
 	Symbol* headp, * tailp;
 	Symbol* basep;
 	Symbol* ownerp;
@@ -219,26 +216,18 @@ public:
 	int Find(std::string na,__int16,TypeArray *typearray, bool exact);
 	int FindRising(std::string na);
 	Symbol** GetParameters();
-	TABLE *GetPtr(int n);
-	void SetOwner(int n) { owner = n; };
-	int GetHead() { return head; };
-	void SetHead(int p) { head = p; };
-	void SetTail(int p) { tail = p; };
-	void Clear() { head = tail = base = 0; headp = nullptr; tailp = nullptr; basep = nullptr; };
+	void Clear() { headp = nullptr; tailp = nullptr; basep = nullptr; };
 	void CopyTo(TABLE *dst) {
-		dst->head = head;
-		dst->tail = tail;
-		dst->base = base;
 		dst->headp = headp;
 		dst->tailp = tailp;
 		dst->basep = basep;
+		dst->ownerp = ownerp;
 	};
 	void AddTo(TABLE* dst);
 	void MoveTo(TABLE *dst) {
 		CopyTo(dst);
 		Clear();
 	};
-	void SetBase(int b) { base = b; };
 };
 
 class PeepList
@@ -337,7 +326,10 @@ public:
 	bool hasParameters;
 	bool hasDefaultCatch;				// programmer coded a default catch
 	bool IsCoroutine;
+	bool Islocal;
 	bool UsesLoopCounter;
+	short inline_threshold;
+	short depth;
 	uint16_t NumRegisterVars;
 	__int8 NumParms;						// 256 max parameters
 	__int8 NumFixedAutoParms;
@@ -402,8 +394,9 @@ public:
 	void Summary(Statement *);
 	Statement *ParseBody();
 	void Init();
-	int Parse();
+	int Parse(bool local);
 	void InsertMethod();
+	void InsertAuto(Symbol* var);
 
 	void SaveGPRegisterVars();
 	void SaveFPRegisterVars();
@@ -440,9 +433,12 @@ public:
 	int64_t SizeofReturnBlock();
 	void SetupReturnBlock();
 	void GenerateReturn(Statement *stmt);
+	void GenerateLocalFunctions();
 	void GenerateCoroutineData();
 	void GenerateCoroutineEntry();
 	void GenerateCoroutineExit();
+	void GenerateName(bool force);
+	void GenerateBody(bool force_inline);
 	void Generate();
 	void GenerateDefaultCatch();
 
@@ -463,6 +459,7 @@ public:
 	static Symbol* alloc();
 public:
 	int number;
+	short depth;
 	int id;
 	int parent;
 	Symbol* parentp;
@@ -519,6 +516,8 @@ public:
 	Symbol* FindInUnion(std::string nme);
 	static Symbol* GetTemp();
 	std::string *GetNameHash();
+	std::string* GetFullName();
+	static std::string* GetFullNameByFunc(std::string nm);
 	std::string *BuildSignature(int opt);
 	static Symbol *GetPtr(int n);
 	Symbol *GetParentPtr();
@@ -917,7 +916,7 @@ private:
 	TYP* ParseStar(ENODE** node, Symbol* symi);
 	ENODE* ParseSizeof(Symbol* symi);
 
-	ENODE* ParseDotOperator(TYP* tp1, ENODE* ep1, Symbol* symi, ENODE* parent);
+	ENODE* ParseDotOperator(TYP* tp1, ENODE* parent, Symbol* symi);
 	ENODE* ParsePointsTo(TYP* tp1, ENODE* ep1);
 	ENODE* ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi);
 	ENODE* ParseOpenbr(TYP*tp1, ENODE* ep1);
@@ -975,7 +974,7 @@ private:
 	void DerefVector(ENODE** node, TYP* tp);
 	void DerefVectorMask(ENODE** node, TYP* tp);
 	void DerefVoid(ENODE** node, TYP* tp);
-	ENODE* FindLastMulu(ENODE*, ENODE*);
+	ENODE* FindLastMulu(ENODE*);
 public:
 	Expression();
 	TYP* ParseNameRef(ENODE** node, Symbol* symi);
@@ -1899,15 +1898,16 @@ public:
 	int8_t funcdecl;
 	e_sc istorage_class;
 	TABLE* itable;
+	short inline_threshold;
 public:
 	Declaration();
 	Declaration *next;
 	void AssignParameterName();
-	int declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo);
-	int declare(Symbol* parent, int ilc, int ztype, Symbol** symo);
+	int declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int ztype, Symbol** symo, bool local);
 	void ParseEnumerationList(TABLE *table, Float128 amt, Symbol *parent, bool power);
 	void ParseEnum(TABLE *table);
 	void ParseVoid();
+	void ParseInline();
 	void ParseInterrupt();
 	void ParseConst();
 	void ParseTypedef();
@@ -1937,12 +1937,12 @@ public:
 	int ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc);
 	Symbol *ParsePrefixId(Symbol*);
 	Symbol *ParsePrefixOpenpa(bool isUnion, Symbol*);
-	Symbol *ParsePrefix(bool isUnion,Symbol*);
+	Symbol *ParsePrefix(bool isUnion,Symbol*, bool local);
 	void ParseSuffixOpenbr();
 	Function* ParseSuffixOpenpa(Function *);
 	Symbol *ParseSuffix(Symbol *sp);
 	static void ParseFunctionAttribute(Function *sym);
-	int ParseFunction(TABLE* table, Symbol* sp, e_sc al);
+	int ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al, bool local);
 	Function* ParseFunctionJ2(Function* fn);
 	void ParseCoroutine();
 	void ParseAssign(Symbol *sp);

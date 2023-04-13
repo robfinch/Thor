@@ -122,8 +122,8 @@ TYP *TYP::Copy(TYP *src)
 		}
 		dfs.printf("C");
 		// We want to keep any base type indicator so Clear() isn't called.
-		dst->lst.head = 0;
-		dst->lst.tail = 0;
+		dst->lst.headp = nullptr;
+		dst->lst.tailp = nullptr;
 		dst->sname = new std::string(*src->sname);
 		dfs.printf("D");
 		TABLE::CopySymbolTable(&dst->lst,&src->lst);
@@ -828,17 +828,17 @@ bool TYP::IsSameUnionType(TYP* a, TYP* b)
 
 	// union will match anything
 	return (true);
-	spA = spA->GetPtr(a->lst.GetHead());      /* start at top of symbol table */
+	spA = a->lst.headp;      /* start at top of symbol table */
 	maxa = a->size;
 	while (spA != nullptr) {
 		maxa = max(maxa, spA->tp->size);
-		spA = spA->GetNextPtr();
+		spA = spA->nextp;
 	}
-	spB = spB->GetPtr(b->lst.GetHead());      /* start at top of symbol table */
+	spB = b->lst.headp;      /* start at top of symbol table */
 	maxb = b->size;
 	while (spB != nullptr) {
 		maxb = max(maxb, spB->tp->size);
-		spB = spB->GetNextPtr();
+		spB = spB->nextp;
 	}
 	return (maxa==maxb);
 }
@@ -1758,7 +1758,7 @@ ENODE *TYP::BuildEnodeTree()
 	ENODE *ep1, *ep2, *ep3;
 	Symbol *thead, *first;
 
-	first = thead = Symbol::GetPtr(lst.GetHead());
+	first = thead = lst.headp;
 	ep1 = ep2 = nullptr;
 	while (thead) {
 		if (thead->tp->IsStructType()) {
@@ -1769,7 +1769,7 @@ ENODE *TYP::BuildEnodeTree()
 		ep1 = makenode(en_void, ep1, ep2);
 		ep1->SetType(thead->tp);
 		ep1->p[2] = ep3;
-		thead = Symbol::GetPtr(thead->next);
+		thead = thead->nextp;
 	}
 	return (ep1);
 }
@@ -1850,7 +1850,7 @@ int TYP::walignment()
 	case bt_class:
 	case bt_struct:
 	case bt_union:
-		sp = (Symbol *)sp->GetPtr(lst.GetHead());
+		sp = (Symbol *)this->lst.headp;
 		worstAlignment = alignment;
 		if (worstAlignment == 0)
 			worstAlignment = 2;

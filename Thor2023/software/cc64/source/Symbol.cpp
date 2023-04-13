@@ -147,9 +147,9 @@ Symbol *search2(std::string na,TABLE *tbl,TypeArray *typearray)
 	if (tbl == &gsyms[0])
 		thead = compiler.symbolTable[0].GetPtr(hashadd((char*)na.c_str()));
 	else if (tbl == &tagtable)
-		thead = Symbol::GetPtr(tagtable.GetHead());
+		thead = tagtable.headp;
 	else
-		thead = &compiler.symTables[tbl->GetHead() >> 15][tbl->GetHead() & 0x7fff];
+		thead = tbl->headp;
 	while( thead != NULL) {
 		if (thead->name && thead->name->length() != 0) {
 		  /*
@@ -192,13 +192,15 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 	Symbol *sp;
 	Symbol* sp1;
 	Statement *st;
-	Symbol *p, *q;
+	Symbol *p, *q, *f;
 	int n;
 	int nn;
 
 	gSearchCnt = 0;
 	ZeroMemory(gSearchSyms, sizeof(gSearchSyms));
 	dfs.printf("\n<gsearch2> for: |%s|\n", (char *)na.c_str());
+	if (na.compare("_g") == 0)
+		printf("hi");
 	prefix = nullptr;
 	sp = currentSym;
 	if (sp) {
@@ -206,6 +208,12 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 			gSearchCnt = 0;
 			gSearchSyms[0] = p;
 			return (p);
+		}
+		else {
+			if (sp->tp->lst.FindRising(na))
+				p = sp->tp->lst.match[0];
+			if (p)
+				return (p);
 		}
 	}
 	sp = nullptr;
@@ -231,6 +239,14 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 //			dfs.puts("</gsearch2>\n");
 //			return (sp);
 		}
+		if (currentStmt->ssyms.ownerp) {
+			sp = currentStmt->ssyms.ownerp;
+			if (sp->Find(na)) {	// Will search parent tables
+				sp = TABLE::match[TABLE::matchno - 1];
+				ADD_SYMS
+				dfs.printf("Found as an auto var\n");
+			}
+		}
 		st = currentStmt->outer;
 		while (st && gSearchCnt < 100) {
 			dfs.printf("Looking in outer statement table\n");
@@ -243,18 +259,26 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 			}
 			st = st->outer;
 		}
-j1:
+	j1:
+		/*
+		p = nullptr;
+		if (currentFn->sym->fi) {
+			if (currentFn->sym->fi->body)
+				p = currentFn->sym->fi->body->ssyms.headp;
+		}
+		else
+		*/
 		p = currentFn->sym;
 		if (p) {
-      dfs.printf("Looking in function's symbol table\n");
-  		if (currentFn->sym->lsyms.Find(na,rettype,typearray,exact)) {
-  			sp = TABLE::match[TABLE::matchno-1];
-				ADD_SYMS
-				dfs.printf("Found in function symbol table (a label)\n");
-  			//dfs.puts("</gsearch2>\n");
-  			//return (sp);
-  		}
-  		while(p) {
+			while (p) {
+				dfs.printf("Looking in function's symbol table\n");
+  			if (p->lsyms.Find(na,rettype,typearray,exact)) {
+  				sp = TABLE::match[TABLE::matchno-1];
+					ADD_SYMS
+					dfs.printf("Found in function symbol table (a label)\n");
+  				//dfs.puts("</gsearch2>\n");
+  				//return (sp);
+  			}
   			dfs.printf((char *)"Searching method/class:%s|%p\n",(char *)p->name->c_str(),(char *)p);
   			if (p->tp) {
     			if (p->tp->type != bt_class) {
@@ -277,9 +301,9 @@ j1:
 //								dfs.puts("</gsearch2>\n");
 //								return (sp);
 							}
-							q = q->GetPtr(p->parent);
+							q = q->parentp;
 						}
-						q->GetPtr(p->lsyms.head);
+						q = p->lsyms.headp;
 						if (q) {
 							dfs.printf("Looking at childs params %p\n", (char*)&q->fi->params);
 						}
@@ -291,8 +315,8 @@ j1:
 //								dfs.puts("</gsearch2>\n");
 //								return (sp);
 							}
-							q = q->GetNextPtr();
-							if (q == q->GetPtr(p->lsyms.head))
+							q = q->nextp;
+							if (q == p->lsyms.headp)
 								break;
 						}
     		  }
@@ -308,8 +332,8 @@ j1:
 //        			dfs.puts("</gsearch2>\n");
 //    					return (sp);
     				}
-    				dfs.printf("Base=%d",p->tp->lst.base);
-    				tab = p->GetPtr(p->tp->lst.base);
+    				dfs.printf("Base=%p",(char *)p->tp->lst.basep);
+    				tab = p->tp->lst.basep;
     				dfs.printf("Base=%p",(char *)tab);
     				if (tab) {
     				  dfs.puts("Has a base class");
@@ -341,7 +365,10 @@ j1:
     			  }
   			  }
   			}
-  			p = p->GetParentPtr();
+				if (p->nextp)
+					p = p->nextp;
+				else
+	  			p = p->parentp;
   		}
   	}
 		// Finally, look in the global symbol table
@@ -413,8 +440,8 @@ Symbol *Symbol::Copy(Symbol *src)
 			dst->fi = dst->MakeFunction(src->id, false);
 			memcpy(dst->fi, src->fi, sizeof(Function));
 			dst->fi->sym = dst;
-			dst->fi->params.SetOwner(src->id);
-			dst->fi->proto.SetOwner(src->id);
+			dst->fi->params.ownerp = src;// SetOwner(src->id);
+			dst->fi->proto.ownerp = src;// SetOwner(src->id);
 		}
   }
   dfs.printf("Leave Symbol::Copy\n");
@@ -432,12 +459,26 @@ Symbol *Symbol::Find(std::string nme)
 	Symbol* head, * n;
 
 //	printf("Enter Find(char *)\r\n");
-	sp = tp->lst.Find(nme,false);
-	if (sp==nullptr) {
-		if (parent) {
-			sp = parentp->Find(nme);
-		}
+
+	sp = lsyms.Find(nme,false);			// search for a variable
+	if (sp)
+		return (sp);
+	sp = tp->lst.Find(nme, false);	// search for method name
+	if (sp)
+		return (sp);
+	if (stmt) {
+		sp = stmt->ssyms.Find(nme, false);
+		if (sp)
+			return (sp);
 	}
+	if (fi)
+		if (fi->body)
+			sp = fi->body->ssyms.Find(nme, false);
+	if (sp)
+		return (sp);
+
+	if (parentp)										// search parent object
+		sp = parentp->Find(nme);
 	if (sp == nullptr) {
 		for (n = tp->lst.headp; n; n = n->nextp) {
 			if (n->tp->IsUnion()) {
@@ -483,7 +524,7 @@ Symbol *Symbol::FindRisingMatch(bool ignore)
 	std::string nme;
 	TypeArray *ta = nullptr;
 
-	nme = *name;
+	nme = *name;//*GetFullName();// *name;
 	if (fi)
 		ta = fi->GetProtoTypes();
 	dfs.printf((char *)"<FindRisingMatch>%s type %d ", (char *)name->c_str(), tp->type);
@@ -627,6 +668,48 @@ std::string *Symbol::BuildSignature(int opt)
 	return str;
 }
 
+std::string* Symbol::GetFullName()
+{
+	Symbol* s;
+	int n;
+	std::string *nme;
+	static std::string *names[32];
+
+	ZeroMemory(names, sizeof(names));
+	for (n = 0,s = this->parentp; s && n < 32; s = s->parentp) {
+		names[n] = s->mangledName;
+		n++;
+	}
+	nme = new std::string("");
+	for (--n; n >= 0; n--) {
+		nme->append(*names[n]);
+		nme->append("_");
+	}
+	nme->append(*BuildSignature(0));
+	return (nme);
+}
+
+std::string* Symbol::GetFullNameByFunc(std::string nm)
+{
+	Symbol* s;
+	int n;
+	std::string* nme;
+	static std::string* names[32];
+
+	ZeroMemory(names, sizeof(names));
+	s = currentFn->sym;
+	for (n = 0; s && n < 32; s = s->parentp) {
+		names[n] = s->mangledName;
+		n++;
+	}
+	nme = new std::string("");
+	for (--n; n >= 0; n--) {
+		nme->append(*names[n]);
+		nme->append("_");
+	}
+	nme->append(nm);
+	return (nme);
+}
 
 // Called during declaration parsing.
 

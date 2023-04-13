@@ -356,7 +356,7 @@ Statement *Statement::ParseCatch()
 		return snp;
 	}
 	catchdecl = TRUE;
-	ad.Parse(NULL, &snp->ssyms);
+	ad.Parse(nullptr, &snp->ssyms);
 	cseg();
 	catchdecl = FALSE;
 	needpunc(closepa, 34);
@@ -578,7 +578,10 @@ Statement *Statement::ParseCompound()
 	Statement *head, *tail;
 	Statement *p;
 	AutoDeclaration ad;
+	Function* fn;
 
+	fn = currentFn;
+	p = currentStmt;
 	tail = nullptr;
 	snp = MakeStatement(st_compound, FALSE);
 	currentStmt = snp;
@@ -593,7 +596,9 @@ Statement *Statement::ParseCompound()
 		}
 		NextToken();
 	}
-	ad.Parse(NULL, &snp->ssyms);
+	snp->ssyms.ownerp = currentFn->sym;
+	ad.Parse(currentFn->sym, &snp->ssyms);
+	//ad.Parse(nullptr, &snp->ssyms);
 	cseg();
 	// Add the first statement at the head of the list.
 	p = currentStmt;
@@ -632,7 +637,9 @@ Statement *Statement::ParseCompound()
 		else
 		{
 			if (tail) {
-				tail->iexp = ad.Parse(NULL, &snp->ssyms);
+				tail->iexp = ad.Parse(currentFn->sym, &snp->ssyms);
+				//tail->iexp = ad.Parse(nullptr, &snp->ssyms);
+				snp->ssyms.ownerp = currentFn->sym;
 			}
 			tail->next = Statement::Parse();
 			if (tail->next != NULL) {
@@ -644,6 +651,7 @@ Statement *Statement::ParseCompound()
 	currentStmt = p;
 	NextToken();
 	snp->s1 = head;
+	currentFn = fn;
 	return (snp);
 }
 
@@ -737,17 +745,20 @@ j1:
 	switch (lastst) {
 	case semicolon:
 		snp = MakeStatement(st_empty, 1);
+		currentStmt = snp;
 		break;
 	case begin:
 		NextToken();
 		stmtdepth++;
 		snp = ParseCompound();
+		currentStmt = snp;
 		stmtdepth--;
 		return snp;
 	case end:
 		return (snp);
 	case kw_check:
 		snp = ParseCheckStatement();
+		currentStmt = snp;
 		break;
 		/*
 		case kw_prolog:
@@ -783,13 +794,16 @@ j1:
 		SkipSpaces();
 		if (lastch == ':') {
 			snp = ParseLabel(true);
+			currentStmt = snp;
 			goto j1;
 		}
 		// else fall through to parse expression
 	default:
 		snp = ParseExpression();
+		currentStmt = snp;
 		break;
 	}
+	currentStmt = snp;
 	if (snp != NULL) {
 		snp->next = (Statement *)NULL;
 		//snp->casevals = bf;
@@ -878,12 +892,12 @@ void Statement::repcse_compound()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
 	while (sp) {
 		if (sp->initexp) {
 			sp->initexp->repexpr();
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	s1->repcse();
 }
@@ -892,13 +906,13 @@ void Statement::scan_compound()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
 	while (sp) {
 		if (sp->initexp) {
 			opt_const(&sp->initexp);
 			sp->initexp->scanexpr(0);
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	s1->scan();
 }
@@ -1067,7 +1081,7 @@ void Statement::update_compound()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
 	while (sp) {
 		if (sp->initexp) {
 			sp->initexp->update();
@@ -1977,13 +1991,17 @@ void Statement::GenerateCompound()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
+	currentStmt = this;
 	while (sp) {
+		if (sp->fi)
+			;
+		else
 		if (sp->initexp) {
 			initstack();
 			ReleaseTempRegister(cg.GenerateExpression(sp->initexp->p[1], am_all, 8, 0));
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	// Generate statement will process the entire list of statements in
 	// the block.
@@ -1996,13 +2014,16 @@ void Statement::GenerateFuncBody()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
+	currentStmt = this;
 	while (sp) {
-		if (sp->initexp) {
+		if (sp->fi)
+			;
+		else if (sp->initexp) {
 			initstack();
 			ReleaseTempRegister(cg.GenerateExpression(sp->initexp->p[1], am_all, sizeOfWord, 0));
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	// Generate statement will process the entire list of statements in
 	// the block.
@@ -2032,6 +2053,7 @@ void Statement::Generate(int opt)
 			}
 		}*/
 		stmt->GenMixedSource();
+		currentStmt = stmt;
 		switch (stmt->stype)
 		{
 		case st_funcbody:
@@ -2161,7 +2183,7 @@ void Statement::GenerateAsm()
 	if (compiler.ipoll)
 		GenerateZeradic(op_pfi);
 	ll = strlen(buf);
-	thead = firsts = Symbol::GetPtr(currentFn->params.head);
+	thead = firsts = currentFn->params.headp;
 	while (thead) {
 		p = &buf[-1];
 		while (p = strstr(p+1, &thead->name->c_str()[1])) {
@@ -2298,12 +2320,12 @@ void Statement::DumpCompound()
 {
 	Symbol *sp;
 
-	sp = sp->GetPtr(ssyms.GetHead());
+	sp = ssyms.headp;
 	while (sp) {
 		if (sp->initexp) {
 			sp->initexp->Dump();
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	s1->Dump();
 }

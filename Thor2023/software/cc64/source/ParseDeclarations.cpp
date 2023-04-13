@@ -130,7 +130,6 @@ void Declaration::SetType(Symbol *sp)
 	}
 	else {
 		sp->tp = TYP::Make(bt_int,sizeOfInt);
-		sp->tp->lst.head = sp->GetIndex();
 		sp->tp->lst.headp = sp;
 	}
 }
@@ -365,6 +364,18 @@ void Declaration::ParseInt(bool nt)
 //printf("Leave ParseInt\r\n");
 }
 
+void Declaration::ParseInline()
+{
+	ENODE* node;
+
+	NextToken();
+	if (lastst == openpa) {
+		NextToken();
+		inline_threshold = (short)GetIntegerExpression(&node, nullptr, 1).low;
+		needpunc(closepa, 57);
+	}
+}
+
 void Declaration::ParseBit()
 {
 	//printf("Enter ParseInt\r\n");
@@ -377,8 +388,8 @@ void Declaration::ParseBit()
 	head->isIO = isIO;
 	head->isBits = true;
 	NextToken();
-	head->size = 8;
-	bit_max = 64;
+	head->size = 1;
+	bit_max = sizeOfWord;
 }
 
 void Declaration::ParseBool()
@@ -394,7 +405,7 @@ void Declaration::ParseBool()
 	head->isBits = true;
 	NextToken();
 	head->size = 8;
-	bit_max = 64;
+	bit_max = sizeOfWord;
 }
 
 void Declaration::ParseFloat()
@@ -801,8 +812,7 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 				break;
 
 			case kw_inline:
-				isInline = TRUE;
-				NextToken();
+				ParseInline();
 				break;
 
 			case kw_register:
@@ -1015,23 +1025,19 @@ Symbol *Declaration::ParsePrefixId(Symbol* symi)
 		goto lxit;	// no ParseDeclarationSuffix()
 	}
 	goto lxit;
-	//sp->SetName(*declid);
-	if (lastst != closepa)
-		sp = ParseSuffix(sp);
-	else {
-		//NextToken();
-		sp = ParseSuffix(sp);
-	}
-	lxit:
+	sp = ParseSuffix(sp);
+lxit:
 	dfs.puts("</ParsePrefixId>");
 	return (sp);
 }
 
-// ()
+// Dead Code
+/*
 Symbol *Declaration::ParsePrefixOpenpa(bool isUnion, Symbol* symi)
 {
 	TYP *temp1, *temp2, *temp3, *temp4;
 	Symbol *sp;
+	Function* fn;
 
 	dfs.puts("<ParsePrefixOpenpa>\n");
 	NextToken();
@@ -1041,7 +1047,10 @@ Symbol *Declaration::ParsePrefixOpenpa(bool isUnion, Symbol* symi)
 	// Do we have (getchar)()
 	// This processing is difficult to do with a loop, so a recursive
 	// call is made.
-	declare(symi, 0, bt_struct, &sp);
+	fn = currentFn;
+	//declare(symi, TABLE * table, sc_none, 0, bt_struct, &sp, local);
+	declare(symi, 0, bt_struct, &sp, symi->parentp!=nullptr);
+	currentFn = fn;
 //	sp = ParsePrefix(isUnion, symi); 
 //	needpunc(closepa,20);
 	// Head could be NULL still if a type hasn't been found
@@ -1072,6 +1081,7 @@ xit:
 	dfs.puts("</ParsePrefixOpenpa>\n");
 	return (sp);
 }
+*/
 
 Symbol* Declaration::CreateNonameVar()
 {
@@ -1091,7 +1101,7 @@ Symbol* Declaration::CreateNonameVar()
 // There may be only a single identifier in the prefix. This identifier may
 // contain a class spec or namespace spec.
 
-Symbol *Declaration::ParsePrefix(bool isUnion, Symbol* symi)
+Symbol *Declaration::ParsePrefix(bool isUnion, Symbol* symi, bool local)
 {   
 	TYP *temp1, *temp2, *temp3;
 	Symbol *sp, *symo, *sp1;
@@ -1159,7 +1169,7 @@ j1:
 		}
 		if (lastst == semicolon)
 			goto lxit;
-		sp = ParsePrefix(isUnion, symi);
+		sp = ParsePrefix(isUnion, symi, local);
 		if (lastst == closepa || lastst == comma) {
 			head->btp = head->GetIndex();
 			head = TYP::Make(bt_func, sizeOfWord);
@@ -1230,10 +1240,18 @@ j1:
 		funcdecl = 1;
 		level++;
 		pa_level++;
-		if (!IsDeclBegin(lastst) || true)
-			declare(symi, 0, 0, &symo);
+		if (!IsDeclBegin(lastst) || true) {
+			Function* fn = currentFn;
+			TABLE* table;
+			if (fn)
+				table = &currentFn->body->ssyms;
+			else
+				table = &gsyms[0];
+			declare(symi, table, fn ? sc_member : sc_global, 0, 0, &symo, local);
+			currentFn = fn;
+		}
 		else {
-			sp = ParsePrefix(isUnion, symi);
+			sp = ParsePrefix(isUnion, symi, local);
 			symo = sp;
 		}
 		level--;
@@ -1492,7 +1510,7 @@ Function* Declaration::ParseFunctionJ2(Function* sp)
 		if (lastst == begin) {
 			needParseFunction = 2;
 			dfs.printf("Set true1\n");
-			if (sp->params.GetHead() && sp->proto.GetHead()) {
+			if (sp->params.headp && sp->proto.headp) {
 				dfs.printf("Matching parameter types to prototype.\n");
 				if (!sp->ParameterTypesMatch(sp))
 					error(ERR_PARMLIST_MISMATCH);
@@ -1564,7 +1582,6 @@ Function* Declaration::ParseSuffixOpenpa(Function *sp)
 	int isd;
 	int nump = 0;
 	int numa = 0;
-	Function *cf;
 	
 	dfs.printf("<openpa>\n");
 	dfs.printf("****************************\n");
@@ -1816,7 +1833,7 @@ void Declaration::DoDeclarationEnd(Symbol *sp, Symbol *sp1)
 				if (tp1 != nullptr) {
 					// Make an expresison that references the var name as the
 					// argument to the ctor.
-					ep2 = makesnode(en_nacon, sp->name, sp->mangledName, sp->value.i);
+					ep2 = makesnode(en_nacon, sp->fi ? sp->GetFullName() : sp->name, sp->mangledName, sp->value.i);
 					ep1 = makenode(en_fcall, ep1, ep2);
 					//ep1->p[2] = tp1;
 				}
@@ -1860,7 +1877,7 @@ void Declaration::DoInsert(Symbol *sp, TABLE *table)
 		if (sp->tp->type == bt_func || sp->tp->type == bt_ifunc)
 			if (sp->fi)
 				sp->mangledName = sp->BuildSignature(!sp->fi->IsPrototype);
-		if (sp->parent && ((sp->tp->type == bt_func || sp->tp->type == bt_ifunc)
+		if (sp->parentp && ((sp->tp->type == bt_func || sp->tp->type == bt_ifunc)
 			|| (sp->tp->type == bt_pointer && (sp->tp->btpp->type == bt_func || sp->tp->btpp->type == bt_ifunc))))
 		{
 			//insState = 1;
@@ -1868,6 +1885,9 @@ void Declaration::DoInsert(Symbol *sp, TABLE *table)
 		}
 		else {
 			//insState = 2;
+			// Inserts ultimately coming from statement ssyms.
+			if (sp->name->compare("_g") == 0)
+				printf("hi");
 			table->insert(sp);
 		}
 	}
@@ -1878,25 +1898,42 @@ Symbol *Declaration::FindSymbol(Symbol *sp, TABLE *table)
 {
 	Symbol *sp1;
 	Function *fn;
+	TypeArray* ta;
 
 	dfs.printf("<FindSymbol>");
 	sp1 = nullptr;
 	//dfs.printf("Table:%p, sp:%p Fn:%p\r\n", table, sp, currentFn);
-	if (sp->parent) {
+	if (sp) {
 		int nn;
 		// If a function body is being processed we want to look for
 		// symbols by rising through the hierarchy. Otherwise we want a
 		// lower level defined symbol to shadow one at a hight level.
-		if (isFuncBody) {
-			nn = sp->GetParentPtr()->tp->lst.FindRising(*sp->name);
+		if (isFuncBody && sp->parentp) {
+			nn = sp->parentp->tp->lst.FindRising(*sp->name);
 			if (nn)
-				sp1 = sp->FindRisingMatch(false);
+				sp1 = sp->parentp->FindRisingMatch(false);
+			else {
+				nn = sp->parentp->lsyms.Find(*sp->name);
+				if (nn) {
+					sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
+				}
+			}
 		}
 		else {
-			nn = sp->GetParentPtr()->tp->lst.Find(*sp->name);
+			nn = sp->tp->lst.Find(*sp->name);
 			if (nn) {
 				sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
 			}
+			else {
+				nn = sp->lsyms.Find(*sp->name);
+				if (nn)
+					sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
+			}
+		}
+		if (nn == 0) {
+			nn = table->FindRising(*sp->name);
+			if (nn)
+				sp1 = sp->FindRisingMatch(false);
 		}
 	}
 	else {
@@ -1928,13 +1965,16 @@ Symbol *Declaration::FindSymbol(Symbol *sp, TABLE *table)
 	return (sp1);
 }
 
-int Declaration::ParseFunction(TABLE* table, Symbol* sp, e_sc al)
+int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al, bool local)
 {
 	Symbol* sp1;
 	bool flag;
 	bool fn_doneinit = false;
+	Function* ofn;
 
-	sp1 = FindSymbol(sp, table);
+	sp1 = nullptr;
+	if (sp1 == nullptr)
+		sp1 = FindSymbol(sp, table);
 	dfs.printf("k");
 	flag = false;
 	if (sp1) {
@@ -1954,14 +1994,16 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, e_sc al)
 	}
 	dfs.printf("J");
 	if (needParseFunction) {
-		needParseFunction = FALSE;
+		needParseFunction = false;
 		if (sp->fi == nullptr) {
 			sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
 			sp->fi->IsFar = isFar;
 			sp->fi->IsCoroutine = isCoroutine;
+			sp->lsyms.ownerp = parent;
 		}
+		ofn = currentFn;
 		currentFn = sp->fi;
-		fn_doneinit = sp->fi->Parse();
+		fn_doneinit = sp->fi->Parse(local);
 		if (lastst == closepa) {
 			return(0);
 			NextToken();
@@ -2004,8 +2046,10 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, e_sc al)
 			insState = 3;
 		}
 		*/
-		if (sp->tp->type != bt_pointer)
+		if (sp->tp->type != bt_pointer) {
+			currentFn = ofn;
 			return (1);
+		}
 	}
 	/*
 	if (insState == 1 || insState == 2) {
@@ -2090,11 +2134,11 @@ void Declaration::FigureStructOffsets(int64_t bgn, Symbol* sp)
  *      be processed. ztype should be bt_struct for normal and in
  *      structure ParseSpecifierarations and sc_union for in union ParseSpecifierarations.
  */
-int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
+int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int ztype, Symbol** symo, bool local)
 {
 	Symbol* sp;
 	Symbol* sp1;
-	Function* fn;
+	Function* fn, *cf;
 	TYP* dhead, * tp1, * tp2;
 	ENODE* ep1, * ep2;
 	int op;
@@ -2107,10 +2151,10 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 	int itdef;
 	int insState = 0;
 	Symbol* fp;
-	TABLE* table = itable;
-	e_sc al = istorage_class;
+	e_sc al = sc;
 	static int old_nbytes = 0;
 
+	cf = currentFn;
 	decl_level++;
 	if (decl_level == 1)
 		isTypedef = false;
@@ -2133,7 +2177,7 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 		declid = nullptr;
 		dfs.printf("b");
 		bit_width = -1;
-		sp = ParsePrefix(ztype == bt_union, nullptr);
+		sp = ParsePrefix(ztype == bt_union, nullptr, local);
 		if (symo)
 			*symo = sp;
 		if (dhead == nullptr)
@@ -2151,6 +2195,11 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 			tmpstr += *declid;
 			declid = new std::string(tmpstr);
 		}
+
+		if (funcdecl > 0)
+			if (local)
+				sp->fi->Islocal = local;
+
 		// If a function declaration is taking place and just the type is
 		// specified without a parameter name, assign an internal compiler
 		// generated name.
@@ -2191,8 +2240,6 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 			isRegister = false;
 			sp->IsAuto = isAuto;
 			sp->IsParameter = parsingParameterList > 0;
-			if (sp->parent <= 0)// was nullptr
-				sp->parent = parent->GetIndex();
 			if (sp->parentp == nullptr)
 				sp->parentp = parent;
 			if (al == sc_member)
@@ -2242,13 +2289,20 @@ int Declaration::declare(Symbol* parent, int ilc, int ztype, Symbol** symo)
 //			if (sp->name->length() > 0) {
 			if (sp->storage_class == sc_member)
 				table->insert(sp);
-			else
-				if (ParseFunction(table, sp, al)) {
+			else {
+				if (ParseFunction(table, sp, parent, al, local)) {
+					if (local)
+						table->insert(sp);// ownerp->lsyms.insert(sp);
 					sp->storage_endpos = ofs.tellp();
 					decl_level--;
+					currentFn = cf;
 					return (nbytes);
 				}
+			}
 			//			}
+		}
+		if (sp->parentp == nullptr) {
+			sp->parentp = parent;
 		}
 		if (funcdecl > 0) {
 			if (lastst == closepa) {
@@ -2324,15 +2378,24 @@ xit1:
 	}
 	dfs.printf("</declare>\n");
 	decl_level--;
+	currentFn = cf;
 	return (nbytes);
 }
 
-int Declaration::declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo)
+/* Dead code
+int Declaration::declare(Symbol *parent,TABLE *table,e_sc al,int ilc,int ztype, Symbol** symo, bool local)
 { 
+	TABLE* temp;
+	int i;
+
+	temp = itable;
 	itable = table;
 	istorage_class = al;
-	return (declare(parent, ilc, ztype, symo));
+	i = declare(parent, table, ilc, ztype, symo, local);
+	//itable = temp;
+	return (i);
 }
+*/
 
 void Declaration::ParseCoroutine()
 {
@@ -2386,8 +2449,7 @@ void GlobalDeclaration::Parse()
 			isPascal = FALSE;
 			break;
 		case kw_inline:
-		  NextToken();
-		  isInline = true;
+			ParseInline();
 		  break;
 		case kw_far:
 			NextToken();
@@ -2399,10 +2461,15 @@ void GlobalDeclaration::Parse()
 			continue;
 
 		case id:
-			lc_static += declare(NULL, &gsyms[0], sc_global, lc_static, bt_struct, &symo);
-			isInline = false;
+			lc_static += declare(NULL, &gsyms[0], sc_global, lc_static, bt_struct, &symo, false);
+			if (symo->fi) {
+				symo->fi->inline_threshold = inline_threshold;
+				symo->fi->IsInline = inline_threshold > 0;
+			}
+			inline_threshold = compiler.autoInline;
 			isCoroutine = false;
 			break;
+
 		case ellipsis:
 		case kw_kernel:
 		case kw_interrupt:
@@ -2421,30 +2488,46 @@ void GlobalDeclaration::Parse()
 				case kw_enum: case kw_void: case kw_bit: case kw_bool:
 				case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
-                lc_static += declare(NULL,&gsyms[0],sc_global,lc_static,bt_struct, &symo);
-				isInline = false;
+			lc_static += declare(NULL, &gsyms[0], sc_global, lc_static, bt_struct, &symo, false);
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+				}
+				inline_threshold = compiler.autoInline;
 				isCoroutine = false;
 				break;
         case kw_thread:
 				NextToken();
-                lc_thread += declare(NULL,&gsyms[0],sc_thread,lc_thread,bt_struct, &symo);
-				isInline = false;
+        lc_thread += declare(NULL,&gsyms[0],sc_thread,lc_thread,bt_struct, &symo, false);
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+				}
+				inline_threshold = compiler.autoInline;
 				isCoroutine = false;
 				break;
 		case kw_register:
 			NextToken();
       error(ERR_ILLCLASS);
-      lc_static += declare(NULL,&gsyms[0],sc_global,lc_static,bt_struct, &symo);
-			isInline = false;
+      lc_static += declare(NULL,&gsyms[0],sc_global,lc_static,bt_struct, &symo, false);
+			if (symo->fi) {
+				symo->fi->inline_threshold = inline_threshold;
+				symo->fi->IsInline = inline_threshold > 0;
+			}
+			inline_threshold = compiler.autoInline;
 			isCoroutine = false;
 			break;
 		case kw_private:
-        case kw_static:
-                NextToken();
-				lc_static += declare(NULL,&gsyms[0],sc_static,lc_static,bt_struct, &symo);
-				isInline = false;
-				isCoroutine = false;
-				break;
+    case kw_static:
+      NextToken();
+			lc_static += declare(NULL,&gsyms[0],sc_static,lc_static,bt_struct, &symo, false);
+			if (symo->fi) {
+				symo->fi->inline_threshold = inline_threshold;
+				symo->fi->IsInline = inline_threshold > 0;
+			}
+			inline_threshold = compiler.autoInline;
+			isCoroutine = false;
+			break;
     case kw_extern:
 j1:
         NextToken();
@@ -2471,8 +2554,12 @@ j1:
 				else if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst==kw_nocall || lastst==kw_naked)
 					NextToken();
           ++global_flag;
-          declare(NULL,&gsyms[0],sc_external,0,bt_struct, &symo);
-          isInline = false;
+          declare(NULL,&gsyms[0],sc_external,0,bt_struct, &symo, false);
+					if (symo->fi) {
+						symo->fi->inline_threshold = inline_threshold;
+						symo->fi->IsInline = inline_threshold > 0;
+					}
+					inline_threshold = compiler.autoInline;
 					isCoroutine = false;
 					--global_flag;
           break;
@@ -2539,16 +2626,21 @@ xit:
 
 ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 {
-	Symbol *sp;
+	Symbol *sp, *symo;
 	ENODE* ep1;
 	int nn;
+	bool isLocal = true;
+	static short depth = 0;
 
 //	printf("Enter ParseAutoDecls\r\n");
-    for(;;) {
+  for(;;) {
 		funcdecl = 0;
 		isFuncPtr = false;
 		worstAlignment = 0;
 		switch(lastst) {
+		case kw_inline:
+			ParseInline();
+			break;
 		case kw_cdecl:
     case kw_kernel:
 		case kw_interrupt:
@@ -2559,7 +2651,16 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 		case kw_pascal:
 		case kw_typedef:
       error(ERR_ILLCLASS);
-	    lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,nullptr);
+			depth++;
+	    lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal);
+			depth--;
+			if (symo) symo->depth = depth;
+			if (symo->fi) {
+				symo->fi->inline_threshold = inline_threshold;
+				symo->fi->IsInline = inline_threshold > 0;
+				symo->fi->depth = depth;
+			}
+			inline_threshold = compiler.autoInline;
 			break;
 		case ellipsis:
 		case id: //return;
@@ -2583,8 +2684,17 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 				  dfs.printf("sp okay sc=%d\n", sp->storage_class);
 					if (sp->storage_class==sc_typedef || sp->storage_class==sc_type) {
 					  dfs.printf("Declaring var of type\n");
-			            lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,nullptr);
-						break;
+						depth++;
+			            lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal);
+									depth--;
+									if (symo) symo->depth = depth;
+									if (symo->fi) {
+										symo->fi->inline_threshold = inline_threshold;
+										symo->fi->IsInline = inline_threshold > 0;
+										symo->fi->depth = depth;
+									}
+									inline_threshold = compiler.autoInline;
+									break;
 					}
 				}
 				goto xit;
@@ -2599,23 +2709,58 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
         case kw_enum: case kw_void:
 				case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
-            lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,nullptr);
-            break;
+			depth++;
+            lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal);
+						depth--;
+						if (symo) symo->depth = depth;
+						if (symo->fi) {
+							symo->fi->inline_threshold = inline_threshold;
+							symo->fi->IsInline = inline_threshold > 0;
+							symo->fi->depth = depth;
+						}
+						inline_threshold = compiler.autoInline;
+						break;
         case kw_thread:
                 NextToken();
-				lc_thread += declare(parent,ssyms,sc_thread,lc_thread,bt_struct,nullptr);
+								depth++;
+				lc_thread += declare(parent,ssyms,sc_thread,lc_thread,bt_struct,&symo,isLocal);
+				depth--;
+				if (symo) symo->depth = depth;
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->depth = depth;
+				}
+				inline_threshold = compiler.autoInline;
 				break;
         case kw_static:
                 NextToken();
-				lc_static += declare(parent,ssyms,sc_static,lc_static,bt_struct,nullptr);
+								depth++;
+				lc_static += declare(parent,ssyms,sc_static,lc_static,bt_struct,&symo,isLocal);
+				depth--;
+				if (symo) symo->depth = depth;
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+				}
+				inline_threshold = compiler.autoInline;
 				break;
         case kw_extern:
                 NextToken();
 				if (lastst==kw_oscall || lastst==kw_interrupt || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel)
 					NextToken();
                 ++global_flag;
-                declare(NULL,&gsyms[0],sc_external,0,bt_struct,nullptr);
-                --global_flag;
+								depth++;
+                declare(nullptr,&gsyms[0],sc_external,0,bt_struct,&symo,isLocal);
+								depth--;
+								if (symo) symo->depth = depth;
+								if (symo->fi) {
+									symo->fi->inline_threshold = inline_threshold;
+									symo->fi->IsInline = inline_threshold > 0;
+									symo->fi->depth = depth;
+								}
+								inline_threshold = compiler.autoInline;
+								--global_flag;
                 break;
         default:
                 goto xit;
@@ -2624,7 +2769,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 xit:
 	;
 	ep1 = nullptr;
-	for (sp = Symbol::GetPtr(ssyms->GetHead()); sp; sp = sp->GetNextPtr()) {
+	for (sp = ssyms->headp; sp; sp = sp->nextp) {
 		if (sp->initexp) 
 			ep1 = makenode(en_void, ep1, sp->initexp);
 	}
@@ -2687,7 +2832,7 @@ j1:
 		case kw_typedef:
 dfs.printf("B");
       error(ERR_ILLCLASS);
-      declare(NULL,throw_away ? &scrap_table : &currentFn->params,sc_auto,0,bt_struct,nullptr);
+      declare(NULL,throw_away ? &scrap_table : &currentFn->params,sc_auto,0,bt_struct,nullptr,false);
 			number++;
 			isAuto = false;
 			break;
@@ -2695,7 +2840,6 @@ dfs.printf("B");
 		case ellipsis:
 			fellip = true;
 		case kw_const:
-		case kw_inline:
 		case kw_volatile:
         case kw_exception:
 		case kw_int8: case kw_int16: case kw_int32: case kw_int64: case kw_int40: case kw_int80:
@@ -2705,27 +2849,35 @@ dfs.printf("B");
 		case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
 dfs.printf("C");
-			declare(NULL, throw_away ? &scrap_table : &currentFn->params,sc_auto,0,bt_struct,nullptr);
+			declare(NULL, throw_away ? &scrap_table : &currentFn->params,sc_auto,0,bt_struct,nullptr,false);
 			number++;
 			if (fellip)
 				ellip = number;
 			isAuto = false;
 	    break;
+		case kw_inline:
+			ParseInline();
+			declare(NULL, throw_away ? &scrap_table : &currentFn->params, sc_auto, 0, bt_struct, nullptr, false);
+			number++;
+			if (fellip)
+				ellip = number;
+			isAuto = false;
+			break;
 		case id:
-			declare(NULL, throw_away ? &scrap_table : &currentFn->params, sc_auto, 0, bt_struct,nullptr);
+			declare(NULL, throw_away ? &scrap_table : &currentFn->params, sc_auto, 0, bt_struct,nullptr, false);
 			number++;
 			isAuto = false;
 			break;
 		case kw_thread:
       NextToken();
       error(ERR_ILLCLASS);
-			lc_thread += declare(NULL,throw_away ? &scrap_table : &gsyms[0],sc_thread,lc_thread,bt_struct,nullptr);
+			lc_thread += declare(NULL,throw_away ? &scrap_table : &gsyms[0],sc_thread,lc_thread,bt_struct,nullptr, false);
 			isAuto = false;
 			break;
     case kw_static:
       NextToken();
       error(ERR_ILLCLASS);
-			lc_static += declare(NULL, throw_away ? &scrap_table : &gsyms[0],sc_static,lc_static,bt_struct,nullptr);
+			lc_static += declare(NULL, throw_away ? &scrap_table : &gsyms[0],sc_static,lc_static,bt_struct,nullptr, false);
 			isAuto = false;
 			break;
 		// A list of externals could be following a function prototype. This
@@ -2739,7 +2891,7 @@ dfs.printf("D");
 				if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel)
 					NextToken();
                 ++global_flag;
-                declare(NULL, throw_away ? &scrap_table : &gsyms[0],sc_external,0,bt_struct,nullptr);
+                declare(NULL, throw_away ? &scrap_table : &gsyms[0],sc_external,0,bt_struct,nullptr,false);
 				isAuto = false;
                 --global_flag;
                 break;

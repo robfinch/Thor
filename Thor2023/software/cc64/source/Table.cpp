@@ -38,10 +38,10 @@ int TABLE::matchno;
 
 TABLE::TABLE()
 {
-  base = 0;
-  head = 0;
-  tail = 0;
-  owner = 0;
+  basep = nullptr;
+  headp = nullptr;
+  tailp = nullptr;
+  ownerp = nullptr;
 }
 
 // Used when deriving classes from base clasases.
@@ -56,7 +56,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 	dfs.puts("<CopySymbolTable>\n");
 	if (src) {
 	  dfs.printf("A");
-		first = sp = sp->GetPtr(src->GetHead());
+		first = sp = src->headp;
 		while (sp) {
   	  dfs.printf("B");
 			newsym = Symbol::Copy(sp);
@@ -68,7 +68,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 				CopySymbolTable(&newsym->tp->lst, &sp->tp->lst);
 			}
   	  dfs.printf("D");
-			next = sp->GetNextPtr();
+			next = sp->nextp;
 			if (next == first)
 				break;
 			sp = next;
@@ -89,8 +89,8 @@ void TABLE::insert(Symbol *sp)
 	TypeArray *ta = nullptr;
 	if (sp->fi)
 		ta = sp->fi->GetProtoTypes();
-	TABLE *tab = this;
-	int s1,s2,s3;
+	int s1;
+	TABLE* tab = this;
 	std::string nm;
 	Symbol *sp1;
 	Symbol* sp2;
@@ -106,21 +106,18 @@ void TABLE::insert(Symbol *sp)
   }
   else
     dfs.printf((char *)"Insert %s into %p", (char *)sp->name->c_str(), (char *)this);
-		sp2 = Symbol::GetPtr(owner);
-		if (sp2 != nullptr)
-			if (sp2->name != nullptr)
-				dfs.printf("(%s)\n",owner ? (char *)Symbol::GetPtr(owner)->name->c_str(): (char *)"");
+	sp2 = ownerp;
+	if (sp2 != nullptr)
+		if (sp2->name != nullptr)
+			dfs.printf("(%s)\n",ownerp ? (char *)ownerp->name->c_str(): (char *)"");
 //  sig = sp->BuildSignature();
 	if (tab==&gsyms[0]) {
 	  dfs.printf("Insert into global table\n");
 		s1 = hashadd((char *)sp->name->c_str());
-		//s2 = hashadd((char *)sp->name2->c_str());
-		//s3 = hashadd((char *)sp->name3->c_str());
-//		tab = &gsyms[(s1&s2)|(s1&s3)|(s2&s3)];
 		tab = &gsyms[s1];
 	}
 
-  nm = *sp->name;
+	nm = *sp->name;// name;
   // The symbol may not have a type if it's just a label. Find doens't
   // look at the return type parameter anyway, so we just set it to bt_long
   // if tp isn't set.
@@ -129,19 +126,14 @@ void TABLE::insert(Symbol *sp)
 	else
 		nn = 0;
 	if(nn == 0) {
-    if( tab->head == 0) {
-      tab->SetHead(sp->GetIndex());
-			tab->SetTail(sp->GetIndex());
+    if(tab->headp == nullptr) {
 			tab->headp = sp;
 			tab->tailp = sp;
 		}
     else {
-      sp->GetPtr(tab->tail)->next = sp->GetIndex();
 			tab->tailp->nextp = sp;
-      tab->SetTail(sp->GetIndex());
 			tab->tailp = sp;
     }
-    sp->SetNext(0);
 		sp->nextp = nullptr;
     dfs.printf("At insert:\n");
     sp->fi->GetProtoTypes()->Print();
@@ -212,11 +204,6 @@ int TABLE::Find(std::string na,__int16 rettype, TypeArray *typearray, bool exact
 		if (thead->name) {	// ???
     name = *thead->name;
 		s1 = thead->name->compare(na);
-		//s2 = thead->name2->compare(na);
-		//s3 = thead->name3->compare(na);
-//		dfs.printf("s1:%d ",s1);
-//		dfs.printf("s2:%d ",s2);
-//		dfs.printf("s3:%d\n",s3);
 		if (s1==0) { //((s1&s2)|(s1&s3)|(s2&s3))==0) {
 		  dfs.printf(":Match");
 			match[matchno] = thead;
@@ -302,10 +289,9 @@ int TABLE::FindRising(std::string na)
 	nn = min(100,ndx+TABLE::matchno);
 	memcpy(&mt[0],TABLE::match,nn*sizeof(Symbol *));
 	ndx += nn;
-	bse = base;
 	bsep = basep;
 	while (bsep) {
-		sym = bsep;// SYM::GetPtr(bse);
+		sym = bsep;
 	  dfs.printf("Searching class:%s \n",(char *)sym->name->c_str());
 		sp = sym->tp->lst.Find(na);
   	nn = min(100,ndx+TABLE::matchno);
@@ -350,7 +336,7 @@ Symbol* TABLE::Find(std::string na, bool opt, e_bt bt)
 {
 	Symbol* sp;
 
-	for (sp = Symbol::GetPtr(head); sp; sp = sp->GetNextPtr()) {
+	for (sp = headp; sp; sp = sp->nextp) {
 		if (sp->name->compare(na) == 0) {
 			if (sp->tp) {
 				if (sp->tp->type == bt)
@@ -368,7 +354,7 @@ Symbol** TABLE::GetParameters()
 	Symbol* thead, * first;
 
 	ZeroMemory(&params, sizeof(params));
-	thead = Symbol::GetPtr(head);
+	thead = headp;
 	first = thead;
 	while (thead != nullptr) {
 		if (thead->IsParameter) {
@@ -389,7 +375,7 @@ void TABLE::AddTo(TABLE* dst)
 {
 	Symbol* thead, * first, *next;
 
-	thead = Symbol::GetPtr(head);
+	thead = headp;
 	first = thead;
 	while (thead != nullptr) {
 		next = thead->GetNextPtr();

@@ -310,9 +310,9 @@ void StructDeclaration::ParseMembers(Symbol *sym, int ztype)
 		priv = isPrivate;
 		isPrivate = false;    
 		if(ztype == bt_struct || ztype==bt_class)
-			slc += declare(sym,&(sym->tp->lst),sc_member,slc,ztype,&sp);
+			slc += declare(sym,&(sym->tp->lst),sc_member,slc,ztype,&sp,false);
 		else // union
-			slc = imax(slc,declare(sym,&(sym->tp->lst),sc_member,0,ztype,&sp));
+			slc = imax(slc,declare(sym,&(sym->tp->lst),sc_member,0,ztype,&sp,false));
 		isPrivate = priv;
 	}
 	bit_offset = 0;

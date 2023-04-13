@@ -807,7 +807,7 @@ ENODE* Expression::ParseSizeof(Symbol* symi)
 		tp = head;
 		tp1 = tail;
 		decl.ParseSpecifier(0, &sp, sc_none);
-		decl.ParsePrefix(FALSE, nullptr);
+		decl.ParsePrefix(FALSE, nullptr, false);
 		if (decl.head != NULL)
 			ep1 = makeinode(en_icon, decl.head->size);
 		else {
@@ -860,7 +860,7 @@ ENODE* Expression::ParseTypenum()
 	tp = head;
 	tp1 = tail;
 	decl.ParseSpecifier(0, &sp, sc_none);
-	decl.ParsePrefix(FALSE, nullptr);
+	decl.ParsePrefix(FALSE, nullptr, false);
 	if (head != NULL)
 		ep1 = makeinode(en_icon, head->GetHash());
 	else {
@@ -894,7 +894,7 @@ ENODE* Expression::ParseNew(bool autonew, Symbol* symi)
 		tp = head;
 		tp1 = tail;
 		decl.ParseSpecifier(0, &sp, sc_none);
-		decl.ParsePrefix(FALSE, nullptr);
+		decl.ParsePrefix(FALSE, nullptr, false);
 		if (head != NULL)
 			ep1 = makeinode(en_icon, head->size + 64);
 		else {
@@ -1147,16 +1147,16 @@ Symbol* Expression::FindMember(TABLE* tbl, char* name)
 		return (nullptr);
 	}
 j1:
-	first = sp = Symbol::GetPtr(tbl->head);
+	first = sp = tbl->headp;
 	do {
 		if (sp == nullptr)
 			break;
 		if (sp->name->compare(name) == 0) {
 			return (sp);
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	} while (sp != first);
-	first = sp = Symbol::GetPtr(tbl->head);
+	first = sp = tbl->headp;
 	do {
 		if (sp == nullptr)
 			break;
@@ -1164,7 +1164,7 @@ j1:
 		mbr = FindMember(&tp->lst, name);
 		if (mbr)
 			return (mbr);
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	} while (sp != first);
 	return (nullptr);
 }
@@ -1190,16 +1190,16 @@ Symbol* Expression::FindMember(TYP* tp1, char *name)
 		return (nullptr);
 	}
 j1:
-	first = sp = Symbol::GetPtr(tp1->lst.head);
+	first = sp = tp1->lst.headp;
 	do {
 		if (sp == nullptr)
 			break;
 		if (sp->name->compare(name) == 0) {
 			return (sp);
 		}
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	} while (sp != first);
-	first = sp = Symbol::GetPtr(tp1->lst.head);
+	first = sp = tp1->lst.headp;
 	do {
 		if (sp == nullptr)
 			break;
@@ -1207,17 +1207,17 @@ j1:
 		mbr = FindMember(tp, name);
 		if (mbr)
 			return (mbr);
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	} while (sp != first);
 	mbr = FindMember(&tagtable, name);
 	return (mbr);
 }
 
 
-ENODE* Expression::ParseDotOperator(TYP* tp1, ENODE *ep1, Symbol* symi, ENODE* parent)
+ENODE* Expression::ParseDotOperator(TYP* tp1, ENODE *ep1, Symbol* symi)
 {
 	TypeArray typearray;
-	ENODE* ep2, * ep3, * qnode, *n1;
+	ENODE* ep2, * ep3, * qnode, *n1, *parent;
 	TYP* ptp1, * ptp2;
 	Symbol* sp, *psp;
 	char* name;
@@ -1227,6 +1227,7 @@ ENODE* Expression::ParseDotOperator(TYP* tp1, ENODE *ep1, Symbol* symi, ENODE* p
 	bool skip_id = false;
 
 	ExpressionHasReference = true;
+	parent = ep1;
 	NextToken();       /* past -> or . */
 	if (tp1 == nullptr) {
 		error(ERR_UNDEFINED);
@@ -1430,9 +1431,11 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi)
 	TypeArray typearray;
 	ENODE* ep2, * ep3, * ep4;
 	TYP* tp2, * tp3;
-	Symbol* sp;
+	Symbol* sp, *sy;
 	char* name;
+	std::string nme;
 
+	NextToken();
 	if (tp1 == NULL) {
 		error(ERR_UNDEFINED);
 		goto xit;
@@ -1693,7 +1696,7 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	*/
 	{
 		if (cf && qnode->i==elesize && 
-			(elesize==1 || elesize==2 || elesize==4 || elesize==8 || elesize==3 ||elesize==5 || elesize==12)) {
+			(elesize==1 || elesize==2 || elesize==4 || elesize==8 || elesize==16)) {
 			qnode = rnode;
 			qnode->scale = sz1;
 		}

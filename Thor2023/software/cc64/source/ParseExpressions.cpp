@@ -366,16 +366,22 @@ void Expression::SetRefType(ENODE** node)
 
 void Expression::DerefBit(ENODE** node, TYP* tp)
 {
-	ENODE* pnode;
+	ENODE* pnode, *qnode;
 	*node = makenode(en_fieldref, *node, (ENODE*)NULL);
 	if (tp->isUnsigned)
 		(*node)->isUnsigned = true;
 	(*node)->esize = tp->size;
 	(*node)->etype = (enum e_bt)tp->type;
-	tp = &stdbit;//&stduint;
-	pnode = makenode(en_sub, tp->bit_width, makeinode(en_icon, 1));
+	//tp = &stdbit;//&stduint;
+	qnode = tp->bit_width;
+	if (qnode == nullptr)
+		;// qnode = makeinode(en_icon, 1);
+	pnode = makenode(en_sub, qnode, makeinode(en_icon, 1));
 	(*node)->bit_width = pnode;
-	(*node)->bit_offset = tp->bit_offset;
+	qnode = tp->bit_offset;
+	if (qnode == nullptr)
+		;// qnode = makeinode(en_icon, 0);
+	(*node)->bit_offset = qnode;
 }
 
 void Expression::DerefByte(ENODE** node, TYP* tp)
@@ -971,13 +977,20 @@ TYP *Expression::nameref(ENODE **node,int nt, Symbol* symi)
 {
 	TYP *tp;
 	std::string str;
+	std::string nme;
 	Symbol* sp;
 	int nn;
+	bool found = false;
 
 	dfs.puts("<Nameref>");
 	dfs.printf("GSearchfor:%s|",lastid);
 	// Search locally first
+	nme = lastid;// *Symbol::GetFullNameByFunc(lastid);
 	sp = gsearch2(lastid, (__int16)bt_int, nullptr, false);
+	if (sp == nullptr)
+		sp = gsearch2(nme, (__int16)bt_int, nullptr, false);
+	else
+		found = true;
 	if (TABLE::matchno == 0) {
 		str = GetNamespace();
 		str = "";
@@ -999,7 +1012,10 @@ TYP *Expression::nameref(ENODE **node,int nt, Symbol* symi)
 				}
 			}
 		}
-		tp = nameref2(lastid, node, nt, true, nullptr, nullptr, symi);
+		if (found)
+			tp = nameref2(lastid, node, nt, true, nullptr, nullptr, symi);
+		else
+			tp = nameref2(nme, node, nt, true, nullptr, nullptr, symi);
 	}
 
 	dfs.puts("</Nameref>\n");
@@ -1375,8 +1391,7 @@ j1:
 		cnt = 0;
 		pnode = AdjustForBitArray(pop, tptr, pnode);
 		tptr = nameref(&pnode, 0, symi);
-		pnode = ParseDotOperator(symi ? symi->tp : &stdint, pnode, symi, nullptr);
-		//ep1->sym->parent = ep2->sym->GetIndex();
+		pnode = ParseDotOperator(symi ? symi->tp : &stdint, pnode, symi);
 		pnode->constflag = true;
 		tptr = pnode->tp;
 		break;
@@ -1578,6 +1593,20 @@ void Expression::ApplyVMask(ENODE *node, ENODE *mask)
 	return;
 }
 
+// Find the last multiply node in the expression tree.
+
+ENODE* Expression::FindLastMulu(ENODE* ep)
+{
+	List* lst, * plst;
+
+	plst = nullptr;
+	for (lst = sortedList(nullptr, ep); lst; lst = lst->nxt)
+		if (lst->node->nodetype == en_mulu)
+			plst = lst;
+	return (plst ? plst->node : nullptr);
+}
+
+/* Dead code
 static ENODE* last_mulu = nullptr;
 
 ENODE* Expression::FindLastMulu(ENODE* ep, ENODE *pep)
@@ -1606,6 +1635,7 @@ ENODE* Expression::FindLastMulu(ENODE* ep, ENODE *pep)
 		return (ep);
 	return (nullptr);
 }
+*/
 
 ENODE* Expression::AdjustForBitArray(int pop, TYP*tp1, ENODE* ep1)
 {
@@ -1615,14 +1645,13 @@ ENODE* Expression::AdjustForBitArray(int pop, TYP*tp1, ENODE* ep1)
 	if (pop == openbr) {
 		if (tp1->type == bt_pointer) {
 			if (tp1->btpp->type == bt_bit) {
-				FindLastMulu(ep1, nullptr);
-				mep = last_mulu;
+				mep = FindLastMulu(ep1);
 				if (mep) {
 					if (mep->p[1] && mep->p[1]->nodetype == en_mulu) {
-						mep->p[1] = makenode(en_bitoffset, mep->p[1], makeinode(en_icon, 6));
+						mep->p[1] = makenode(en_bitoffset, mep->p[1], makeinode(en_icon, 7));
 					}
 					else {
-						mep->p[0] = makenode(en_bitoffset, mep->p[0], makeinode(en_icon, 6));
+						mep->p[0] = makenode(en_bitoffset, mep->p[0], makeinode(en_icon, 7));
 					}
 				}
 			}
@@ -1650,26 +1679,23 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 	bool classdet = false;
 	bool wasBr = false;
 
-  ep1 = (ENODE* )nullptr;
-	tp1 = (TYP* ) nullptr;
   Enter("<ParsePostfix>");
-  *node = (ENODE *)NULL;
+	ep1 = nullptr;
+	tp1 = nullptr;
+	*node = nullptr;
 	tp1 = ParsePrimaryExpression(&ep1, got_pa, symi);
-	if (ep1 == NULL) {
-			//		ep1 = makeinode(en_icon, 0);
-			//		goto j1;
-			//	   printf("DIAG: ParsePostFix: ep1 is NULL\r\n");
-			if (symi) {
-				ep1 = MakeNameNode(symi);
-				ep1->sym = symi;
-				tp1 = symi->tp;
-			}
+	if (ep1 == nullptr) {
+		if (symi) {
+			ep1 = MakeNameNode(symi);
+			ep1->sym = symi;
+			tp1 = symi->tp;
 		}
-		if (tp1 == NULL) {
-			*node = ep1;
-			Leave("</ParsePostfix>", 0);
-			return ((TYP*)NULL);
-		}
+	}
+	if (tp1 == NULL) {
+		*node = ep1;
+		Leave("</ParsePostfix>", 0);
+		return (nullptr);
+	}
 	pep1 = nullptr;
 	cnt = 0;
 	// Note that tp1, ep1 is passed to items in this list as they build on
@@ -1689,7 +1715,6 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			cnt = 0;
 			wasBr = false;
 			ep1 = AdjustForBitArray(pop, tp1, ep1);
-			NextToken();
 			ep1 = ParseOpenpa(tp1, ep1, symi);
 			tp1 = ep1->tp;
 			break;
@@ -1699,11 +1724,8 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			wasBr = false;
 			ep1 = AdjustForBitArray(pop, tp1, ep1);
 			ep1 = ParsePointsTo(tp1, ep1);
-			ep2 = ep1;
+			ep1 = ParseDotOperator(ep1->tp, ep1, symi);
 			tp1 = ep1->tp;
-			ep1 = ParseDotOperator(tp1, ep1, symi, ep2);
-			tp1 = ep1->tp;
-			//ep1->sym->parent = ep2->sym->GetIndex();
 			ep1->constflag = true;
 			break;
 
@@ -1711,9 +1733,7 @@ TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 			cnt = 0;
 			wasBr = false;
 			ep1 = AdjustForBitArray(pop, tp1, ep1);
-			ep2 = ep1;
-			ep1 = ParseDotOperator(tp1, ep1, symi, ep2);
-			//ep1->sym->parent = ep2->sym->GetIndex();
+			ep1 = ParseDotOperator(tp1, ep1, symi);
 			ep1->constflag = true;
 			tp1 = ep1->tp;
 			break;
@@ -1744,8 +1764,6 @@ j1:
 	if (wasBr)
 		ep1 = AdjustForBitArray(openbr, firstType, ep1);
 	*node = ep1;
-//	if (ep1)
-//		tp1 = ep1->tp;
 	if (tp1)
 	Leave("</ParsePostfix>", tp1->type);
 	else
@@ -1945,7 +1963,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 			decl.itable = nullptr;
 			decl.istorage_class = sc_member;
 			decl.ParseSpecifier(0, &sp, sc_none); // do cast declaration
-			decl.ParsePrefix(FALSE, nullptr);
+			decl.ParsePrefix(FALSE, nullptr,false);
 			tp = decl.head;
 			tp1 = decl.tail;
 			needpunc(closepa, 5);

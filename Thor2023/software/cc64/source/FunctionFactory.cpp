@@ -12,14 +12,17 @@ Function* FunctionFactory::MakeFunction(int symnum, Symbol* sp, bool isPascal)
 			sym->sym = sp;
 			sym->IsPascal = isPascal;
 			sym->IsCoroutine = false;
+			sym->Islocal = false;
 			sym->alloced = true;
 			sym->valid = TRUE;
 			sym->NumParms = 0;	// was -1
 			sym->numa = 0;	// was -1
-			sym->params.SetOwner(symnum);
-			sym->proto.SetOwner(symnum);
+			sym->params.ownerp = sp->parentp;// .SetOwner(symnum);
+			sym->proto.ownerp = sp->parentp;// .SetOwner(symnum);
 			sym->UsesTemps = true;
 			sym->UsesStackParms = true;
+			sym->inline_threshold = compiler.autoInline;
+			sym->number = compiler.funcnum;
 			compiler.funcnum++;
 			if (compiler.funcnum > 2999)
 				compiler.funcnum = 0;

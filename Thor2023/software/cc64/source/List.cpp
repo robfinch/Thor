@@ -228,18 +228,18 @@ void ListTable(TABLE *t, int i)
 	if (t==&gsyms[0]) {
 		for (nn = 0; nn < 257; nn++) {
 			t = &gsyms[nn];
-			sp = Symbol::GetPtr(t->GetHead());
+			sp = t->headp;
 			while(sp != NULL) {
 				list_var(sp,i);
-				sp = sp->GetNextPtr();
+				sp = sp->nextp;
       }
 		}
 	}
 	else {
-		sp = Symbol::GetPtr(t->GetHead());
+		sp = t->headp;
 		while(sp != NULL) {
 			list_var(sp,i);
-			sp = sp->GetNextPtr();
+			sp = sp->nextp;
     }
 	}
 }

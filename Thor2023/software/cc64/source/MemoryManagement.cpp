@@ -190,7 +190,7 @@ Symbol* Symbol::alloc()
   sym->id = compiler.symnum;
   sym->name = new std::string("");
   sym->shortname = new std::string("");
-  sym->lsyms.SetOwner(compiler.symnum);
+  sym->lsyms.ownerp = sym;// SetOwner(compiler.symnum);
   compiler.symnum++;
   return (sym);
 }

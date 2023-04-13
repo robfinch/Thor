@@ -38,30 +38,27 @@ Function::Function()
 	NumFixedAutoParms = 0;
 }
 
-Statement *Function::ParseBody()
+void Function::GenerateName(bool force)
 {
 	std::string lbl;
-	char *p;
-	OCODE *ip, *ip2;
-	int oc;
-	int label, lab1;
-	char cc = '#';
-
-	dfs.printf("<Parse function body>:%s|\n", (char *)sym->name->c_str());
-
-	lbl = std::string("");
-	lastst;
-	needpunc(begin, 47);
-
+	std::string nme;
+	char* p;
+	Symbol* sy;
+	
+	currentFn = this;
+	pl.head = pl.tail = nullptr;
+//	for (sy = sym; sy; sym = sy->parentp)
+//		nme = nme + "_" + *sym->mangledName;
+	nme = *sym->GetFullName();// *sym->mangledName;
 	tmpReset();
 	//ParseAutoDeclarations();
 	lbl += *sym->mangledName;
 	switch (syntax) {
 	case MOT:
-		ofs.printf("\n;{++ %s\n", (char*)lbl.c_str());
+		ofs.printf("\n;{++ %s\n", (char*)nme.c_str());
 		break;
 	default:
-		ofs.printf("\n#{++ %s\n", (char*)lbl.c_str());
+		ofs.printf("\n#{++ %s\n", (char*)nme.c_str());
 	}
 	lbl = std::string("");
 	if (IsCoroutine)
@@ -73,7 +70,7 @@ Statement *Function::ParseBody()
 		//strcpy(lbl,GetNamespace());
 		//strcat(lbl,"_");
 		//		strcpy(lbl,sp->name);
-		lbl += *sym->mangledName;
+		lbl += nme;// *sym->mangledName;
 		if (sym->tp->type == bt_pointer)
 			lbl += "_func";
 		else {
@@ -86,13 +83,13 @@ Statement *Function::ParseBody()
 			}
 		}
 		//			gen_strlab((char *)lbl.c_str());
-		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char *)lbl.c_str(), codeseg));
+		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char*)nme.c_str(), codeseg));
 	}
 	//	put_label((unsigned int) sp->value.i);
 	else {
-		if (sym->storage_class == sc_global) {
-//			lbl = "\n\t.global ";
-//			lbl += *sym->mangledName;
+		if (sym->storage_class == sc_global || sym->storage_class == sc_auto) {
+			//			lbl = "\n\t.global ";
+			//			lbl += *sym->mangledName;
 			switch (syntax) {
 			case MOT:
 				lbl = "\n\talign 5\n";
@@ -100,20 +97,19 @@ Statement *Function::ParseBody()
 			default:
 				lbl = "\n\t.align 5\n";
 			}
-			if (!IsInline) {
+			if (!IsInline || force) {
 				ofs.printf((char*)lbl.c_str());
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst(my_strdup((char*)lbl.c_str()), codeseg));
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst("\n;{+",codeseg));
-				GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char *)sym->mangledName->c_str(), codeseg));
+				GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char*)nme.c_str(), codeseg));
 				ofs.printf("\n");
 			}
 			lbl = "public code ";
 		}
 		else {
-			lbl = *sym->mangledName;
 			if (!IsInline) {
 				lbl = "\n\t.local ";
-				lbl += *sym->mangledName;
+				lbl += nme;
 				ofs.printf((char*)lbl.c_str());
 				switch (syntax) {
 				case MOT:
@@ -123,14 +119,14 @@ Statement *Function::ParseBody()
 					lbl = "\n\t.align 5\n";
 				}
 				ofs.printf((char*)lbl.c_str());
-				lbl = *sym->mangledName;
+				lbl = nme;
 				//GenerateMonadic(op_verbatium, 0, MakeStringAsNameConst("\n;{+", codeseg));
-				GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char*)lbl.c_str(), codeseg));
+				GenerateMonadic(op_fnname, 0, MakeStringAsNameConst((char*)nme.c_str(), codeseg));
 				ofs.printf("\n");
 			}
 		}
 		//		strcat(lbl,sp->name);
-		lbl += *sym->mangledName;
+		lbl = nme;
 		if (sym->tp->type == bt_pointer)
 			lbl += "_func";
 		//gen_strlab(lbl);
@@ -143,10 +139,29 @@ Statement *Function::ParseBody()
 		ofs.printf("\t.sdreg\t%d\n", regGP);
 	}
 	dfs.printf("B");
-	p = my_strdup((char *)lbl.c_str());
+	p = my_strdup((char*)lbl.c_str());
 	dfs.printf("b");
 	if (!IsInline && false)
 		GenerateMonadic(op_fnname, 0, MakeStringAsNameConst(p, codeseg));
+}
+
+Statement *Function::ParseBody()
+{
+	std::string lbl;
+	char *p;
+	OCODE *ip, *ip2;
+	int oc;
+	int label, lab1;
+	char cc = '#';
+	Function* ofn;
+
+	ofn = currentFn;
+	dfs.printf("<Parse function body>:%s|\n", (char *)sym->name->c_str());
+
+	lbl = std::string("");
+	lastst;
+	needpunc(begin, 47);
+
 	currentFn = this;
 	IsLeaf = TRUE;
 	DoesThrow = false;
@@ -169,12 +184,35 @@ Statement *Function::ParseBody()
 		currentFn->body->next = stmt.ParseCatch();
 	}
 	dfs.printf("D");
-	//	stmt->stype = st_funcbody;
+	// Go through the list of symbols associated with the function generating any
+	// local functions that are found.
+	GenerateLocalFunctions();
+
+	if (!this->Islocal)
+		GenerateName(false);
+	if (!this->Islocal)
+		GenerateBody(false);
+	//if (sp->stkspace)
+	//ofs.printf("%sSTKSIZE_ EQU %d\r\n", (char *)sp->mangledName->c_str(), sp->stkspace);
+	isFuncBody = false;
+	dfs.printf("</ParseFunctionBody>\n");
+	currentFn = ofn;
+	return (sym->stmt);
+}
+
+void Function::GenerateBody(bool force_inline)
+{
+	std::string lbl;
+	int oc, label;
+	OCODE* ip;
+
+	currentFn = this;
+
 	while (lc_auto % sizeOfWord)	// round frame size to word
 		++lc_auto;
-	if (pass==1)
+	if (pass == 1)
 		stkspace = roundWord(lc_auto);
-	if (!IsInline) {
+	if (!IsInline || force_inline) {
 		pass = 1;
 		if (pl.tail)
 			oc = pl.tail->opcode;
@@ -187,10 +225,10 @@ Statement *Function::ParseBody()
 		label = nextlabel;
 		Generate();
 		if (pass == 1) {
-			stkspace += (ArgRegCount/* - regFirstArg*/) * sizeOfWord;
+			stkspace += (ArgRegCount/* - regFirstArg*/)*sizeOfWord;
 			argbot = -stkspace;
 			stkspace += max_stack_use;// GetTempMemSpace();
-			tempbot = -stkspace ;
+			tempbot = -stkspace;
 		}
 		pass = 2;
 		pl.tail = ip;
@@ -201,33 +239,28 @@ Statement *Function::ParseBody()
 		Generate();
 		dfs.putch('E');
 
+		if (pl.Count(pl.head) < compiler.autoInline && force_inline)
+			IsInline = true;
 		PeepOpt();
 		FlushPeep();
-		if (!IsInline && pl.Count(pl.head) < compiler.autoInline)
-			IsInline = true;
 		switch (syntax) {
 		case MOT:
 			break;
 		default:
-			ofs.printf("\t.type\t%s,@function\n", (char*)sym->mangledName->c_str());
-			ofs.printf("\t.size\t%s,$-", (char*)sym->mangledName->c_str());
-			ofs.printf("%s\n", (char*)sym->mangledName->c_str());
+			ofs.printf("\t.type\t%s,@function\n", (char*)sym->GetFullName()->c_str());
+			ofs.printf("\t.size\t%s,$-", (char*)sym->GetFullName()->c_str());
+			ofs.printf("%s\n", (char*)sym->GetFullName()->c_str());
 		}
 		lbl = ".endp ";
-		lbl += *sym->mangledName;
+		lbl += *sym->GetFullName();
 		//ofs.printf(lbl.c_str());
 		ofs.printf("\n");
-//		if (sym->storage_class == sc_global) {
-//			ofs.printf("endpublic\r\n\r\n");
-//		}
+		//		if (sym->storage_class == sc_global) {
+		//			ofs.printf("endpublic\r\n\r\n");
+		//		}
 		if (!IsInline)
 			;
 	}
-	//if (sp->stkspace)
-	//ofs.printf("%sSTKSIZE_ EQU %d\r\n", (char *)sp->mangledName->c_str(), sp->stkspace);
-	isFuncBody = false;
-	dfs.printf("</ParseFunctionBody>\n");
-	return (sym->stmt);
 }
 
 void Function::Init()
@@ -295,7 +328,7 @@ void Function::DoFuncptrAssign(Function *sp)
 *      block. If begin is the current symbol then funcbody
 *      assumes that the function has no parameters.
 */
-int Function::Parse()
+int Function::Parse(bool local)
 {
 	Function *osp, *sp;
 	int nump, numar, ellipos;
@@ -303,6 +336,7 @@ int Function::Parse()
 
 	currentFn = this;
 	currentSym = this->sym;
+	Islocal = local;
 	sp = this;
 	dfs.puts("<ParseFunction>\n");
 	isFuncBody = true;
@@ -348,10 +382,13 @@ int Function::Parse()
 											  // signatures.
 	osp = this;
 	nme = *sym->name;
-	if (sym->parent) {
-		Function *sp2;
-		dfs.printf("Parent Class:%s|", (char *)sym->GetParentPtr()->name->c_str());
-		sp2 = sym->GetParentPtr()->Find(nme)->fi;
+	if (sym->parentp) {
+		Function *sp2 = nullptr;
+		Symbol* sp3;
+		dfs.printf("Parent Class:%s|", (char *)sym->parentp->name->c_str());
+		sp3 = sym->parentp->Find(nme);
+		if (sp3)
+			sp2 = sp3->fi;
 		if (sp2) {
 			dfs.printf("Found at least inexact match");
 			sp2 = FindExactMatch(TABLE::matchno);
@@ -1473,7 +1510,7 @@ TypeArray *Function::GetParameterTypes()
 	//	printf("Enter GetParameterTypes()\r\n");
 	i16 = new TypeArray();
 	i16->Clear();
-	sp = sym->GetPtr(params.GetHead());
+	sp = params.headp;
 	for (nn = 0; sp; nn++) {
 		i16->Add(sp->tp, (__int16)(sp->IsRegister ? sp->reg : 0));
 		sp = sp->GetNextPtr();
@@ -1494,7 +1531,7 @@ TypeArray *Function::GetProtoTypes()
 	i16->Clear();
 	if (this == nullptr)
 		return (i16);
-	sp = sym->GetPtr(proto.GetHead());
+	sp = proto.headp;
 	// If there's no prototype try for a parameter list.
 	if (sp == nullptr)
 		return (GetParameterTypes());
@@ -1900,18 +1937,51 @@ bool Function::HasRegisterParameters()
 
 void Function::CheckForUndefinedLabels()
 {
-	Symbol *head = Symbol::GetPtr(sym->lsyms.GetHead());
+	Symbol *head = sym->lsyms.headp;
 
 	while (head != 0) {
 		if (head->storage_class == sc_ulabel)
 			lfs.printf("*** UNDEFINED LABEL - %s\n", (char *)head->name->c_str());
-		head = head->GetNextPtr();
+		head = head->nextp;
 	}
 }
 
+// Go through the list of symbols associated with the function generating any
+// local functions that are found.
+
+static CSet genfi;
+
+void Function::GenerateLocalFunctions()
+{
+	Symbol* symb;
+	Statement* stmt2;
+	std::string nm;
+	bool inline_flag;
+
+	if (!Islocal)
+		genfi.clear();
+	for (stmt2 = body; stmt2; stmt2 = stmt2->next) {
+		if (stmt2->stype == st_compound) {
+			for (symb = stmt2->ssyms.headp; symb; symb = symb->nextp) {
+				if (symb->fi)
+					if (symb->fi->Islocal && !genfi.isMember(symb->fi->number)) {
+						symb->fi->GenerateName(true);
+						inline_flag = symb->fi->IsInline;
+						symb->fi->IsInline = false;
+						symb->fi->GenerateBody(true);
+						symb->fi->IsInline = inline_flag;
+						genfi.add(symb->fi->number);
+						symb->fi->GenerateLocalFunctions();
+					}
+			}
+		}
+	}
+}
 
 void Function::Summary(Statement *stmt)
 {
+	Symbol* symb;
+
 	dfs.printf("<FuncSummary>\n");
 	irfs.printf("\nFunction:%s\n", (char *)this->sym->name->c_str());
 	nl();
@@ -1934,13 +2004,21 @@ void Function::Summary(Statement *stmt)
 	isOscall = FALSE;
 	isInterrupt = FALSE;
 	isNocall = FALSE;
-	switch (syntax) {
-	case MOT:
-		ofs.printf(";--}\n");
-		break;
-	default:
-		ofs.printf("#--}\n");
+	if (!this->Islocal)
+		switch (syntax) {
+		case MOT:
+			ofs.printf(";--}\n");
+			break;
+		default:
+			ofs.printf("#--}\n");
+		}
+	/*
+	for (symb = sym->lsyms.headp; symb; symb = symb->nextp) {
+		if (symb->fi)
+			if (symb->fi->Islocal)
+				symb->fi->ParseBody();
 	}
+	*/
 	dfs.printf("</FuncSummary>\n");
 }
 
@@ -1975,8 +2053,8 @@ void Function::InsertMethod()
 
 	name = *sym->name;
 	dfs.printf((char *)"<InsertMethod>%s type %d ", (char *)sym->name->c_str(), sym->tp->type);
-	sym->GetParentPtr()->tp->lst.insert(sym);
-	nn = sym->GetParentPtr()->tp->lst.FindRising(*sym->name);
+	sym->parentp->tp->lst.insert(sym);
+	nn = sym->parentp->tp->lst.FindRising(*sym->name);
 	sy = sym->FindRisingMatch(true);
 	if (sy) {
 		dfs.puts("Found in a base class:");
@@ -1986,6 +2064,27 @@ void Function::InsertMethod()
 		}
 	}
 	dfs.printf("</InsertMethod>\n");
+}
+
+void Function::InsertAuto(Symbol* var)
+{
+	int nn;
+	Symbol* sy;
+	std::string name;
+
+	name = *sym->name;
+	dfs.printf((char*)"<InsertAuto>%s type %d ", (char*)var->name->c_str(), var->tp->type);
+	body->ssyms.insert(var);
+	nn = body->ssyms.FindRising(*sym->name);
+	sy = sym->FindRisingMatch(true);
+	if (sy) {
+		dfs.puts("Found in a base class:");
+		if (sy->fi->IsVirtual) {
+			dfs.printf("Found virtual:");
+			sy->fi->AddDerived();
+		}
+	}
+	dfs.printf("</InsertAuto>\n");
 }
 
 void Function::CreateVars()

@@ -1364,7 +1364,7 @@ void CodeGenerator::GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Ope
 	int64_t offset2;
 	ENODE *node;
 
-	first = thead = Symbol::GetPtr(tp->lst.GetHead());
+	first = thead = tp->lst.headp;
 	ep = ep->p[0];
 	while (thead) {
 		if (ep == nullptr)
@@ -1964,7 +1964,8 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 
 Operand *CodeGenerator::GenAutocon(ENODE *node, int flags, int64_t size, TYP* typ)
 {
-	Operand *ap1, *ap2;
+	Operand *ap1, *ap2, *ap3;
+	short nn, ni;
 
 	// We always want an address register (GPR) for lea
 	ap1 = GetTempRegister();
@@ -1980,7 +1981,25 @@ Operand *CodeGenerator::GenAutocon(ENODE *node, int flags, int64_t size, TYP* ty
 //	ap1->type = &stdint;
 	ap1->typep = typ;
 	ap1->tp = node->tp;
-	GenerateDiadic(cpu.lea_op,0,ap1,ap2);
+	ni = nn = node->sym->depth - currentFn->depth;
+	if (nn > 0) {
+		ap3 = GetTempRegister();
+		GenerateDiadic(op_ldh, 0, ap3, MakeIndirect(regFP));	
+		for (--nn; nn > 0; nn--)
+			GenerateDiadic(op_ldh, 0, ap3, MakeIndirect(ap3->preg));
+		ReleaseTempRegister(ap3);
+		ap3->isPtr = node->etype == bt_pointer;
+		ap3->mode = am_indx;
+		ap3->preg = regFP;          // frame pointer
+		ap3->offset = node;     /* use as constant node */
+		ap3->bit_offset = node->bit_offset;
+		ap3->bit_width = node->bit_width;
+		//	ap2->type = type;
+		ap3->tp = node->tp;
+		GenerateDiadic(cpu.lea_op, 0, ap1, ap3);
+	}
+	else
+		GenerateDiadic(cpu.lea_op,0,ap1,ap2);
 	//if (!compiler.os_code)
 	//	GenerateTriadic(op_base, 0, ap1, ap1, MakeImmediate(10));
 	ap1->MakeLegal(flags,size);
@@ -3307,9 +3326,10 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	GenerateHint(begin_func_call);
 	i = 0;
 	if (node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon) {
-		if (node->p[2])
-			currentSym = node->p[2]->sym;
-		s = gsearch(*node->p[0]->sp);
+		if (node->p[0])
+			s = currentSym = node->sym;
+		else
+			s = gsearch(*node->p[0]->sp);
 		if (s)
 			sym = s->fi;
 		/*

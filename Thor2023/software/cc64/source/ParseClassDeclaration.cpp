@@ -143,9 +143,8 @@ int ClassDeclaration::Parse(int ztype)
 			//sp->tp = TYP::Copy(bcsp->tp);
 			// Start off at the size of the base.
 			sp->tp = allocTYP();
-			sp->tp->lst.SetBase(bcsp->GetIndex());
 			sp->tp->lst.basep = bcsp;
-			dfs.printf("Set base class: %d\n", sp->tp->lst.base);
+			dfs.printf("Set base class: %p\n", (char *)sp->tp->lst.basep);
 			sp->tp->size = bcsp->tp->size;
 			sp->tp->type = (e_bt)ztype;
 			sp->tp->typeno = typeno++;
@@ -184,7 +183,7 @@ int ClassDeclaration::Parse(int ztype)
       sp->tp->sname = new std::string(*sp->name);
       sp->tp->alignment = alignment;
 			sp->tp->type = (e_bt)ztype;
-			sp->tp->lst.SetBase(0);
+			sp->tp->lst.basep = nullptr;
 	    sp->storage_class = sc_type;
       tagtable.insert(sp);
       NextToken();
@@ -263,13 +262,13 @@ void ClassDeclaration::ParseMembers(Symbol *sym, int ztype)
 		}
 		if (lastst==kw_unique || lastst==kw_static) {
 			NextToken();
-      declare(sym,&(tp->lst),sc_static,slc,ztype,nullptr);
+      declare(sym,&tp->lst,sc_static,slc,ztype,nullptr,false);
 		}
 		else {
 			if(ztype == bt_struct || ztype==bt_class)
-				slc += declare(sym,&(tp->lst),sc_member,slc,ztype,nullptr);
+				slc += declare(sym,&tp->lst,sc_member,slc,ztype,nullptr,false);
 			else
-				slc = imax(slc,declare(sym,&(tp->lst),sc_member,0,ztype,nullptr));
+				slc = imax(slc,declare(sym,&tp->lst,sc_member,0,ztype,nullptr,false));
 		}
   }
 	bit_offset = 0;

@@ -15,6 +15,7 @@ Declaration::Declaration()
 	decl_level = 0;
 	pa_level = 0;
 	isTypedef = false;
+	inline_threshold = compiler.autoInline;
 }
 
 Function* Declaration::MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline) {
