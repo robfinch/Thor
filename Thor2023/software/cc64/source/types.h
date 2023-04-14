@@ -1094,6 +1094,8 @@ public:
 	bool HasTargetReg(int regno) const;
 	int GetTargetReg(int *rg1, int *rg2) const;
 	bool HasSourceReg(int) const;
+	bool IsLoad() const;
+	bool IsStore() const;
 	//Edge *MakeEdge(OCODE *ip1, OCODE *ip2);
 	// Optimizations
 	bool IsSubiSP();
@@ -1904,7 +1906,7 @@ public:
 	Declaration();
 	Declaration *next;
 	void AssignParameterName();
-	int declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int ztype, Symbol** symo, bool local);
+	int declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int ztype, Symbol** symo, bool local, short int depth=0);
 	void ParseEnumerationList(TABLE *table, Float128 amt, Symbol *parent, bool power);
 	void ParseEnum(TABLE *table);
 	void ParseVoid();
@@ -2021,6 +2023,7 @@ public:
 	FunctionFactory ff;
 	ExpressionFactory ef;
 	StatementFactory sf;
+	AutoDeclaration ad;
 	short int pass;
 	bool ipoll;
 	bool nogcskips;

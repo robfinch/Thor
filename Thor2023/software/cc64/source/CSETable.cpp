@@ -186,6 +186,7 @@ int CSETable::AllocateGPRegisters()
 			if (csp->OptimizationDesireability() > 0) {
 				if (!csp->voidf && csp->reg == -1) {
 					if (csp->exp->etype != bt_vector && !csp->isfp && !csp->isPosit) {
+						alloc = false;
 						switch (pass)
 						{
 						case 0:
@@ -321,9 +322,9 @@ void CSETable::InitializeTempRegs()
 			// A negative reference relative to the frame pointer indicates local variable.
 			// Since local vars haven't been initialized yet, there's no point to preloading
 			// the register.
-			if (exptr->nodetype == en_ref && exptr->p[0]->nodetype == en_autocon && exptr->p[0]->i < 0)
-				continue;
-			if (1 || !IsLValue(exptr) || (exptr->p[0]->i > 0))
+//			if (exptr->nodetype == en_ref && exptr->p[0]->nodetype == en_autocon && exptr->p[0]->i < 0)
+//				continue;
+			if (true /*!IsLValue(exptr) || (exptr->p[0] && (exptr->p[0]->i > 0)) */)
 			{
 				if (exptr->tp || true) {
 					initstack();
@@ -486,7 +487,7 @@ int CSETable::Optimize(Statement *block)
 		if (currentFn->csetbl == nullptr) {
 			currentFn->csetbl = new CSETable;
 		}
-		Clear();
+		currentFn->csetbl->Clear();
 	}
 	else if (pass == 2) {
 		//Assign(currentFn->csetbl);

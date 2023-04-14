@@ -555,8 +555,8 @@ Operand* GetTempPositRegister()
 	preg_alloc[preg_alloc_ptr].reg = next_preg;
 	preg_alloc[preg_alloc_ptr].Operand = ap;
 	preg_alloc[preg_alloc_ptr].f.isPushed = 'F';
-	if (next_preg++ >= regLastTemp|0x40)
-		next_preg = regFirstTemp|0x40;		/* wrap around */
+	if (next_preg++ >= (regLastTemp|0x40))
+		next_preg = (regFirstTemp|0x40);		/* wrap around */
 	if (preg_alloc_ptr++ == MAX_REG_STACK)
 		fatal("GetTempFPRegister(): register stack overflow");
 	return (ap);
@@ -646,12 +646,12 @@ void validate(Operand *ap)
 		}
 		break;
 	case am_fpreg:
-		if ((ap->preg >= frg|0x20 && ap->preg <= (unsigned)regLastTemp|0x20) && fpreg_alloc[ap->deep].f.isPushed == 'T' ) {
+		if ((ap->preg >= (frg|0x20) && ap->preg <= (unsigned)(regLastTemp|0x20)) && fpreg_alloc[ap->deep].f.isPushed == 'T' ) {
 			LoadFPRegister(ap->preg, (int) ap->deep);
 		}
 		break;
 	case am_preg:
-		if ((ap->preg >= frg|0x40 && ap->preg <= (unsigned)regLastTemp|0x40) && preg_alloc[ap->deep].f.isPushed == 'T') {
+		if ((ap->preg >= (frg|0x40) && ap->preg <= (unsigned)(regLastTemp|0x40)) && preg_alloc[ap->deep].f.isPushed == 'T') {
 			LoadPositRegister(ap->preg, (int)ap->deep);
 		}
 		break;
@@ -755,7 +755,7 @@ void ReleaseTempRegister(Operand *ap)
 	else
     switch (ap->mode) {
 	case am_fpreg:
-		if (ap->preg >= frg|0x20 && ap->preg <= (unsigned)regLastTemp|0x20) {
+		if (ap->preg >= (frg|0x20) && ap->preg <= (unsigned)(regLastTemp|0x20)) {
 			if (fpreg_in_use[ap->preg]==-1)
 				return;
 			if (next_fpreg-- <= frg)
@@ -772,10 +772,10 @@ void ReleaseTempRegister(Operand *ap)
 		}
 		return;
 	case am_preg:
-		if (ap->preg >= frg|0x40 && ap->preg <= (unsigned)regLastTemp|0x40) {
+		if (ap->preg >= (frg|0x40) && ap->preg <= (unsigned)(regLastTemp|0x40)) {
 			if (preg_in_use[ap->preg] == -1)
 				return;
-			if (next_preg-- <= frg|0x40)
+			if (next_preg-- <= (frg|0x40))
 				next_preg = regLastTemp|0x40;
 			number = preg_in_use[ap->preg];
 			preg_in_use[ap->preg] = -1;

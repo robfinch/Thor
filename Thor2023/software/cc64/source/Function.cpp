@@ -176,6 +176,7 @@ Statement *Function::ParseBody()
 	ZeroMemory(regs, sizeof(regs));
 	initRegStack();
 	sym->stmt = sym->stmt->ParseCompound(true);
+	currentFn = ofn;
 	if (lastst == kw_catch) {
 		int lab1;
 		Statement stmt;
@@ -196,7 +197,6 @@ Statement *Function::ParseBody()
 	//ofs.printf("%sSTKSIZE_ EQU %d\r\n", (char *)sp->mangledName->c_str(), sp->stkspace);
 	isFuncBody = false;
 	dfs.printf("</ParseFunctionBody>\n");
-	currentFn = ofn;
 	return (sym->stmt);
 }
 
@@ -1333,7 +1333,7 @@ void Function::GenerateCoroutineEntry()
 void Function::Generate()
 {
 	int defcatch;
-	Statement* stmt = this->sym->stmt;
+	Statement* stmt = this->body;// sym->stmt;
 	int lab0;
 	int o_throwlab, o_retlab, o_contlab, o_breaklab;
 	OCODE* ip;
@@ -1412,8 +1412,11 @@ void Function::Generate()
 	}
 
 	if (optimize) {
-		if (currentFn->csetbl == nullptr)
+		if (currentFn->csetbl == nullptr) {
 			currentFn->csetbl = new CSETable;
+		}
+		if (pass == 1)
+			currentFn->csetbl->Clear();
 		currentFn->csetbl->Optimize(stmt);
 	}
 	if (prolog) {
@@ -1768,7 +1771,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	this->hasParameters = true;
 	if (opt_vreg)
 		cpu.SetVirtualRegisters();
-	poffset = 0;//GetReturnBlockSize();
+	poffset = compiler.GetReturnBlockSize();
 				//	sp->parms = (SYM *)NULL;
 	old_nparms = nparms;
 	for (np = 0; np < nparms; np++)
@@ -1971,7 +1974,6 @@ void Function::GenerateLocalFunctions()
 						symb->fi->GenerateBody(true);
 						symb->fi->IsInline = inline_flag;
 						genfi.add(symb->fi->number);
-						symb->fi->GenerateLocalFunctions();
 					}
 			}
 		}

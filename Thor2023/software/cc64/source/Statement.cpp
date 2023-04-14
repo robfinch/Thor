@@ -356,7 +356,7 @@ Statement *Statement::ParseCatch()
 		return snp;
 	}
 	catchdecl = TRUE;
-	ad.Parse(nullptr, &snp->ssyms);
+	compiler.ad.Parse(nullptr, &snp->ssyms);
 	cseg();
 	catchdecl = FALSE;
 	needpunc(closepa, 34);
@@ -577,7 +577,6 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	Statement *snp;
 	Statement *head, *tail;
 	Statement *p;
-	AutoDeclaration ad;
 	Function* fn;
 
 	fn = currentFn;
@@ -601,7 +600,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 		NextToken();
 	}
 	snp->ssyms.ownerp = currentFn->sym;
-	ad.Parse(currentFn->sym, &snp->ssyms);
+	compiler.ad.Parse(currentFn->sym, &snp->ssyms);
 	//ad.Parse(nullptr, &snp->ssyms);
 	cseg();
 	// Add the first statement at the head of the list.
@@ -641,7 +640,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 		else
 		{
 			if (tail) {
-				tail->iexp = ad.Parse(currentFn->sym, &snp->ssyms);
+				tail->iexp = compiler.ad.Parse(currentFn->sym, &snp->ssyms);
 				//tail->iexp = ad.Parse(nullptr, &snp->ssyms);
 				snp->ssyms.ownerp = currentFn->sym;
 			}
@@ -832,6 +831,8 @@ void Statement::repcse()
 {
 	Statement *block = this;
 
+	if (this == nullptr)
+		return;
 	while (block != NULL) {
 		switch (block->stype) {
 		case st_compound:
@@ -930,6 +931,8 @@ void Statement::scan()
 	Statement *block = this;
 
 	dfs.printf("<Statement__Scan>");
+	if (this == nullptr)
+		return;
 	loop_active = 1;
 	while (block != NULL) {
 		dfs.printf("B");

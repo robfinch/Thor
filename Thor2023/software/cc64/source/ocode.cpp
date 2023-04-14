@@ -30,6 +30,20 @@ void OCODE::Remove()
 	currentFn->pl.Remove(this);
 };
 
+bool OCODE::IsLoad() const
+{
+	if (insn)
+		return (insn->IsLoad());
+	return (false);
+}
+
+bool OCODE::IsStore() const
+{
+	if (insn)
+		return (insn->IsStore());
+	return (false);
+}
+
 // Return true if the instruction has a target register.
 
 bool OCODE::HasTargetReg() const
@@ -58,6 +72,8 @@ bool OCODE::HasSourceReg(int regno) const
 {
 	if (insn == nullptr)
 		return (false);
+	if ((IsStore() || IsLoad()) && oper1->preg == regno)
+		return (true);
 	// Push has an implied target, so oper1 is actually a source.
 	// For deposit, the target is also a source
 	if (oper1 && !insn->HasTarget() || opcode==op_push || opcode==op_dep) {
@@ -631,7 +647,7 @@ void OCODE::OptStore()
 void OCODE::OptBeq()
 {
 	if (back && back->opcode == op_cmp && back->oper3->preg == regZero) {
-		if (back->back && back->back->opcode & 0x7fff == cpu.ldi_op) {
+		if (back->back && (back->back->opcode & 0x7fff) == cpu.ldi_op) {
 			if (back->back->oper1->preg == back->oper2->preg) {
 				if (back->back->oper2->offset->i != 0) {
 					back->MarkRemove();
@@ -679,7 +695,7 @@ void OCODE::OptBne()
 		}
 	}
 	if (back && back->opcode == op_cmp && back->oper3->preg == regZero) {
-		if (back->back && back->back->opcode & 0x7fff == cpu.ldi_op) {
+		if (back->back && (back->back->opcode & 0x7fff) == cpu.ldi_op) {
 			if (back->back->oper1->preg == back->oper2->preg) {
 				if (back->back->oper2->offset->i != 0) {
 					back->MarkRemove();
@@ -1250,7 +1266,7 @@ void OCODE::OptHint()
 			if (back->HasTargetReg()) {
 				int rg1, rg2;
 				back->GetTargetReg(&rg1, &rg2);
-				if (!(fwd->oper1->mode == am_reg && back->opcode & 0x7fff == cpu.ldi_op)) {
+				if (!(fwd->oper1->mode == am_reg && (back->opcode & 0x7fff) == cpu.ldi_op)) {
 					// Search forward to see if the target register is used anywhere.
 					for (frwd = fwd->fwd; frwd; frwd = frwd->fwd) {
 						// If the register has been targeted again, it is okay to opt.
@@ -1407,7 +1423,7 @@ void OCODE::OptLdi()
 		if (ip->HasTargetReg()) {
 			int rg1, rg2;
 			ip->GetTargetReg(&rg1, &rg2);
-			if (ip->opcode & 0x7fff == cpu.ldi_op) {
+			if ((ip->opcode & 0x7fff) == cpu.ldi_op) {
 				if (rg1 == oper1->preg || rg2 == oper1->preg) {
 					if (ip->oper2->offset->i == oper2->offset->i) {
 						ip->MarkRemove();
@@ -1459,7 +1475,7 @@ void OCODE::OptLea()
 		if (ip->HasTargetReg()) {
 			int rg1, rg2;
 			ip->GetTargetReg(&rg1, &rg2);
-			if (ip->opcode & 0x7fff == cpu.ldi_op) {
+			if ((ip->opcode & 0x7fff) == cpu.ldi_op) {
 				if (rg1 == oper1->preg || rg2 == oper1->preg) {
 					if (ip->oper2->offset->i == oper2->offset->i) {
 						ip->MarkRemove();

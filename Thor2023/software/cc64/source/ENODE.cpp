@@ -363,6 +363,13 @@ bool ENODE::IsEqual(ENODE *node1, ENODE *node2, bool lit)
 	case en_autopcon:
 	case en_autofcon:
 	{
+		// With nested methods, autocon nodes can end up with the same stack offset
+		// value, but they are really pointing to different places in the stack.
+		// It depends on the depth being the same.
+		if (node1->sym == nullptr || node2->sym == nullptr)
+			return (false);
+		if (node1->sym->depth != node2->sym->depth)
+			return (false);
 		return (node1->i == node2->i);
 	}
 	case en_nacon: {
@@ -830,7 +837,7 @@ void ENODE::repexpr()
 	// Autofcon resolve to *pointers* which are stored in integer registers.
 	case en_autopcon:
 		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
-			csp->isPosit = FALSE; //**** a kludge
+			csp->isPosit = false; //**** a kludge
 			if (csp->reg > 0) {
 				nodetype = en_pregvar;
 				rg = csp->reg;
@@ -922,13 +929,17 @@ void ENODE::repexpr()
 		bit_offset->repexpr();
 		bit_width->repexpr();
 	case en_ref:
-		if ((csp = currentFn->csetbl->Search(this)) != NULL) {
-			if (csp->reg > 0) {
-				nodetype = csp->isfp ? en_fpregvar : csp->isPosit ? en_pregvar : en_regvar;
-				//nodetype = en_regvar;
-				rg = csp->reg;
-				ru->add(rg);
-				rru->add(nregs - 1 - rg);
+		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
+			if (!csp->voidf) {
+				if (csp->reg > 0) {
+					nodetype = csp->isfp ? en_fpregvar : csp->isPosit ? en_pregvar : en_regvar;
+					//nodetype = en_regvar;
+					rg = csp->reg;
+					ru->add(rg);
+					rru->add(nregs - 1 - rg);
+				}
+				else
+					p[0]->repexpr();
 			}
 			else
 				p[0]->repexpr();
@@ -1082,6 +1093,10 @@ CSE *ENODE::OptInsertAutocon(int duse)
 
 	if (this == nullptr)
 		return (nullptr);
+	if (sym)
+	if (this->sym->depth < currentFn->depth + 2)
+		return (nullptr);
+	csp = nullptr;
 	nn = currentFn->csetbl->voidauto2(this);
 	csp = currentFn->csetbl->InsertNode(this, duse, &first);
 	if (nn >= 0) {
@@ -1099,17 +1114,20 @@ CSE *ENODE::OptInsertRef(int duse)
 
 	csp = nullptr;
 	// Search the chain of refs.
-	for (ep = p[0]; ep && ep->IsRefType(); ep = ep->p[0])
-		if (ep == nullptr)
-			return (nullptr);
+//	for (ep = p[0]; ep && ep->IsRefType(); ep = ep->p[0])
+//		if (ep == nullptr)
+//			return (nullptr);
 	if (this == nullptr)
 		return (nullptr);
+//	if (sym)
+//		if (sym->depth < currentFn->depth)
+//			return (nullptr);
 	ep = p[0];
 	if (ep && ep->IsAutocon()) {
 		csp = currentFn->csetbl->InsertNode(this, duse, &first);
 		// take care: the non-derereferenced use of the autocon node may
 		// already be in the list. In this case, set voidf to 1
-		if (currentFn->csetbl->Search(p[0]) != NULL) {
+		if (currentFn->csetbl->Search(p[0]) != NULL || currentFn->csetbl->Search(p[1]) != NULL) {
 			csp->voidf = 1;
 			p[0]->scanexpr(1);
 			if (pfl)
@@ -1177,7 +1195,7 @@ void ENODE::scanexpr(int duse)
 		break;
 	case en_cnacon:
 	case en_clabcon:
-	case en_fcon:
+	case en_fcon:    
 	case en_icon:
 	case en_labcon:
 	case en_nacon:
@@ -1211,10 +1229,10 @@ void ENODE::scanexpr(int duse)
 		p[0]->scanexpr(duse);
 		break;
 	case en_fieldref:
-		bit_offset->scanexpr(duse);
-		bit_width->scanexpr(duse);
+		bit_offset->scanexpr(1);
+		bit_width->scanexpr(1);
 	case en_ref:
-		OptInsertRef(duse);
+		OptInsertRef(1);
 		break;
 	case en_uminus:
 	case en_abs:

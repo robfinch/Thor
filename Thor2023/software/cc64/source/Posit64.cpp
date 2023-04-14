@@ -683,7 +683,7 @@ void Posit64::Decompose(Posit64 a, RawPosit* b)
   b->sigWidth = max(0, posWidth - rgmlen - expWidth);
   // Significand is left aligned.
   if (posWidth - rgmlen - expWidth - 1 >= 0) {
-    n = n << rgmlen + expWidth; // Left align significand, + 1 for sign bit - 1 for hidden bit
+    n = n << (rgmlen + expWidth); // Left align significand, + 1 for sign bit - 1 for hidden bit
     n = n >> expWidth;
     //n = n & ~(0xffffffffffffffffULL << (posWidth - 1LL - rgmlen - expWidth));
     if (!b->isZero)

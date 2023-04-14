@@ -592,7 +592,7 @@ Posit16 Posit16::IntToPosit(int64_t i)
   }
   ii = i < 0 ? -i : i;
   lzcnt = countLeadingZeros((ii<<1LL)|1LL);
-  sgn = (i >> posWidth-1LL) & 1LL;
+  sgn = (i >> (posWidth-1LL)) & 1LL;
   rgm = (posWidth - (lzcnt + 2LL)) >> expWidth;
   sig = ii << lzcnt;  // left align number
   sig &= 0x3fffffff;  // chop off leading one
@@ -667,7 +667,7 @@ void Posit16::Decompose(Posit16 a, RawPosit* b)
   int64_t regexp;
   Int128 nn;
 
-  sign = (a.val >> posWidth-1LL) & 1LL;
+  sign = (a.val >> (posWidth-1LL)) & 1LL;
   n = a.val < 0 ? -a.val : a.val;
   rgmlen = countLeadingBits(n << 1LL) + 1;
   regexp = (n >> (posWidth - rgmlen - expWidth - 1LL));
@@ -684,7 +684,7 @@ void Posit16::Decompose(Posit16 a, RawPosit* b)
   b->sigWidth = max(0, posWidth - rgmlen - expWidth);
   // Significand is left aligned.
   if (posWidth - rgmlen - expWidth - 1 >= 0) {
-    n = n << rgmlen + expWidth; // Left align significand, + 1 for sign bit - 1 for hidden bit
+    n = n << (rgmlen + expWidth); // Left align significand, + 1 for sign bit - 1 for hidden bit
     n = n >> expWidth;
     //n = n & ~(0xffffffffffffffffULL << (posWidth - 1LL - rgmlen - expWidth));
     if (!b->isZero)
