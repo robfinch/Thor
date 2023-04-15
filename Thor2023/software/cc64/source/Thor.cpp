@@ -1228,7 +1228,7 @@ static void RestoreFPRegisterVars()
 //
 int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat, int* push_count, bool large_argcount)
 {    
-	Operand *ap, *ap3;
+	Operand *ap, *ap1, *ap2, *ap3;
 	int nn = 0;
 	int sz;
 
@@ -1358,7 +1358,28 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 						nn = 1;
 					}
 					else {
-						if (ap->tp->IsFloatType()) {
+						// For aggregate types larger than the word size, a pointer to a buffer
+						// is pushed instead of the actual value. The buffer will have been 
+						// allocated by the caller.
+						// What needs to be done is copy the aggregate to the buffer then push
+						// the buffer address.
+						if (ap->tp->IsAggregateType() && ap->tp->size > sizeOfWord) {
+							ap2 = GetTempRegister();
+							GenerateDiadic(op_lea, 0, ap2, MakeIndexed(ep->stack_offs, regSP));	// push target
+							cg.GenerateStore(ap2, MakeIndexed(sizeOfWord, regSP), sizeOfWord);	
+							ReleaseTempRegister(ap2);
+							cg.GenerateStore(ap, MakeIndexed((int64_t)0, regSP), sizeOfWord);		// and source
+							ap3 = GetTempRegister();
+							GenerateLoadConst(ap3, MakeImmediate(ap->tp->size));								// and size
+							cg.GenerateStore(ap3, MakeImmediate(ap->tp->size), sizeOfWord);
+							ReleaseTempRegister(ap3);
+							GenerateMonadic(op_bsr, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));	// call copy helper
+							ap1 = GetTempRegister();
+							GenerateLoadConst(ap1, MakeImmediate(ep->stack_offs));							// and size
+							cg.GenerateStore(ap1, MakeIndexed(stkoffs, regSP), sizeOfWord);
+							ReleaseTempRegister(ap1);
+						}
+						else if (ap->tp->IsFloatType()) {
 							*isFloat = true;
 							cg.GenerateStore(ap,MakeIndexed(stkoffs,regSP),sizeOfWord);
 							nn = 1;// sz / sizeOfWord;

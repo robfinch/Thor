@@ -553,21 +553,29 @@ Statement *Statement::ParseTry()
 	return (snp);
 }
 
-Statement *Statement::ParseExpression()
+Statement* Statement::ParseExpression(ENODE** node, Symbol* symi)
 {
-	Statement *snp;
+	Statement* snp;
 	Expression exp;
 
 	dfs.printf("<ParseExpression>\n");
 	snp = MakeStatement(st_expr, FALSE);
-	if (exp.ParseExpression(&(snp->exp), nullptr) == NULL) {
+	if (exp.ParseExpression(node, symi) == NULL) {
 		error(ERR_EXPREXPECT);
 		NextToken();
 	}
+	snp->exp = *node;
 	if (lastst != end)
 		needpunc(semicolon, 44);
 	dfs.printf("</ParseExpression>\n");
 	return (snp);
+}
+
+Statement *Statement::ParseExpression()
+{
+	ENODE* node;
+
+	return (ParseExpression(&node, nullptr));
 }
 
 // Parse a compound statement.
@@ -738,12 +746,14 @@ Statement* Statement::ParseYield()
 	return (snp);
 }
 
-Statement *Statement::Parse()
+Statement *Statement::Parse(ENODE** node, Symbol* symi)
 {
 	Statement *snp = nullptr;
 	int64_t* bf = nullptr;
 
 	dfs.puts("<Parse>");
+	*node = makeinode(en_icon, 0);
+	(*node)->tp = &stdint;
 j1:
 	switch (lastst) {
 	case semicolon:
@@ -802,7 +812,7 @@ j1:
 		}
 		// else fall through to parse expression
 	default:
-		snp = ParseExpression();
+		snp = ParseExpression(node, symi);
 		currentStmt = snp;
 		break;
 	}
@@ -814,6 +824,13 @@ j1:
 	}
 	dfs.puts("</Parse>");
 	return (snp);
+}
+
+Statement* Statement::Parse()
+{
+	ENODE* node;
+
+	return (Parse(&node, nullptr));
 }
 
 

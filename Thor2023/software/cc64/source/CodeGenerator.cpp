@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -401,8 +401,8 @@ Operand* CodeGenerator::GenerateAutoconDereference(ENODE* node, TYP* tp, bool is
 	ap1->segment = stackseg;
 	ap1->offset = makeinode(en_icon, node->i);
 	ap1->offset->sym = node->sym;
-	//ap1->bit_offset = node->bit_offset;
-	//ap1->bit_width = node->bit_width;
+	ap1->bit_offset = node->bit_offset;
+	ap1->bit_width = node->bit_width;
 	ap1->argref = node->sym->IsParameter;
 	ap1->isUnsigned = !su;
 	ap1->tp = tp;
@@ -416,16 +416,14 @@ Operand* CodeGenerator::GenerateAutoconDereference(ENODE* node, TYP* tp, bool is
 		ap1->isPtr = true;// node->etype == bt_pointer;
 		ap1->preg = ap3->preg;
 		ap1->mode = am_indx;
-		//node->nodetype = en_unknown;
 	}
 
 	//if (!compiler.os_code)
 	//	GenerateTriadic(op_base, 0, ap1, ap1, MakeImmediate(10));
-//	if (!node->isUnsigned)
-//		ap1 = ap1->GenerateSignExtend(siz1, size, flags);
-//	else
-//		ap1->MakeLegal(flags, siz1);
-	ap1->MakeLegal(flags, size);
+	if (!node->isUnsigned)
+		ap1 = ap1->GenerateSignExtend(siz1, size, flags);
+	else
+		ap1->MakeLegal(flags, siz1);
 	return (ap1);             /* return reg */
 }
 
@@ -631,6 +629,9 @@ Operand* CodeGenerator::GenerateRegvarDereference(ENODE* node, TYP* tp, bool isR
 	return (ap1);
 }
 
+// Dead code??? the register file is unified for Thor so register references 
+// are strictly to the GPRs.
+
 Operand* CodeGenerator::GenerateFPRegvarDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size)
 {
 	Operand* ap1;
@@ -651,6 +652,8 @@ Operand* CodeGenerator::GenerateFPRegvarDereference(ENODE* node, TYP* tp, bool i
 	Leave((char *)"</Genderef>", 3);
 	return (ap1);
 }
+
+// Dead code??? as above
 
 Operand* CodeGenerator::GeneratePositRegvarDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size)
 {
@@ -772,26 +775,13 @@ Operand* CodeGenerator::GenerateDereference2(ENODE* node, TYP* tp, bool isRefTyp
 	case en_fpregvar: return (GenerateFPRegvarDereference(node, tp, isRefType, flags, size));
 	case en_pregvar: return (GeneratePositRegvarDereference(node, tp, isRefType, flags, size));
 	case en_bitoffset: return (GenerateBitoffsetDereference(node, tp, isRefType, flags, size, opt));
-		/*
-	case en_ref:
-		ap2 = GetTempRegister();
-		ap1 = GenerateExpression(node, am_reg, sizeOfWord);
-		ap1->isPtr = isRefType;
-		ap1->tp = tp;
-		ap1->segment = dataseg;
-		//ap1->MakeLegal(flags, size);
-		ap2->isPtr = TRUE;
-		ap1->mode = am_ind;
-		ap3 = MakeIndirect(ap1->preg);
-		GenerateLoad(ap2, ap3, size, size);
-		ReleaseTempRegister(ap3);
-		ReleaseTempRegister(ap1);
-		//ap2->MakeLegal(flags, size);
-		return (ap2);
-		return (GenerateDereference2(node->p[0], tp, isRefType, flags, size, siz1, su, opt));
-		*/
+
+	// Dereferencing a reference, I think the two operations cancel out. I tried
+	// just a return here, and the compiler seems to work.
+
 	case en_ref:
 		return (nullptr);
+		// Dead code
 		ap2 = GetTempRegister();
 		ap1 = GenerateExpression(node, am_reg, sizeOfWord, 0);
 		ap1->isPtr = isRefType;
@@ -808,23 +798,13 @@ Operand* CodeGenerator::GenerateDereference2(ENODE* node, TYP* tp, bool isRefTyp
 		return (ap2);
 		//		return (GenerateDereference2(node->p[0], tp, isRefType, flags, size, siz1, su, opt));
 		return (GenerateDereference(node->p[0], flags, size, siz1, su, opt));
+	
+	// Should not get an en_type as it is just an artifact of typecasting
+	// containing just a type and no variable. It should have been processed and
+	// removed by optimization.
+
 	case en_type:
 		return (nullptr);
-		ap2 = GetTempRegister();
-		return (ap2);
-//		ap1 = GenerateExpression(node->p[0], am_reg, sizeOfWord, 0);
-		ap1->isPtr = isRefType;
-		ap1->tp = tp;
-		ap1->segment = dataseg;
-		//ap1->MakeLegal(flags, size);
-		//ap2->isPtr = TRUE;
-		//ap1->mode = am_ind;
-		ap3 = MakeIndirect(ap1->preg);
-		GenerateLoad(ap2, ap3, size, size);
-		ReleaseTempRegister(ap3);
-		ReleaseTempRegister(ap1);
-		//ap2->MakeLegal(flags, size);
-		return (ap2);
 	default:
 		return (nullptr);
 	}
@@ -1504,16 +1484,12 @@ OCODE* CodeGenerator::GenerateLoadFloatConst(Operand* ap1, Operand* ap2)
 			GenerateMonadic(op_pfx1, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
 		}
 		else {
-			int64_t i;
-			int64_t* pi;
-
-			pi = (int64_t*)&ap1->offset->f128;
-			i = pi[0];
-			GenerateMonadic(op_pfx0, 0, MakeImmediate(i & 0xffffffffLL));
-			GenerateMonadic(op_pfx1, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
-			i = pi[1];
-			GenerateMonadic(op_pfx2, 0, MakeImmediate(i & 0xffffffffLL));
-			GenerateMonadic(op_pfx3, 0, MakeImmediate((i >> 32LL) & 0xffffffffLL));
+			Float128::Assign(&f128, &ap1->offset->f128);
+			f128.Pack(128);
+			GenerateMonadic(op_pfx0, 0, MakeImmediate(f128.pack[0]));
+			GenerateMonadic(op_pfx1, 0, MakeImmediate(f128.pack[1]));
+			GenerateMonadic(op_pfx2, 0, MakeImmediate(f128.pack[2]));
+			GenerateMonadic(op_pfx3, 0, MakeImmediate(f128.pack[3]));
 		}
 	}
 	return (ip);
@@ -1715,6 +1691,17 @@ Operand* CodeGenerator::GenerateImmToMemAssign(Operand* ap1, Operand* ap2, int s
 {
 	Operand* ap3;
 
+	if (ap2->tp->IsFloatType()) {
+		if (Float128::IsEqual(&ap2->offset->f128, Float128::Zero())) {
+			GenerateStore(makereg(regZero), ap1, ssize);
+			return (ap1);
+		}
+		ap3 = GetTempRegister();
+		GenerateLoadFloatConst(ap2,ap3);
+		GenerateStore(ap3, ap1, ssize);
+		ReleaseTempRegister(ap3);
+		return (ap1);
+	}
 	if (ap2->offset->i == 0 && ap2->offset->nodetype != en_labcon) {
 		GenerateStore(makereg(regZero), ap1, ssize);
 	}
@@ -3272,13 +3259,47 @@ bool CodeGenerator::IsPascal(ENODE* ep)
 int CodeGenerator::GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp)
 {
 	int i;
+	List* lst, *hlst;
+	ENODE* en;
+	int64_t sz, sum;
+	Operand* ap;
+	int64_t offs[100];
+	int count;
 
 	if (sym)
 		sym->SaveTemporaries(sp, fsp, psp);
 	if (currentFn->HasRegisterParameters())
 		if (sym)
 			sym->SaveRegisterArguments();
-	i = PushArguments(sym, node->p[1]);
+	// Go through the list of arguments looking for aggregates. These will need to
+	// be allocated on stack and copied, then a pointer to the stack area pushed.
+	// We want the area allocated before pushing other values.
+	count = sum = 0;
+	hlst = nullptr;
+	if (node->p[1]) {
+		for (hlst = lst = node->p[1]->ReverseList(node->p[1]); lst; lst = lst->nxt) {
+			en = lst->node;
+			if (en && en->esize > sizeOfWord) {
+				if (en->etype == bt_struct || en->etype == bt_union || en->etype == bt_class) {
+					sz = roundWord(en->esize);
+					sum += sz;
+					offs[count] = sum;
+					count++;
+				}
+			}
+		}
+	}
+	// Allocate stack buffers.
+	GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sum, 0));
+	count = 0;
+	if (hlst)
+	for (lst = hlst; lst; lst = lst->nxt) {
+		en = lst->node;
+		en->stack_offs = offs[count];
+		count++;
+	}
+
+	i = PushArguments(sym, node->p[1]) + (sum / sizeOfWord);
 	// If the symbol is unknown, assume a throw is present
 	if (sym) {
 		if (sym->DoesThrow)
@@ -3344,7 +3365,10 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	sym = nullptr;
 	ap = nullptr;
 
-	// Call the function
+	// Call the function, the function will be called directly by name if the node
+	// indicates a name constant. Otherwise the function will be called indirectly
+	// via a value loaded into a register.
+
 	GenerateHint(begin_func_call);
 	i = 0;
 	if (node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon) {
@@ -3402,31 +3426,11 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		sym->RestoreTemporaries(sp, fsp, psp);
 	if (ap)
 		ReleaseTempRegister(ap);
-	/*
-	if (sym) {
-		 if (sym->tp->type==bt_double)
-					 result = GetTempFPRegister();
-		 else
-					 result = GetTempRegister();
-		}
-		else {
-				if (node->etype==bt_double)
-						result = GetTempFPRegister();
-				else
-						result = GetTempRegister();
-		}
-	*/
-	if (sym
-		&& sym->sym
-		&& sym->sym->tp
-		&& sym->sym->tp->btpp
-		&& sym->sym->tp->btpp->IsFloatType()) {
-		GenerateHint(end_func_call);
-		if (!(flags & am_novalue))
-			return (makereg(cpu.argregs[0]));
-		else
-			return (makereg(regZero));
-	}
+
+	// Here it is assumed that the function will return any value in the first
+	// argument register. The register file for Thor is unified so it makes no
+	// difference as to whether a float type or an integer type is returned.
+
 	if (sym
 		&& sym->sym
 		&& sym->sym->tp
@@ -3438,6 +3442,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		else
 			return (makevreg(0));
 	}
+
 	if (sym
 		&& sym->sym
 		&& sym->sym->tp
@@ -3445,9 +3450,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		) {
 		if (!(flags & am_novalue)) {
 			if (sym->sym->tp->btpp->type != bt_void) {
-				//ap = GetTempRegister();
 				ap = makereg(cpu.argregs[0]);
-				//GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
 				regs[cpu.argregs[0]].modified = true;
 			}
 			else
@@ -3459,6 +3462,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 			return(makereg(regZero));
 		}
 	}
+	// Otherwise returning a int or a void.
 	else {
 		if (!(flags & am_novalue)) {
 			//ap = GetTempRegister();
@@ -3466,6 +3470,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 			//GenerateDiadic(cpu.mov_op, 0, ap, makereg(cpu.argregs[0]));
 			regs[cpu.argregs[0]].modified = true;
 		}
+		// If the function has no return value, just return a zero (r0).
 		else {
 			GenerateHint(end_func_call);
 			return(makereg(regZero));
@@ -3473,28 +3478,5 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	}
 	GenerateHint(end_func_call);
 	return (ap);
-	/*
-	else {
-		if( result->preg != 1 || (flags & am_reg) == 0 ) {
-			if (sym) {
-				if (sym->tp->btpp->type==bt_void)
-					;
-				else {
-										if (sym->tp->type==bt_double)
-							GenerateDiadic(op_fdmov,0,result,makefpreg(1));
-										else
-							GenerateDiadic(op_mov,0,result,makereg(1));
-								}
-			}
-			else {
-								if (node->etype==bt_double)
-							GenerateDiadic(op_fdmov,0,result,makereg(1));
-								else
-						GenerateDiadic(op_mov,0,result,makereg(1));
-						}
-		}
-	}
-		return result;
-	*/
 }
 

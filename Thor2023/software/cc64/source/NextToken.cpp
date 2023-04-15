@@ -363,8 +363,10 @@ void getbase(int64_t b)
                         }
                 else break;
                 }
-		if (lastch=='L' || lastch=='U')	// ignore a 'L'ong suffix and 'U'nsigned
-			getch();
+        if (lastch == 'L' || lastch == 'U' || lastch == 'l' || lastch == 'u' || lastch == 'S' || lastch == 's') { // ignore a 'L'ong suffix and 'U'nsigned
+          int_precision = toupper(lastch);
+          getch();
+        }
     ival128 = i128;
         ival = i;
 /*
@@ -493,6 +495,7 @@ void getnum()
   bool isPosit = false;
         i = 0;
         float_precision = ' ';
+        int_precision = ' ';
         ival = 0;
         rval = 0.0;
         pval64.Zero();
@@ -514,7 +517,8 @@ void getnum()
                   getch();
                 }
                 // Ignore 'L' unsigned suffix
-                if (lastch == 'L' || lastch == 'l') {
+                if (lastch == 'L' || lastch == 'l' || lastch == 'S' || lastch == 's') {
+                  int_precision = lastch;
                   getch();
                   if (lastch == 'L' || lastch == 'l') {
                     getch();
@@ -526,6 +530,21 @@ void getnum()
         }
         else    {
                 getbase(10);
+                // Ignore 'U' unsigned suffix
+                if (lastch == 'U' || lastch == 'u') {
+                  getch();
+                }
+                // Ignore 'L' unsigned suffix
+                if (lastch == 'L' || lastch == 'l' || lastch == 'S' || lastch == 's') {
+                  int_precision = lastch;
+                  getch();
+                  if (lastch == 'L' || lastch == 'l') {
+                    getch();
+                    if (lastch == 'U' || lastch == 'u') {
+                      getch();
+                    }
+                  }
+                }
 j1:
                 if(lastch == '.') {
                   if (lptr[0] == '.' && lptr[1] == '.') {

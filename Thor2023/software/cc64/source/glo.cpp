@@ -114,6 +114,7 @@ Float128		rval128;
 Int128 ival128;
 Posit64 pval64;
 char float_precision = 'd';
+char int_precision = ' ';
 //FloatTriple     FAC1,FAC2;
 //FLOAT           rval = {0,0,0,0,0,0};
 int parseEsc = TRUE;

@@ -526,7 +526,7 @@ void Float128::FloatSingleToQuad(Float128* d, float* a)
 
 	aa = (__int32*)a;
 	sign = *aa >> 31LL;
-	exp = (*aa >> 23L) & 0x7f;
+	exp = (*aa >> 23L) & 0xff;
 	man = *aa & 0x7fffffL;
 	d->sign = sign;
 	// Zero?

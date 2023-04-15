@@ -147,6 +147,7 @@ extern Float128			rval128;
 extern Int128  ival128;
 extern Posit64 pval64;
 extern char float_precision;
+extern char int_precision;
 extern int parseEsc;
 //extern FloatTriple      FAC1,FAC2;
 

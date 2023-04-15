@@ -1739,6 +1739,135 @@ xit:
 	return (ep1);
 }
 
+bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int count, 
+	short int* defcount, ENODE** ep_def, TYP** head, TYP** tp2, ENODE** ep4)
+{
+	bool found = false;
+	Declaration decl;
+	Symbol* sp;
+	TYP* tph, *tpt;
+
+	if (lastst == kw_default) {
+		*defcount = count;
+		NextToken();
+	}
+	else
+		needpunc(kw_case, 59);
+
+	decl.itable = nullptr;
+	decl.head = nullptr;
+	decl.tail = nullptr;
+	decl.istorage_class = sc_member;
+	decl.ParseSpecifier(0, &sp, sc_none);
+	decl.ParsePrefix(false, nullptr, false);
+	tph = decl.head;
+	tpt = decl.tail;
+
+	needpunc(colon, 60);
+	*ep4 = nullptr;
+	do {
+		*tp2 = ParseExpression(ep4, symi);
+		if (ep4 == nullptr)
+			*tp2 = &stdint;
+		else
+			*tp2 = (*ep4)->tp;
+		if (lastst == semicolon)
+			NextToken();
+		if (lastst == kw_break) {
+			NextToken();
+			if (lastst == semicolon)
+				NextToken();
+			break;
+		}
+		if (lastst == end)
+			break;
+		if (lastst == my_eof) {
+			error(ERR_EOF_REACHED);
+			break;
+		}
+	} while (false);
+	if (count == *defcount)
+		*ep_def = *ep4;
+	if (TYP::IsSameType(tph, tp1, true)) {
+		found = true;
+		*node = (*ep4)->Clone();
+		(*node)->SetType(tph);
+	}
+	return (found);
+}
+
+TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
+{
+	bool got_pa = false;
+	bool got_begin = false;
+	bool found = false;
+	Declaration decl;
+	Symbol* sp;
+	TYP* tp1, * tpa, *tp2, *tp, *tprh, *tprt;
+	TYP* tp_found;
+	TYP* tph[100];
+	TYP* tpt[100];
+	ENODE* ep1, * ep2, *ep3, * ep4, *epr, *ep_def;
+	ENODE* ep_found;
+	short int count, defcount;
+	Statement* stmt;
+
+	tp1 = tp2 = nullptr;
+	tp_found = nullptr;
+	ep_def = nullptr;
+	stmt = nullptr;
+	defcount = -1;
+	if (lastst == kw_switch) {
+		NextToken();
+		if (lastst == openpa) {
+			got_pa = true;
+			NextToken();
+		}
+		tp1 = ParseExpression(&ep1, symi);
+			/*
+			decl.itable = nullptr;
+			decl.istorage_class = sc_member;
+			decl.ParseSpecifier(0, &sp, sc_none); // do cast declaration
+			decl.ParsePrefix(FALSE, nullptr, false);
+			tp1 = decl.head;
+			tpa = decl.tail;
+			*/
+		if (got_pa)
+			needpunc(closepa, 57);
+		needpunc(begin, 58);
+		ep2 = nullptr;
+		for (count = 0; count < 100; count++) {
+			if (lastst == end) {
+				NextToken();
+				break;
+			}
+			if (ParseGenericCase(node, tp1, symi, count, &defcount,
+				&ep_def, &tph[count], &tp2, &ep4)) {
+				found = true;
+				ep_found = ep4;
+				tp_found = ep4->tp;
+			}
+		}
+		if (!found && defcount >= 0) {
+			tprh = tph[defcount];
+			ep_def->tp = forcefit(&ep4, tp2, &ep1, tp1, false, true);
+			*node = makenode(en_void, ep1, ep_def);
+			ep_def->SetType(ep_def->tp);
+			return (ep_def->tp);
+		}
+		if (found) {
+			(*node)->tp = forcefit(&ep_found, tp_found, &ep1, tp1, false, true);
+			*node = makenode(en_void, ep1, ep_found);
+			(*node)->SetType(ep1->tp);
+			return ((*node)->tp);
+		}
+		*node = makeinode(en_icon, 0);
+		return (&stdint);
+	}
+	else
+		return (ParseExpression(node, symi));
+}
+
 ENODE* Expression::MakeStaticNameNode(Symbol* sp)
 {
 	std::string stnm;

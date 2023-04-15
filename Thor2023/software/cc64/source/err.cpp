@@ -102,7 +102,8 @@ static const char *errtextstr[] = {
 	"E Too many designators.",
 	"E The dot operator must reference a struct / union or class.",
 	"E Integer constant between 0 and 255 required.",
-	"E Extra ')'."
+	"E Extra ')'.",
+	"E End of file reached."
 };
 
 static const char *errtext1000[] =

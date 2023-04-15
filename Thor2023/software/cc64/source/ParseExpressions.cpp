@@ -1321,13 +1321,17 @@ j1:
 		break;
 
 	case iconst:
-		if (ival128.IsNBit(64))
+		if (int_precision == ' ')
 		{
 			tptr = &stdint;
 			pnode = SetIntConstSize(tptr, ival);
 		}
-		else {
+		else if (int_precision == 'L') {
 			tptr = &stdlong;
+			pnode = makei128node(en_icon, ival128);
+		}
+		else if (int_precision == 'S') {
+			tptr = &stdshort;
 			pnode = makei128node(en_icon, ival128);
 		}
 		pnode->SetType(tptr);
@@ -1782,6 +1786,7 @@ j1:
  //                     not cast_expression
  *                      ~cast_expression
  *                      -cast_expression
+ *                      =cast_expression
  *                      +cast_expression
  *                      *cast_expression
  *                      &cast_expression
@@ -1830,6 +1835,7 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 		break;
 
 	case plus:
+	case assign:
     NextToken();
     tp = ParseCastExpression(&ep1, symi);
     if(tp == NULL) {
@@ -1918,6 +1924,7 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 //		unary_expression
 //		(type name)cast_expression
 //		(type name) { const list }
+//		switch(type) { case list }
 // ----------------------------------------------------------------------------
 TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 {
@@ -2057,6 +2064,10 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 		else {
 			tp = ParseUnaryExpression(&ep1,1,symi);
 		}
+		break;
+
+	case kw_switch:
+		tp = ParseGenericSwitch(&ep1, symi);
 		break;
 
 	default:
@@ -3038,8 +3049,10 @@ xit:
 }
 
 // ----------------------------------------------------------------------------
-//      asnop handles the assignment operators. currently only the
-//      simple assignment is implemented.
+//  asnop handles the assignment operators.
+// 
+//		= expression
+//		= switch(type) { case type: expr1; case type: expr2; default: expr3; }
 // ----------------------------------------------------------------------------
 TYP *Expression::ParseAssignOps(ENODE **node, Symbol* symi)
 {      
@@ -3060,7 +3073,7 @@ TYP *Expression::ParseAssignOps(ENODE **node, Symbol* symi)
         op = en_assign;
 ascomm:
 				NextToken();
-        tp2 = ParseAssignOps(&ep2, symi);
+				tp2 = ParseAssignOps(&ep2, symi);
 ascomm2:
 		    if ( tp2 == 0 || !IsLValue(ep1) )
           error(ERR_LVALUE);

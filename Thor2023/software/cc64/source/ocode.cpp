@@ -1423,17 +1423,19 @@ void OCODE::OptLdi()
 		if (ip->HasTargetReg()) {
 			int rg1, rg2;
 			ip->GetTargetReg(&rg1, &rg2);
-			if ((ip->opcode & 0x7fff) == cpu.ldi_op) {
-				if (rg1 == oper1->preg || rg2 == oper1->preg) {
-					if (ip->oper2->offset->i == oper2->offset->i) {
-						ip->MarkRemove();
-						optimized++;
+			if (ip->opcode != op_pfx0 && ip->opcode != op_pfx1 && ip->opcode != op_pfx2 && ip->opcode != op_pfx3) {
+				if ((ip->opcode & 0x7fff) == cpu.ldi_op) {
+					if (rg1 == oper1->preg || rg2 == oper1->preg) {
+						if (ip->oper2->offset->i == oper2->offset->i) {
+							ip->MarkRemove();
+							optimized++;
+						}
+						else
+							return;
 					}
 					else
 						return;
 				}
-				else
-					return;
 			}
 		}
 	}

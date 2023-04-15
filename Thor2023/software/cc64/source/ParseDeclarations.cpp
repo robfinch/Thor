@@ -256,7 +256,7 @@ void Declaration::ParseLong()
 		NextToken();
 	}
 	else if (lastst==kw_double) {
-		head = TYP::Copy(&stddouble);
+		head = TYP::Copy(&stdquad);
 		//head = (TYP *)TYP::Make(bt_quad,8);
 		tail = head;
 		bit_max = head->precision;
@@ -320,7 +320,8 @@ void Declaration::ParseInt(bool nt)
 	head->isIO = isIO;
 	if (nt)
 		NextToken();
-	if (lastst == colon) {
+	if (lastch == '\'') {
+		getch();
 		NextToken();
 		if (lastst == iconst) {
 			head->precision = ival;// (__int16)GetIntegerExpression(nullptr);
@@ -416,7 +417,8 @@ void Declaration::ParseFloat()
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
 	NextToken();
-	if (lastst == colon) {
+	if (lastch == '\'') {
+		getch();
 		NextToken();
 		if (lastst == iconst) {
 			head->precision = ival;
@@ -469,7 +471,8 @@ void Declaration::ParsePosit()
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
 	NextToken();
-	if (lastst == colon) {
+	if (lastch == '\'') {
+		getch();
 		NextToken();
 		if (lastst == iconst) {
 			head->precision = ival;

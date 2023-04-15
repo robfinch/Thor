@@ -5,7 +5,7 @@
 
 /* Subroutines in this file take care of temporary variable management */
 
-#define SWIDTH 8
+#define SWIDTH 16
 #define REGION_MAX 128	/* The maximum number of stack elements that can be
 									used for temporaries. */
 #define MARK	-1			/* Marks cells that are in use but are not the

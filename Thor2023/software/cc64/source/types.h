@@ -686,6 +686,7 @@ public:
 	ENODE* bit_offset;
 	__int8 scale;
 	short int rg;
+	int64_t stack_offs;
 	// The following could be in a value union
 	// Under construction: use value class
 //	Value val;
@@ -902,6 +903,9 @@ private:
 	bool ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp);
 	void ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp);
 	TYP* ParseAggregate(ENODE** node, Symbol* typi, TYP* tp);
+	bool ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int count, 
+		short int* defcount, ENODE** ep_def, TYP** head, TYP** tp2, ENODE** ep4);
+	TYP* ParseGenericSwitch(ENODE** node, Symbol* symi);
 	ENODE* ParseTypenum();
 	ENODE* ParseNew(bool autonew, Symbol* symi);
 	ENODE* ParseDelete(Symbol* symi);
@@ -1773,6 +1777,7 @@ public:
 	Statement *ParseAsm();
 	Statement *ParseTry();
 	Statement *ParseExpression();
+	Statement* ParseExpression(ENODE** node, Symbol* symi);
 	Statement *ParseLabel(bool pt=true);
 	Statement *ParseWhile();
 	Statement *ParseUntil();
@@ -1781,6 +1786,7 @@ public:
 	Statement *ParseBreak();
 	Statement *ParseSwitch();
 	Statement* ParseYield();
+	Statement* Parse(ENODE** node, Symbol* symi);
 	Statement *Parse();
 
 	// Optimization
