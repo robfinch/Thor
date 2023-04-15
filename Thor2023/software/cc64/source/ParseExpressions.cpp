@@ -274,6 +274,12 @@ ENODE *makefqnode(int nt, Float128 *f128)
 	ep->etype = bt_quad;
 	ep->esize = -1;
   Float128::Assign(&ep->f128,f128);
+	Float128::Float128ToDouble(&ep->f, f128);
+	Float128::FloatToInt(&ep->i, f128);
+	ep->i128.low = ep->i;
+	ep->i128.high = 0LL;
+	if (ep->i & 0x8000000000000000LL)
+		ep->i128 = 0xffffffffffffffffLL;
 //    ep->f2 = v2;
 	ep->p[0] = 0;
 	ep->p[1] = 0;
@@ -1929,7 +1935,7 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 {
 	TYP *tp, *tp1, *tp2;
-	ENODE *ep1, *ep2;
+	ENODE *ep1, *ep2, *ep3, *dstnode, *srcnode;
 	Declaration decl;
 	Symbol* sp;
 	bool madenode;
@@ -1999,7 +2005,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 				if (!ep1->AssignTypeToList(tp)) {
 					error(ERR_CASTAGGR);
 				}
-				ep2 = ep1;
+				dstnode = ep1;
 			}
 			else
 			{
@@ -2021,43 +2027,75 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 					ep2->SetType(tp);
 				}
 				ep2 = makenode(en_cast, ep2, ep1);
-				if (ep1 == nullptr)
+				ep2->SetType(ep2->p[0]->tp);
+				if (ep1 == nullptr) {
+					dstnode = nullptr;
 					error(ERR_NULLPOINTER);
+				}
 				else {
-					if (ep2->p[0]->constflag || ep1->constflag) {
-						ep2->isUnsigned = ep2->p[0]->isUnsigned;
-						ep2->constflag = true;
-						if (ep2->p[0]->tp != nullptr) {
+					dstnode = ep2;
+					srcnode = ep2->p[0];
+					if (srcnode->nodetype == en_type)
+						srcnode = ep2->p[1];
+					if (dstnode->constflag || ep1->constflag) {
+						dstnode->isUnsigned = srcnode->isUnsigned;
+						dstnode->constflag = true;
+						if (srcnode->tp != nullptr) {
 							// Copy a scalar.
-							if (ep2->p[0]->tp->IsScalar()) {
-								ep2->nodetype = en_icon;
-								ep2->i = ep2->p[1]->i;
-								ep2->i128 = ep2->p[1]->i128;
-								ep2->p[0] = nullptr;
-								ep2->p[1] = nullptr;
+							if (tp->IsScalar()) {
+								dstnode->nodetype = en_icon;
+								// Convert float to integer?
+								if (srcnode->tp->IsFloatType()) {
+									Float128::FloatToInt(&dstnode->i, &ep1->f128);
+									dstnode->i128.low = ep1->i;
+									if (dstnode->i & 0x8000000000000000LL)
+										dstnode->i128.high = 0xFFFFFFFFFFFFFFFFLL;
+									else
+										dstnode->i128.high = 0LL;
+								}
+								// Copy integer value
+								else {
+									dstnode->i = ep1->i;
+									dstnode->i128 = ep1->i128;
+									dstnode->f = ep1->f;
+									dstnode->f128 = ep1->f128;
+									dstnode->p[0] = nullptr;
+									dstnode->p[1] = nullptr;
+								}
 							}
 							// Copy float constant.
-							else if (ep2->p[0]->tp->IsFloatType()) {
-								ep2->nodetype = en_fcon;
-								ep2->i = ep2->p[1]->i;	// i=literal index
-								ep2->f = ep2->p[1]->f;
-								ep2->f128 = ep2->p[1]->f128;
-								ep2->p[0] = nullptr;
-								ep2->p[1] = nullptr;
+							else if (dstnode->p[1]->tp->IsFloatType()) {
+								dstnode->nodetype = en_fcon;
+								if (srcnode->tp->IsScalar()) {
+									Float128::IntToFloat(&dstnode->f128, ep1->i);
+									dstnode->f = (double)ep1->i;
+									dstnode->i = ep1->i;	// i=literal index
+									dstnode->i128 = ep1->i128;
+								}
+								else {
+									dstnode->i = ep1->i;	// i=literal index
+									dstnode->i128 = ep1->i128;
+									dstnode->f = ep1->f;
+									dstnode->f128 = ep1->f128;
+								}
+								dstnode->p[0] = nullptr;
+								dstnode->p[1] = nullptr;
 							}
 						}
+						tp = dstnode->tp;
 					}
 					//ep2->etype = ep1->etype;
 					//ep2->esize = ep1->esize;
 	//				forcefit(&ep2,tp,&ep1,tp2,false);
-					tp = forcefit(&ep1, tp2, &ep2, tp, false, true);
+					else
+						forcefit(&ep1, tp2, &dstnode, tp, false, true);
 				}
 				//			forcefit(&ep2,tp2,&ep1,tp,false);
 			}
 			head = tp;
 			tail = tp1;
 //			*node = ep1;
-			*node = ep2;
+			*node = dstnode;
 			(*node)->SetType(tp);
 			return (tp);
         }

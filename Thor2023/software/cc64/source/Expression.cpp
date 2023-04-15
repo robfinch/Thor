@@ -1798,7 +1798,7 @@ bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int coun
 
 TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
 {
-	bool got_pa = false;
+	bool got_pap = false;
 	bool got_begin = false;
 	bool found = false;
 	Declaration decl;
@@ -1814,15 +1814,17 @@ TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
 
 	tp1 = tp2 = nullptr;
 	tp_found = nullptr;
-	ep_def = nullptr;
+	ep1 = ep_def = nullptr;
 	stmt = nullptr;
 	defcount = -1;
 	if (lastst == kw_switch) {
 		NextToken();
 		if (lastst == openpa) {
-			got_pa = true;
+			got_pap = true;
 			NextToken();
 		}
+		// Parse the expression to get the type, throw-away the expression and just
+		// use the type.
 		tp1 = ParseExpression(&ep1, symi);
 			/*
 			decl.itable = nullptr;
@@ -1832,7 +1834,7 @@ TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
 			tp1 = decl.head;
 			tpa = decl.tail;
 			*/
-		if (got_pa)
+		if (got_pap)
 			needpunc(closepa, 57);
 		needpunc(begin, 58);
 		ep2 = nullptr;
@@ -1844,21 +1846,19 @@ TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
 			if (ParseGenericCase(node, tp1, symi, count, &defcount,
 				&ep_def, &tph[count], &tp2, &ep4)) {
 				found = true;
-				ep_found = ep4;
+				ep_found = ep4->Clone();
 				tp_found = ep4->tp;
 			}
 		}
 		if (!found && defcount >= 0) {
 			tprh = tph[defcount];
-			ep_def->tp = forcefit(&ep4, tp2, &ep1, tp1, false, true);
-			*node = makenode(en_void, ep1, ep_def);
+			ep_def->tp = forcefit(&ep_def, tp2, node, tp1, false, true);
 			ep_def->SetType(ep_def->tp);
 			return (ep_def->tp);
 		}
 		if (found) {
-			(*node)->tp = forcefit(&ep_found, tp_found, &ep1, tp1, false, true);
-			*node = makenode(en_void, ep1, ep_found);
-			(*node)->SetType(ep1->tp);
+			(*node)->tp = forcefit(&ep_found, tp_found, node, tp1, false, true);
+			(*node)->SetType(tp1);
 			return ((*node)->tp);
 		}
 		*node = makeinode(en_icon, 0);

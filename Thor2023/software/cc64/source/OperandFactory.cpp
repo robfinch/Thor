@@ -157,6 +157,10 @@ Operand *OperandFactory::MakeIndexed(int64_t offset, int regno)
 	ep = allocEnode();
 	ep->nodetype = en_icon;
 	ep->i = offset;
+	ep->i128.low = offset;
+	ep->i128.high = 0;
+	if (offset & 0x8000000000000000LL)
+		ep->i128.high = 0xffffffffffffffffLL;
 	ap = allocOperand();
 	ap->mode = am_indx;
 	ap->preg = regno;

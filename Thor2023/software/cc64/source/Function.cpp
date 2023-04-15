@@ -1804,6 +1804,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 		sp1->parent = sym->parent;
 		sp1->IsParameter = true;
 		sp1->value.i = poffset;
+
 		noParmOffset = false;
 		if (sp1->tp->IsFloatType())
 			reg = BPLAssignReg(sp1, reg, &noParmOffset);
