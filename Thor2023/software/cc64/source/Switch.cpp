@@ -592,6 +592,49 @@ void Statement::GenerateCase()
 	stmt->Generate(1);
 }
 
+Operand* CodeGenerator::GenerateCase(ENODE* node, Operand* sw_ap)
+{
+	Operand* apr, *tmp;
+	ENODE* ep, *def;
+	int64_t nn, kk;
+	int64_t* buf;
+	int lab;
+
+	lab = nextlabel++;
+	tmp = GetTempRegister();
+	def = nullptr;
+	for (ep = node; ep; ep = ep->p[0]) {
+		if (ep->nodetype == en_case) {
+			buf = (int64_t*)ep->p[2];
+			if (buf) {
+				nn = buf[0];
+				for (kk = 1; kk <= nn; kk++)
+					GenerateTriadic(op_bne, 0, sw_ap, MakeImmediate(buf[kk], 0), MakeCodeLabel(lab));
+				apr = GenerateExpression(ep->p[1], am_all, ep->p[1]->esize, 1);
+				GenerateDiadic(op_mov, 0, tmp, apr);
+				GenerateLabel(lab);
+				lab = nextlabel++;
+			}
+		}
+		else if (ep->nodetype == en_default)
+			def = ep->p[1];
+	}
+	if (def) {
+		apr = GenerateExpression(def, am_all, def->esize, 1);
+		GenerateDiadic(op_mov, 0, tmp, apr);
+	}
+	return (tmp);
+}
+
+Operand* CodeGenerator::GenerateSwitch(ENODE* node)
+{
+	Operand* ap;
+
+	ap = GenerateExpression(node->p[0], am_reg, node->p[0]->esize, 1);
+	ap = GenerateCase(node->p[1], ap);
+	return (ap);
+}
+
 void Statement::GenerateDefault()
 {
 	Statement* stmt = this;

@@ -106,6 +106,8 @@ void doinit(Symbol *sp)
   char buf[500];
   std::streampos endpoint;
 	std::streampos lblpoint;
+	int64_t szpoint;
+	bool setsz = false;
 	TYP *tp;
 	int n;
 	ENODE* node;
@@ -220,7 +222,10 @@ void doinit(Symbol *sp)
 			else
 				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
 			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.type\t%s,@object\n", (char*)sp->name->c_str());
+			szpoint = strlen(lbl);
 			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.size\t%s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
+			if (sp->tp->size == 0)
+				setsz = true;
 		}
 		//		strcat_s(lbl, sizeof(lbl), sp->name->c_str());
 //		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "[xxx%d]", sp->tp->size);
@@ -320,6 +325,7 @@ void doinit(Symbol *sp)
 		hasPointer = false;
 		if (!IsFuncptrAssign(sp)) {
 			Symbol* s2;
+			TYP* et;
 			hasPointer = sp->tp->FindPointer();
 			typ_sp = 0;
 			tp = sp->tp;
@@ -332,11 +338,17 @@ void doinit(Symbol *sp)
 			//gNameRefNode = exp.ParseNameRef(sp);
 			s2 = currentSym;
 			//currentSym = sp;
-			exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
+			et = exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
 			opt_const_unchecked(&node);			// This should reduce to a single integer expression
 			//if (!node->AssignTypeToList(sp->tp)) {
 			//	error(ERR_CASTAGGR);
 			//}
+			if (sp->tp->type == bt_array || (sp->tp->type==bt_pointer && sp->tp->val_flag)) {
+				if (sp->tp->size == 0) {
+					sp->tp->size = et->size;
+					sp->tp->numele = et->numele;
+				}
+			}
 			currentSym = s2;
 			ENODE::initializedSet.clear();
 			if (node != nullptr)

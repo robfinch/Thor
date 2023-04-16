@@ -2544,7 +2544,7 @@ void Statement::ListCompoundVars()
 			if (ss1->s1->stype == st_compound)
 				ss1->s1->ListCompoundVars();
 		}
-		if (ss1->s2) {
+		if (ss1->stype != st_default && ss1->s2) {
 			if (ss1->s2->stype == st_compound)
 				ss1->s2->ListCompoundVars();
 		}

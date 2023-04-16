@@ -32,6 +32,7 @@ int openfiles(char *);
 void closefiles();
 int PreProcessFile(char *);
 extern void initRegs();
+bool append = false;
 
 char irfile[256],
 	infile[256],
@@ -245,7 +246,10 @@ int	options(char *s)
 		}
 	}
 	else if (s[1]=='a') {
-        address_bits = atoi(&s[2]);
+		if (strncmp(&s[2], "ppend", 5) == 0)
+			append = true;
+		else
+       address_bits = atoi(&s[2]);
     }
 	else if (s[1]=='p') {
         if (strcmp(&s[2],"FISA64")==0) {
@@ -348,7 +352,10 @@ int openfiles(char *s)
 	strcpy_s(irfile, sizeof(irfile), s);
 	strcpy_s(infile,sizeof(infile),s);
         strcpy_s(listfile,sizeof(listfile),s);
-        strcpy_s(outfile,sizeof(outfile),s);
+				if (append)
+					strcpy_s(outfile, sizeof(outfile), "cc64.asm");
+				else
+	        strcpy_s(outfile,sizeof(outfile),s);
   dbgfile = s;
 
 		//strcpy(outfileG,s);
@@ -397,9 +404,14 @@ int openfiles(char *s)
         //        fclose(input);
         //        return 0;
         //        }
-		ofs.open(outfile,std::ios::out|std::ios::trunc);
-		dfs.open(dbgfile.c_str(),std::ios::out|std::ios::trunc);
-//		irfs.open(irfile, std::ios::out | std::ios::trunc);
+		if (append) {
+			ofs.open(outfile, std::ios::out | std::ios::app);
+		}
+		else {
+			ofs.open(outfile, std::ios::out | std::ios::trunc);
+		}
+		dfs.open(dbgfile.c_str(), std::ios::out | std::ios::trunc);
+		//		irfs.open(irfile, std::ios::out | std::ios::trunc);
 		irfs.level = 1;
 		irfs.puts("CC64 Hex Intermediate File\n");
 		dfs.level = 1;
@@ -421,7 +433,7 @@ int openfiles(char *s)
         //        return 0;
         //        }
         try {
-			lfs.open(listfile,std::ios::out|std::ios::trunc);
+					lfs.open(listfile,std::ios::out|std::ios::trunc);
 		}
 		catch(...) {
 			closefiles();

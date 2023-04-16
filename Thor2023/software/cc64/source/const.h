@@ -101,6 +101,7 @@ enum e_node {
 		en_ref, en_fieldref, en_ursh,
 		en_bchk, en_chk, en_bytendx, en_bitoffset,
 		en_abs, en_max, en_min, en_addrof, en_ptrdif, en_wydendx,
+		en_switch, en_case, en_default,
 		// Vector
 		en_autovcon, en_autovmcon, en_vector_ref, en_vex, en_veins,
 		en_vadd, en_vsub, en_vmul, en_vdiv,
@@ -156,7 +157,7 @@ enum e_sym {
 	kw_new, kw_delete, kw_using, kw_namespace, kw_not, kw_attribute,
 	kw_no_temps, kw_no_parms, kw_floatmax, kw_mulf, kw_bytendx, kw_is_nullptr,
 	kw_compound, kw_expr, kw_label, kw_restrict,
-	kw_nullptr,
+	kw_nullptr, kw_generic,
 	my_eof
 };
 
@@ -276,6 +277,8 @@ enum e_op {
 	op_ptrdif, op_isnullptr,
 	op_mtlc, op_mflk, op_mtlk, op_sbx,
 	op_exi56, op_exim, op_ldhs, op_sths,
+	// Thor2023
+	op_orf,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt,
 	op_wydendx,

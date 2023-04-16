@@ -774,6 +774,10 @@ static void Opt0_byt2hexi(ENODE* ep)
 			ep->i128.low = ep->p[0]->i128.low & 0xffLL;
 		}
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -787,6 +791,10 @@ static void Opt0_ubyt2hexi(ENODE* ep)
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffLL;
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -807,6 +815,10 @@ static void Opt0_wyde2hexi(ENODE* ep)
 			ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
 		}
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -820,6 +832,10 @@ static void Opt0_uwyde2hexi(ENODE* ep)
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffffLL;
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -840,6 +856,10 @@ static void Opt0_tetra2hexi(ENODE* ep)
 			ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
 		}
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -853,6 +873,10 @@ static void Opt0_utetra2hexi(ENODE* ep)
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low & 0xffffffffLL;
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -872,6 +896,10 @@ static void Opt0_octa2hexi(ENODE* ep)
 			ep->i128.low = ep->p[0]->i128.low;
 		}
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 
@@ -885,6 +913,10 @@ static void Opt0_uocta2hexi(ENODE* ep)
 		ep->i128.high = 0;
 		ep->i128.low = ep->p[0]->i128.low;
 		ooptimized = true;
+		ep->p[0] = nullptr;
+		ep->p[1] = nullptr;
+		ep->p[2] = nullptr;
+		ep->p[3] = nullptr;
 	}
 }
 

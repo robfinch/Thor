@@ -288,6 +288,10 @@ int ENODE::GetNaturalSize()
 			return (p[0]->GetNaturalSize() + p[1]->GetNaturalSize());
 		else
 			return (p[0]->GetNaturalSize());
+	case en_switch:
+		if (tp)
+			return (tp->size);
+		return (sizeOfWord);
 	default:
 		printf("DIAG - natural size error %d.\n", nodetype);
 		break;
@@ -2996,7 +3000,7 @@ void ENODE::CountSegments()
 	if (this) {
 		segcount[segment]++;
 		if (p[0])	p[0]->CountSegments();
-		if (nodetype != en_aggregate) {
+		if (nodetype != en_aggregate && nodetype != en_icon) {
 			if (p[1])	p[1]->CountSegments();
 			if (p[2])	p[2]->CountSegments();
 			if (p[3])	p[3]->CountSegments();

@@ -273,6 +273,7 @@ void OCODE::OptSubtract()
 	OCODE* fsbi;
 
 	ip2 = fwd;
+
 	// Subtract zero from self.
 	if (IsEqualOperand(oper1, oper2)) {
 		if (oper3->mode == am_imm) {
@@ -289,6 +290,9 @@ void OCODE::OptSubtract()
 			optimized++;
 		}
 	}
+	return;
+	// The following seems not to work all the time.
+
 	//if (oper2->isPtr && oper3->isPtr && oper2->mode == am_reg && oper3->mode == am_reg) {
 	//	opcode = op_ptrdif;
 	//	insn = GetInsn(op_ptrdif);
@@ -326,6 +330,8 @@ void OCODE::OptSubtract()
 	for (; ip2; ip2 = ip2->fwd) {
 		if (ip2->opcode == op_label)
 			return;
+		if (ip2->remove)
+			continue;
 		if (ip2->insn->IsFlowControl())
 			return;
 		if (!ip2->IsSubiSP()) {
@@ -339,8 +345,10 @@ void OCODE::OptSubtract()
 				return;
 		}
 		else {
+			// The following add does not update properly.
 			fsbi->oper3->offset->i += ip2->oper3->offset->i;
 			ip2->MarkRemove();
+			optimized++;
 		}
 	}
 	/*
@@ -350,9 +358,12 @@ void OCODE::OptSubtract()
 			ip2->MarkRemove();
 		}
 	*/
-	for (ip2 = fwd; ip2; ip2 = ip2->fwd)
+	for (ip2 = fwd; ip2; ip2 = ip2->fwd) {
+		if (ip2->remove)
+			continue;
 		if (ip2->IsSubiSP() && ip2->oper3->offset->i == 0)
-			MarkRemove();
+			ip2->MarkRemove();
+	}
 	return;
 	if (opcode == op_subui) {
 		if (oper3) {

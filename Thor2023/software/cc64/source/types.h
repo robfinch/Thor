@@ -906,6 +906,10 @@ private:
 	bool ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int count, 
 		short int* defcount, ENODE** ep_def, TYP** head, TYP** tp2, ENODE** ep4);
 	TYP* ParseGenericSwitch(ENODE** node, Symbol* symi);
+	TYP* ParseSwitchExpr(ENODE** node, Symbol* symi);
+	TYP* ParseSwitch(ENODE** node, Symbol* symi);
+	TYP* ParseGenericCase(ENODE** node, Symbol* symi, TYP* tp1);
+	TYP* ParseGeneric(ENODE** node, Symbol* symi);
 	ENODE* ParseTypenum();
 	ENODE* ParseNew(bool autonew, Symbol* symi);
 	ENODE* ParseDelete(Symbol* symi);
@@ -997,6 +1001,7 @@ public:
 	Function* MakeFunction(int symnum, Symbol* sp, bool isPascal);
 	Symbol* FindMember(TYP* tp1, char* name);
 	Symbol* FindMember(TABLE* tbl, char* name);
+	void force_type(ENODE* dst, ENODE* src, TYP* tp);
 };
 
 
@@ -1272,6 +1277,8 @@ public:
 	Operand* GenerateTrinary(ENODE* node, int flags, int size, int op);
 	virtual void GenerateUnlink(int64_t amt);
 	virtual void RestoreRegisterVars() {};
+	Operand* GenerateCase(ENODE* node, Operand* sw);
+	Operand* GenerateSwitch(ENODE* node);
 };
 
 class ThorCodeGenerator : public CodeGenerator
@@ -1756,10 +1763,10 @@ public:
 	static int olderthrow;
 	static bool lc_in_use;
 	
-	Statement* MakeStatement(int typ, int gt);
+	static Statement* MakeStatement(int typ, int gt);
 
 	// Parsing
-	int64_t* GetCasevals();
+	static int64_t* GetCasevals();
 	Statement* ParseDefault();
 	Statement* ParseCheckStatement();
 	Statement *ParseStop();
@@ -1950,7 +1957,7 @@ public:
 	void ParseSuffixOpenbr();
 	Function* ParseSuffixOpenpa(Function *);
 	Symbol *ParseSuffix(Symbol *sp);
-	static void ParseFunctionAttribute(Function *sym);
+	static void ParseFunctionAttribute(Function *sym, bool needpa);
 	int ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al, bool local);
 	Function* ParseFunctionJ2(Function* fn);
 	void ParseCoroutine();

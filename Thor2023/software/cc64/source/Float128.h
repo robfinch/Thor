@@ -147,6 +147,8 @@ public:
 	static void FloatToInt(__int64 *i, Float128 *a);
 	static void Float128ToDouble(double *d, Float128 *a);
 	static void Float128ToSingle(float* f, Float128* a);
+	static void FloatQuadToHalf(uint16_t* f, Float128* a);
+	static void FloatHalfToQuad(Float128*, uint16_t*);
 	static void FloatSingleToQuad(Float128* a, float* f);
 	static void FloatDoubleToQuad(Float128* a, double* f);
 	void Pack(int);

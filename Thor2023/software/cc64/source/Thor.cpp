@@ -1370,12 +1370,12 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 							ReleaseTempRegister(ap2);
 							cg.GenerateStore(ap, MakeIndexed((int64_t)0, regSP), sizeOfWord);		// and source
 							ap3 = GetTempRegister();
-							GenerateLoadConst(ap3, MakeImmediate(ap->tp->size));								// and size
+							GenerateLoadConst(MakeImmediate(ap->tp->size), ap3);								// and size
 							cg.GenerateStore(ap3, MakeImmediate(ap->tp->size), sizeOfWord);
 							ReleaseTempRegister(ap3);
 							GenerateMonadic(op_bsr, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));	// call copy helper
 							ap1 = GetTempRegister();
-							GenerateLoadConst(ap1, MakeImmediate(ep->stack_offs));							// and size
+							GenerateLoadConst(MakeImmediate(ep->stack_offs), ap1);							// and size
 							cg.GenerateStore(ap1, MakeIndexed(stkoffs, regSP), sizeOfWord);
 							ReleaseTempRegister(ap1);
 						}

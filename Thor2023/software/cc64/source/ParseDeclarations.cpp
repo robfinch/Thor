@@ -761,6 +761,7 @@ int Declaration::ParseStruct(TABLE* table, e_bt typ, Symbol **sp)
 int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 {
 	Symbol *sp;
+	Function* fn;
 	ClassDeclaration cd;
 	StructDeclaration sd;
 	bool rv;
@@ -773,6 +774,7 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 	isVirtual = FALSE;
 	isIO = FALSE;
 	isConst = FALSE;
+	fn = nullptr;
 	dfs.printf("A");
 	for (;;) {
 		switch (lastst) {
@@ -931,7 +933,11 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 				NextToken();
 				bit_max = 64;
 				goto lxit;
-				
+			
+			case kw_attribute:
+				ParseFunctionAttribute(fn,true);
+				break;
+
 			default:
 				goto lxit;
 			}
@@ -1246,11 +1252,18 @@ j1:
 		if (!IsDeclBegin(lastst) || true) {
 			Function* fn = currentFn;
 			TABLE* table;
-			if (fn)
-				table = &currentFn->body->ssyms;
+			if (fn) {
+				if (currentFn->body)
+					table = &currentFn->body->ssyms;
+				else {
+					Statement* bdy;
+					currentFn->body = bdy = Statement::MakeStatement(st_compound, 0);
+					table = &currentFn->body->ssyms;
+				}
+			}
 			else
 				table = &gsyms[0];
-			declare(symi, table, fn ? sc_member : sc_global, 0, 0, &symo, local, currentFn->depth);
+			declare(symi, table, fn ? sc_member : sc_global, 0, 0, &symo, local, currentFn ? currentFn->depth : 0);
 			currentFn = fn;
 		}
 		else {
@@ -1418,12 +1431,18 @@ void Declaration::ParseSuffixOpenbr()
 	tail = temp1;
 }
 */
-void Declaration::ParseFunctionAttribute(Function *sym)
+void Declaration::ParseFunctionAttribute(Function *sym, bool needpa)
 {
 	NextToken();
-	needpunc(openpa,0);
+	if (needpa)
+		needpunc(openpa,0);
 	do {
 		switch(lastst) {
+		case openpa:
+			ParseFunctionAttribute(sym, false);
+			needpunc(closepa, 73);
+			break;
+
 		case kw_no_temps:
 			sym->UsesTemps = false;
 			NextToken();
@@ -1434,9 +1453,12 @@ void Declaration::ParseFunctionAttribute(Function *sym)
 			NextToken();
 			break;
 		*/
+		default:
+			NextToken();
 		}
 	} while (lastst==comma);
-	needpunc(closepa,0);
+	if (needpa)
+		needpunc(closepa,0);
 }
 
 Function* Declaration::ParseFunctionJ2(Function* sp)
@@ -1506,7 +1528,7 @@ Function* Declaration::ParseFunctionJ2(Function* sp)
 		}
 		needpunc(closepa, 23);
 		while (lastst == kw_attribute)
-			ParseFunctionAttribute(sp);
+			ParseFunctionAttribute(sp,true);
 		if (lastst == assign)
 			return (sp);
 
@@ -1647,7 +1669,7 @@ Function* Declaration::ParseSuffixOpenpa(Function *sp)
 	if(lastst == closepa) {
 		NextToken();
 		while (lastst == kw_attribute)
-			ParseFunctionAttribute(sp);
+			ParseFunctionAttribute(sp,true);
 	  if(lastst == begin) {
 		  temp1->type = bt_ifunc;
 		  needParseFunction = 2;
@@ -1917,19 +1939,23 @@ Symbol *Declaration::FindSymbol(Symbol *sp, TABLE *table)
 			else {
 				nn = sp->parentp->lsyms.Find(*sp->name);
 				if (nn) {
-					sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
+					Function* fn = sp->fi->FindExactMatch(TABLE::matchno);
+					if (fn) sp1 = fn->sym;
 				}
 			}
 		}
 		else {
 			nn = sp->tp->lst.Find(*sp->name);
 			if (nn) {
-				sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
+				Function* fn = sp->fi->FindExactMatch(TABLE::matchno);
+				if (fn) sp1 = fn->sym;
 			}
 			else {
 				nn = sp->lsyms.Find(*sp->name);
-				if (nn)
-					sp1 = sp->fi->FindExactMatch(TABLE::matchno)->sym;
+				if (nn) {
+					Function* fn = sp->fi->FindExactMatch(TABLE::matchno);
+					if (fn) sp1 = fn->sym;
+				}
 			}
 		}
 		if (nn == 0) {
@@ -2024,7 +2050,7 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 				if (lastst == closepa) {
 					NextToken();
 					while (lastst == kw_attribute)
-						Declaration::ParseFunctionAttribute(fn);
+						Declaration::ParseFunctionAttribute(fn,true);
 				}
 				needpunc(closepa, 52);
 			}
@@ -2182,7 +2208,8 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 		dfs.printf("b");
 		bit_width = -1;
 		sp = ParsePrefix(ztype == bt_union, nullptr, local);
-		sp->depth = depth;
+		if (sp)
+			sp->depth = depth;
 		if (symo)
 			*symo = sp;
 		if (dhead == nullptr)
@@ -2203,7 +2230,8 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 
 		if (funcdecl > 0)
 			if (local)
-				sp->fi->Islocal = local;
+				if (sp)
+					sp->fi->Islocal = local;
 
 		// If a function declaration is taking place and just the type is
 		// specified without a parameter name, assign an internal compiler
@@ -2216,6 +2244,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			if (sp == nullptr) {
 				sp = Symbol::alloc();
 				sp->name = declid;
+				sp->depth = depth;
 				//if (funcdecl > 0)
 				//	sp->fi = MakeFunction(sp->id, sp, isPascal, isInline);
 			}
@@ -2306,9 +2335,10 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			}
 			//			}
 		}
-		if (sp->parentp == nullptr) {
-			sp->parentp = parent;
-		}
+		if (sp)
+			if (sp->parentp == nullptr) {
+				sp->parentp = parent;
+			}
 		if (funcdecl > 0) {
 			if (lastst == closepa) {
 				goto xit1;
@@ -2429,6 +2459,7 @@ void GlobalDeclaration::Parse()
 	isLeaf = false;
 	isCoroutine = false;
 	head = tail = nullptr;
+	symo = nullptr;
 	for(;;) {
 		lc_auto = 0;
 		bool notVal = false;
@@ -2467,11 +2498,12 @@ void GlobalDeclaration::Parse()
 
 		case id:
 			lc_static += declare(NULL, &gsyms[0], sc_global, lc_static, bt_struct, &symo, false, 0);
-			if (symo->fi) {
-				symo->fi->inline_threshold = inline_threshold;
-				symo->fi->IsInline = inline_threshold > 0;
-				symo->fi->depth = 0;
-			}
+			if (symo)
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->depth = 0;
+				}
 			inline_threshold = compiler.autoInline;
 			isCoroutine = false;
 			break;
@@ -2495,22 +2527,24 @@ void GlobalDeclaration::Parse()
 				case kw_float: case kw_double: case kw_float128: case kw_posit:
 		case kw_vector: case kw_vector_mask:
 			lc_static += declare(NULL, &gsyms[0], sc_global, lc_static, bt_struct, &symo, false, 0);
-				if (symo->fi) {
-					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
-					symo->fi->depth = 0;
-				}
+				if (symo)
+					if (symo->fi) {
+						symo->fi->inline_threshold = inline_threshold;
+						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->depth = 0;
+					}
 				inline_threshold = compiler.autoInline;
 				isCoroutine = false;
 				break;
         case kw_thread:
 				NextToken();
         lc_thread += declare(NULL,&gsyms[0],sc_thread,lc_thread,bt_struct, &symo, false, 0);
-				if (symo->fi) {
-					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
-					symo->fi->depth = 0;
-				}
+				if (symo)
+					if (symo->fi) {
+						symo->fi->inline_threshold = inline_threshold;
+						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->depth = 0;
+					}
 				inline_threshold = compiler.autoInline;
 				isCoroutine = false;
 				break;
@@ -2518,11 +2552,12 @@ void GlobalDeclaration::Parse()
 			NextToken();
       error(ERR_ILLCLASS);
       lc_static += declare(NULL,&gsyms[0],sc_global,lc_static,bt_struct, &symo, false, 0);
-			if (symo->fi) {
-				symo->fi->inline_threshold = inline_threshold;
-				symo->fi->IsInline = inline_threshold > 0;
-				symo->fi->depth = 0;
-			}
+			if (symo)
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->depth = 0;
+				}
 			inline_threshold = compiler.autoInline;
 			isCoroutine = false;
 			break;
@@ -2530,11 +2565,12 @@ void GlobalDeclaration::Parse()
     case kw_static:
       NextToken();
 			lc_static += declare(NULL,&gsyms[0],sc_static,lc_static,bt_struct, &symo, false, 0);
-			if (symo->fi) {
-				symo->fi->inline_threshold = inline_threshold;
-				symo->fi->IsInline = inline_threshold > 0;
-				symo->fi->depth = 0;
-			}
+			if (symo)
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->depth = 0;
+				}
 			inline_threshold = compiler.autoInline;
 			isCoroutine = false;
 			break;
@@ -2565,11 +2601,12 @@ j1:
 					NextToken();
           ++global_flag;
           declare(NULL,&gsyms[0],sc_external,0,bt_struct, &symo, false, 0);
-					if (symo->fi) {
-						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0;
-						symo->fi->depth = 0;
-					}
+					if (symo)
+						if (symo->fi) {
+							symo->fi->inline_threshold = inline_threshold;
+							symo->fi->IsInline = inline_threshold > 0;
+							symo->fi->depth = 0;
+						}
 					inline_threshold = compiler.autoInline;
 					isCoroutine = false;
 					--global_flag;
@@ -2665,10 +2702,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 			depth++;
 	    lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal,depth);
 			depth--;
-			if (symo->fi) {
-				symo->fi->inline_threshold = inline_threshold;
-				symo->fi->IsInline = inline_threshold > 0;
-			}
+			if (symo)
+				if (symo->fi) {
+					symo->fi->inline_threshold = inline_threshold;
+					symo->fi->IsInline = inline_threshold > 0;
+				}
 			inline_threshold = compiler.autoInline;
 			break;
 		case ellipsis:
@@ -2696,10 +2734,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 						depth++;
 			            lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal,depth);
 									depth--;
-									if (symo->fi) {
-										symo->fi->inline_threshold = inline_threshold;
-										symo->fi->IsInline = inline_threshold > 0;
-									}
+									if (symo)
+										if (symo->fi) {
+											symo->fi->inline_threshold = inline_threshold;
+											symo->fi->IsInline = inline_threshold > 0;
+										}
 									inline_threshold = compiler.autoInline;
 									break;
 					}
@@ -2719,10 +2758,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 			depth++;
             lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal,depth);
 						depth--;
-						if (symo->fi) {
-							symo->fi->inline_threshold = inline_threshold;
-							symo->fi->IsInline = inline_threshold > 0;
-						}
+						if (symo)
+							if (symo->fi) {
+								symo->fi->inline_threshold = inline_threshold;
+								symo->fi->IsInline = inline_threshold > 0;
+							}
 						inline_threshold = compiler.autoInline;
 						break;
         case kw_thread:
@@ -2730,10 +2770,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 								depth++;
 				lc_thread += declare(parent,ssyms,sc_thread,lc_thread,bt_struct,&symo,isLocal,depth);
 				depth--;
-				if (symo->fi) {
-					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
-				}
+				if (symo)
+					if (symo->fi) {
+						symo->fi->inline_threshold = inline_threshold;
+						symo->fi->IsInline = inline_threshold > 0;
+					}
 				inline_threshold = compiler.autoInline;
 				break;
         case kw_static:
@@ -2741,10 +2782,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 								depth++;
 				lc_static += declare(parent,ssyms,sc_static,lc_static,bt_struct,&symo,isLocal,depth);
 				depth--;
-				if (symo->fi) {
-					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
-				}
+				if (symo)
+					if (symo->fi) {
+						symo->fi->inline_threshold = inline_threshold;
+						symo->fi->IsInline = inline_threshold > 0;
+					}
 				inline_threshold = compiler.autoInline;
 				break;
         case kw_extern:
@@ -2755,10 +2797,11 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 								depth++;
                 declare(nullptr,&gsyms[0],sc_external,0,bt_struct,&symo,isLocal,depth);
 								depth--;
-								if (symo->fi) {
-									symo->fi->inline_threshold = inline_threshold;
-									symo->fi->IsInline = inline_threshold > 0;
-								}
+								if (symo)
+									if (symo->fi) {
+										symo->fi->inline_threshold = inline_threshold;
+										symo->fi->IsInline = inline_threshold > 0;
+									}
 								inline_threshold = compiler.autoInline;
 								--global_flag;
                 break;

@@ -149,9 +149,15 @@ int IdentifyKeyword()
 		if (p[1]=='h' && p[2]=='r' && p[3]=='e' && p[4]=='a' && p[5]=='d' && p[6]=='\0')
 			return lastst = kw_thread;
 	}
+	
+	// goto generic
+	if (p[0] == 'g') {
+		if (p[1] == 'o' && p[2] == 't' && p[3] == 'o' && p[4] == '\0')
+			return lastst = kw_goto;
+		if (p[1] == 'e' && p[2] == 'n' && p[3] == 'e' && p[4] == 'r' && p[5] == 'i' && p[6] == 'c' && p[7] == '\0')
+			return lastst = kw_generic;
+	}
 
-	if (p[0]=='g' && p[1]=='o' && p[2]=='t' && p[3]=='o' && p[4]=='\0')
-		return lastst = kw_goto;
 	if (p[0]=='j' && p[1]=='u' && p[2]=='m' && p[3]=='p' && p[4]=='\0')
 		return lastst = kw_goto;
 
@@ -365,5 +371,9 @@ int IdentifyKeyword()
 		//	return lastst = kw_is_nullptr;
 	}
 
+	if (p[0] == '_') {
+		if (p[1] == 'G' && p[2] == 'e' && p[3] == 'n' && p[4] == 'e' && p[5] == 'r' && p[6] == 'i' && p[7] == 'c' && p[8] == '\0')
+			return (lastst = kw_generic);
+	}
 	return 0;
 }

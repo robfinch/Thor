@@ -176,7 +176,8 @@ ENODE *makenode(int nt, ENODE *v1, ENODE *v2)
 	ep->p[0] = v1;
 	ep->p[1] = v2;
 	ep->p[2] = 0;
-  return (ep);
+	ep->p[3] = nullptr;
+	return (ep);
 }
 
 ENODE *makefcnode(int nt, ENODE *v1, ENODE *v2, Symbol *sp)
@@ -193,7 +194,8 @@ ENODE *makefcnode(int nt, ENODE *v1, ENODE *v2, Symbol *sp)
 	ep->p[0] = v1;
 	ep->p[1] = v2;
 	ep->p[2] = 0;
-  return ep;
+	ep->p[3] = nullptr;
+	return ep;
 }
 
 ENODE *makesnode(int nt, std::string *v1, std::string *v2, int64_t i)
@@ -211,7 +213,8 @@ ENODE *makesnode(int nt, std::string *v1, std::string *v2, int64_t i)
 	ep->p[0] = 0;
 	ep->p[1] = 0;
 	ep->p[2] = 0;
-  return ep;
+	ep->p[3] = nullptr;
+	return ep;
 }
 
 ENODE *makenodei(int nt, ENODE *v1, int i)
@@ -227,7 +230,8 @@ ENODE *makenodei(int nt, ENODE *v1, int i)
 	ep->p[0] = v1;
 	ep->p[1] = (ENODE *)NULL;
 	ep->p[2] = 0;
-    return ep;
+	ep->p[3] = nullptr;
+	return ep;
 }
 
 ENODE *makeinode(int nt, int64_t v1)
@@ -244,6 +248,7 @@ ENODE *makeinode(int nt, int64_t v1)
 	ep->p[1] = 0;
 	ep->p[0] = 0;
 	ep->p[2] = 0;
+	ep->p[3] = nullptr;
     return ep;
 }
 
@@ -261,6 +266,7 @@ ENODE* makei128node(int nt, Int128 v1)
 	ep->p[1] = 0;
 	ep->p[0] = 0;
 	ep->p[2] = 0;
+	ep->p[3] = nullptr;
 	return ep;
 }
 
@@ -284,7 +290,8 @@ ENODE *makefqnode(int nt, Float128 *f128)
 	ep->p[0] = 0;
 	ep->p[1] = 0;
 	ep->p[2] = 0;
-  return ep;
+	ep->p[3] = nullptr;
+	return ep;
 }
 
 char *GetStrConst()
@@ -1402,6 +1409,8 @@ j1:
 		pnode = AdjustForBitArray(pop, tptr, pnode);
 		tptr = nameref(&pnode, 0, symi);
 		pnode = ParseDotOperator(symi ? symi->tp : &stdint, pnode, symi);
+		if (pnode == nullptr)
+			return (nullptr);
 		pnode->constflag = true;
 		tptr = pnode->tp;
 		break;
@@ -2038,50 +2047,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 					if (srcnode->nodetype == en_type)
 						srcnode = ep2->p[1];
 					if (dstnode->constflag || ep1->constflag) {
-						dstnode->isUnsigned = srcnode->isUnsigned;
-						dstnode->constflag = true;
-						if (srcnode->tp != nullptr) {
-							// Copy a scalar.
-							if (tp->IsScalar()) {
-								dstnode->nodetype = en_icon;
-								// Convert float to integer?
-								if (srcnode->tp->IsFloatType()) {
-									Float128::FloatToInt(&dstnode->i, &ep1->f128);
-									dstnode->i128.low = ep1->i;
-									if (dstnode->i & 0x8000000000000000LL)
-										dstnode->i128.high = 0xFFFFFFFFFFFFFFFFLL;
-									else
-										dstnode->i128.high = 0LL;
-								}
-								// Copy integer value
-								else {
-									dstnode->i = ep1->i;
-									dstnode->i128 = ep1->i128;
-									dstnode->f = ep1->f;
-									dstnode->f128 = ep1->f128;
-									dstnode->p[0] = nullptr;
-									dstnode->p[1] = nullptr;
-								}
-							}
-							// Copy float constant.
-							else if (dstnode->p[1]->tp->IsFloatType()) {
-								dstnode->nodetype = en_fcon;
-								if (srcnode->tp->IsScalar()) {
-									Float128::IntToFloat(&dstnode->f128, ep1->i);
-									dstnode->f = (double)ep1->i;
-									dstnode->i = ep1->i;	// i=literal index
-									dstnode->i128 = ep1->i128;
-								}
-								else {
-									dstnode->i = ep1->i;	// i=literal index
-									dstnode->i128 = ep1->i128;
-									dstnode->f = ep1->f;
-									dstnode->f128 = ep1->f128;
-								}
-								dstnode->p[0] = nullptr;
-								dstnode->p[1] = nullptr;
-							}
-						}
+						force_type(dstnode, ep1, srcnode->tp);
 						tp = dstnode->tp;
 					}
 					//ep2->etype = ep1->etype;
@@ -2105,7 +2071,11 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 		break;
 
 	case kw_switch:
-		tp = ParseGenericSwitch(&ep1, symi);
+		tp = ParseSwitch(&ep1, symi);
+		break;
+
+	case kw_generic:
+		tp = ParseGeneric(&ep1, symi);
 		break;
 
 	default:

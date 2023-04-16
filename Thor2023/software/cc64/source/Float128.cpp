@@ -554,6 +554,44 @@ void Float128::FloatSingleToQuad(Float128* d, float* a)
 	d->man[0] = 0L;
 }
 
+void Float128::FloatHalfToQuad(Float128* d, uint16_t* a)
+{
+	bool sign;
+	unsigned __int8 exp;
+	__int16 man;
+	__int16* aa;
+
+	aa = (__int16*)a;
+	sign = *aa >> 15;
+	exp = (*aa >> 10) & 0x1f;
+	man = *aa & 0x3ff;
+	d->sign = sign;
+	// Zero?
+	if (*a == 00 || *a==0x8000) {
+		d->sign = *a >> 16;
+		d->exp = 0;
+		d->man[0] = 0;
+		d->man[1] = 0;
+		d->man[2] = 0;
+		d->man[3] = 0;
+		return;
+	}
+	// Infinite?
+	if (exp == 0x1f && man == 0L) {
+		d->exp = 0xffffL;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		d->man[0] = 0;
+		return;
+	}
+	d->exp = exp + bias - 0x0f;
+	d->man[3] = ((uint32_t)man << 20) | 0x40000000L;
+	d->man[2] = 0L;
+	d->man[1] = 0L;
+	d->man[0] = 0L;
+}
+
 void Float128::Float128ToSingle(float* d, Float128* a)
 {
 	bool sgn;
@@ -583,7 +621,39 @@ void Float128::Float128ToSingle(float* d, Float128* a)
 	exp = a->exp - bias + 0x7f;
 	*di = (__int32)sgn << 31;
 	*di |= (__int32)exp << 23;
-	*di |= (__int32)(a->man[FLT128_WORDS - 1] & 0x3fffffffL) >> 8L;
+	*di |= (__int32)(a->man[FLT128_WORDS - 1] & 0x3fffffffL) >> 7L;
+}
+
+void Float128::FloatQuadToHalf(uint16_t* d, Float128* a)
+{
+	bool sgn;
+	unsigned __int16 exp;
+	__int16* di = (__int16*)d;
+
+	// Do we have a zero ?
+	if (a->IsZero()) {
+		*di = a->sign ? 0x8000 : 0x0000;
+		return;
+	}
+	// Or an infinite number ?
+	if (a->IsInfinite()) {
+		*di = a->sign ? 0xFC00 : 0x7C00;
+		return;
+	}
+	// Too large a number -> infinity
+	if (a->exp > a->bias + 0x10) {
+		*di = a->sign ? 0xFC00 : 0x7C00;
+		return;
+	}
+	// Too small a number -> zero
+	if (a->exp < a->bias - 0x0f) {
+		*di = a->sign ? 0x8000 : 0x0000;
+	}
+	sgn = a->sign;
+	exp = a->exp - bias + 0xf;
+	*di = (__int16)sgn << 15;
+	*di |= (__int16)exp << 10;
+	*di |= (__int16)((a->man[FLT128_WORDS - 1] & 0x3fffffffL) >> 20L);
 }
 
 void Float128::Pack(int prec)
@@ -744,6 +814,16 @@ bool Float128::IsLessThan(Float128 *a, Float128 *b)
 	if (a->exp > b->exp)
 		return (false);
 	return (ManGT(b, a));
+}
+
+bool Float128::IsHalf()
+{
+	Float128 f128;
+	uint16_t h;
+
+	Float128::FloatQuadToHalf(&h, this);
+	Float128::FloatHalfToQuad(&f128, &h);
+	return (IsEqual(&f128, this));
 }
 
 bool Float128::IsSingle()

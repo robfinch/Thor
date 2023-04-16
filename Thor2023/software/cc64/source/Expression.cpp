@@ -1,4 +1,7 @@
 #include "stdafx.h"
+using namespace std;
+#include <list>
+#include <array>
 
 extern int defaultcc;
 extern Symbol* currentClass;
@@ -342,23 +345,40 @@ ENODE* Expression::ParseThis(ENODE** node)
 void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp)
 {
 	ENODE* pnode;
-	ENODE** node_array;
+	//ENODE** node_array;
 	int64_t count;
+	int64_t maxcount;
 	int64_t at_node;
+	int64_t asz;
 	TYP* array_type;
+	ENODE** node_array;
+	ENODE** new_array;
 
 //	pnode = *node;
+	asz = 1000;
 	pnode = nullptr;
 	array_type = tp->btpp;
+	node_array = new ENODE * [asz];
+	memset(node_array, 0, asz * sizeof(ENODE*));
+	/*
 	node_array = new ENODE * [tp->numele];
 	for (count = 0; count < tp->numele; count++) {
 		node_array[count] = allocEnode();
 		node_array[count]->order = count;
 		node_array[count]->SetType(symi->tp->btpp);
 	}
-	for (count = 0; count < tp->numele; count++) {
+	*/
+	for (count = 0; tp->numele==0 ? true: count < tp->numele; count++) {
 		at_node = 0;
-		if (lastst == begin)
+		if (count >= asz) {
+			asz += 1000;
+			new_array = new ENODE * [asz];
+			memset(node_array, 0, asz * sizeof(ENODE*));
+			memcpy(new_array, node_array, (asz - 1000) * sizeof(ENODE*));
+			delete[] node_array;
+			node_array = new_array;
+		}
+		if (lastst == e_sym::begin)
 			ParseAggregate(&node_array[count], symi, tp);
 		else {
 			if (lastst == openbr) {
@@ -369,20 +389,33 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 			}
 			else
 				at_node = count;
+			if (at_node > asz) {
+				asz = at_node + 1000;
+				new_array = new ENODE * [asz];
+				memset(node_array, 0, asz * sizeof(ENODE*));
+				memcpy(new_array, node_array, (asz - 1000) * sizeof(ENODE*));
+				delete[] node_array;
+				node_array = new_array;
+			}
 			ParseNonCommaExpression(&node_array[at_node], symi);
 			opt_const(&node_array[at_node]);
 			lastst;
 		}
-		if (at_node > tp->numele)
+		if (tp->numele && at_node > tp->numele)
 			error(ERR_ILLINIT);
 		if (lastst == comma)
 			NextToken();
 		else
 			break;
 	}
-	for (count = 0; count < symi->tp->numele; count++)
+	maxcount = count+1;
+	for (count = 0; count < maxcount; count++)
 		pnode = makenode(en_void, pnode, node_array[count]);
 	*node = pnode;
+	if (tp->numele == 0) {
+		tp->numele = maxcount;
+		tp->size = tp->numele * tp->btpp->size;
+	}
 }
 
 bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp)
@@ -410,7 +443,7 @@ bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, 
 		node_array[count]->order = count;
 	}
 	lst = hlst;
-	for (count = 0; lastst != end && lst != nullptr; count++, lst = lst->nextp) {
+	for (count = 0; lastst != e_sym::end && lst != nullptr; count++, lst = lst->nextp) {
 		at_node = count;
 		found = false;
 		tmp = nullptr;
@@ -434,7 +467,7 @@ bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, 
 				error(ERR_NOMEMBER);
 		}
 		if (at_node < maxcount) {
-			if (lastst == begin)
+			if (lastst == e_sym::begin)
 				tptr = ParseAggregate(&node_array[count], lst, lst->tp);
 			else {
 				tptr = ParseNonCommaExpression(&node_array[at_node], found ? tmp : lst);
@@ -531,7 +564,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		ParseAggregateStruct(&pnode, cnode, symi, tp);
 		consistentType = false;
 	}
-	needpunc(end, 56);
+	needpunc(e_sym::end, 56);
 /*
 	else {
 		tptr = ParseNonCommaExpression(&pnode, lst);
@@ -552,6 +585,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 			return (nullptr);
 	}
 	*/
+	sz = tp->size;
 	pnode = makenode(en_end_aggregate, pnode, nullptr);
 	hnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
 	pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
@@ -563,10 +597,10 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		count = 0;
 		for (qnode = pnode->p[0]; qnode; qnode = qnode->p[0])
 			count++;
-		hnode->tp->numele = count-1;
-		pnode->tp->numele = count-1;
-		hnode->tp->size = (count - 1) * tptr->size;
-		pnode->tp->size = (count - 1) * tptr->size;
+		hnode->tp->numele = count;
+		pnode->tp->numele = count;
+//		hnode->tp->size = (count) * tptr->size;
+//		pnode->tp->size = (count) * tptr->size;
 	}
 
 	hnode->esize = hnode->tp->size;
@@ -1548,32 +1582,42 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	int64_t elesize, sz1;
 	bool cf = false;	// constant flag
 	bool uf = false;	// unsigned flag
+	bool undimensioned = false;
 
+	rnode = nullptr;
 	pnode = ep1;
 	if (tp1 == nullptr) {
 		error(ERR_UNDEFINED);
 		goto xit;
 	}
 	NextToken();
-	if (tp1->type == bt_pointer) {
-		tp2 = expression(&rnode, nullptr);
-		tp3 = tp1;
-		tp4 = tp1;
-		if (rnode == nullptr) {
-			error(ERR_EXPREXPECT);
-			throw new C64PException(ERR_EXPREXPECT, 9);
+	if (lastst == closebr)
+		undimensioned = true;
+	if (!undimensioned) {
+		if (tp1->type == bt_pointer) {
+			tp2 = expression(&rnode, nullptr);
+			tp3 = tp1;
+			tp4 = tp1;
+			if (rnode == nullptr) {
+				error(ERR_EXPREXPECT);
+				throw new C64PException(ERR_EXPREXPECT, 9);
+			}
+		}
+		else {
+			tp2 = tp1;
+			rnode = pnode;
+			tp3 = expression(&pnode, nullptr);
+			if (tp3 == NULL) {
+				error(ERR_UNDEFINED);
+				throw new C64PException(ERR_UNDEFINED, 10);
+				goto xit;
+			}
+			tp1 = tp3;
+			tp4 = tp1;
 		}
 	}
 	else {
-		tp2 = tp1;
-		rnode = pnode;
-		tp3 = expression(&pnode, nullptr);
-		if (tp3 == NULL) {
-			error(ERR_UNDEFINED);
-			throw new C64PException(ERR_UNDEFINED, 10);
-			goto xit;
-		}
-		tp1 = tp3;
+		tp3 = tp1;
 		tp4 = tp1;
 	}
 	if (cnt == 0) {
@@ -1767,7 +1811,7 @@ bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int coun
 	*ep4 = nullptr;
 	do {
 		*tp2 = ParseExpression(ep4, symi);
-		if (ep4 == nullptr)
+		if (*ep4 == nullptr)
 			*tp2 = &stdint;
 		else
 			*tp2 = (*ep4)->tp;
@@ -1779,7 +1823,7 @@ bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int coun
 				NextToken();
 			break;
 		}
-		if (lastst == end)
+		if (lastst == e_sym::end)
 			break;
 		if (lastst == my_eof) {
 			error(ERR_EOF_REACHED);
@@ -1790,8 +1834,12 @@ bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int coun
 		*ep_def = *ep4;
 	if (TYP::IsSameType(tph, tp1, true)) {
 		found = true;
-		*node = (*ep4)->Clone();
-		(*node)->SetType(tph);
+		if (ep4) {
+			*node = (*ep4)->Clone();
+			(*node)->SetType(tph);
+		}
+		else
+			*node = nullptr;
 	}
 	return (found);
 }
@@ -1817,55 +1865,235 @@ TYP* Expression::ParseGenericSwitch(ENODE** node, Symbol* symi)
 	ep1 = ep_def = nullptr;
 	stmt = nullptr;
 	defcount = -1;
-	if (lastst == kw_switch) {
-		NextToken();
-		if (lastst == openpa) {
-			got_pap = true;
+
+	needpunc(e_sym::begin, 58);
+	ep2 = nullptr;
+	ep_found = nullptr;
+	for (count = 0; count < 100; count++) {
+		if (lastst == e_sym::end) {
 			NextToken();
+			break;
 		}
-		// Parse the expression to get the type, throw-away the expression and just
-		// use the type.
-		tp1 = ParseExpression(&ep1, symi);
-			/*
-			decl.itable = nullptr;
-			decl.istorage_class = sc_member;
-			decl.ParseSpecifier(0, &sp, sc_none); // do cast declaration
-			decl.ParsePrefix(FALSE, nullptr, false);
-			tp1 = decl.head;
-			tpa = decl.tail;
-			*/
-		if (got_pap)
-			needpunc(closepa, 57);
-		needpunc(begin, 58);
-		ep2 = nullptr;
-		for (count = 0; count < 100; count++) {
-			if (lastst == end) {
-				NextToken();
-				break;
-			}
-			if (ParseGenericCase(node, tp1, symi, count, &defcount,
-				&ep_def, &tph[count], &tp2, &ep4)) {
-				found = true;
-				ep_found = ep4->Clone();
-				tp_found = ep4->tp;
-			}
+		if (ParseGenericCase(node, tp1, symi, count, &defcount,
+			&ep_def, &tph[count], &tp2, &ep4)) {
+			found = true;
+			ep_found = ep4->Clone();
+			tp_found = ep4->tp;
 		}
-		if (!found && defcount >= 0) {
-			tprh = tph[defcount];
-			ep_def->tp = forcefit(&ep_def, tp2, node, tp1, false, true);
-			ep_def->SetType(ep_def->tp);
-			return (ep_def->tp);
-		}
-		if (found) {
-			(*node)->tp = forcefit(&ep_found, tp_found, node, tp1, false, true);
-			(*node)->SetType(tp1);
-			return ((*node)->tp);
-		}
-		*node = makeinode(en_icon, 0);
-		return (&stdint);
 	}
-	else
-		return (ParseExpression(node, symi));
+	if (!found && defcount >= 0) {
+		tprh = tph[defcount];
+		//ep_def->tp = forcefit(&ep_def, tp2, node, tp1, false, true);
+		//ep_def->SetType(ep_def->tp);
+		*node = ep_def;
+		return (ep_def->tp);
+	}
+	if (found) {
+		//(*node)->tp = forcefit(&ep_found, tp_found, node, tp1, false, true);
+		*node = ep_found;
+		(*node)->SetType(tp1);
+		return ((*node)->tp);
+	}
+	*node = makeinode(en_icon, 0);
+	return (&stdint);
+}
+
+TYP* Expression::ParseSwitchExpr(ENODE** node, Symbol* symi)
+{
+	Statement* stmt;
+	int64_t* cv;
+	TYP* tp, *first_tp;
+	ENODE* ep1, *ep2;
+
+	ep1 = nullptr;
+	ep2 = nullptr;
+	first_tp = nullptr;
+	needpunc(e_sym::begin, 66);
+	while (lastst == kw_case || lastst == kw_default) {
+		if (lastst == kw_case) {
+			cv = Statement::GetCasevals();
+			tp = ParseExpression(&ep2, symi);
+			ep1 = makenode(en_case, ep1, ep2);
+			if (ep2)
+				ep2->p[2] = (ENODE *)cv;
+		}
+		// Default case
+		else {
+			NextToken();
+			if (lastst == colon)
+				NextToken();
+			tp = ParseExpression(&ep2, symi);
+			ep1 = makenode(en_default, ep1, ep2);
+		}
+		if (first_tp == nullptr)
+			first_tp = tp;
+		needpunc(semicolon, 68);
+	}
+	needpunc(e_sym::end, 67);
+	if (first_tp == nullptr)
+		first_tp = &stdint;
+	if (node) {
+		*node = ep1;
+		(*node)->SetType(first_tp);
+	}
+	return (first_tp);
+}
+
+TYP* Expression::ParseGenericCase(ENODE** node, Symbol* symi, TYP* tp1)
+{
+	int count;
+	Declaration decl;
+	TYP* tph, * tpt;
+	TYP* tp;
+	ENODE* ep1, *defcase;
+	Symbol* sp;
+	bool found = false;
+
+	defcase = nullptr;
+	sp = allocSYM();
+	do {
+		if (lastst == closepa)
+			break;
+		if (lastst == kw_default) {
+			NextToken();
+			if (lastst == colon)
+				NextToken();
+			tp = ParseNonCommaExpression(&defcase, symi);
+		}
+		else {
+			decl.itable = nullptr;
+			decl.head = nullptr;
+			decl.tail = nullptr;
+			decl.istorage_class = sc_member;
+			decl.ParseSpecifier(0, &sp, sc_none);
+			decl.ParsePrefix(false, nullptr, false);
+			tph = decl.head;
+			tpt = decl.tail;
+			needpunc(colon, 72);
+			tp = ParseNonCommaExpression(&ep1, symi);
+			needpunc(comma, 73);
+			if (TYP::IsSameType(tph, tp1, true)) {
+				found = true;
+				if (ep1) {
+					*node = ep1->Clone();
+					(*node)->SetType(tph);
+				}
+				else
+					*node = nullptr;
+			}
+		}
+	} while (lastst != closepa);
+	if (!found && defcase) {
+		*node = defcase;
+		(*node)->SetType(defcase->tp);
+	}
+	return ((*node)->tp);
+}
+
+TYP* Expression::ParseGeneric(ENODE** node, Symbol* symi)
+{
+	TYP* tp;
+	ENODE* ep1;
+
+	NextToken();
+	needpunc(openpa,69);
+	tp = ParseNonCommaExpression(&ep1, symi);
+	needpunc(comma, 71);
+	tp = ParseGenericCase(node, symi, tp);
+	needpunc(closepa,70);
+	return (tp);
+}
+
+TYP* Expression::ParseSwitch(ENODE** node, Symbol* symi)
+{
+	bool got_pap = false;
+	bool nkd = false;
+	bool genric = false;
+	ENODE* ep1, *sw_ep, *sw_case;
+	TYP* tp1;
+
+	NextToken();	// skip past "switch"
+	if (lastst == openpa) {
+		got_pap = true;
+		NextToken();
+	}
+	tp1 = ParseExpression(&sw_ep, symi);
+	if (lastst == semicolon) {
+		NextToken();
+		do {
+			if (lastst == kw_generic) {
+				genric = true;
+				NextToken();
+			}
+			else if (lastst == kw_naked) {
+				nkd = true;
+				NextToken();
+			}
+		} while (lastst==kw_generic || lastst == kw_naked);
+	}
+	if (got_pap)
+		needpunc(closepa, 57);
+	if (genric) {
+		tp1 = ParseGenericSwitch(&sw_case, symi);
+		ep1 = makenode(en_switch, sw_ep, sw_case);
+		ep1->SetType(tp1);
+		*node = ep1;
+		return (tp1);
+	}
+	tp1 = ParseSwitchExpr(&sw_case, symi);
+	ep1 = makenode(en_switch, sw_ep, sw_case);
+	ep1->SetType(tp1);
+	*node = ep1;
+	return (tp1);
+}
+
+void Expression::force_type(ENODE* dstnode, ENODE* srcnode, TYP* tp)
+{
+	dstnode->isUnsigned = tp->isUnsigned;
+	dstnode->constflag = true;
+	if (tp != nullptr) {
+		// Copy a scalar.
+		if (tp->IsScalar()) {
+			dstnode->nodetype = en_icon;
+			// Convert float to integer?
+			if (srcnode->tp->IsFloatType()) {
+				Float128::FloatToInt(&dstnode->i, &srcnode->f128);
+				dstnode->i128.low = srcnode->i;
+				if (dstnode->i & 0x8000000000000000LL)
+					dstnode->i128.high = 0xFFFFFFFFFFFFFFFFLL;
+				else
+					dstnode->i128.high = 0LL;
+			}
+			// Copy integer value
+			else {
+				dstnode->i = srcnode->i;
+				dstnode->i128 = srcnode->i128;
+				dstnode->f = srcnode->f;
+				dstnode->f128 = srcnode->f128;
+				dstnode->p[0] = nullptr;
+				dstnode->p[1] = nullptr;
+			}
+		}
+		// Copy float constant.
+		else if (dstnode->p[1]->tp->IsFloatType()) {
+			dstnode->nodetype = en_fcon;
+			if (srcnode->tp->IsScalar()) {
+				Float128::IntToFloat(&dstnode->f128, srcnode->i);
+				dstnode->f = (double)srcnode->i;
+				dstnode->i = srcnode->i;	// i=literal index
+				dstnode->i128 = srcnode->i128;
+			}
+			else {
+				dstnode->i = srcnode->i;	// i=literal index
+				dstnode->i128 = srcnode->i128;
+				dstnode->f = srcnode->f;
+				dstnode->f128 = srcnode->f128;
+			}
+			dstnode->p[0] = nullptr;
+			dstnode->p[1] = nullptr;
+		}
+	}
+	tp = dstnode->tp;
 }
 
 ENODE* Expression::MakeStaticNameNode(Symbol* sp)

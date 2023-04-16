@@ -418,7 +418,7 @@ int Function::Parse(bool local)
 	if (lastst == closepa) {
 		NextToken();
 		while (lastst == kw_attribute)
-			Declaration::ParseFunctionAttribute(sp);
+			Declaration::ParseFunctionAttribute(sp,true);
 		//if (lastst == closepa)
 		//	NextToken();
 		if (lastst == openpa) {
@@ -433,7 +433,7 @@ int Function::Parse(bool local)
 			if (lastst == closepa) {
 				NextToken();
 				while (lastst == kw_attribute)
-					Declaration::ParseFunctionAttribute(fn);
+					Declaration::ParseFunctionAttribute(fn,true);
 			}
 		}
 	}
@@ -466,7 +466,7 @@ j2:
 	}
 	else if (lastst == kw_attribute) {
 		while (lastst == kw_attribute) {
-			Declaration::ParseFunctionAttribute(sp);
+			Declaration::ParseFunctionAttribute(sp,true);
 		}
 		goto j2;
 	}

@@ -1463,14 +1463,19 @@ OCODE* CodeGenerator::GenerateLoadFloatConst(Operand* ap1, Operand* ap2)
 	int32_t* pi;
 	float* pf = &f;
 	int32_t i;
-	OCODE* ip;
+	OCODE* ip = currentFn->pl.tail;
 
 	pi = (int32_t*)pf;
 	i = *pi;
 	Float128 f128;
+	uint16_t h;
+
+	Float128::FloatQuadToHalf(&h, &ap1->offset->f128);
 	Float128::Float128ToSingle(&f, &ap1->offset->f128);
-	ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(0));
-	if (ap1->offset->f128.IsSingle())
+	GenerateTriadic(op_orf, 0, ap2, makereg(regZero), MakeImmediate(h));
+	if (ap1->offset->f128.IsHalf())
+		;
+	else if (ap1->offset->f128.IsSingle())
 		GenerateMonadic(op_pfx0, 0, MakeImmediate(i));
 	else {
 		int64_t i;
@@ -1513,7 +1518,8 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 	}
 	else {
 		OCODE* ip;
-
+		if (ap1->offset == nullptr)
+			;
 		if (ap1->offset->esize <= 8)
 			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
 		else {
@@ -2873,6 +2879,11 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		//	}
 		//}
 		goto retpt;
+
+	case en_switch:
+		ap1 = GenerateSwitch(node);
+		goto retpt;
+
 	default:
     printf("DIAG - uncoded node (%d) in GenerateExpression.\n", node->nodetype);
     return 0;
