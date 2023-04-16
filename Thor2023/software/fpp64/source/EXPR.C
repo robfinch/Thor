@@ -73,6 +73,11 @@ static long Constant()
          unNextCh();
          value = strtoul(inptr, &s, 0);
       }
+      // Allow a number to be followed directly by an 'L' or 'U'.
+      if (s[0] == 'L' || s[0]=='U')
+        s++;
+      if (s[0] == 'L')
+        s++;
       inptr = s;
    }
    else if (ch == '\'') {

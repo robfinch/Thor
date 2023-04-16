@@ -27,6 +27,7 @@ int errors;
 int InLineNo = 1;
 char SourceName[250];
 char OutputName[250];
+char BaseSourceName[250];
 char *SymSpace, *SymSpacePtr;
 SHashTbl HashInfo = { HashFnc, icmp, 0, sizeof(SDef), NULL };
 int MacroCount;
@@ -40,7 +41,8 @@ bbstdc = { "__STDC__", "1", -1, 0, "<fpp>" },
    bbline = { "__LINE__", NULL, -1, 0, "<fpp>" },
    bbdate = { "__DATE__", NULL, -1, 0, "<fpp>" },
    bbfile = { "__FILE__", NULL, -1, 0, "<fpp>" },
-   bbtime = { "__TIME__", NULL, -1, 0, "<fpp>" },
+  bbbasefile = { "__BASEFILE__", NULL, -1, 0, "<fpp>" },
+  bbtime = { "__TIME__", NULL, -1, 0, "<fpp>" },
    bbpp   = { "__PP__", NULL, -1, 0, "<fpp>" };
 
 void PrintDefines(void);
@@ -97,9 +99,10 @@ void ddefine()
 {
    int c, n = 0;
    SDef dp, *p;
-   char *parms[10];
+   char *parms[100];
    char *ptr;
 
+   memset(parms, 0, 100 * sizeof(char*));
    dp.nArgs = -1;          // no arguments or round brackets
    dp.line = InLineNo;     // line number macro defined on
    dp.file = bbfile.body;  // file macro defined in
@@ -442,7 +445,7 @@ void ProcLine()
 void ProcFile(char *fname)
 {
    FILE *fp;
-	 char buf[260];
+	 char buf[500];
 
 	 // Strip leading/trailing quotes from filename.
 	 if (fname[0] == '"')
@@ -632,6 +635,8 @@ void SetStandardDefines(void)
    bbline.body = StoreStr("%5d", 1);
 	 sprintf_s(buf, sizeof(buf), "%c%s%c", 0x22, SourceName, 0x22);
    bbfile.body = StoreStr(buf);
+   sprintf_s(buf, sizeof(buf), "%s", BaseSourceName);
+   bbbasefile.body = StoreStr(buf);
    bbdate.body = StoreStr("%02d/%02d/%02d", LocalTime.tm_year, LocalTime.tm_mon+1, LocalTime.tm_mday);
    bbtime.body = StoreStr("%02d:%02d:%02d", LocalTime.tm_hour, LocalTime.tm_min, LocalTime.tm_sec);
    bbpp.body = StoreStr("fpp");
@@ -639,6 +644,7 @@ void SetStandardDefines(void)
    htInsert(&HashInfo, &bbstdc);
    htInsert(&HashInfo, &bbline);
    htInsert(&HashInfo, &bbfile);
+   htInsert(&HashInfo, &bbbasefile);
    htInsert(&HashInfo, &bbtime);
    htInsert(&HashInfo, &bbdate);
    htInsert(&HashInfo, &bbpp);
@@ -654,13 +660,14 @@ main(int argc, char *argv[]) {
       xx;
    SDef *p;
 	 char buf[260];
+   char* p1;
    
    HashInfo.size = MAXMACROS;
    HashInfo.width = sizeof(SDef);
    if (argc < 2)
    {
-		fprintf(stderr, "FPP version 2.02  (C) 1998-2023 Robert T Finch  \n");
-		fprintf(stderr, "\nfpp [options] <filename> [<output filename>]\n\n");
+		fprintf(stderr, "FPP version 2.04  (C) 1998-2023 Robert T Finch  \n");
+		fprintf(stderr, "\nfpp64 [options] <filename> [<output filename>]\n\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "/D<macro name>[=<definition>] - define a macro\n");
 		fprintf(stderr, "/L                            - output #lines\n");
@@ -685,7 +692,7 @@ main(int argc, char *argv[]) {
       parsesw(argv[xx]);
 
 	if (banner)
-		fprintf(stderr, "FPP version 2.02  (C) 1998-2023 Robert T Finch  \n");
+		fprintf(stderr, "FPP version 2.04  (C) 1998-2023 Robert T Finch  \n");
 
    /* ---------------------------
          Get source file name.
@@ -710,6 +717,9 @@ main(int argc, char *argv[]) {
       if (!strchr(OutputName, '.'))
          strcat_s(OutputName, sizeof(OutputName)-1,".pp");
    }
+   strncpy_s(BaseSourceName, sizeof(BaseSourceName), OutputName, sizeof(OutputName));
+   p1 = strrchr(BaseSourceName, '.');
+   p1[0] = '\0';
 
    /* ------------------------------
          Define standard defines.

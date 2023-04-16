@@ -32,9 +32,10 @@
 
 #define FALSE     0
 #define TRUE      1
-#define MAXLINE   300
+#define MAXLINE   4000
 #define STRAREA   640000
 #define MAXMACROS 4001
+#define MAX_MACRO_ARGS  100
 
 #define DIGITS "0123456789abcdefghijklmnopqrstuvwxyz"
 

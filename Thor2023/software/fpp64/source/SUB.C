@@ -13,7 +13,7 @@
 int SubParmMacro(SDef *p)
 {
    int c, nArgs, ArgCount, xx;
-   char *Args[10];
+   char *Args[MAX_MACRO_ARGS];
    char *arg, *bdy, *tp, *ptr;
    int st,nd;
 
@@ -38,7 +38,7 @@ int SubParmMacro(SDef *p)
 
    // get macro argument list
    nArgs = p->nArgs;
-   for (ArgCount = 0; ArgCount < nArgs; ArgCount++)
+   for (ArgCount = 0; ArgCount < nArgs && ArgCount < MAX_MACRO_ARGS; ArgCount++)
    {
       arg = GetMacroArg();
       if (arg == NULL)

@@ -52,12 +52,12 @@ void searchenv(char *filename, char *envname, char *pathname, int pathsize)
    np = NULL;
    if (p = strtok_s(pbuf, ";", &np))
    {
-      do
+     do
       {
-		  if (p[strlen(p)-1]=='\\')
-	         sprintf_s(pathname, pathsize-1, "%0.90s%s", p, filename);
+       if (p[strlen(p)-1]=='\\')
+	         sprintf_s(pathname, pathsize-1, "%0.200s%s", p, filename);
 		  else
-		     sprintf_s(pathname, pathsize-1, "%0.90s\\%s", p, filename);
+		     sprintf_s(pathname, pathsize-1, "%0.200s\\%s", p, filename);
          if (_access(pathname, 0) >= 0)
             return;
       }

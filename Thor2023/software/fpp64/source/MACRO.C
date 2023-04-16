@@ -249,7 +249,7 @@ int GetMacroParmList(char *parmlist[])
         if (strncmp(id, "...", 3) == 0) {
           vargs = 1;
         }
-         if (count >= 10) {
+         if (count >= MAX_MACRO_ARGS) {
             err(15);
             goto errxit;
          }
@@ -275,7 +275,7 @@ int GetMacroParmList(char *parmlist[])
    }
 //   if (count < 1)
 //      err(17);
-   if (count < 10)
+   if (count < MAX_MACRO_ARGS)
       parmlist[count] = NULL;
 errxit:;
    return vargs ? -count : count;
