@@ -772,6 +772,13 @@ int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
 
 	if (ENODE::initializedSet.isMember(pnode->number))
 		return (0);
+	// Assign a default node if there isn't one.
+	if (pnode == nullptr) {
+		if (tp2->IsFloatType())
+			pnode = makefqnode(en_fcon, Float128::Zero());
+		else if (tp2->IsScalar())
+			pnode = makeinode(en_icon, 0);
+	}
 	return (GenerateT(pnode, tp2));
 	/*
 	do {
@@ -1036,6 +1043,8 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 		;
 	if (ENODE::initializedSet.isMember(node->number))
 		return (0);
+	if (ptp == nullptr)
+		ptp = this->tp;
 	switch (ptp->type) {
 	case bt_byte:
 		val = node->i;

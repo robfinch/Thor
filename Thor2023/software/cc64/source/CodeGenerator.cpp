@@ -24,6 +24,8 @@
 // ============================================================================
 //
 #include "stdafx.h"
+using namespace std;
+#include <map>
 
 /*
  *      this module contains all of the code generation routines
@@ -3327,7 +3329,10 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	Function* o_fn;
 	CSet* mask, * fmask, * pmask;
 	int ps;
-	OCODE* ip, *pip;
+	OCODE* ip, * pip, *cip, *hip;
+	static int instance = 1024;
+	int newlabno, oldlab;
+	std::map<int, int> labelmap;
 
 	o_fn = currentFn;
 	mask = save_mask;
@@ -3339,13 +3344,58 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	// inline function must be appended onto the peeplist of the current
 	// function.
 	//sym->pl.head = sym->pl.tail = nullptr;
+	hip = o_fn->pl.head;
 	for (ip = sym->pl.head; ip; ip = pip) {
 		if (ip->opcode != op_fnname &&
 			ip->opcode != op_rts &&
 			ip->opcode != op_rtd &&
-			ip->opcode != op_ret)
-			o_fn->pl.Add(ip->Clone(ip));
+			ip->opcode != op_ret) {
+			cip = ip->Clone(ip);
+			if (cip->opcode == op_label) {
+				labelmap[(int)cip->oper1] = 1;
+				oldlab = (int)cip->oper1 + instance;
+				cip->oper1 = (Operand*)oldlab;
+			}
+			o_fn->pl.Add(cip);
+		}
 		pip = ip->fwd;
+	}
+	// Go through the list and replace old labels with new ones.
+	for (ip = hip; ip; ip = ip->fwd) {
+		if (Instruction::Get(ip->opcode)->Instruction::IsFlowControl()) {
+			if (ip->oper1)
+				if (ip->oper1->offset)
+					if (ip->oper1->offset->nodetype == en_clabcon) {
+						if (labelmap[ip->oper1->offset->i] == 1) {
+							ip->oper1->offset->i = ip->oper1->offset->i + instance;
+							DataLabels[ip->oper1->offset->i] = true;
+						}
+					}
+			if (ip->oper2)
+				if (ip->oper2->offset)
+					if (ip->oper2->offset->nodetype == en_clabcon) {
+						if (labelmap[ip->oper2->offset->i] == 1) {
+							ip->oper2->offset->i = ip->oper2->offset->i + instance;
+							DataLabels[ip->oper2->offset->i] = true;
+						}
+					}
+			if (ip->oper3)
+				if (ip->oper3->offset)
+					if (ip->oper3->offset->nodetype == en_clabcon) {
+						if (labelmap[ip->oper3->offset->i] == 1) {
+							ip->oper3->offset->i = ip->oper3->offset->i + instance;
+							DataLabels[ip->oper3->offset->i] = true;
+						}
+					}
+			if (ip->oper4)
+				if (ip->oper4->offset)
+					if (ip->oper4->offset->nodetype == en_clabcon) {
+						if (labelmap[ip->oper4->offset->i] == 1) {
+							ip->oper4->offset->i = ip->oper4->offset->i + instance;
+							DataLabels[ip->oper4->offset->i] = true;
+						}
+					}
+			}
 	}
 	//sym->Generate();
 	pass = ps;
@@ -3357,6 +3407,7 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	fpsave_mask = fmask;
 	save_mask = mask;
 	psave_mask = pmask;
+	instance += 1024;
 }
 
 Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)

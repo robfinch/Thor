@@ -9,6 +9,7 @@ bool IsCalleeSave(int regno);
 int IsTempReg(int rg);
 
 extern TYP* expression(ENODE** node, Symbol* symi);
+extern ENODE* makefqnode(int nt, Float128* f128);
 
 // Intexpr.c
 extern Int128 GetIntegerExpression(ENODE** p, Symbol* symi, int opt);

@@ -33,6 +33,7 @@ Operand *Operand::Clone()
 		return NULL;
 	newap = allocOperand();
 	memcpy(newap, this, sizeof(Operand));
+	offset = offset->Clone();
 	return (newap);
 }
 

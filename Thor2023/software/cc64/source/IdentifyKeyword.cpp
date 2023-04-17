@@ -396,6 +396,8 @@ int IdentifyKeyword()
 		//	return lastst = kw_is_nullptr;
 		if (p[2] == 'b' && p[3] == 'm' && p[4] == 'a' && p[5] == 'p' && p[6] == '\0')
 			return (lastst = kw_bmap);
+		if (p[2] == 'd' && p[3] == 'e' && p[4] == 'c' && p[5] == 'l' && p[6] == 's' && p[7] == 'p' && p[8] == 'e' && p[9] == 'c' && p[10] == '\0')
+			return (lastst = kw_declspec);
 	}
 
 	if (p[0] == '_') {

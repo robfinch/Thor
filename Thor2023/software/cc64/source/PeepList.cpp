@@ -310,7 +310,7 @@ void PeepList::SetLabelReference()
 void PeepList::EliminateUnreferencedLabels()
 {
 	OCODE *p;
-
+	return;
 	for (p = head; p; p = p->fwd) {
 		if (p->opcode == op_label)
 			p->remove = false;

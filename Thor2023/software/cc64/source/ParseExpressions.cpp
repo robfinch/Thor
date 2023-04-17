@@ -1392,9 +1392,7 @@ j1:
 		break;
 
 	case begin:
-		if (symi == nullptr)
-			symi = Symbol::GetTemp();
-		tptr = ParseAggregate(&pnode, symi, symi->tp);
+		tptr = ParseAggregate(&pnode, symi, symi ? symi->tp : nullptr);
 		break;
 
 	case kw_restrict:
@@ -3075,7 +3073,6 @@ xit:
 //  asnop handles the assignment operators.
 // 
 //		= expression
-//		= switch(type) { case type: expr1; case type: expr2; default: expr3; }
 // ----------------------------------------------------------------------------
 TYP *Expression::ParseAssignOps(ENODE **node, Symbol* symi)
 {      

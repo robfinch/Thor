@@ -159,7 +159,7 @@ enum e_sym {
 	kw_no_temps, kw_no_parms, kw_floatmax, kw_mulf, kw_bytendx, kw_is_nullptr,
 	kw_compound, kw_expr, kw_label, kw_restrict,
 	kw_nullptr, kw_generic, kw_set, kw_single, kw_quad, kw_half, kw_real, kw_decimal,
-	kw_alignof,
+	kw_alignof, kw_declspec,
 	// Intrinsics
 	kw_bmap, kw_wydendx,
 	my_eof

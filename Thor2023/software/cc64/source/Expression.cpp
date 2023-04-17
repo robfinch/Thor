@@ -1173,11 +1173,11 @@ ENODE* Expression::ParseBmap(Symbol* symi)
 	NextToken();
 	needpunc(openpa, 46);
 	ep1 = nullptr;
+	ep2 = nullptr;
 	tp1 = ParseNonCommaExpression(&ep1, symi);
 	needpunc(comma, 47);
 	tp2 = ParseNonCommaExpression(&ep2, symi);
 	needpunc(closepa, 48);
-	ep2 = nullptr;
 	ep1 = makenode(en_bmap, ep1, ep2);
 	ep1->esize = sizeOfWord;
 	tp = &stdint;

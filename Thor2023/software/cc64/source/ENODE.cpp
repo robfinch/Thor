@@ -294,6 +294,8 @@ int ENODE::GetNaturalSize()
 		if (tp)
 			return (tp->size);
 		return (sizeOfWord);
+	case en_unknown:
+		return (sizeOfWord);
 	default:
 		printf("DIAG - natural size error %d.\n", nodetype);
 		break;

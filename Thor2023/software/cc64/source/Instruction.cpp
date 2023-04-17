@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -76,6 +76,8 @@ bool Instruction::IsFlowControl()
 		opcode == op_bbs ||
 		opcode == op_bbc ||
 		opcode == op_bnand ||
+		opcode == op_beqz ||
+		opcode == op_bnez ||
 		opcode == op_bnor ||
 		//opcode == op_ibne ||
 		//opcode == op_dbnz ||

@@ -788,6 +788,28 @@ int Declaration::ParseStruct(TABLE* table, e_bt typ, Symbol **sp)
 	return (rv);
 }
 
+void Declaration::ParseDeclspec()
+{
+	NextToken();
+	needpunc(openpa, 74);
+	NextToken();	// dllimport
+	needpunc(closepa, 75);
+}
+
+bool Declaration::IsScalar(e_sym lastst)
+{
+	return (
+		lastst == kw_int ||
+		lastst == kw_long ||
+		lastst == kw_char ||
+		lastst == kw_byte ||
+		lastst == kw_unsigned ||
+		lastst == kw_short ||
+		lastst == kw_enum ||
+		lastst == kw_exception
+		);
+}
+
 // Parse a specifier. This is the first part of a declaration.
 // Returns:
 // 0 usually, 1 if only a specifier is present
@@ -812,6 +834,8 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 	dfs.printf("A");
 	for (;;) {
 		switch (lastst) {
+
+			case kw_declspec: ParseDeclspec(); break;
 				
 			case kw_const:		ParseConst();	break;
 			case kw_typedef:	ParseTypedef(); break;
@@ -848,6 +872,10 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 			case kw_pascal:
 				isPascal = TRUE;
 				NextToken();
+				break;
+			case kw_cdecl:
+				NextToken();
+				isPascal = false;
 				break;
 
 			case kw_inline:
@@ -889,7 +917,7 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 			case kw_unsigned:
 				isUnsigned = TRUE;
 				NextToken();
-				if (TYP::IsScalar((e_sym)lastst))
+				if (IsScalar((e_sym)lastst))
 					continue;
 				ParseInt(false);
 				goto lxit;
@@ -1882,7 +1910,7 @@ void Declaration::ParseAssign(Symbol *sp)
 		//tp1 = exp.nameref(&ep1, TRUE);
 		op = en_assign;
 		ep2 = nullptr;
-		tp2 = exp.ParseAssignOps(&ep2, nullptr);
+		tp2 = exp.ParseAssignOps(&ep2, sp);
 		if (tp2 == nullptr || !IsLValue(ep1))
 			error(ERR_LVALUE);
 		else {
@@ -1977,7 +2005,10 @@ void Declaration::DoInsert(Symbol *sp, TABLE *table)
 		else {
 			//insState = 2;
 			// Inserts ultimately coming from statement ssyms.
-			table->insert(sp);
+			if (sp->IsTypedef())
+				tagtable.insert(sp);
+			else
+				table->insert(sp);
 		}
 	}
 	dfs.printf("</DoInsert>\n");
@@ -2573,6 +2604,7 @@ void GlobalDeclaration::Parse()
 			isCoroutine = false;
 			break;
 
+		case kw_declspec:
 		case ellipsis:
 		case kw_kernel:
 		case kw_interrupt:

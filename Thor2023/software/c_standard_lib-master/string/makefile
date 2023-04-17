@@ -10,6 +10,8 @@ APPINC = d:\Cores5\FT64\v7\software\source\;d:\Cores5\FT64\v7\software\FMTK\sour
 #CCX = cc64
 CFLAGS = -w -S -fno-exceptions
 #CXX = cc64 -w -S 
+AFLAGS = -Fvobj -Lbpl=5
+
 ASMS = \
 	memchr.t64 \
 	memcmp.t64 \
@@ -34,19 +36,45 @@ ASMS = \
 	strxfrm.t64 \
 	xstrxfrm.t64
 
-all:	$(ASMS)
+OUT = \
+	memchr.o \
+	memcmp.o \
+	memcpy.o \
+	memmove.o \
+	memset.o \
+	strcat.o \
+	strchr.o \
+	strcmp.o \
+	strcoll.o \
+	strcpy.o \
+	strcspn.o \
+	strerror.o \
+	strlen.o \
+	strncat.o \
+	strncpy.o \
+	strpbrk.o \
+	strrchr.o \
+	strspn.o \
+	strstr.o \
+	strtok.o \
+	strxfrm.o \
+	xstrxfrm.o
+
+all:	$(OUT)
 	echo "made STRING"
            
-STRING:	$(ASMS)
+STRING:	$(OUT)
 	echo "made STRING"
 
-.c.t64:
+.c.o:
 	cc64 $(CFLAGS) $<
-
+	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	
 clean:
+	del *.o
+	del *.lst
 	del *.t64
 	del *.lis
 	del *.c.xml
 	del *.fpp
 	del *.hir
-

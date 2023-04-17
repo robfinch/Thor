@@ -176,6 +176,12 @@ OCODE *OCODE::Clone(OCODE *c)
 	OCODE *cd;
 	cd = (OCODE *)xalloc(sizeof(OCODE));
 	memcpy(cd, c, sizeof(OCODE));
+	if (cd->opcode != op_label) {
+		cd->oper1 = cd->oper1->Clone();
+		cd->oper2 = cd->oper2->Clone();
+		cd->oper3 = cd->oper3->Clone();
+		cd->oper4 = cd->oper4->Clone();
+	}
 	return (cd);
 }
 

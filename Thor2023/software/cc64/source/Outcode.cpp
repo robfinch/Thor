@@ -376,7 +376,7 @@ Instruction opl[335] =
 { "vsne", op_vsne,10,1,false, am_vreg,am_vreg,am_vreg,0 },
 { "vsub", op_vsub,10,1,false, am_vreg,am_vreg,am_vreg,0 },
 { "vsubs", op_vsubs,10 },
-{ "wydndx", op_wydendx,1,1,false,am_reg,am_reg,am_reg | am_imm,0 },
+{ "wydendx", op_wydendx,1,1,false,am_reg,am_reg,am_reg | am_imm,0 },
 { "xnor",op_xnor,1,1,false,am_reg,am_reg,am_reg,0 },
 { "xor",op_xor,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "zxb",op_zxb,1,1,false,am_reg,am_reg,0,0 },

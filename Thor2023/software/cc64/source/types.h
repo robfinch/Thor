@@ -1931,6 +1931,7 @@ public:
 	void ParseInterrupt();
 	void ParseConst();
 	void ParseTypedef();
+	void ParseDeclspec();
 	void ParseNaked();
 	void ParseShort();
 	void ParseLong();
@@ -1976,6 +1977,7 @@ public:
 	static Function* MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline);
 	static void MakeFunction(Symbol* sp, Symbol* sp1);
 	void FigureStructOffsets(int64_t bgn, Symbol* sp);
+	bool IsScalar(e_sym lastst);
 };
 
 class StructDeclaration : public Declaration
