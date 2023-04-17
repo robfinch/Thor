@@ -1645,6 +1645,7 @@ Function* Declaration::ParseFunctionJ2(Function* sp)
 		// area.
 		else if (lastst == semicolon || lastst == closepa) {
 			sp->params.CopyTo(&sp->proto);
+			sp->IsPrototype = true;
 		}
 		else {
 			if (funcdecl > 0 && lastst == closepa)
@@ -2597,7 +2598,7 @@ void GlobalDeclaration::Parse()
 			if (symo)
 				if (symo->fi) {
 					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 					symo->fi->depth = 0;
 				}
 			inline_threshold = compiler.autoInline;
@@ -2627,7 +2628,7 @@ void GlobalDeclaration::Parse()
 				if (symo)
 					if (symo->fi) {
 						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 						symo->fi->depth = 0;
 					}
 				inline_threshold = compiler.autoInline;
@@ -2639,7 +2640,7 @@ void GlobalDeclaration::Parse()
 				if (symo)
 					if (symo->fi) {
 						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 						symo->fi->depth = 0;
 					}
 				inline_threshold = compiler.autoInline;
@@ -2652,7 +2653,7 @@ void GlobalDeclaration::Parse()
 			if (symo)
 				if (symo->fi) {
 					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 					symo->fi->depth = 0;
 				}
 			inline_threshold = compiler.autoInline;
@@ -2665,7 +2666,7 @@ void GlobalDeclaration::Parse()
 			if (symo)
 				if (symo->fi) {
 					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 					symo->fi->depth = 0;
 				}
 			inline_threshold = compiler.autoInline;
@@ -2701,7 +2702,7 @@ j1:
 					if (symo)
 						if (symo->fi) {
 							symo->fi->inline_threshold = inline_threshold;
-							symo->fi->IsInline = inline_threshold > 0;
+							symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 							symo->fi->depth = 0;
 						}
 					inline_threshold = compiler.autoInline;
@@ -2802,7 +2803,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 			if (symo)
 				if (symo->fi) {
 					symo->fi->inline_threshold = inline_threshold;
-					symo->fi->IsInline = inline_threshold > 0;
+					symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 				}
 			inline_threshold = compiler.autoInline;
 			break;
@@ -2834,7 +2835,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 									if (symo)
 										if (symo->fi) {
 											symo->fi->inline_threshold = inline_threshold;
-											symo->fi->IsInline = inline_threshold > 0;
+											symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 										}
 									inline_threshold = compiler.autoInline;
 									break;
@@ -2858,7 +2859,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 						if (symo)
 							if (symo->fi) {
 								symo->fi->inline_threshold = inline_threshold;
-								symo->fi->IsInline = inline_threshold > 0;
+								symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 							}
 						inline_threshold = compiler.autoInline;
 						break;
@@ -2870,7 +2871,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 				if (symo)
 					if (symo->fi) {
 						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 					}
 				inline_threshold = compiler.autoInline;
 				break;
@@ -2882,7 +2883,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 				if (symo)
 					if (symo->fi) {
 						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0;
+						symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 					}
 				inline_threshold = compiler.autoInline;
 				break;
@@ -2897,7 +2898,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 								if (symo)
 									if (symo->fi) {
 										symo->fi->inline_threshold = inline_threshold;
-										symo->fi->IsInline = inline_threshold > 0;
+										symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
 									}
 								inline_threshold = compiler.autoInline;
 								--global_flag;

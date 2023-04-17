@@ -1,0 +1,66 @@
+# Makefile for CTYPE
+#
+PATH = $PATH;F:\Cores2023\Thor\software\cc64\cc64\x64\debug\;F:\Cores2023\Thor\software\FPP64\FPP64\x64\debug\;"F:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64"
+FPPINC = f:\Cores2023\Thor\software\c_standard_lib-master\_HEADERS\;f:\Cores2023\Thor\software\source\;f:\Cores2023\Thor\software\Femtiki\source\kernel\;f:\Cores2023\Thor\software\inc
+INC = f:\Cores2023\Thor\software\c_standard_lib-master\_HEADERS\;f:\Cores2023\Thor\software\source\;f:\Cores2023\Thor\software\Femtiki\source\kernel\;f:\Cores2023\Thor\software\inc
+INCLUDE = f:\Cores2023\Thor\software\c_standard_lib-master\_HEADERS\;f:\Cores2023\Thor\software\source\;f:\Cores2023\Thor\software\Femtiki\source\kernel\;f:\Cores2023\Thor\software\inc
+#CCX = cc64
+CFLAGS = -w -S -fno-exceptions
+APPINC = d:\Cores5\FT64\v7\software\source\;d:\Cores5\FT64\v7\software\FMTK\source\kernel\;d:\Cores5\FT64\v7\software\inc
+#CCX = cc64
+CFLAGS = -w -S -fno-exceptions
+#CXX = cc64 -w -S 
+AFLAGS = -Fvobj -Lbpl=5
+
+ASMS =     isalnum.t64 \
+           isalpha.t64 \
+           iscntrl.t64 \
+           isdigit.t64 \
+           isgraph.t64 \
+           islower.t64 \
+           isprint.t64 \
+           ispunct.t64 \
+           isspace.t64 \
+           isupper.t64 \
+           isxdigit.t64 \
+           tolower.t64 \
+           toupper.t64 \
+           xctype.t64 \
+           xtolower.t64 \
+           xtoupper.t64
+
+OUT =     isalnum.o \
+           isalpha.o \
+           iscntrl.o \
+           isdigit.o \
+           isgraph.o \
+           islower.o \
+           isprint.o \
+           ispunct.o \
+           isspace.o \
+           isupper.o \
+           isxdigit.o \
+           tolower.o \
+           toupper.o \
+           xctype.o \
+           xtolower.o \
+           xtoupper.o
+
+ALL:	$(OUT)
+	echo "made CTYPE"
+
+CTYPE:	$(OUT)
+	echo "made CTYPE"
+
+.c.o:
+	cc64 $(CFLAGS) $<
+	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	
+clean:
+	del *.o
+	del *.lst
+	del *.t64
+	del *.lis
+	del *.c.xml
+	del *.fpp
+	del *.hir

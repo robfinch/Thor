@@ -3324,7 +3324,7 @@ int CodeGenerator::GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* 
 	return (i);
 }
 
-void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
+bool CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 {
 	Function* o_fn;
 	CSet* mask, * fmask, * pmask;
@@ -3333,6 +3333,7 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	static int instance = 1024;
 	int newlabno, oldlab;
 	std::map<int, int> labelmap;
+	bool code_generated = false;
 
 	o_fn = currentFn;
 	mask = save_mask;
@@ -3357,6 +3358,7 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 				cip->oper1 = (Operand*)oldlab;
 			}
 			o_fn->pl.Add(cip);
+			code_generated = true;
 		}
 		pip = ip->fwd;
 	}
@@ -3408,6 +3410,7 @@ void CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 	save_mask = mask;
 	psave_mask = pmask;
 	instance += 1024;
+	return (code_generated);
 }
 
 Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)

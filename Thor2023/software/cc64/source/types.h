@@ -1274,7 +1274,7 @@ public:
 	virtual void PopArguments(Function *func, int howMany, bool isPascal = true) {};
 	virtual void GenerateIndirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0) {};
 	virtual void GenerateDirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0) {};
-	virtual void GenerateInlineCall(ENODE* node, Function* func);
+	virtual bool GenerateInlineCall(ENODE* node, Function* func);
 	virtual Operand *GenerateFunctionCall(ENODE *node, int flags, int lab=0);
 	virtual int GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp);
 	void GenerateFunction(Function *fn) { fn->Generate(); };

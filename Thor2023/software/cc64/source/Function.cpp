@@ -205,6 +205,7 @@ void Function::GenerateBody(bool force_inline)
 	std::string lbl;
 	int oc, label;
 	OCODE* ip;
+	int insn_cnt;
 
 	currentFn = this;
 
@@ -239,7 +240,9 @@ void Function::GenerateBody(bool force_inline)
 		Generate();
 		dfs.putch('E');
 
-		if (pl.Count(pl.head) < compiler.autoInline && force_inline)
+		insn_cnt = pl.Count(pl.head);
+		if (((insn_cnt < compiler.autoInline) ||
+				(insn_cnt < inline_threshold)) && force_inline && !IsPrototype)
 			IsInline = true;
 		PeepOpt();
 		FlushPeep();

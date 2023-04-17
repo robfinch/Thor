@@ -1676,7 +1676,7 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 	pnode = ep1;
 	if (tp1 == nullptr) {
 		error(ERR_UNDEFINED);
-		goto xit;
+		return (ep1);
 	}
 	NextToken();
 	if (lastst == closebr)

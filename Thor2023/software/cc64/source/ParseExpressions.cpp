@@ -1414,10 +1414,15 @@ j1:
 		break;
 
 	case openbr:
-		if (pnode == nullptr)
-			pnode = MakeNameNode(symi);
+		if (pnode == nullptr) {
+			if (symi)
+				pnode = MakeNameNode(symi);
+			else
+				pnode = MakeNameNode(symi->GetTemp());
+		}
 		pnode = ParseOpenbr(tptr, pnode);
-		tptr = pnode->tp;
+		if (pnode)
+			tptr = pnode->tp;
 		wasBr = true;
 		goto j1;
 
