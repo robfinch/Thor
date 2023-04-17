@@ -379,7 +379,7 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 			node_array = new_array;
 		}
 		if (lastst == e_sym::begin)
-			ParseAggregate(&node_array[count], symi, tp);
+			ParseAggregate(&node_array[count], symi, tp->btpp);
 		else {
 			if (lastst == openbr) {
 				NextToken();
@@ -414,7 +414,7 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 	*node = pnode;
 	if (tp->numele == 0) {
 		tp->numele = maxcount;
-		tp->size = tp->numele * tp->btpp->size;
+//		tp->size = tp->numele * tp->size;
 	}
 }
 
@@ -467,8 +467,9 @@ bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, 
 				error(ERR_NOMEMBER);
 		}
 		if (at_node < maxcount) {
-			if (lastst == e_sym::begin)
+			if (lastst == e_sym::begin) {
 				tptr = ParseAggregate(&node_array[count], lst, lst->tp);
+			}
 			else {
 				tptr = ParseNonCommaExpression(&node_array[at_node], found ? tmp : lst);
 				opt_const(&node_array[at_node]);
@@ -597,14 +598,14 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		count = 0;
 		for (qnode = pnode->p[0]; qnode; qnode = qnode->p[0])
 			count++;
-		hnode->tp->numele = count;
-		pnode->tp->numele = count;
+		hnode->tp->numele = tp->numele;// count;
+		pnode->tp->numele = tp->numele;// count;
 //		hnode->tp->size = (count) * tptr->size;
 //		pnode->tp->size = (count) * tptr->size;
 	}
 
-	hnode->esize = hnode->tp->size;
-	pnode->esize = pnode->tp->size;
+	hnode->esize = tp->size;// hnode->tp->size;
+	pnode->esize = tp->size;// pnode->tp->size;
 	hnode->i = litlist(pnode);
 	pnode->i = litlist(pnode);
 	hnode->segment = cnst ? rodataseg : dataseg;

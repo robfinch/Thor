@@ -98,6 +98,7 @@ Symbol *Symbol::GetParentPtr()
 	return (Symbol*)&compiler.symTables[parent >> 15][parent & 0x7fff];
 };
 
+// Dead code
 int Symbol::GetIndex()
 {
 	Symbol* p1;
@@ -112,9 +113,9 @@ bool Symbol::IsTypedef()
 	Symbol* p, * q, *first, *next;
 
 	q = nullptr;
-	for (first = p = GetParentPtr(); p; p = next) {
+	for (first = p = parentp; p; p = next) {
 		q = p;
-		next = p->GetParentPtr();
+		next = p->parentp;
 		if (next == first) {
 			break;
 		}
@@ -669,7 +670,10 @@ std::string* Symbol::GetFullName()
 
 	ZeroMemory(names, sizeof(names));
 	for (n = 0,s = this->parentp; s && n < 32; s = s->parentp) {
-		names[n] = s->mangledName;
+		if (mangledNames)
+			names[n] = s->mangledName;
+		else
+			names[n] = s->name;
 		n++;
 	}
 	nme = new std::string("");
@@ -677,7 +681,10 @@ std::string* Symbol::GetFullName()
 		nme->append(*names[n]);
 		nme->append("_");
 	}
-	nme->append(*BuildSignature(0));
+	if (mangledNames)
+		nme->append(*BuildSignature(0));
+	else
+		nme->append(*name);
 	return (nme);
 }
 

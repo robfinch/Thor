@@ -1811,9 +1811,10 @@ Operand *ENODE::GenerateShift(int flags, int size, int op)
 	// Rotates automatically sign extend
 	if ((op == op_rol || op == op_ror) && ap2->isUnsigned)
 		switch (size) {
-		case 1:	GenerateDiadic(op_zxb, 0, ap3, ap3); break;
-		case 2:	GenerateDiadic(op_zxw, 0, ap3, ap3); break;
-		case 4:	GenerateDiadic(op_zxt, 0, ap3, ap3); break;
+		case 1:	Generate4adic(op_clr, 0, ap1, ap2, MakeImmediate(8), MakeImmediate(127)); break;
+		case 2:	Generate4adic(op_clr, 0, ap1, ap2, MakeImmediate(16), MakeImmediate(127)); break;
+		case 4:	Generate4adic(op_clr, 0, ap1, ap2, MakeImmediate(32), MakeImmediate(127)); break;
+		case 8: Generate4adic(op_clr, 0, ap1, ap2, MakeImmediate(64), MakeImmediate(127)); break;
 		default:;
 		}
 	ReleaseTempRegister(ap2);

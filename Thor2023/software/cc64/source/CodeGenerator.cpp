@@ -2769,31 +2769,31 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	case en_uwyde2octa:
 	case en_uwyde2tetra:
 		ap1 = GenerateExpression(node->p[0],am_reg,2,rhs);
-		GenerateDiadic(op_zxw,0,ap1,ap1);
+		Generate4adic(op_clr,0,ap1,ap1,MakeImmediate(16), MakeImmediate(127));
 		goto retpt;
 	case en_wyde2ptr:
 	case en_ccwp:
 		ap1 = GenerateExpression(node->p[0], am_reg, 2,rhs);
 		ap1->isPtr = TRUE;
-		GenerateDiadic(op_sxw, 0, ap1, ap1);
+		Generate4adic(op_sbx, 0, ap1, ap1, MakeImmediate(15), MakeImmediate(127));
 		goto retpt;
 	case en_uwyde2ptr:
 	case en_cucwp:
 		ap1 = GenerateExpression(node->p[0], am_reg, 2,rhs);
 		ap1->isPtr = TRUE;
-		GenerateDiadic(op_zxw, 0, ap1, ap1);
+		Generate4adic(op_clr, 0, ap1, ap1, MakeImmediate(16), MakeImmediate(127));
 		goto retpt;
 	case en_utetra2hexi:
 	case en_utetra2octa:
 		ap1 = GenerateExpression(node->p[0],am_reg,4,rhs);
-		GenerateDiadic(op_zxt,0,ap1,ap1);
+		Generate4adic(op_clr, 0, ap1, ap1, MakeImmediate(32), MakeImmediate(127));
 		goto retpt;
 	case en_byt2hexi:
 	case en_byt2octa:
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg,1,rhs);
 		if (ap2->mode != am_imm)
-			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(7), MakeImmediate(119));
+			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(7), MakeImmediate(127));
 		ReleaseTempRegister(ap2);
 		//GenerateDiadic(op_sxb,0,ap1,ap1);
 		//GenerateDiadic(op_sxb,0,ap1,ap1);
@@ -2803,7 +2803,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg|am_imm,2,rhs);
 		if (ap2->mode != am_imm)
-			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(111));
+			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(127));
 //		GenerateDiadic(op_sxw,0,ap1,ap1);
 		ReleaseTempRegister(ap2);
 		goto retpt;
@@ -2812,7 +2812,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg|am_imm,4,rhs);
 		if (ap2->mode != am_imm)
-			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(111));
+			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(127));
 //		GenerateDiadic(op_sxt,0,ap1,ap1);
 		ReleaseTempRegister(ap2);
 		goto retpt;
@@ -2843,7 +2843,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0], am_reg|am_imm, 8, rhs);
 		if (ap2->mode != am_imm)
-			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(31), MakeImmediate(95));
+			Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(31), MakeImmediate(127));
 		ReleaseTempRegister(ap2);
 		goto retpt;
 	case en_uocta2hexi:

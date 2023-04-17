@@ -769,20 +769,20 @@ restart:        /* we come back here after comments */
                         else if(lastch == '*') {
                           inComment = TRUE;
                           getch();
-                                for(;;) {
-                                        if(lastch == '*') {
-                                                getch();
-                                                if(lastch == '/') {
-                                                        getch();
-														inComment = FALSE;
-                                                        goto restart;
-                                                        }
-                                                }
-                                        else
-                                                getch();
-                                        }
-                                }
-						else if (lastch == '/') {
+                          for(;;) {
+                            if(lastch == '*') {
+                              getch();
+                              if(lastch == '/') {
+                                getch();
+														  inComment = FALSE;
+                              goto restart;
+                            }
+                          }
+                          else
+                            getch();
+                          }
+                        }
+	    			else if (lastch == '/') {
 
 							inComment = TRUE;
 							for(;;) {

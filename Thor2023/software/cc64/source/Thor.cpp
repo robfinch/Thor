@@ -1126,7 +1126,7 @@ void SaveRegisterVars(CSet *rmask)
 			cnt = 0;
 			//GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * sizeOfWord));
 			rmask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "store_s0s%d", rmask->NumMember()-1);
+			sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember()-1);
 			GenerateDiadic(op_bsr, 0, makereg(regLR+1), cg.MakeStringAsNameConst(buf, codeseg));
 			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {

@@ -165,6 +165,8 @@ bool Instruction::IsExt()
 		|| opcode == op_zxb
 		|| opcode == op_zxw
 		|| opcode == op_zxt
+		|| opcode == op_sbx
+		|| opcode == op_clr
 		)
 		return (true);
 	return (false);

@@ -113,6 +113,7 @@ Statement *Statement::ParseCase()
 	}
 	snp->s1 = head;
 	*/
+	snp->label = (int64_t*)nextlabel++;
 	return (snp);
 }
 
@@ -370,7 +371,7 @@ void Statement::GenerateSwitchSearch(Case *cases, Operand* ap, Operand* ap2, int
 		GenerateTriadic(is_unsigned ? op_bgtu : op_bgt, 0, ap, ap2, MakeCodeLabel(hilab));
 		GenerateTriadic(is_unsigned ? op_bltu : op_blt, 0, ap, ap2, MakeCodeLabel(lolab));
 	}
-	GenerateLabel(cases[mid].label);
+//	GenerateLabel(cases[mid].label);
 //	cases[mid].stmt->GenMixedSource();
 	cases[mid].done = true;
 	cases[mid].stmt->GenerateCase();

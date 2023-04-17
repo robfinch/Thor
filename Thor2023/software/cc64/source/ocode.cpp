@@ -1416,6 +1416,38 @@ void OCODE::OptLdi()
 					optimized++;
 				}
 			}
+			if (fwd->opcode == op_sbx) {
+				if (fwd->oper3->offset->i <= 8) {
+					if (oper2->offset->i128.IsNBit(8)) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
+			if (fwd->opcode == op_sbx) {
+				if (fwd->oper3->offset->i <= 16) {
+					if (oper2->offset->i128.IsNBit(16)) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
+			if (fwd->opcode == op_sbx) {
+				if (fwd->oper3->offset->i <= 32) {
+					if (oper2->offset->i128.IsNBit(32)) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
+			if (fwd->opcode == op_sbx) {
+				if (fwd->oper3->offset->i <= 64) {
+					if (oper2->offset->i128.IsNBit(64)) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
 			if (fwd->opcode == op_zxt) {
 				if (oper2->offset->i >= 0 && oper2->offset->i <= 4294967295L) {
 					fwd->MarkRemove();
@@ -1428,10 +1460,34 @@ void OCODE::OptLdi()
 					optimized++;
 				}
 			}
+			if (fwd->opcode == op_clr) {
+				if (fwd->oper3->offset->i <= 32) {
+					if (oper2->offset->i >= 0 && oper2->offset->i <= 4294967295L) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
+			if (fwd->opcode == op_clr) {
+				if (fwd->oper3->offset->i <= 16) {
+					if (oper2->offset->i >= 0 && oper2->offset->i <= 65535) {
+						fwd->MarkRemove();
+						optimized++;
+					}
+				}
+			}
 			if (fwd->opcode == op_zxb) {
 				if (oper2->offset->i >= 0 && oper2->offset->i <= 255) {
 					fwd->MarkRemove();
 					optimized++;
+				}
+			}
+			if (fwd->opcode == op_clr) {
+				if (fwd->oper3->offset->i <= 8) {
+					if (oper2->offset->i >= 0 && oper2->offset->i <= 65535) {
+						fwd->MarkRemove();
+						optimized++;
+					}
 				}
 			}
 		}

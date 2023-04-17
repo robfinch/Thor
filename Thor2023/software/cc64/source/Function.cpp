@@ -550,7 +550,7 @@ void Function::SaveGPRegisterVars()
 			cnt = 0;
 			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
 			rmask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "store_s0s%d", rmask->NumMember());
+			sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember());
 			GenerateMonadic(op_bsr, 0, MakeStringAsNameConst(buf, codeseg));
 			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
@@ -713,7 +713,7 @@ int Function::RestoreGPRegisterVars()
 			cnt2 = cnt = save_mask->NumMember() * sizeOfWord;
 			cnt = 0;
 			save_mask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "load_s0s%d", save_mask->NumMember()-1);
+			sprintf_s(buf, sizeof(buf), "__load_s0s%d", save_mask->NumMember()-1);
 			GenerateDiadic(op_bsr, 0, makereg(regLR+1), MakeStringAsNameConst(buf, codeseg));
 			/*
 			for (nn = save_mask->nextMember(); nn >= 0; nn = save_mask->nextMember()) {
