@@ -1486,6 +1486,8 @@ bool IsLValue(ENODE *node)
 	// expression tree. This evaluates to an address which is essentially
 	// the same as an *_ref node. It's an LValue.
 	case en_add:
+	case en_assub:
+	case en_asadd:
 		return (IsLValue(node->p[0]) || IsLValue(node->p[1]));
 	case en_nacon:
 	case en_autocon:
@@ -1542,12 +1544,12 @@ bool IsLValue(ENODE *node)
 		return (TRUE);
 	}
 */
-	return (FALSE);
+	return (false);
 }
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-ENODE *Autoincdec(TYP *tp, ENODE **node, int flag, bool isPostfix)
+ENODE *Expression::Autoincdec(TYP *tp, ENODE **node, int flag, bool isPostfix)
 {
 	ENODE *ep1, *ep2;
 	TYP *typ;
@@ -1805,12 +1807,15 @@ j1:
  *                      +cast_expression
  *                      *cast_expression
  *                      &cast_expression
+ *                      addrof cast_expression
  *                      sizeof(typecast)
+ *											alignof cast_expression
  *                      sizeof unary
  *                      typenum(typecast)
 												__mulf(a,b)
 												__bytendx(a,b)
 												__wydendx(a,b)
+												__bmap(a,b)
  //                     new 
  *
  */
@@ -1898,8 +1903,18 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 		tp = ep1->tp;
 		break;
 
-  case kw_sizeof:
+	case kw_bmap:
+		ep1 = ParseBmap(symi);
+		tp = ep1->tp;
+		break;
+
+	case kw_sizeof:
 		ep1 = ParseSizeof(symi);
+		tp = ep1->tp;
+		break;
+
+	case kw_alignof:
+		ep1 = ParseAlignof(symi);
 		tp = ep1->tp;
 		break;
 
@@ -1980,7 +1995,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 		break;
 */
 	case openpa:
-		NextToken();
+		NextToken(2);
 		if (IsBeginningOfTypecast(lastst)) {
 			decl.itable = nullptr;
 			decl.istorage_class = sc_member;

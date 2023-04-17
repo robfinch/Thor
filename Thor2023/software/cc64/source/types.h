@@ -554,14 +554,15 @@ class TYP {
 public:
   int type;
 	__int16 typeno;			// number of the type
-	unsigned int val_flag : 1;       /* is it a value type */
-	unsigned int isArray : 1;
-	unsigned int isUnsigned : 1;
-	unsigned int isShort : 1;
-	unsigned int isVolatile : 1;
-	unsigned int isIO : 1;
-	unsigned int isResv : 1;
-	unsigned int isBits : 1;
+	bool val_flag;       /* is it a value type */
+	bool isArray;
+	bool isUnsigned;
+	bool isShort;
+	bool isVolatile;
+	bool isIO;
+	bool isResv;
+	bool isBits;
+	bool isDecimal;
 	__int16 precision;			// precision of the numeric in bits
 	ENODE* bit_width;
 	ENODE* bit_offset;
@@ -917,12 +918,14 @@ private:
 	ENODE* ParseMulf(Symbol* symi);
 	ENODE* ParseBytndx(Symbol* symi);
 	ENODE* ParseWydndx(Symbol* symi);
+	ENODE* ParseBmap(Symbol* symi);
 	// Unary Expression Parsing
 	TYP* ParseMinus(ENODE** node, Symbol* symi);
 	TYP* ParseNot(ENODE** node, Symbol* symi);
 	ENODE* ParseCom(Symbol* symi);
 	TYP* ParseStar(ENODE** node, Symbol* symi);
 	ENODE* ParseSizeof(Symbol* symi);
+	ENODE* ParseAlignof(Symbol* symi);
 
 	ENODE* ParseDotOperator(TYP* tp1, ENODE* parent, Symbol* symi);
 	ENODE* ParsePointsTo(TYP* tp1, ENODE* ep1);
@@ -1002,6 +1005,7 @@ public:
 	Symbol* FindMember(TYP* tp1, char* name);
 	Symbol* FindMember(TABLE* tbl, char* name);
 	void force_type(ENODE* dst, ENODE* src, TYP* tp);
+	static ENODE* Autoincdec(TYP* tp, ENODE** node, int flag, bool isPostfix);
 };
 
 
@@ -1938,9 +1942,10 @@ public:
 	void ParseChar();
 	void ParseInt8();
 	void ParseByte();
-	void ParseFloat();
+	void ParseFloat(int prec=64);
 	void ParseDouble();
 	void ParseTriple();
+	void ParseDecimal();
 	void ParseFloat128();
 	void ParsePosit();
 	void ParseClass();
@@ -1950,6 +1955,7 @@ public:
 	Symbol *ParseId();
 	void ParseDoubleColon(Symbol *sp);
 	void ParseBitfieldSpec(bool isUnion);
+	void ParsePrecisionSpec();
 	int ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc);
 	Symbol *ParsePrefixId(Symbol*);
 	Symbol *ParsePrefixOpenpa(bool isUnion, Symbol*);

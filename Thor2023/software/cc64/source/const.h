@@ -28,7 +28,7 @@
 //
 enum e_bt {
 	bt_none,
-	bt_byte, bt_ubyte, bt_bit, bt_bool,
+	bt_byte, bt_ubyte, bt_bit, bt_bool, bt_set,
 	bt_char, bt_short, bt_int, bt_long, 
 	bt_float, bt_double, bt_triple, bt_quad, bt_decimal, bt_posit, bt_pointer,
 	bt_ichar, bt_iuchar, bt_i128,
@@ -102,6 +102,7 @@ enum e_node {
 		en_bchk, en_chk, en_bytendx, en_bitoffset,
 		en_abs, en_max, en_min, en_addrof, en_ptrdif, en_wydendx,
 		en_switch, en_case, en_default,
+		en_bmap,
 		// Vector
 		en_autovcon, en_autovmcon, en_vector_ref, en_vex, en_veins,
 		en_vadd, en_vsub, en_vmul, en_vdiv,
@@ -133,7 +134,7 @@ enum e_sym {
 	openpa, closepa, pointsto, dot, lor, land, nott, bitorr, bitandd, lor_safe, land_safe,
 	ellipsis,
 	// functions
-	kw_abs, kw_max, kw_min, kw_wydendx, kw_bit,
+	kw_abs, kw_max, kw_min, kw_bit,
 	kw_coroutine, kw_yield,
 	kw_vector, kw_vector_mask,
 	kw_int, kw_byte, kw_int8, kw_int16, kw_int32, kw_int40, kw_int64, kw_int80,
@@ -157,7 +158,10 @@ enum e_sym {
 	kw_new, kw_delete, kw_using, kw_namespace, kw_not, kw_attribute,
 	kw_no_temps, kw_no_parms, kw_floatmax, kw_mulf, kw_bytendx, kw_is_nullptr,
 	kw_compound, kw_expr, kw_label, kw_restrict,
-	kw_nullptr, kw_generic,
+	kw_nullptr, kw_generic, kw_set, kw_single, kw_quad, kw_half, kw_real, kw_decimal,
+	kw_alignof,
+	// Intrinsics
+	kw_bmap, kw_wydendx,
 	my_eof
 };
 
@@ -280,7 +284,7 @@ enum e_op {
 	// Thor2023
 	op_orf,
 	// Built in functions
-	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt,
+	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt, op_bmap,
 	op_wydendx,
 	op_phi, op_pfi,
 	op_verbatium,
@@ -468,6 +472,7 @@ enum e_hint {
 #define ERR_INT0255			70
 #define ERR_CLOSEPA			71
 #define ERR_EOF_REACHED	72
+#define ERR_BAD_PRECISION 73
 #define ERR_NULLPOINTER		1000
 #define ERR_CIRCULAR_LIST 1001
 #define ERR_MISSING_HIDDEN_STRUCTPTR	1002

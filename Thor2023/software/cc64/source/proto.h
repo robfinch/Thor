@@ -131,5 +131,6 @@ void fatal(char*);
 void fatal(const char*);
 
 List* sortedList(List* head, ENODE* root);
+int IdentifyPrecision();
 
 #endif

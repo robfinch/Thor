@@ -297,7 +297,7 @@ extern void ReleaseLocalMemory();
 
 // NextToken.c
 extern void initsym();
-extern void NextToken();
+extern void NextToken(int typ=0);
 extern int getch();
 extern int my_isspace(char c);
 extern void getbase(int64_t);
@@ -414,7 +414,7 @@ extern BasicBlock *basicBlocks[10000];
 extern BasicBlock *sortedBlocks[10000];
 extern Forest forest;
 extern IGraph iGraph;
-extern Instruction opl[334];
+extern Instruction opl[335];
 extern BasicBlock *LastBlock;
 extern Instruction *GetInsn(int);
 extern char inpline[100000];

@@ -29,11 +29,13 @@ int IdentifyKeyword()
 {
 	char *p = lastkw;
 
-	if (p[0]=='i') { // if,int,inton,intoff,interrupt,icache,inline,inout
+	if (p[0]=='i') { // if,int,inton,intoff,interrupt,icache,inline,inout,integer
 		if (p[1]=='f' && p[2]=='\0')
 			return lastst = kw_if;
 		if (p[1]=='n' && p[2]=='t' && p[3]=='\0')
 			return lastst = kw_int;
+		if (p[1] == 'n' && p[2] == 't' && p[3] == 'e' && p[4] == 'g' && p[5] == 'e' && p[6] == 'r' && p[7] == '\0')
+			return (lastst = kw_int);
 		if (p[1]=='n' && p[2]=='t' && p[3]=='o' && p[4]=='n' && p[5]=='\0')
 			return lastst = kw_inton;
 		if (p[1]=='n' && p[2]=='t' && p[3]=='o' && p[4]=='f' && p[5]=='f' && p[6]=='\0')
@@ -48,7 +50,7 @@ int IdentifyKeyword()
 			return lastst = kw_inout;
 	}
 
-	// bit,break,byte,bool
+	// bit,break,byte,bool,begin
 	if (p[0] == 'b') {
 		if (p[1] == 'r' && p[2] == 'e' && p[3] == 'a' && p[4] == 'k' && p[5] == '\0')
 			return lastst = kw_break;
@@ -58,6 +60,8 @@ int IdentifyKeyword()
 			return lastst = kw_bit;
 		if (p[1] == 'o' && p[2] == 'o' && p[3] == 'l' && p[4] == '\0')
 			return lastst = kw_bool;
+		if (p[1] == 'e' && p[2] == 'g' && p[3] == 'i' && p[4] == 'n' && p[5] == '\0')
+			return (lastst = begin);
 	}
 
 	// while,wchar_t
@@ -69,7 +73,8 @@ int IdentifyKeyword()
 				return lastst = kw_char;
 	}
 
-	if (p[0]=='d') {	// do,default,double,dcache,delete
+	// do,default,double,dcache,delete,decimal
+	if (p[0]=='d') {	
 		if (p[1]=='o' && p[2]=='\0')
 			return lastst = kw_do;
 		if (p[1]=='e' && p[2]=='l' && p[3]=='e' && p[4]=='t' && p[5]=='e' && p[6]=='\0') {
@@ -81,6 +86,8 @@ int IdentifyKeyword()
 			return lastst = kw_default;
 		if (p[1]=='c' && p[2]=='a' && p[3]=='c' && p[4]=='h' && p[5]=='e' && p[6]=='\0')
 			return lastst = kw_dcache;
+		if (p[1] == 'e' && p[2] == 'c' && p[3] == 'i' && p[4] == 'm' && p[5] == 'a' && p[6] == 'l' && p[7] == '\0')
+			return (lastst = kw_decimal);
 	}
 
 	if (p[0]=='o') {	// or,oscall
@@ -118,7 +125,7 @@ int IdentifyKeyword()
 			return lastst = kw_lockfail;
 	}
 
-	if (p[0]=='s') {	// switch,short,static,stop,struct,sizeof,signed
+	if (p[0]=='s') {	// switch,short,static,stop,struct,sizeof,signed,set,single
 		if (p[1]=='w' && p[2]=='i' && p[3]=='t' && p[4]=='c' && p[5]=='h' && p[6]=='\0')
 			return lastst = kw_switch;
 		if (p[1]=='t' && p[2]=='a' && p[3]=='t' && p[4]=='i' && p[5]=='c' && p[6]=='\0')
@@ -133,7 +140,18 @@ int IdentifyKeyword()
 			return lastst = kw_sizeof;
 		if (p[1]=='i' && p[2]=='g' && p[3]=='n' && p[4]=='e' && p[5]=='d' && p[6]=='\0')
 			return lastst = kw_signed;
+		if (p[1] == 'e' && p[2] == 't' && p[3] == '\0')
+			return (lastst = kw_set);
+		if (p[1] == 'i' && p[2] == 'n' && p[3] == 'g' && p[4] == 'l' && p[5] == 'e' && p[6] == '\0')
+			return (lastst = kw_single);
 	}
+
+	// quad
+	if (p[0] == 'q' && p[1] == 'u' && p[2] == 'a' && p[3] == 'd' && p[4] == '\0')
+		return (lastst = kw_quad);
+	// half
+	if (p[0] == 'h' && p[1] == 'a' && p[2] == 'l' && p[3] == 'f' && p[4] == '\0')
+		return (lastst = kw_half);
 
 	if (p[0]=='t') {	// typedef,typenum,throw,then,try,thread
 		if (p[1]=='y' && p[2]=='p' && p[3]=='e' && p[4]=='d' && p[5]=='e' && p[6]=='f' && p[7]=='\0')
@@ -161,9 +179,11 @@ int IdentifyKeyword()
 	if (p[0]=='j' && p[1]=='u' && p[2]=='m' && p[3]=='p' && p[4]=='\0')
 		return lastst = kw_goto;
 
-	if (p[0]=='e') {	// else,enum,extern,epilog
+	if (p[0]=='e') {	// else,enum,extern,epilog,end,elsif
 		if (p[1]=='l' && p[2]=='s' && p[3]=='e' && p[4]=='\0')
 			return lastst = kw_else;
+		if (p[1] == 'n' && p[2] == 'd' && p[3] == '\0')
+			return (lastst = end);
 		if (p[1]=='l' && p[2]=='s' && p[3]=='i' && p[4]=='f' && p[5]=='\0')
 			return lastst = kw_elsif;
 		if (p[1]=='n' && p[2]=='u' && p[3]=='m' && p[4]=='\0')
@@ -173,7 +193,7 @@ int IdentifyKeyword()
 		if (p[1]=='p' && p[2]=='i' && p[3]=='l' && p[4]=='o' && p[5]=='g' && p[6]=='\0')
 			return lastst = kw_epilog;
 	}
-	if (p[0]=='a') {	// abs,and,asm,align,auto
+	if (p[0]=='a') {	// abs,and,asm,align,auto,alignof,addrof
 		//if (p[1]=='b' && p[2]=='s' && p[3]=='\0')
 		//	return lastst = kw_abs;
 		if (p[1]=='n' && p[2]=='d' && p[3]=='\0')
@@ -182,8 +202,12 @@ int IdentifyKeyword()
 			return lastst = kw_asm;
 		if (p[1]=='l' && p[2]=='i' && p[3]=='g' && p[4]=='n' && p[5]=='\0')
 			return lastst = kw_align;
+		if (p[1] == 'l' && p[2] == 'i' && p[3] == 'g' && p[4] == 'n' && p[5]=='o' && p[6]=='f' && p[7] == '\0')
+			return lastst = kw_alignof;
 		if (p[1]=='u' && p[2]=='t' && p[3]=='o' && p[4]=='\0')
 			return lastst = kw_auto;
+		if (p[1] == 'd' && p[2] == 'd' && p[3] == 'r' && p[4] == 'o' && p[5] == 'f' && p[6] == '\0')
+			return lastst = bitandd;
 	}
 	if (p[0]=='v') {		// vector,vector_mask,virtual,void,volatile
 		if (p[1]=='e' && p[2]=='c' && p[3]=='t' && p[4]=='o' && p[5]=='r' && p[6]=='\0')
@@ -291,6 +315,7 @@ int IdentifyKeyword()
         if (p[1]=='e' && p[2]=='r' && p[3]=='n' && p[4]=='e' && p[5]=='l' && p[6]=='\0')
             return lastst = kw_kernel;
     }
+
 	//// spinlock,spinunlock
 	//if (p[0]=='s' && p[1]=='p' && p[2]=='i' && p[3]=='n' && p[4]=='l' && p[5]=='o' && p[6]=='c' && p[7]=='k' && p[8]=='\0')
 	//	return lastst = kw_spinlock;
@@ -319,7 +344,7 @@ int IdentifyKeyword()
 
 
 	// __cdecl,__asm,__int64,__int32,__int16,__int8,__check,__exception,__task,__unordered,__leafs,__attribute__
-	// __no_temps __no_parms __floatmax __mulf
+	// __no_temps __no_parms __floatmax __mulf __bmap
 	if (p[0]=='_' && p[1]=='_') {
 		if (p[2]=='a' && p[3]=='s' && p[4]=='m' && p[5]=='\0')
 			return lastst = kw_asm;
@@ -369,6 +394,8 @@ int IdentifyKeyword()
 			return lastst = kw_float128;
 		//if (p[2] == 'i' && p[3] == 's' && p[4] == '_' && p[5] == 'n' && p[6] == 'u' && p[7] == 'l' && p[8] == 'l' && p[9] == 'p' && p[10] == 't' && p[11] == 'r' && p[12] == '\0')
 		//	return lastst = kw_is_nullptr;
+		if (p[2] == 'b' && p[3] == 'm' && p[4] == 'a' && p[5] == 'p' && p[6] == '\0')
+			return (lastst = kw_bmap);
 	}
 
 	if (p[0] == '_') {
@@ -376,4 +403,27 @@ int IdentifyKeyword()
 			return (lastst = kw_generic);
 	}
 	return 0;
+}
+
+int IdentifyPrecision()
+{
+	char* p = lastkw;
+
+	if (p[0] == 'd' && p[1] == 'o' && p[2] == 'u' && p[3] == 'b' && p[4] == 'l' && p[5] == 'e' && p[6] == '\0')
+		return (lastst = kw_double);
+	if (p[0] == 'q' && p[1] == 'u' && p[2] == 'a' && p[3] == 'd' && p[4] == '\0')
+		return (lastst = kw_quad);
+	if (p[0] == 's' && p[1] == 'i' && p[2] == 'n' && p[3] == 'g' && p[4] == 'l' && p[5] == 'e' && p[6] == '\0')
+		return (lastst = kw_single);
+	if (p[0] == 'h' && p[1] == 'a' && p[2] == 'l' && p[3] == 'f' && p[4] == '\0')
+		return (lastst = kw_half);
+	if (p[0] == 'b' && p[1] == 'y' && p[2] == 't' && p[3] == 'e' && p[4] == '\0')
+		return (lastst = kw_byte);
+	if (p[0] == 'b' && p[1] == 'i' && p[2] == 't' && p[3] == '\0')
+		return (lastst = kw_bit);
+	if (p[0] == 's' && p[1] == 'h' && p[2] == 'o' && p[3] == 'r' && p[4] == 't' && p[5] == '\0')
+		return (lastst = kw_short);
+	if (p[0] == 'l' && p[1] == 'o' && p[2] == 'n' && p[3] == 'g' && p[4] == '\0')
+		return (lastst = kw_long);
+	return (0);
 }

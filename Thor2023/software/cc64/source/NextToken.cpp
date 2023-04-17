@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -629,7 +629,7 @@ void SkipSpaces()
  *
  *      NextToken should be called for all your input needs...
  */
-void NextToken()
+void NextToken(int typ)
 {
   int i, j;
   Symbol *sp;
@@ -1020,8 +1020,17 @@ restart:        /* we come back here after comments */
                         goto restart;   /* get a real token */
                 }
               }
-  if(lastst == id)
-    IdentifyKeyword();
+  if (lastst == id) {
+    if (typ == 1)
+      IdentifyPrecision();
+    else if (typ == 2) {
+      if (!IdentifyKeyword())
+        IdentifyPrecision();
+    }
+    else
+      IdentifyKeyword();
+  }
+
 //	printf("token: %d",lastst);
 //	if (lastst==id)
 //		printf("lastid=%s| ", lastid);

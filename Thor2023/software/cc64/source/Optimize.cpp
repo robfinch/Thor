@@ -1301,6 +1301,7 @@ static void opt0(ENODE **node)
 				if (ep->p[0]->nodetype == en_icon)
 					dooper(*node);
 				return;
+			case en_bmap:
 			case en_wydendx:
 			case en_bytendx:
 				opt0(&(ep->p[0]));
@@ -1624,6 +1625,7 @@ static Int128 xfold(ENODE *node)
 		return (*Int128::Zero());
 	case en_shr:    case en_div:	case en_udiv:	case en_shru: case en_asr:
 	case en_mod:    case en_asadd:	case en_bytendx:	case en_wydendx:
+	case en_bmap:
   case en_assub:  case en_asmul:
   case en_asdiv:  case en_asmod:
 	case en_and:    case en_land:	case en_land_safe:

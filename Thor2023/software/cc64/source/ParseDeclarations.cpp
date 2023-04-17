@@ -201,6 +201,7 @@ void Declaration::ParseShort()
 {
 	bit_max = 32;
 	NextToken();
+	ParsePrecisionSpec();
 	switch(lastst) {
 	case kw_int:
 		NextToken();
@@ -312,7 +313,7 @@ void Declaration::ParseInt(bool nt)
 		head = TYP::Make(bt_int, sizeOfInt);
 		tail = head;
 	}
-	bit_max = 64;
+	bit_max = 128;
 	if (head==nullptr)
 		return;
 	head->isUnsigned = isUnsigned;
@@ -320,26 +321,36 @@ void Declaration::ParseInt(bool nt)
 	head->isIO = isIO;
 	if (nt)
 		NextToken();
+	ParsePrecisionSpec();
+	/*
 	if (lastch == '\'') {
 		getch();
-		NextToken();
-		if (lastst == iconst) {
+		NextToken(1);
+		switch (lastst) {
+		case kw_long: head->precision = 128; NextToken(); break;
+		case kw_short: head->precision = 32; NextToken(); break;
+		case kw_byte: head->precision = 8; NextToken(); break;
+		case kw_quad:	head->precision = 128; NextToken(); break;
+		case kw_double: head->precision = 64; NextToken(); break;
+		case kw_single: head->precision = 32; NextToken(); break;
+		case kw_half: head->precision = 16; NextToken(); break;
+		case iconst:
 			head->precision = ival;// (__int16)GetIntegerExpression(nullptr);
 			NextToken();
 			if (head->precision != 8
 				&& head->precision != 16
 				&& head->precision != 32
-				&& head->precision != 40
 				&& head->precision != 64
-				&& head->precision != 80
 				&& head->precision != 128) {
 				error(ERR_PRECISION);
-				head->precision = 64;
+				head->precision = 128;
 			}
-		}
-		else
+			break;
+		default:
 			error(ERR_INT_CONST);
+		}
 	}
+	*/
 	head->size = head->precision >> 3;
 	bit_max = head->precision;
 	if (lastst==kw_vector) {
@@ -409,14 +420,16 @@ void Declaration::ParseBool()
 	bit_max = sizeOfWord;
 }
 
-void Declaration::ParseFloat()
+void Declaration::ParseFloat(int prec)
 {
 //	head = TYP::Copy(&stddouble);
-	head = (TYP*)TYP::Make(bt_double, 8);
+	head = (TYP*)TYP::Make(bt_double, prec);
 	tail = head;
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
 	NextToken();
+	ParsePrecisionSpec();
+	/*
 	if (lastch == '\'') {
 		getch();
 		NextToken();
@@ -433,6 +446,7 @@ void Declaration::ParseFloat()
 		else
 			error(ERR_INT_CONST);
 	}
+	*/
 	if (lastst==kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
@@ -452,10 +466,30 @@ void Declaration::ParseDouble()
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
 	NextToken();
+	ParsePrecisionSpec();
 	if (lastst==kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
 		head = TYP::Make(bt_vector,512);
+		head->numele = maxVL;
+		head->btpp = btp;
+		tail = head;
+		NextToken();
+	}
+	bit_max = head->precision;
+}
+
+void Declaration::ParseDecimal()
+{
+	head = (TYP*)TYP::Make(bt_decimal, 16);
+	head->isDecimal = true;
+	tail = head;
+	head->isVolatile = isVolatile;
+	head->isIO = isIO;
+	if (lastst == kw_vector) {
+		//int btp = head->GetIndex();
+		TYP* btp = head;
+		head = TYP::Make(bt_vector, 512);
 		head->numele = maxVL;
 		head->btpp = btp;
 		tail = head;
@@ -880,10 +914,13 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 
 			case id:	sp = ParseId();	goto lxit;
 
-			case kw_float:	ParseFloat(); goto lxit;
+			case kw_half: ParseFloat(16); goto lxit;
+			case kw_single: ParseFloat(32); goto lxit;
+			case kw_float:	ParseFloat(64); goto lxit;
 			case kw_double:	ParseDouble(); goto lxit;
 			case kw_float128:	ParseFloat128(); goto lxit;
 			case kw_posit:	ParsePosit(); goto lxit;
+			case kw_decimal: ParseDecimal(); goto lxit;
 
 			case kw_triple:
 				head = TYP::Copy(&stdtriple);
@@ -982,13 +1019,24 @@ void Declaration::ParseDoubleColon(Symbol *sp)
 void Declaration::ParseBitfieldSpec(bool isUnion)
 {
 	dfs.puts("<ParseBitfieldSpec>");
-	NextToken();
-	bit_width = (int)GetIntegerExpression((ENODE **)NULL,nullptr,0).low;
+	NextToken(1);
+	switch (lastst) {
+	case kw_long: bit_width = 128; NextToken(); break;
+	case kw_short: bit_width = 32; NextToken(); break;
+	case kw_quad: bit_width = 128; NextToken(); break;
+	case kw_double: bit_width = 64; NextToken(); break;
+	case kw_single: bit_width = 32; NextToken(); break;
+	case kw_half: bit_width = 16; NextToken(); break;
+	case kw_byte: bit_width = 8; NextToken(); break;
+	case kw_bit: bit_width = 1; NextToken(); break;
+	default:
+		bit_width = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 0).low;
+	}
 	if (isUnion)
 		bit_offset = 0;
 	else
 		bit_offset = bit_next;
-	if (bit_width < 0 || bit_width > bit_max) {
+	if (bit_width < 0 || bit_width > 128) {
 		error(ERR_BITFIELD_WIDTH);
 		bit_width = 1;
 	}
@@ -996,6 +1044,23 @@ void Declaration::ParseBitfieldSpec(bool isUnion)
 		bit_offset = 0;
 	bit_next = bit_offset + bit_width;
 	dfs.puts("</ParseBitfieldSpec>\n");
+}
+
+void Declaration::ParsePrecisionSpec()
+{
+	dfs.puts("<ParsePrecisionSpec>");
+	switch (lastst) {
+	case kw_long: head->precision = 128; NextToken(); break;
+	case kw_short: head->precision = 32; NextToken(); break;
+	case kw_quad: head->precision = 128; NextToken(); break;
+	case kw_double: head->precision = 64; NextToken(); break;
+	case kw_single: head->precision = 32; NextToken(); break;
+	case kw_half: head->precision = 16; NextToken(); break;
+	case kw_byte: head->precision = 8; NextToken(); break;
+	default:;
+//		error(ERR_BAD_PRECISION);
+	}
+	dfs.puts("</ParsePrecisionSpec>\n");
 }
 
 Symbol *Declaration::ParsePrefixId(Symbol* symi)

@@ -280,6 +280,8 @@ int ENODE::GetNaturalSize()
 		return (1);
 	case en_wydendx:
 		return (2);
+	case en_bmap:
+		return (sizeOfWord);
 	case en_aggregate:
 	case en_end_aggregate:
 		return (p[0]->GetNaturalSize());
@@ -997,6 +999,7 @@ void ENODE::repexpr()
 		p[0]->repexpr();
 		p[1]->repexpr();
 		break;
+	case en_bmap:
 	case en_bytendx:	case en_wydendx:
 	case en_sub:
 	case en_ext: case en_extu:
@@ -1267,6 +1270,7 @@ void ENODE::scanexpr(int duse)
 		p[0]->scanexpr(duse);
 		p[1]->scanexpr(duse);
 		break;
+	case en_bmap:
 	case en_ext: case en_extu:
 	case en_mulf:		case en_bytendx:	case en_wydendx: case en_bitoffset:
 	case en_mul:    case en_mulu:   case en_div:	case en_udiv:

@@ -87,6 +87,7 @@ Statement *Statement::ParseCheckStatement()
 Statement *Statement::ParseWhile()
 {
 	Statement *snp;
+	bool got_pap = false;
 
 	currentFn->UsesPredicate = TRUE;
 	snp = MakeStatement(st_while, TRUE);
@@ -95,20 +96,22 @@ Statement *Statement::ParseWhile()
 	looplevel++;
 	if ((iflevel > maxPn - 1) && isThor)
 		error(ERR_OUTOFPREDS);
-	if (lastst != openpa)
-		error(ERR_EXPREXPECT);
-	else {
+	if (lastst == openpa) {
+		got_pap = true;
 		NextToken();
-		if (expression(&(snp->exp),nullptr) == 0)
-			error(ERR_EXPREXPECT);
-		needpunc(closepa, 13);
-		if (lastst == kw_do)
-			NextToken();
-		snp->s1 = Statement::Parse();
-		// Empty statements return NULL
-		if (snp->s1)
-			snp->s1->outer = snp;
 	}
+//	if (lastst != openpa)
+//		error(ERR_EXPREXPECT);
+	if (expression(&(snp->exp),nullptr) == 0)
+		error(ERR_EXPREXPECT);
+	if (got_pap)
+		needpunc(closepa, 13);
+	if (lastst == kw_do)
+		NextToken();
+	snp->s1 = Statement::Parse();
+	// Empty statements return NULL
+	if (snp->s1)
+		snp->s1->outer = snp;
 	iflevel--;
 	looplevel--;
 	return (snp);

@@ -2584,6 +2584,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	case en_and:    ap1 = node->GenerateBinary(flags, size, op_and); goto retpt;
   case en_or:     ap1 = node->GenerateBinary(flags,size,op_or); goto retpt;
 	case en_xor:	ap1 = node->GenerateBinary(flags,size,op_xor); goto retpt;
+	case en_bmap:	ap1 = node->GenerateBinary(flags, size, op_bmap); goto retpt;
 	case en_bytendx:	ap1 = node->GenerateBinary(flags, size, op_bytendx); goto retpt;
 	case en_wydendx:	ap1 = node->GenerateBinary(flags, size, op_wydendx); goto retpt;
 	case en_ext:			ap1 = GenerateTrinary(node, flags, size, op_ext); goto retpt;

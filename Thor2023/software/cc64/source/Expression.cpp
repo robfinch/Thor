@@ -784,6 +784,7 @@ TYP* Expression::ParseStar(ENODE** node, Symbol* symi)
 	ENODE* ep1;
 	TYP* tp, *tp1;
 	int typ;
+	bool sub = false;
 
 	*node = nullptr;
 	NextToken();
@@ -813,9 +814,15 @@ TYP* Expression::ParseStar(ENODE** node, Symbol* symi)
 	if (tp->type == bt_pointer)
 		if (tp->btpp)
 			typ = tp->btpp->type;
-	//Autoincdec(tp,&ep1);
-	*node = ep1;
+	// C accepts an autoinc / autodec here.
+	if (lastst == autodec || lastst == autoinc) {
+		if (lastst == autodec)
+			sub = true;
+		NextToken();
+		ep1 = Autoincdec(tp, &ep1, sub, false);
+	}
 	tp = CondDeref(&ep1, tp);
+	*node = ep1;
 j1:
 	ep1->SetType(tp);
 	return (tp);
@@ -872,6 +879,67 @@ ENODE* Expression::ParseSizeof(Symbol* symi)
 		}
 		else
 			ep1 = makeinode(en_icon, (long)tp->size);
+	}
+	if (flag2)
+		needpunc(closepa, 2);
+	ep1->constflag = TRUE;
+	ep1->esize = sizeOfWord;//??? 8?
+	tp = &stdint;
+	ep1->SetType(tp);
+	return (ep1);
+}
+
+ENODE* Expression::ParseAlignof(Symbol* symi)
+{
+	Declaration decl;
+	ENODE* ep1;
+	TYP* tp, * tp1;
+	Symbol* sp;
+	bool flag2 = false;
+
+	NextToken();
+
+	if (lastst == openpa) {
+		flag2 = true;
+		NextToken();
+	}
+
+	//	ParseCastExpression(&ep1);
+	if (flag2 && IsBeginningOfTypecast(lastst)) {
+		tp = head;
+		tp1 = tail;
+		decl.ParseSpecifier(0, &sp, sc_none);
+		decl.ParsePrefix(FALSE, nullptr, false);
+		if (decl.head != NULL)
+			ep1 = makeinode(en_icon, decl.head->alignment);
+		else {
+			error(ERR_IDEXPECT);
+			ep1 = makeinode(en_icon, 1);
+		}
+		head = tp;
+		tail = tp1;
+	}
+	else if (flag2) {
+		sizeof_flag++;
+		tp = ParseCastExpression(&ep1, symi);
+		sizeof_flag--;
+		if (tp == 0) {
+			error(ERR_SYNTAX);
+			ep1 = makeinode(en_icon, 1);
+		}
+		else
+			ep1 = makeinode(en_icon, (long)tp->alignment);
+	}
+	else {
+		sizeof_flag++;
+		tp = ParseUnaryExpression(&ep1, false, symi);
+		sizeof_flag--;
+		if (tp == 0) {
+			error(ERR_SYNTAX);
+			ep1 = makeinode(en_icon, 1);
+		}
+		else
+			ep1 = makeinode(en_icon, (long)tp->alignment);
 	}
 	if (flag2)
 		needpunc(closepa, 2);
@@ -1091,6 +1159,26 @@ ENODE* Expression::ParseWydndx(Symbol* symi)
 	tp2 = ParseNonCommaExpression(&ep2, symi);
 	needpunc(closepa, 48);
 	ep1 = makenode(en_wydendx, ep1, ep2);
+	ep1->esize = sizeOfWord;
+	tp = &stdint;
+	if (ep1) ep1->SetType(tp);
+	return (ep1);
+}
+
+ENODE* Expression::ParseBmap(Symbol* symi)
+{
+	ENODE* ep1, * ep2;
+	TYP* tp, * tp1, * tp2;
+
+	NextToken();
+	needpunc(openpa, 46);
+	ep1 = nullptr;
+	tp1 = ParseNonCommaExpression(&ep1, symi);
+	needpunc(comma, 47);
+	tp2 = ParseNonCommaExpression(&ep2, symi);
+	needpunc(closepa, 48);
+	ep2 = nullptr;
+	ep1 = makenode(en_bmap, ep1, ep2);
 	ep1->esize = sizeOfWord;
 	tp = &stdint;
 	if (ep1) ep1->SetType(tp);
