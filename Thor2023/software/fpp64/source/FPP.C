@@ -178,7 +178,7 @@ void derror()
       if (c == '\n')
          break;
    } while (1);
-   exit(0);
+//   exit(0);
 }
 
 
@@ -666,7 +666,7 @@ main(int argc, char *argv[]) {
    HashInfo.width = sizeof(SDef);
    if (argc < 2)
    {
-		fprintf(stderr, "FPP version 2.04  (C) 1998-2023 Robert T Finch  \n");
+		fprintf(stderr, "FPP version 2.05  (C) 1998-2023 Robert T Finch  \n");
 		fprintf(stderr, "\nfpp64 [options] <filename> [<output filename>]\n\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "/D<macro name>[=<definition>] - define a macro\n");
@@ -692,7 +692,7 @@ main(int argc, char *argv[]) {
       parsesw(argv[xx]);
 
 	if (banner)
-		fprintf(stderr, "FPP version 2.04  (C) 1998-2023 Robert T Finch  \n");
+		fprintf(stderr, "FPP version 2.05  (C) 1998-2023 Robert T Finch  \n");
 
    /* ---------------------------
          Get source file name.

@@ -310,7 +310,15 @@ void SubMacro(char *body, int slen)
 	  // for (nn = 0; nn < sizeof(inbuf)-500-nchars-dif; nn++)
 		 //  p[nn] = inptr[nn];
    //}
-   memmove(inptr+dif, inptr, sizeof(inbuf)-500-nchars-dif);  // shift open space in input buffer
+    // If the text is not changing, we want to advance the text pointer.
+    // Prevents the substitution from getting stuck in a loop.
+   if (strncmp(inptr-slen, body, mlen) == 0) {
+     inptr -= slen;           // reset input pointer to start of replaced text
+     inptr++;                 // and advance by one
+     return;
+   }
+   if (dif > 0)
+    memmove(inptr+dif, inptr, sizeof(inbuf)-500-nchars-dif);  // shift open space in input buffer
    inptr -= slen;                // reset input pointer to start of replaced text
    memcpy(inptr, body, mlen);    // copy macro body in place over identifier
    //for (nn = 0; nn < mlen; nn++)

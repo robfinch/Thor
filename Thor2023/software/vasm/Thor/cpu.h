@@ -170,6 +170,8 @@ typedef struct {
 #define J3		34
 #define JL3		35
 #define RII		36
+#define RTDR	37
+#define RTDI	38
 #define ENTER	39
 #define LEAVE	40
 #define EXI56F	41
@@ -188,6 +190,9 @@ typedef struct {
 #define PRED		54
 #define VMASK		55
 #define CSRI		56
+#define RIV			57
+#define PFX			58
+#define RIMV		59
 
 #define OPC(x)	(((x) & 0x1fLL))
 #define COND(x)	(((x) & 0xfLL) << 5LL)
@@ -227,10 +232,10 @@ typedef struct {
 #define OP_D16 0x40001002
 #define OP_D32 0x40001003
 #define OP_D64 0x40001004
-#define OP_D96 0x40001005
+#define OP_D128 0x40001005
 #define OP_F32 0x40001006
 #define OP_F64 0x40001007
-#define OP_F96 0x40001008
+#define OP_F128 0x40001008
 
 #define OP_DATAM(t) (t >= OP_D8)
 #define OP_FLOAT(t) (t >= OP_F32)
