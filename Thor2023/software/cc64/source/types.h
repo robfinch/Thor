@@ -1059,6 +1059,7 @@ public:
 
 	void GenZeroExtend(int isize, int osize);
 	Operand *GenerateSignExtend(int isize, int osize, int flags);
+	void MakeLegalReg(int flags, int size);
 	void MakeLegal(int flags, int size);
 	int OptRegConst(int regclass, bool tally=false);
 
@@ -1747,6 +1748,7 @@ public:
 	Statement *epilog;
 	Function* fi;				// Function connected to statement
 	bool nkd;
+	bool tabular;				// tabular switch statement
 	bool contains_label;
 	int predreg;		// assigned predicate register
 	ENODE *exp;         // condition or expression

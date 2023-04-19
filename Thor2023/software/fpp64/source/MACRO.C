@@ -321,6 +321,8 @@ void SubMacro(char *body, int slen)
     memmove(inptr+dif, inptr, sizeof(inbuf)-500-nchars-dif);  // shift open space in input buffer
    inptr -= slen;                // reset input pointer to start of replaced text
    memcpy(inptr, body, mlen);    // copy macro body in place over identifier
+   if (dif < 0)
+     memmove(inptr + mlen, inptr - dif + mlen, sizeof(inbuf) - 500 - nchars - dif);
    //for (nn = 0; nn < mlen; nn++)
 	  // inptr[nn] = body[nn];
    //printf("inptr:%.60s\r\n", inptr);

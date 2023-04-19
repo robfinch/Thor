@@ -529,14 +529,14 @@ void Statement::GenerateLinearSwitch()
 						nn = cases[kk + 1].label;
 					nn = stmt->FindNextLabel(nn);
 					GenerateTriadic(op_bne, 0, ap, MakeImmediate(cases[kk].val), MakeCodeLabel(nn));
-					if (!stmt->s1->generated) {
+					if (stmt->s1 && !stmt->s1->generated) {
 						stmt->s1->Generate(2);
 						stmt->s1->generated = true;
 					}
 				}
 				else if (stmt->stype == st_default) {
 					GenerateLabel((int)cases[kk].label);
-					if (!stmt->s1->generated) {
+					if (stmt->s1 && !stmt->s1->generated) {
 						stmt->s1->Generate(2);
 						stmt->s1->generated = true;
 					}
@@ -597,7 +597,12 @@ Operand* CodeGenerator::GenerateCase(ENODE* node, Operand* sw_ap)
 				for (kk = 1; kk <= nn; kk++)
 					GenerateTriadic(op_bne, 0, sw_ap, MakeImmediate(buf[kk], 0), MakeCodeLabel(lab));
 				apr = GenerateExpression(ep->p[1], am_all, ep->p[1]->esize, 1);
-				GenerateDiadic(op_mov, 0, tmp, apr);
+				if (apr->mode == am_reg)
+					GenerateDiadic(op_mov, 0, tmp, apr);
+				else if (apr->mode == am_imm)
+					GenerateLoadConst(tmp, apr);
+				else
+					GenerateLoad(apr, tmp, ep->p[1]->esize, ep->p[1]->esize);
 				GenerateLabel(lab);
 				lab = nextlabel++;
 			}
@@ -607,7 +612,12 @@ Operand* CodeGenerator::GenerateCase(ENODE* node, Operand* sw_ap)
 	}
 	if (def) {
 		apr = GenerateExpression(def, am_all, def->esize, 1);
-		GenerateDiadic(op_mov, 0, tmp, apr);
+		if (apr->mode == am_reg)
+			GenerateDiadic(op_mov, 0, tmp, apr);
+		else if (apr->mode == am_imm)
+			GenerateLoadConst(tmp, apr);
+		else
+			GenerateLoad(apr, tmp, def->esize, def->esize);
 	}
 	return (tmp);
 }
@@ -666,16 +676,29 @@ void Statement::GenerateSwitchStatements()
 	Statement* stmt;
 
 	for (stmt = s1; stmt; stmt = stmt->next) {
-		if (stmt->stype == st_case) {
-			GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName((int)stmt->label).c_str()));
+		switch (stmt->stype) {
+		case st_case:
+			//GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName((int)stmt->label).c_str()));
+			GenerateLabel((int)stmt->label);
+			if (stmt->s1) stmt->s1->Generate(2);
+			stmt->Generate(2);
+			break;
+		case st_default:
+//			GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName((int)stmt->label).c_str()));
+			GenerateLabel((int)stmt->label);
+			if (stmt->s1) stmt->s1->Generate(2);
+			stmt->Generate(2);
+			break;
+		case st_break:
+//			GenerateMonadic(op_bra, 0, cg.MakeStringAsNameConst((char*)GenerateSwitchTargetName(breaklab).c_str(), codeseg));
+			GenerateMonadic(op_bra, 0, MakeCodeLabel(breaklab));
+			break;
+		default:
+			stmt->Generate(2);
 		}
-		else if (stmt->stype == st_default) {
-			GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName((int)stmt->label).c_str()));
-		}
-		if (stmt->s1) stmt->s1->Generate(2);
-		stmt->Generate(2);
 	}
-	GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName(breaklab).c_str()));
+	GenerateLabel(breaklab);
+	//GenerateStrLabel(my_strdup((char*)GenerateSwitchTargetName(breaklab).c_str()));
 }
 
 std::string Statement::GenerateSwitchTargetName(int labno)
@@ -694,13 +717,16 @@ void Statement::GenerateTabularSwitch(int64_t minv, int64_t maxv, Operand* ap, b
 	Operand* ap2;
 	Statement* stmt;
 
+	tabular = true;
 	ap2 = GetTempRegister();
 	GenerateTriadic(op_sub, 0, ap, ap, MakeImmediate(minv));
 	if (maxv - minv >= 0 && maxv - minv < 64)
-		GenerateTriadic(op_bgeu, 0, ap, MakeImmediate(maxv - minv + 1), cg.MakeStringAsNameConst((char*)GenerateSwitchTargetName(HasDefcase ? deflbl : breaklab).c_str(),codeseg)); //MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+//		GenerateTriadic(op_bgeu, 0, ap, MakeImmediate(maxv - minv + 1), cg.MakeStringAsNameConst((char*)GenerateSwitchTargetName(HasDefcase ? deflbl : breaklab).c_str(),codeseg)); //MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+		GenerateTriadic(op_bgeu, 0, ap, MakeImmediate(maxv - minv + 1), MakeCodeLabel(HasDefcase ? deflbl : breaklab)); //MakeCodeLabel(HasDefcase ? deflbl : breaklab));
 	else {
 		GenerateTriadic(op_sltu, 0, ap2, ap, MakeImmediate(maxv - minv - 1));
-		GenerateDiadic(op_beqz, 0, ap2, cg.MakeStringAsNameConst((char *)GenerateSwitchTargetName(HasDefcase ? deflbl : breaklab).c_str(),codeseg)); // MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+//		GenerateDiadic(op_beqz, 0, ap2, cg.MakeStringAsNameConst((char*)GenerateSwitchTargetName(HasDefcase ? deflbl : breaklab).c_str(), codeseg)); // MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+		GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(HasDefcase ? deflbl : breaklab)); // MakeCodeLabel(HasDefcase ? deflbl : breaklab));
 	}
 	ReleaseTempRegister(ap2);
 	GenerateTriadic(op_asl, 0, ap, ap, MakeImmediate(2));
@@ -716,7 +742,8 @@ void Statement::GenerateNakedTabularSwitch(int64_t minv, Operand* ap, int tablab
 	if (minv != 0)
 		GenerateTriadic(op_sub, 0, ap, ap, MakeImmediate(minv));
 	Generate4adic(op_sllp, 0, ap, makereg(regZero), ap, MakeImmediate(3));
-	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
+//	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
+	GenerateDiadic(op_ldt, 0, ap, compiler.of.MakeIndexedName((char*)GenerateSwitchTargetName(tablabel).c_str(), ap->preg)); // MakeIndexedCodeLabel(tablabel, ap->preg));
 	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
 	ReleaseTempRegister(ap);
 	GenerateSwitchStatements();

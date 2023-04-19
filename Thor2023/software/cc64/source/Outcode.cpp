@@ -951,12 +951,14 @@ std::streampos genstorage(int64_t nbytes)
 void GenerateLabelReference(int n, int64_t offset, char* nmspace)
 { 
 	char buf[200];
-
+	
+	if (nmspace == nullptr)
+		nmspace = (char *)"";
 	if( gentype == longgen && outcol < 58) {
 		if (offset==0)
-			sprintf_s(buf, sizeof(buf), ",%s_%d", nmspace, n);
+			sprintf_s(buf, sizeof(buf), ",%s.%05d", nmspace, n);
 		else
-			sprintf_s(buf, sizeof(buf), ",%s_%d+%lld", nmspace, n, offset);
+			sprintf_s(buf, sizeof(buf), ",%s.%05d+%lld", nmspace, n, offset);
 		ofs.printf(buf);
         outcol += 6;
     }
@@ -964,15 +966,15 @@ void GenerateLabelReference(int n, int64_t offset, char* nmspace)
         nl();
 				if (offset == 0) {
 					if (syntax == MOT)
-						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s_%d", nmspace, n);
+						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s.%05d", nmspace, n);
 					else
-						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s_%d", nmspace, n);
+						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s.%05d", nmspace, n);
 				}
 				else {
 					if (syntax == MOT)
-						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s_%d+%lld", nmspace, n, offset);
+						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s.%05d+%lld", nmspace, n, offset);
 					else
-						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s_%d+%lld", nmspace, n, offset);
+						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s.%05d+%lld", nmspace, n, offset);
 				}
 				ofs.printf(buf);
         outcol = 22;
@@ -1239,7 +1241,7 @@ void dumplits()
 		}
 		for (nn = 0; nn < casetab->num; nn++) {
 			if (casetab->cases[nn].pass==2)
-				GenerateLabelReference(casetab->cases[nn].label, 0, casetab->nmspace);
+				GenerateLabelReference(casetab->cases[nn].label, 0, nullptr);
 		}
 		casetab = casetab->next;
 	}

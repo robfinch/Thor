@@ -1195,7 +1195,10 @@ Operand *CodeGenerator::GenerateAssignMultiply(ENODE *node,int flags, int size, 
 	if (node->p[0]->IsBitfield()) {
 		ap3 = GetTempRegister();
 		ap1 = GenerateBitfieldDereference(node->p[0], am_reg | am_mem, size, 1);
-		GenerateDiadic(cpu.mov_op, 0, ap3, ap1);
+		if (ap1->mode == am_reg)
+			GenerateDiadic(cpu.mov_op, 0, ap3, ap1);
+		else
+			GenerateLoad(ap3, ap1, size, size);
 		ap2 = GenerateExpression(node->p[1], am_reg | am_imm, size, 1);
 		GenerateTriadic(op, 0, ap1, ap1, ap2);
 //		ap4 = GenerateExpression(ap1->offset->bit_offset, am_reg | am_imm | am_imm0, sizeOfWord, 1);
@@ -1281,7 +1284,10 @@ Operand *CodeGenerator::GenerateAssignModiv(ENODE *node,int flags,int size,int o
 	if (node->p[0]->IsBitfield()) {
 		ap3 = GetTempRegister();
 		ap1 = GenerateBitfieldDereference(node->p[0], am_reg | am_mem, size, 1);
-		GenerateDiadic(cpu.mov_op, 0, ap3, ap1);
+		if (ap1->mode == am_reg)
+			GenerateDiadic(cpu.mov_op, 0, ap3, ap1);
+		else
+			GenerateLoad(ap3, ap1, size, size);
 		ap2 = GenerateExpression(node->p[1], am_reg | am_imm, size,1);
 		GenerateTriadic(op, 0, ap1, ap1, ap2);
 //		if (ap1->offset->bit_offset < 0)
@@ -2521,9 +2527,9 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
   case en_i2q:
     ap1 = GetTempFPRegister();	
     ap2 = GenerateExpression(node->p[0],am_reg,8,rhs);
-		GenerateTriadic(op_csrrw,0,makereg(regZero),MakeImmediate(0x18),ap2);
-		GenerateZeradic(op_nop);
-		GenerateZeradic(op_nop);
+		//GenerateTriadic(op_csrrw,0,makereg(regZero),MakeImmediate(0x18),ap2);
+		//GenerateZeradic(op_nop);
+		//GenerateZeradic(op_nop);
     GenerateDiadic(op_itof,'q',ap1,makereg(63));
     ReleaseTempReg(ap2);
 		goto retpt;
@@ -2537,18 +2543,18 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg,sizeOfWord,rhs);
 		GenerateDiadic(op_ftoi,'q',makereg(63),ap2);
-		GenerateZeradic(op_nop);
-		GenerateZeradic(op_nop);
-		GenerateTriadic(op_csrrw,0,ap1,MakeImmediate(0x18),makereg(0));
+		//GenerateZeradic(op_nop);
+		//GenerateZeradic(op_nop);
+		//GenerateTriadic(op_csrrw,0,ap1,MakeImmediate(0x18),makereg(0));
 		ReleaseTempReg(ap2);
 		goto retpt;
 	case en_t2i:
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0],am_reg,sizeOfWord,rhs);
 		GenerateDiadic(op_ftoi,'t',makereg(63),ap2);
-		GenerateZeradic(op_nop);
-		GenerateZeradic(op_nop);
-		GenerateTriadic(op_csrrw,0,ap1,MakeImmediate(0x18),makereg(0));
+		//GenerateZeradic(op_nop);
+		//GenerateZeradic(op_nop);
+		//GenerateTriadic(op_csrrw,0,ap1,MakeImmediate(0x18),makereg(0));
     ReleaseTempReg(ap2);
 		goto retpt;
 	case en_s2q:

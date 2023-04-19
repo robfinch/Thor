@@ -2181,7 +2181,11 @@ bool Statement::Generate(int opt)
 		case st_break:
 			if (breaklab == -1)
 				error(ERR_NOT_IN_LOOP);
-			GenerateDiadic(op_bra, 0, MakeCodeLabel(breaklab), 0);
+			//(char*)GenerateSwitchTargetName(tablabel).c_str()
+			if (opt==3)
+				GenerateMonadic(op_bra, 0, cg.MakeStringAsNameConst((char*)GenerateSwitchTargetName(breaklab).c_str(),codeseg));
+			else
+				GenerateDiadic(op_bra, 0, MakeCodeLabel(breaklab), 0);
 			break;
 		case st_switch:
 			stmt->GenerateSwitch();
@@ -2203,7 +2207,7 @@ bool Statement::Generate(int opt)
 			break;
 		}
 		// Break after one statement generated.
-		if (opt == 2)
+		if (opt >= 2)
 			break;
 	}
 	return (false);

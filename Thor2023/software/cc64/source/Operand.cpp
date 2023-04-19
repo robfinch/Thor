@@ -157,6 +157,68 @@ Operand *Operand::GenerateSignExtend(int isize, int osize, int flags)
 	return (ap);
 }
 
+void Operand::MakeLegalReg(int flags, int size)
+{
+	Operand* ap2;
+
+	if (mode == am_reg)	// Might get this if am_volatile specified
+		return;
+	ReleaseTempRegister(this);      // maybe we can use it...
+	if (this)
+		ap2 = GetTempRegister();// GetTempReg(ap->type);
+	else
+		ap2 = GetTempRegister();// (stdint.GetIndex());
+	switch (mode) {
+	case am_ind:
+	case am_indx:
+		ap2->isUnsigned = this->isUnsigned;
+		if (this->tp) {
+			if (this->tp->btpp)
+				ap2->isUnsigned = this->tp->btpp->isUnsigned;
+		}
+		cg.GenerateLoad(ap2, this, size, size);
+		break;
+	case am_indx2:
+		cg.GenerateLoad(ap2, this, size, size);
+		break;
+	case am_imm:
+		cg.GenerateLoadConst(this, ap2);
+		break;
+	case am_reg:
+		GenerateDiadic(cpu.mov_op, 0, ap2, this);
+		break;
+	case am_preg:
+		GenerateDiadic(op_ptoi, 0, ap2, this);
+		break;
+	case am_fpreg:
+		GenerateDiadic(op_ftoi, fpsize(), ap2, this);
+		break;
+	case am_creg:
+		GenerateTriadic(op_aslx, 0, ap2, makereg(regZero), cg.MakeImmediate((int64_t)1));
+		break;
+	default:
+		cg.GenerateLoad(ap2, this, size, size);
+		break;
+	}
+	mode = am_reg;
+	switch (size) {
+	case 0: typep = &stdvoid; break;
+	case 1: typep = &stdbyte; break;
+	case 2: typep = &stdchar; break;
+	case 4:	typep = &stdshort; break;
+	case 8: typep = &stdint; break;
+	case 16: typep = &stdlong; break;
+	default:
+		typep = &stdint;
+	}
+	preg = ap2->preg;
+	deep = ap2->deep;
+	pdeep = ap2->pdeep;
+	tempflag = 1;
+	memref = ap2->memref;
+	memop = ap2->memop;
+}
+
 // ----------------------------------------------------------------------------
 // MakeLegal will coerce the addressing mode in ap1 into a mode that is
 // satisfactory for the flag word.
@@ -262,61 +324,7 @@ void Operand::MakeLegal(int flags, int size)
 
 	if (flags & am_reg)
 	{
-		if (mode == am_reg)	// Might get this if am_volatile specified
-			return;
-		ReleaseTempRegister(this);      // maybe we can use it...
-		if (this)
-			ap2 = GetTempRegister();// GetTempReg(ap->type);
-		else
-			ap2 = GetTempRegister();// (stdint.GetIndex());
-		switch (mode) {
-		case am_ind:
-		case am_indx:
-			ap2->isUnsigned = this->isUnsigned;
-			if (this->tp) {
-				if (this->tp->btpp)
-					ap2->isUnsigned = this->tp->btpp->isUnsigned;
-			}
-			cg.GenerateLoad(ap2, this, size, size);
-			break;
-		case am_indx2:
-			cg.GenerateLoad(ap2, this, size, size);
-			break;
-		case am_imm:
-			cg.GenerateLoadConst(this, ap2);
-			//GenerateDiadic(op_ldi, 0, ap2, this);
-			break;
-		case am_reg:
-			GenerateDiadic(cpu.mov_op, 0, ap2, this);
-			break;
-		case am_preg:
-			GenerateDiadic(op_ptoi, 0, ap2, this);
-			break;
-		case am_fpreg:
-			GenerateDiadic(op_ftoi, fpsize(), ap2, this);
-			break;
-		case am_creg:
-			GenerateTriadic(op_aslx, 0, ap2, makereg(regZero), cg.MakeImmediate((int64_t)1));
-			break;
-		default:
-			cg.GenerateLoad(ap2, this, size, size);
-			break;
-		}
-		mode = am_reg;
-		switch (size) {
-		case 0: typep = &stdvoid; break;
-		case 1: typep = &stdbyte; break;
-		case 2: typep = &stdchar; break;
-		case 4:	typep = &stdshort; break;
-		default:
-			typep = &stdint;
-		}
-		preg = ap2->preg;
-		deep = ap2->deep;
-		pdeep = ap2->pdeep;
-		tempflag = 1;
-		memref = ap2->memref;
-		memop = ap2->memop;
+		MakeLegalReg(flags, size);
 		return;
 	}
 	if (flags & am_fpreg)
@@ -408,7 +416,7 @@ void Operand::MakeLegal(int flags, int size)
 			ap2 = GetTempRegister();
 			cg.GenerateLoad(ap2, this, size, size);
 			ap1 = cg.MakeBoolean(ap2);
-			GenerateDiadic(cpu.mov_op, 0, this, ap1);
+			GenerateDiadic(cpu.mov_op, 0, this, ap1); //ToDo: fix
 			ReleaseTempReg(ap1);
 			ReleaseTempReg(ap2);
 			return;
@@ -429,7 +437,12 @@ void Operand::MakeLegal(int flags, int size)
 	{
 		ReleaseTempRegister(this);
 		ap2 = GetTempRegister();
-		GenerateDiadic(cpu.mov_op, 0, ap2, this);
+		if (this->mode == am_reg)
+			GenerateDiadic(cpu.mov_op, 0, ap2, this);
+		else if (this->mode == am_imm)
+			cg.GenerateLoadConst(this, ap2);
+		else
+			cg.GenerateLoad(ap2, this, size, size);
 		if (isUnsigned)
 			GenerateTriadic(op_and, 0, ap2, ap2, cg.MakeImmediate(255));
 		else {
