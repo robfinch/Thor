@@ -565,11 +565,11 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 			char *str;
 
 			str = GetStrConst();
-      GenerateLabelReference(stringlit(str),0);
+      GenerateLabelReference(stringlit(str),0, (char*)currentFn->sym->GetFullName()->c_str());
 			free(str);
     }
 		else if (lastst == rconst) {
-			GenerateLabelReference(quadlit(&rval128), 0);
+			GenerateLabelReference(quadlit(&rval128), 0, (char*)currentFn->sym->GetFullName()->c_str());
 			NextToken();
 		}
 		else if (lastst == pconst) {
@@ -596,13 +596,13 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 				GenerateLong(lng);
 		}
 		else if (n && n->nodetype == en_labcon) {
-			GenerateLabelReference(n->i,0);
+			GenerateLabelReference(n->i,0, (char*)currentFn->sym->GetFullName()->c_str());
 		}
 		else if (n && n->nodetype == en_add) {
 			if (n->p[0]->nodetype==en_labcon)
-				GenerateLabelReference(n->p[0]->i, n->p[1]->i);
+				GenerateLabelReference(n->p[0]->i, n->p[1]->i, (char*)currentFn->sym->GetFullName()->c_str());
 			else
-				GenerateLabelReference(n->p[1]->i, n->p[0]->i);
+				GenerateLabelReference(n->p[1]->i, n->p[0]->i, (char*)currentFn->sym->GetFullName()->c_str());
 		}
 		else {
 //			GenerateLong((lng & 0xFFFFFFFFFFFLL)|0xFFF0100000000000LL);

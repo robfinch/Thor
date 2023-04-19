@@ -33,7 +33,7 @@ int64_t genst_cumulative;
 
 /*      variable initialization         */
 
-enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen };
+enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
 //enum e_sg { noseg, codeseg, dataseg, bssseg, idataseg };
 
 int	       gentype = nogen;
@@ -109,7 +109,7 @@ Instruction opl[335] =
 { "chk", op_chk,1,0 },
 { "clr",op_clr,1,1,false,am_reg,am_reg,am_reg | am_imm, am_imm },
 { "cmovenz", op_cmovenz,1,1,false,am_reg,am_reg,am_reg,am_reg },
-{ "cmp",op_cmp,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
+{ "cmp",op_cmp,1,1,false,am_reg,am_reg|am_imm,am_reg|am_imm,0 },
 { "cmpu",op_cmpu,1,1,false,am_reg,am_reg,am_reg|am_imm,0 },
 { "com", op_com,2,1,false,am_reg,am_reg,0,0 },
 { "csrrd", op_csrrd,1,1,false,am_reg,am_reg,am_imm },
@@ -143,11 +143,11 @@ Instruction opl[335] =
 { "fbne", op_fbne,3,0,false,am_reg,am_reg,0,0 },
 { "fbor", op_fbor,3,0,false,am_reg,am_reg,0,0 },
 { "fbun", op_fbun,3,0,false,am_reg,am_reg,0,0 },
-{ "fcmp", op_fcmp, 1,1,false,am_reg,am_reg,am_reg,0 },
+{ "fcmp", op_fcmp, 1,1,false,am_reg,am_reg|am_imm,am_reg|am_imm,0 },
 { "fcvtdq", op_fcvtdq,2,1,false,am_reg,am_reg,0,0 },
 { "fcvtsq", op_fcvtsq,2,1,false,am_reg,am_reg,0,0 },
 { "fcvttq", op_fcvttq,2,1,false,am_reg,am_reg,0,0 },
-{ "fdiv", op_fdiv, 160, 1, false, am_reg, am_reg, am_reg, 0 },
+{ "fdiv", op_fdiv, 160, 1, false, am_reg, am_reg|am_imm,am_reg|am_imm, 0 },
 { "fdiv.s", op_fsdiv,80,1,false },
 { "fi2d", op_i2d,2,1,false },
 { "fix2flt", op_fix2flt },
@@ -775,16 +775,23 @@ void GenerateFloat(Float128 *val)
 { 
 	if (val==nullptr)
 		return;
-	if (syntax == MOT) {
-		//ofs.printf("\r\n\talign 2\r\n");
-		ofs.printf("\tdc.l\t%s", val->ToString(64));
+	if (gentype == floatgen && outcol < 60) {
+		ofs.printf(",%s", val->ToString(64));
+		outcol += 22;
 	}
 	else {
-		//ofs.printf("\r\n\t.align 2\r\n");
-		ofs.printf("\t.4byte\t%s", val->ToString(64));
+		nl();
+		if (syntax == MOT) {
+			//ofs.printf("\r\n\talign 2\r\n");
+			ofs.printf("\tdc.l\t%s", val->ToString(64));
+		}
+		else {
+			//ofs.printf("\r\n\t.align 2\r\n");
+			ofs.printf("\t.4byte\t%s", val->ToString(64));
+		}
+		gentype = floatgen;
+		outcol = 25;
 	}
-  gentype = longgen;
-  outcol = 65;
 	genst_cumulative += 8;
 }
 
@@ -941,15 +948,15 @@ std::streampos genstorage(int64_t nbytes)
 	return (pos);
 }
 
-void GenerateLabelReference(int n, int64_t offset)
+void GenerateLabelReference(int n, int64_t offset, char* nmspace)
 { 
 	char buf[200];
 
 	if( gentype == longgen && outcol < 58) {
 		if (offset==0)
-			sprintf_s(buf, sizeof(buf), ",%s_%d", GetNamespace(), n);
+			sprintf_s(buf, sizeof(buf), ",%s_%d", nmspace, n);
 		else
-			sprintf_s(buf, sizeof(buf), ",%s_%d+%lld", GetNamespace(), n, offset);
+			sprintf_s(buf, sizeof(buf), ",%s_%d+%lld", nmspace, n, offset);
 		ofs.printf(buf);
         outcol += 6;
     }
@@ -957,15 +964,15 @@ void GenerateLabelReference(int n, int64_t offset)
         nl();
 				if (offset == 0) {
 					if (syntax == MOT)
-						sprintf_s(buf, sizeof(buf), "\tdc.w\t%s_%d", GetNamespace(), n);
+						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s_%d", nmspace, n);
 					else
-						sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d", GetNamespace(), n);
+						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s_%d", nmspace, n);
 				}
 				else {
 					if (syntax == MOT)
-						sprintf_s(buf, sizeof(buf), "\tdc.w\t%s_%d+%lld", GetNamespace(), n, offset);
+						sprintf_s(buf, sizeof(buf), "\tdc.l\t%s_%d+%lld", nmspace, n, offset);
 					else
-						sprintf_s(buf, sizeof(buf), "\t.2byte\t%s_%d+%lld", GetNamespace(), n, offset);
+						sprintf_s(buf, sizeof(buf), "\t.4byte\t%s_%d+%lld", nmspace, n, offset);
 				}
 				ofs.printf(buf);
         outcol = 22;
@@ -979,11 +986,14 @@ void GenerateLabelReference(int n, int64_t offset)
 int stringlit(char *s)
 {      
 	struct slit *lp;
+	std::string str;
 
 	lp = (struct slit *)allocx(sizeof(struct slit));
 	lp->label = nextlabel++;
+	str = "";
+	str.append(*currentFn->sym->GetFullName());
 	lp->str = my_strdup(s);
-	lp->nmspace = my_strdup(GetNamespace());
+	lp->nmspace = my_strdup((char *)str.c_str());
 	if (strtab == nullptr) {
 		strtab = lp;
 		strtab->tail = lp;
@@ -997,7 +1007,7 @@ int stringlit(char *s)
 	return (lp->label);
 }
 
-int litlist(ENODE *node)
+int litlist(ENODE *node, char* nmspace)
 {
 	struct slit *lp;
 	ENODE *ep;
@@ -1017,7 +1027,7 @@ int litlist(ENODE *node)
 	lp = (struct slit *)allocx(sizeof(struct slit));
 	lp->label = nextlabel++;
 	lp->str = (char *)node;
-	lp->nmspace = my_strdup(GetNamespace());
+	lp->nmspace = my_strdup(nmspace);
 	if (strtab == nullptr) {
 		strtab = lp;
 		strtab->tail = lp;
@@ -1037,6 +1047,7 @@ int litlist(ENODE *node)
 int caselit(struct scase *cases, int64_t num)
 {
 	struct clit *lp;
+	std::string str;
 
 	lp = casetab;
 	while (lp) {
@@ -1046,7 +1057,9 @@ int caselit(struct scase *cases, int64_t num)
 	}
 	lp = (struct clit *)allocx(sizeof(struct clit));
 	lp->label = nextlabel++;
-	lp->nmspace = my_strdup(GetNamespace());
+	str = "";
+	str.append(*currentFn->sym->GetFullName());
+	lp->nmspace = my_strdup((char *)str.c_str());// , GetNamespace());
 	lp->cases = (struct scase *)allocx(sizeof(struct scase)*(int)num);
 	lp->num = (int)num;
 	lp->pass = pass;
@@ -1059,6 +1072,8 @@ int caselit(struct scase *cases, int64_t num)
 int quadlit(Float128 *f128)
 {
 	Float128 *lp;
+	std::string str;
+
 	lp = quadtab;
 	// First search for the same literal constant and it's label if found.
 	while(lp) {
@@ -1073,7 +1088,9 @@ int quadlit(Float128 *f128)
 	lp = (Float128 *)allocx(sizeof(Float128));
 	lp->label = nextlabel++;
 	Float128::Assign(lp,f128);
-	lp->nmspace = my_strdup(GetNamespace());
+	str = "";
+	str.append(*currentFn->sym->GetFullName());
+	lp->nmspace = my_strdup((char*)str.c_str());
 	lp->next = quadtab;
 	quadtab = lp;
 	return (lp->label);
@@ -1083,6 +1100,8 @@ int quadlit(Float128 *f128)
 int NumericLiteral(ENODE* node)
 {
 	struct nlit* lp, *pp;
+	std::string str;
+
 	lp = numeric_tab;
 	pp = nullptr;
 	if (node) {
@@ -1123,7 +1142,9 @@ int NumericLiteral(ENODE* node)
 	Float128::Assign(&lp->f128, &node->f128);
 	lp->p.val = node->posit.val;
 	lp->f = node->f;
-	lp->nmspace = my_strdup(GetNamespace());
+	str = "";
+	str.append(*currentFn->sym->GetFullName());
+	lp->nmspace = my_strdup((char*)str.c_str());
 	lp->next = numeric_tab;
 	lp->typ = node->etype;
 	if (node->tp)
@@ -1213,11 +1234,12 @@ void dumplits()
 	}
 	while (casetab != nullptr) {
 		nl();
-		if (casetab->pass == 2)
-			put_label(casetab->label, (char *)"", casetab->nmspace, 'C', 0);// 'D');
+		if (casetab->pass == 2) {
+			put_label(casetab->label, "", casetab->nmspace, 'R', casetab->num * 4);// 'D');
+		}
 		for (nn = 0; nn < casetab->num; nn++) {
 			if (casetab->cases[nn].pass==2)
-				GenerateLabelReference(casetab->cases[nn].label, 0);
+				GenerateLabelReference(casetab->cases[nn].label, 0, casetab->nmspace);
 		}
 		casetab = casetab->next;
 	}

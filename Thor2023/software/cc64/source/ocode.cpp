@@ -743,6 +743,7 @@ void OCODE::OptBra()
 		}
 	OptUctran();
 	if (!opt) {
+		/* bra can branch farther and takes same amount of code.
 		if (TargetDistance(oper1->offset->i) < 512) {
 			opcode = op_beqz;
 			insn = Instruction::Get(op_beqz);
@@ -750,6 +751,7 @@ void OCODE::OptBra()
 			oper1 = makereg(regZero);
 			return;
 		}
+		*/
 	}
 	return;
 }
@@ -1894,8 +1896,8 @@ void OCODE::store(txtoStream& ofs)
 				ofs.printf(",");
 			else
 				ofs.printf(",");
-			if (op == op_cmp && ap2->mode != am_reg)
-				printf("aha\r\n");
+			//if (op == op_cmp && ap2->mode != am_reg)
+			//	printf("aha\r\n");
 			ap2->store(ofs);
 			if (ap3 != NULL) {
 				if (op == op_push || op == op_pop)

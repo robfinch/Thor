@@ -1280,6 +1280,7 @@ j1:
 			head = temp1;
 			if (tail == NULL)
 				tail = head;
+			sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
 			goto lxit;
 		}
 		if (lastst == semicolon) {
@@ -2000,8 +2001,13 @@ void Declaration::DoInsert(Symbol *sp, TABLE *table)
 			|| (sp->tp->type == bt_pointer && (sp->tp->btpp->type == bt_func || sp->tp->btpp->type == bt_ifunc))))
 		{
 			//insState = 1;
-			sp->fi->InsertMethod();
-			sp->fi->depth = sp->depth;
+//			if (sp->fi == nullptr)
+//				sp->fi = MakeFunction(sp->id, sp, defaultcc == 1, false);
+
+			if (sp->fi) {
+				sp->fi->InsertMethod();
+				sp->fi->depth = sp->depth;
+			}
 		}
 		else {
 			//insState = 2;
@@ -2096,7 +2102,12 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 	bool flag;
 	bool fn_doneinit = false;
 	Function* ofn;
-
+	Function* fn;
+	
+	if (!sp->fi)
+		sp->fi = compiler.ff.MakeFunction(sp->number, sp, false);
+	if (currentFn == nullptr)
+		currentFn = sp->fi;
 	sp1 = nullptr;
 	if (sp1 == nullptr)
 		sp1 = FindSymbol(sp, table);
@@ -2106,6 +2117,7 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 		if (sp1->tp) {
 			dfs.printf("l");
 			flag = sp1->tp->type == bt_func;
+			MakeFunction(sp, sp1);
 		}
 	}
 	if (sp->tp->type == bt_ifunc && flag) {

@@ -821,31 +821,35 @@ void ENODE::repexpr()
 	switch (nodetype) {
 	case en_temppref:
 		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
-			csp->isPosit = TRUE; //**** a kludge
-			if (csp->reg > 0) {
-				nodetype = en_pregvar;
-				rg = csp->reg;
-				ru->add(rg);
-				rru->add(nregs - 1 - rg);
+			//csp->isPosit = TRUE; //**** a kludge
+			if (!csp->voidf) {
+				if (csp->reg > 0) {
+					nodetype = en_pregvar;
+					rg = csp->reg;
+					ru->add(rg);
+					rru->add(nregs - 1 - rg);
+				}
 			}
 		}
 		break;
 	case en_fcon:
 	case en_tempfpref:
 		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
-			csp->isfp = TRUE; //**** a kludge
-			if (csp->reg > 0) {
-				nodetype = en_fpregvar;
-				rg = csp->reg;
-				ru->add(rg);
-				rru->add(nregs - 1 - rg);
+			//csp->isfp = TRUE; //**** a kludge
+			if (!csp->voidf) {
+				if (csp->reg > 0) {
+					nodetype = en_fpregvar;
+					rg = csp->reg;
+					ru->add(rg);
+					rru->add(nregs - 1 - rg);
+				}
 			}
 		}
 		break;
 	// Autofcon resolve to *pointers* which are stored in integer registers.
 	case en_autopcon:
 		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
-			csp->isPosit = false; //**** a kludge
+//			csp->isPosit = false; //**** a kludge
 			if (csp->reg > 0) {
 				nodetype = en_pregvar;
 				rg = csp->reg;
@@ -856,12 +860,14 @@ void ENODE::repexpr()
 		break;
 	case en_autofcon:
 		if ((csp = currentFn->csetbl->Search(this)) != nullptr) {
-			csp->isfp = FALSE; //**** a kludge
-			if (csp->reg > 0) {
-				nodetype = en_fpregvar;
-				rg = csp->reg;
-				ru->add(rg);
-				rru->add(nregs - 1 - rg);
+//			csp->isfp = FALSE; //**** a kludge
+			if (!csp->voidf) {
+				if (csp->reg > 0) {
+					nodetype = en_fpregvar;
+					rg = csp->reg;
+					ru->add(rg);
+					rru->add(nregs - 1 - rg);
+				}
 			}
 		}
 		break;
@@ -1094,21 +1100,28 @@ void ENODE::repexpr()
 }
 
 
-CSE *ENODE::OptInsertAutocon(int duse)
+CSE* ENODE::OptInsertAutocon(int duse)
 {
 	int nn;
-	CSE *csp;
+	CSE* csp;
 	bool first;
 
 	if (this == nullptr)
 		return (nullptr);
-	if (sym)
-	if (this->sym->depth < currentFn->depth + 2)
-		return (nullptr);
+	if (sym) {
+		if (sym->IsParameter) {
+			if (this->sym->depth < currentFn->depth)
+				return (nullptr);
+		}
+		else {
+			if (this->sym->depth < currentFn->depth + 2)
+				return (nullptr);
+		}
+	}
 	csp = nullptr;
 	nn = currentFn->csetbl->voidauto2(this);
 	csp = currentFn->csetbl->InsertNode(this, duse, &first);
-	if (nn >= 0) {
+	if (csp && nn >= 0) {
 		csp->duses += loop_active + nn;
 		csp->uses = csp->duses - loop_active;
 	}
@@ -1151,13 +1164,13 @@ CSE *ENODE::OptInsertRef(int duse)
 			if (first) {
 				// look for register nodes
 				int j = p[0]->rg;
-				if ((p[0]->nodetype == en_regvar) && IsSavedReg(j))
+				if ((p[0]->nodetype == en_regvar || p[0]->nodetype==en_fpregvar || p[0]->nodetype==en_pregvar) && IsSavedReg(j))
 				{
 					csp->voidf = false;
 					csp->AccUses(3);
 					csp->AccDuses(1);
 				}
-				if ((p[0]->nodetype == en_regvar) && IsArgReg(j))
+				if ((p[0]->nodetype == en_regvar || p[0]->nodetype == en_fpregvar || p[0]->nodetype == en_pregvar) && IsArgReg(j))
 				{
 					csp->voidf = false;
 				}
@@ -1204,7 +1217,7 @@ void ENODE::scanexpr(int duse)
 		break;
 	case en_cnacon:
 	case en_clabcon:
-	case en_fcon:    
+	case en_fcon:
 	case en_icon:
 	case en_labcon:
 	case en_nacon:
@@ -1214,9 +1227,10 @@ void ENODE::scanexpr(int duse)
 	case en_autofcon:
 	case en_temppref:
 	case en_tempfpref:
-		csp = OptInsertAutocon(duse);
-		csp->isfp = FALSE;
-		csp->isPosit = false;
+		if (csp = OptInsertAutocon(duse)) {
+			csp->isfp = false;
+			csp->isPosit = false;
+		}
 		break;
 	case en_autovcon:
 	case en_autocon:
@@ -2046,26 +2060,7 @@ Operand *ENODE::GenerateBinary(int flags, int size, int op)
 	bool dup = false;
 
 	if (IsFloatType())
-	{
-		ap3 = GetTempFPRegister();
-		if (IsEqual(p[0], p[1]))
-			dup = !opt_nocgo;
-		ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
-		if (!dup)
-			ap2 = cg.GenerateExpression(p[1], am_reg, size, 1);
-		// Generate a convert operation ?
-		if (!dup) {
-			if (ap1->fpsize() != ap2->fpsize()) {
-				if (ap2->fpsize() == 's')
-					GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
-			}
-		}
-		if (dup)
-			GenerateTriadic(op, ap1->fpsize(), ap3, ap1, ap1);
-		else
-			GenerateTriadic(op, ap1->fpsize(), ap3, ap1, ap2);
-		ap3->type = ap1->type;
-	}
+		return (cg.GenerateBinaryFloat(this, flags, size, op));
 	else if (IsPositType())
 	{
 		ap3 = GetTempPositRegister();
@@ -2476,7 +2471,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 	case en_fcon:
 		// Floats support immediate mode
 		if (false && !opt) {
-			sprintf_s(buf, sizeof(buf), "%s_%lld", GetNamespace(), i);
+			sprintf_s(buf, sizeof(buf), "%s_%lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
 			DataLabels[i] = true;
 			ofs.write(buf);
 			break;
@@ -2554,7 +2549,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_labcon:
 	j1:
-		sprintf_s(buf, sizeof(buf), "%s_%lld", GetNamespace(), i);
+		sprintf_s(buf, sizeof(buf), "%s_%lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
 		DataLabels[i] = true;
 		ofs.write(buf);
 		if (rshift > 0) {

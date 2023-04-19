@@ -499,7 +499,7 @@ j2:
 			sp->numa = numa;
 			sp->NumParms = nump;
 			sp->Init();
-			sp->sym->stmt = ParseBody();
+			sp->sym->stmt = sp->ParseBody();
 			Summary(sp->sym->stmt);
 		}
 	}
@@ -512,7 +512,7 @@ j2:
 			// should be global if there is a function body.
 			if (sp->sym->storage_class == sc_external)
 				sp->sym->storage_class = sc_global;
-			sp->sym->stmt = ParseBody();
+			sp->sym->stmt = sp->ParseBody();
 			Summary(sp->sym->stmt);
 		}
 	}

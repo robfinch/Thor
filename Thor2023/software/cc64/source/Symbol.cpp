@@ -971,21 +971,30 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 	TYP* ntp;
 	int count;
 	List* lst, *hlst;
-	ENODE* node;
+	ENODE* node, *pnode;
+	int64_t ne;
 
 	nbytes = 0;
 	node = rootnode;
 	if (node == nullptr)	// syntax error in GetConstExpression()
 		return (0);
-	      /* start at top of symbol table */
+	pnode = node->p[0];
+	/* start at top of symbol table */
 	hlst = lst = node->ReverseList(node);
 	count = 0;
 	// An array of values matching a union?
-	ntp = node->tp;
-	ntp = tp;
-	if (ntp->type == bt_pointer && ntp->val_flag) {
+	if (pnode->nodetype == en_end_aggregate) {
+		ntp = pnode->tp;
+		node = pnode->p[0];
+	}
+	else
+		ntp = tp;
+	// There is only one element in the union position, though it may be an array.
+	// So, we only count to one.
+	if (ntp->type == bt_array || (ntp->type == bt_pointer && ntp->val_flag)) {
+		ne = ntp->numele;
 		ntp = ntp->btpp;
-		for (count = 0; count < ntp->numele; count++)
+		for (count = 0; count < 1; count++)
 			nbytes += ntp->GenerateT(node);
 //		ENODE::initializedSet.add(node->number);
 	}
@@ -1007,16 +1016,25 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 		}
 	}
 	else {
+		node = nullptr;
 		for (; lst; lst = lst->nxt) {
 			node = lst->node;
 			if (node == rootnode)
 				continue;
-			for (osp = sp = tp->lst.headp; sp != 0; sp = sp->nextp) {
-				// Detect array of values
+			// If node is a null pointer then there was an empty exression at the 
+			// location of the field to fill. Assume a zero value, and use the
+			// first type of the list. Some type contained in the list of types must
+			// be set.
+			if (node == nullptr) {
+				node = makeinode(en_icon, 0);	// set value field to null
+				node->tp = tp->lst.headp->tp;
+			}
+			// Search the list of types in the union for a type matching the node.
+			for (osp = sp = tp->lst.headp; sp != nullptr; sp = sp->nextp) {
 				if (TYP::IsSameType(sp->tp, node->tp, false)) {
-					if (!ENODE::initializedSet.isMember(lst->node->number)) {
+					if (!ENODE::initializedSet.isMember(node->number)) {
 						nbytes = GenerateT(node, sp->tp);
-//						ENODE::initializedSet.add(lst->node->number);
+						ENODE::initializedSet.add(node->number);
 					}
 					found = true;
 					break;

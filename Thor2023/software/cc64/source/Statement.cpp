@@ -53,6 +53,15 @@ int Statement::oldthrow = 0;
 int Statement::olderthrow = 0;
 bool Statement::lc_in_use = false;
 
+void Statement::ResetGenerated()
+{
+	if (this) {
+		generated = false;
+		s1->ResetGenerated();
+		s2->ResetGenerated();
+	}
+}
+
 static Symbol *makeint(char *name)
 {
 	Symbol *sp;
@@ -749,7 +758,7 @@ Statement* Statement::ParseYield()
 	return (snp);
 }
 
-Statement *Statement::Parse(ENODE** node, Symbol* symi)
+Statement *Statement::Parse(ENODE** node, Symbol* symi, bool* has_label)
 {
 	Statement *snp = nullptr;
 	int64_t* bf = nullptr;
@@ -810,6 +819,8 @@ j1:
 		SkipSpaces();
 		if (lastch == ':') {
 			snp = ParseLabel(true);
+			if (has_label)
+				*has_label = true;
 			currentStmt = snp;
 			goto j1;
 		}
@@ -829,11 +840,11 @@ j1:
 	return (snp);
 }
 
-Statement* Statement::Parse()
+Statement* Statement::Parse(bool* has_label)
 {
 	ENODE* node;
 
-	return (Parse(&node, nullptr));
+	return (Parse(&node, nullptr, has_label));
 }
 
 
@@ -2057,7 +2068,7 @@ void Statement::GenerateFuncBody()
 	s1->Generate();
 }
 
-void Statement::Generate(int opt)
+bool Statement::Generate(int opt)
 {
 	Operand *ap;
 	Statement *stmt;
@@ -2177,12 +2188,12 @@ void Statement::Generate(int opt)
 			break;
 		case st_case:
 			if (opt)
-				return;
+				return (true);
 			stmt->GenerateCase();
 			break;
 		case st_default:
 			if (opt)
-				return;
+				return (true);
 			stmt->GenerateDefault();
 			break;
 		case st_empty:
@@ -2191,7 +2202,11 @@ void Statement::Generate(int opt)
 			printf("DIAG - unknown statement.\n");
 			break;
 		}
+		// Break after one statement generated.
+		if (opt == 2)
+			break;
 	}
+	return (false);
 }
 
 void Statement::GenerateStop()

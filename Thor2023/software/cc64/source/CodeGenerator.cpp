@@ -1079,6 +1079,45 @@ Operand* CodeGenerator::GenerateBitfieldAssignAdd(ENODE* node, int flags, int si
 	return (ap3);
 }
 
+Operand* CodeGenerator::GenerateBinaryFloat(ENODE* node, int flags, int size, int op)
+{
+	Operand* ap1 = nullptr, * ap2 = nullptr, * ap3, * ap4;
+	bool dup = false;
+
+	ap3 = GetTempRegister();
+	ap4 = GetTempRegister();
+	if (ENODE::IsEqual(node->p[0], node->p[1]))
+		dup = !opt_nocgo;
+	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op)->amclass2, size, 0);
+	if (!dup) {
+		ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op)->amclass3, size, 1);
+	}
+	// Generate a convert operation ?
+	if (!dup) {
+		if (ap1->fpsize() != ap2->fpsize()) {
+			if (ap2->fpsize() == 's')
+				GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
+		}
+	}
+	// Two immediate operands not supported.
+	if (ap1->mode == am_imm && ap2->mode == am_imm) {
+		GenerateLoadFloatConst(ap4, ap1);
+		ap1 = ap4;
+	}
+	if (dup)
+		GenerateTriadic(op, 0, ap3, ap1, ap1);
+	else
+		GenerateTriadic(op, 0, ap3, ap1, ap2);
+	ap3->type = ap1->type;
+
+	if (ap2)
+		ReleaseTempReg(ap2);
+	if (ap1)
+		ReleaseTempReg(ap1);
+	ap3->MakeLegal(flags, size);
+	return (ap3);
+}
+
 Operand* CodeGenerator::GenerateAssignAdd(ENODE* node, int flags, int size, int op)
 {
 	Operand* ap1, * ap2, * ap3, * ap4;
@@ -1496,10 +1535,10 @@ OCODE* CodeGenerator::GenerateLoadFloatConst(Operand* ap1, Operand* ap2)
 			GenerateMonadic(op_pfx0, 0, MakeImmediate(f128.pack[0]));
 			GenerateMonadic(op_pfx1, 0, MakeImmediate(f128.pack[1]));
 			GenerateMonadic(op_pfx2, 0, MakeImmediate(f128.pack[2]));
-			GenerateMonadic(op_pfx3, 0, MakeImmediate(f128.pack[3]));
+			GenerateMonadic(op_pfx2, 0, MakeImmediate(f128.pack[3]));
 		}
 	}
-	return (ip);
+	return (ip->fwd);
 }
 
 // Generate an assignment to an array.
@@ -1522,9 +1561,10 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 		OCODE* ip;
 		if (ap1->offset == nullptr)
 			;
-		if (ap1->offset->esize <= 8)
-			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
-		else {
+//		if (ap1->offset->esize <= 8)
+//			ip = GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(ap1->offset->i));
+//		else 
+		 {
 			// Try to compress a float into the smallest representation.
 			if (ap1->tp->IsFloatType())
 				ip = GenerateLoadFloatConst(ap1, ap2);
@@ -1541,7 +1581,8 @@ void CodeGenerator::GenerateLoadConst(Operand *ap1, Operand *ap2)
 			}
 		}
 		if (ip->oper2)
-			ip->oper2->offset->constflag = true;
+			if (ip->oper2->offset)
+				ip->oper2->offset->constflag = true;
 		regs[ap2->preg].isConst = true;
 			if (ap2->tp) {
 //				ap2->tp->type = bt_long;
@@ -1849,10 +1890,13 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 		ap1 = GenerateExpression(node->p[0], am_reg | am_mem | am_vreg, ssize, 1);
 		flg = am_all;
 		flg = am_reg | am_mem | am_imm;
+		/*
 		if (ap1->typep == &stddouble)
 			flg = am_fpreg;
-		else if (ap1->typep == &stdposit)
+		else 
+		if (ap1->typep == &stdposit)
 			flg = am_preg;
+		*/
 
 		// We want the size of the RHS to be its natural size.
 		ap2 = GenerateExpression(node->p[1], flg, RHsize = node->p[1]->GetNaturalSize(), 0);// size);
@@ -1977,7 +2021,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 
 // autocon and autofcon nodes
 
-Operand *CodeGenerator::GenAutocon(ENODE *node, int flags, int64_t size, TYP* typ)
+Operand *CodeGenerator::GenerateAutocon(ENODE *node, int flags, int64_t size, TYP* typ)
 {
 	Operand *ap1, *ap2, *ap3;
 	short nn, ni;
@@ -2021,7 +2065,7 @@ Operand *CodeGenerator::GenAutocon(ENODE *node, int flags, int64_t size, TYP* ty
 	return (ap1);             /* return reg */
 }
 
-Operand* CodeGenerator::GenFloatcon(ENODE* node, int flags, int64_t size)
+Operand* CodeGenerator::GenerateFloatcon(ENODE* node, int flags, int64_t size)
 {
 	Operand* ap1, * ap2;
 
@@ -2030,6 +2074,10 @@ Operand* CodeGenerator::GenFloatcon(ENODE* node, int flags, int64_t size)
 	ap1->offset = node;
 	ap1->tp = node->tp;
 	return (ap1);
+
+	// Dead code follows, for generating a reference to the constant which is 
+	// stored in rodata. This is not needed since Thor can use immediates with
+	// floats, but some other architectures cannot.
 	ap1 = allocOperand();
 	ap1->isPtr = node->IsPtr();
 	if (node->constflag && node->f128.IsZero()) {
@@ -2183,7 +2231,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		goto retpt;
 	
 	case en_fcon:
-		ap1 = GenFloatcon(node, flags, size);
+		ap1 = GenerateFloatcon(node, flags, size);
 		goto retpt;
 /*
 	case en_pcon:
@@ -2285,21 +2333,21 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		Leave((char *)"GenExpression",7); 
 		goto retpt;
 	case en_autocon:
-		ap1 = GenAutocon(node, flags, size, &stdint);
+		ap1 = GenerateAutocon(node, flags, size, &stdint);
 		goto retpt;
   case en_autofcon:	
 		switch (node->tp->type)
 		{
 		case bt_float:
-			ap1 = GenAutocon(node, flags, size, &stdflt);
+			ap1 = GenerateAutocon(node, flags, size, &stdflt);
 			goto retpt;
 		case bt_double:
-			ap1 = GenAutocon(node, flags, size, &stddouble);
+			ap1 = GenerateAutocon(node, flags, size, &stddouble);
 			goto retpt;
-		case bt_quad:	return GenAutocon(node, flags, size, &stdquad);
-		case bt_posit: return GenAutocon(node, flags, size, &stdposit);
+		case bt_quad:	return GenerateAutocon(node, flags, size, &stdquad);
+		case bt_posit: return GenerateAutocon(node, flags, size, &stdposit);
 		case bt_pointer:
-			ap1 = GenAutocon(node, flags, size, &stdint);
+			ap1 = GenerateAutocon(node, flags, size, &stdint);
 			goto retpt;
 		}
 		break;
@@ -2308,21 +2356,21 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		switch (node->tp->type)
 		{
 		case bt_float:
-			ap1 = GenAutocon(node, flags, size, &stdflt);
+			ap1 = GenerateAutocon(node, flags, size, &stdflt);
 			goto retpt;
 		case bt_double:
-			ap1 = GenAutocon(node, flags, size, &stddouble);
+			ap1 = GenerateAutocon(node, flags, size, &stddouble);
 			goto retpt;
-		case bt_quad:	return GenAutocon(node, flags, size, &stdquad);
-		case bt_posit: return GenAutocon(node, flags, size, &stdposit);
+		case bt_quad:	return GenerateAutocon(node, flags, size, &stdquad);
+		case bt_posit: return GenerateAutocon(node, flags, size, &stdposit);
 		case bt_pointer:
-			ap1 = GenAutocon(node, flags, size, &stdint);
+			ap1 = GenerateAutocon(node, flags, size, &stdint);
 			goto retpt;
 		}
 		break;
 
-	case en_autovcon:	return GenAutocon(node, flags, size, &stdvector);
-    case en_autovmcon:	return GenAutocon(node, flags, size, &stdvectormask);
+	case en_autovcon:	return GenerateAutocon(node, flags, size, &stdvector);
+    case en_autovmcon:	return GenerateAutocon(node, flags, size, &stdvectormask);
   case en_classcon:
     ap1 = GetTempRegister();
     ap2 = allocOperand();

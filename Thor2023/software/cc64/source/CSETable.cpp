@@ -89,8 +89,8 @@ CSE *CSETable::InsertNode(ENODE *node, int duse, bool *first)
 		csp->AccUses(1);
 		csp->AccDuses(duse != 0);
 		csp->exp = node->Clone();
-		csp->isfp = csp->exp->IsFloatType();// && !csp->exp->constflag;
-		csp->isPosit = csp->exp->IsPositType();// && !csp->exp->constflag;
+		csp->isfp = false;// csp->exp->IsFloatType();// && !csp->exp->constflag;
+		csp->isPosit = false;// csp->exp->IsPositType();// && !csp->exp->constflag;
 		return (csp);
 	}
 	*first = false;
@@ -223,8 +223,8 @@ int CSETable::AllocateFPRegisters()
 						{
 						case 0:
 						case 1:
-						case 2:	alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
-						case 3: alloc = (csp->OptimizationDesireability() >= 4) && reg < cpu.NumSavedRegs; break;
+						case 2:	alloc = (csp->OptimizationDesireability() >= 3) && reg < cpu.NumSavedRegs; break;
+						case 3: alloc = (csp->OptimizationDesireability() >= 3) && reg < cpu.NumSavedRegs; break;
 							//    					if(( csp->duses > csp->uses / (8 << nn)) && reg < regLastRegvar )	// <- address register assignments
 						}
 						if (alloc) {
@@ -332,10 +332,12 @@ void CSETable::InitializeTempRegs()
 					if (ap == nullptr)
 						continue;
 					ap2 = csp->isfp ? makefpreg(csp->reg) : csp->isPosit ? compiler.of.makepreg(csp->reg) : makereg(csp->reg);
+					/* ??? Why different from scalar?
 					if (csp->isfp | csp->isPosit) {
 						ap2->type = ap->type;
 						ap2->tp = ap->tp;
 					}
+					*/
 					ap2->isPtr = ap->isPtr;
 					if (ap->mode == am_imm) {
 						//if (ap2->mode == am_fpreg) {

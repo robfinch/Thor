@@ -856,7 +856,7 @@ bool Float128::IsDouble()
 	return (IsEqual(&f128, this));
 }
 
-char* Float128::ToCompressedString()
+char* Float128::ToCompressedString(int syntax)
 {
 	float f;
 	double d, * pd;
@@ -867,16 +867,44 @@ char* Float128::ToCompressedString()
 	static char buf[4][100];
 	static char str[100];
 	std::string* s1;
+	int ndx;
 
 	Float128 f128;
 	memset(&buf[0], '\0', sizeof(buf[0]));
+	if (IsHalf()) {
+		uint16_t hf;
+		uint16_t* pi;
+		uint16_t i;
+		Float128::FloatQuadToHalf(&hf, this);
+		pi = (uint16_t*)&hf;
+		i = pi[0];
+		if (syntax == 0) {
+			buf[0][0] = '$';
+			ndx = 1;
+		}
+		else {
+			buf[0][0] = '0';
+			buf[0][1] = 'x';
+			ndx = 2;
+		}
+		_itoa_s((int64_t)i, &buf[0][ndx], sizeof(buf[0]), 16);
+		s1 = new std::string((char*)buf[0]);
+		return ((char*)s1->c_str());
+	}
 	if (IsSingle()) {
 		Float128::Float128ToSingle(&f, this);
 		pi = (int32_t*)pf;
 		i = pi[0];
-		buf[0][0] = '0';
-		buf[0][1] = 'x';
-		_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+		if (syntax == 0) {
+			buf[0][0] = '$';
+			ndx = 1;
+		}
+		else {
+			buf[0][0] = '0';
+			buf[0][1] = 'x';
+			ndx = 2;
+		}
+		_itoa_s((int64_t)i, &buf[0][ndx], sizeof(buf[0]), 16);
 		s1 = new std::string((char *)buf[0]);
 		return ((char*)s1->c_str());
 	}
@@ -884,40 +912,54 @@ char* Float128::ToCompressedString()
 		pi = (int32_t*)&d;
 		i = pi[0];
 		Float128::Float128ToDouble(&d, this);
-		buf[0][0] = '0';
-		buf[0][1] = 'x';
-		_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+		if (syntax == 0) {
+			buf[0][0] = '$';
+			ndx = 1;
+		}
+		else {
+			buf[0][0] = '0';
+			buf[0][1] = 'x';
+			ndx = 2;
+		}
+		_itoa_s((int64_t)i, &buf[0][ndx], sizeof(buf[0]), 16);
 
 		i = pi[1];
 		_itoa_s((int64_t)i, str, sizeof(str), 16);
 		for (n = i = 16 - strlen(str); i >= 0; i--)
-			buf[0][18 + i] = '0';
+			buf[0][16 + ndx + i] = '0';
 		strcat_s((char *)&buf[0], 30, str);
 		s1 = new std::string((char*)buf[0]);
 		return ((char *)s1->c_str());
 	}
 	pi = (int32_t*)&f128;
 	i = pi[0];
-	buf[0][0] = '0';
-	buf[0][1] = 'x';
-	_itoa_s((int64_t)i, &buf[0][2], sizeof(buf[0]), 16);
+	if (syntax == 0) {
+		buf[0][0] = '$';
+		ndx = 1;
+	}
+	else {
+		buf[0][0] = '0';
+		buf[0][1] = 'x';
+		ndx = 2;
+	}
+	_itoa_s((int64_t)i, &buf[0][ndx], sizeof(buf[0]), 16);
 
 	i = pi[1];
 	_itoa_s((int64_t)i, str, sizeof(str), 16);
 	for (n = i = 16 - strlen(str); i >= 0; i--)
-		buf[0][18 + i] = '0';
+		buf[0][16 + ndx + i] = '0';
 	strcat_s((char *)&buf[0], 30, str);
 
 	i = pi[2];
 	_itoa_s((int64_t)i, str, sizeof(str), 16);
 	for (i = 16 - strlen(str); i >= 0; i--)
-		buf[0][34 + i] = '0';
+		buf[0][32 + ndx + i] = '0';
 	strcat_s((char*)&buf[0], 30, str);
 
 	i = pi[3];
 	_itoa_s((int64_t)i, str, sizeof(str), 16);
 	for (i = 16 - strlen(str); i >= 0; i--)
-		buf[0][50 + i] = '0';
+		buf[0][48 + ndx + i] = '0';
 	strcat_s((char*)&buf[0], 30, str);
 	s1 = new std::string((char*)buf[0]);
 	return ((char*)s1->c_str());

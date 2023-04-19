@@ -324,7 +324,7 @@ enum e_am {
 	am_preg = 1 << 25,
 	am_mem_indirect = 1 << 26,
 	am_jmp = 1 << 27,
-	am_all = 0x1FF,
+	am_all = 0x1FB,	// exclude fp reg for Thor
 };
 
 //#define am_reg   1       /* register direct mode allowed */

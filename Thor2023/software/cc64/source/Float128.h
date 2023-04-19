@@ -154,7 +154,7 @@ public:
 	void Pack(int);
 	char *ToString();
 	char *ToString(int);
-	char* ToCompressedString();
+	char* ToCompressedString(int syntax=1);
 	bool IsManZero() const;
 	bool IsZero() const;
 	bool IsInfinite() const;

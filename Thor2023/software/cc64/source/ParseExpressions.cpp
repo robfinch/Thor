@@ -2065,7 +2065,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 					if (srcnode->nodetype == en_type)
 						srcnode = ep2->p[1];
 					if (dstnode->constflag || ep1->constflag) {
-						force_type(dstnode, ep1, srcnode->tp);
+						force_type(dstnode, ep1, srcnode->tp ? srcnode->tp : tp);
 						tp = dstnode->tp;
 					}
 					//ep2->etype = ep1->etype;
@@ -2560,6 +2560,7 @@ TYP *Expression::ParseRelationalOps(ENODE **node, Symbol* symi)
       goto fini;
     }
 		ep1 = makenode(nt, ep1, ep2);
+		ep1->SetType(tp1);
 		ep1->esize = 1;
 		if (isVector)
 			tp1 = TYP::Make(bt_vector_mask, sizeOfWord);

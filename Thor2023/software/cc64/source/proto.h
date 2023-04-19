@@ -33,7 +33,7 @@ void IRemove();
 int roundSize(TYP *tp);
 extern char *rtrim(char *);
 extern int caselit(scase *casetab, int64_t);
-extern int litlist(ENODE *);
+extern int litlist(ENODE *, char*);
 
 // MemoryManagement.cpp
 void FreeFunction(Function *fn);
@@ -49,7 +49,7 @@ extern void GenerateLong(Int128 val);
 extern void GenerateFloat(Float128 *val);
 extern void GenerateQuad(Float128 *);
 extern void GenerateReference(Symbol *sp, int64_t offset);
-extern void GenerateLabelReference(int n, int64_t);
+extern void GenerateLabelReference(int n, int64_t, char*);
 // Outcode.c
 extern void gen_strlab(char* s);
 extern void dumplits();

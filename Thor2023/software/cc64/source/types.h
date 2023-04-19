@@ -1225,6 +1225,7 @@ public:
 	virtual void GenerateBitfieldInsert(Operand* ap1, Operand* ap2, Operand* offset, Operand* width);
 	virtual void GenerateBitfieldInsert(Operand* ap1, Operand* ap2, ENODE* offset, ENODE* width);
 	virtual Operand* GenerateBitfieldExtract(Operand* ap1, ENODE* offset, ENODE* width);
+	Operand* GenerateBinaryFloat(ENODE* node, int flags, int size, int op);
 	Operand* GenerateAsaddDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su, bool neg);
 	Operand* GenerateAddDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su);
 	Operand* GenerateAutoconDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su);
@@ -1249,8 +1250,8 @@ public:
 	void GenerateStructAssign(TYP *tp, int64_t offset, ENODE *ep, Operand *base);
 	void GenerateArrayAssign(TYP *tp, ENODE *node1, ENODE *node2, Operand *base);
 	Operand *GenerateAggregateAssign(ENODE *node1, ENODE *node2);
-	Operand *GenAutocon(ENODE *node, int flags, int64_t size, TYP* type);
-	Operand* GenFloatcon(ENODE* node, int flags, int64_t size);
+	Operand *GenerateAutocon(ENODE *node, int flags, int64_t size, TYP* type);
+	Operand* GenerateFloatcon(ENODE* node, int flags, int64_t size);
 	Operand* GenPositcon(ENODE* node, int flags, int64_t size);
 	Operand* GenLabelcon(ENODE* node, int flags, int64_t size);
 	Operand *GenerateAssign(ENODE *node, int flags, int64_t size);
@@ -1746,6 +1747,7 @@ public:
 	Statement *epilog;
 	Function* fi;				// Function connected to statement
 	bool nkd;
+	bool contains_label;
 	int predreg;		// assigned predicate register
 	ENODE *exp;         // condition or expression
 	ENODE *initExpr;    // initialization expression - for loops
@@ -1766,6 +1768,7 @@ public:
 	static int oldthrow;
 	static int olderthrow;
 	static bool lc_in_use;
+	bool generated;
 	
 	static Statement* MakeStatement(int typ, int gt);
 
@@ -1797,8 +1800,8 @@ public:
 	Statement *ParseBreak();
 	Statement *ParseSwitch();
 	Statement* ParseYield();
-	Statement* Parse(ENODE** node, Symbol* symi);
-	Statement *Parse();
+	Statement* Parse(ENODE** node, Symbol* symi, bool* has_label=nullptr);
+	Statement* Parse(bool* has_label=nullptr);
 
 	// Optimization
 	void scan();
@@ -1809,6 +1812,8 @@ public:
 	void update_compound();
 
 	// Code generation
+	int FindNextLabel(int);
+	void ResetGenerated();
 	Operand *MakeDataLabel(int lab, int ndxreg);
 	Operand *MakeCodeLabel(int lab);
 	Operand *MakeStringAsNameConst(char *s, e_sg seg);
@@ -1853,6 +1858,8 @@ public:
 	void GenerateSwitchLo(Case* cases, Operand*, Operand*, int, int, int, bool, bool, bool last_case);
 	void GenerateSwitchLop2(Case* cases, Operand*, Operand*, int, int, int, bool, bool);
 	void GenerateNakedTabularSwitch(int64_t, Operand*, int);
+	void GenerateSwitchStatements();
+	std::string GenerateSwitchTargetName(int labno);
 	void GenerateTry();
 	void GenerateThrow();
 	void GenerateCatch(int opt, int oldthrowlab, int olderthrow);
@@ -1862,7 +1869,7 @@ public:
 	void GenerateLinearSwitch();
 	void GenerateTabularSwitch(int64_t, int64_t, Operand*, bool, int, int);
 	void GenerateYield();
-	void Generate(int opt = 0);
+	bool Generate(int opt = 0);
 	void CheckReferences(int* sp, int* bp, int* gp, int* gp1);
 	void CheckCompoundReferences(int* sp, int* bp, int* gp, int* gp1);
 	// Debugging

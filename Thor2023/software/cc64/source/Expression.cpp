@@ -411,6 +411,13 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 	maxcount = count+1;
 	for (count = 0; count < maxcount; count++)
 		pnode = makenode(en_void, pnode, node_array[count]);
+	/*
+	pnode = makenode(en_end_aggregate, pnode, nullptr);
+	pnode->SetType(TYP::Copy(&stdptr));
+	pnode->tp->val_flag = true;
+	pnode->tp->btpp = tp;
+	pnode->tp->numele = tp->numele;
+	*/
 	*node = pnode;
 	if (tp->numele == 0) {
 		tp->numele = maxcount;
@@ -420,34 +427,65 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 
 bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, TYP* tp)
 {
+	Int128 n128;
 	int64_t count, ndx, maxcount, at_node;
 	Symbol* lst, * tmp, * hlst;
-	ENODE* pnode;
+	ENODE* pnode, *qnode;
 	ENODE** node_array;
-	TYP* tptr, *tptr2;
+	TYP* tptr, * tptr2;
 	bool consistentType = true;
 	bool found = false;
+	bool is_array = false;
+	bool is_union = false;
+	int64_t ne;
+	List* pplist;
 
 	pnode = nullptr;
 	tptr2 = nullptr;
+	tptr = tp;
 	if (tp->type == bt_pointer)
 		hlst = lst = tp->btpp->lst.headp;
 	else {
 		hlst = lst = tp->lst.headp;
 	}
-	for (maxcount = 0; lst != nullptr; maxcount++, lst = lst->nextp)
-		;
-	node_array = new ENODE * [maxcount];
-	for (count = 0; count < maxcount; count++) {
+	if (tp->type == bt_union) {
+		is_union = true;
+		maxcount = 1;
+	}
+	// Find the largest array in a union
+	ne = 1;
+	if (is_union) {
+		for (maxcount = 0; lst != nullptr; maxcount++, lst = lst->nextp) {
+			if (lst->tp->type == bt_array || (lst->tp->type == bt_pointer && lst->tp->val_flag))
+				ne = max(ne, lst->tp->numele);
+		}
+	}
+	// Or find the number of struct members
+	else {
+		for (maxcount = 0; lst != nullptr; maxcount++, lst = lst->nextp)
+			;
+		ne = maxcount;
+	}
+	// Allocate array and ENODEs
+	node_array = new ENODE * [ne];
+	pplist = new List[ne];
+	for (count = 0; count < ne; count++) {
 		node_array[count] = allocEnode();
 		node_array[count]->order = count;
+		pplist[count].node = node_array[count];
 	}
+
+	// If it is a struct, loop through the struct member, otherwise if it is a
+	// union count the number of elements in case an array.
 	lst = hlst;
-	for (count = 0; lastst != e_sym::end && lst != nullptr; count++, lst = lst->nextp) {
+	for (count = 0;
+		lastst != e_sym::end && lst != nullptr || tp->type == bt_union;
+		count++, tp->type != bt_union ? lst = lst->nextp : 0) {
 		at_node = count;
 		found = false;
 		tmp = nullptr;
 		tptr = nullptr;
+		// Check for an indexing operation.
 		if (lastst == dot) {
 			NextToken();
 			if (lastst != id)
@@ -466,27 +504,73 @@ bool Expression::ParseAggregateStruct(ENODE** node, ENODE* cnode, Symbol* symi, 
 			if (!found)
 				error(ERR_NOMEMBER);
 		}
-		if (at_node < maxcount) {
+		// Check for indexing operation.
+		// We allow this for a struct member access too. Why error?
+		else if (lastst == openbr) {
+			NextToken();
+			n128 = GetIntegerExpression(&qnode, symi, 0);
+			needpunc(closebr, 78);
+			needpunc(assign, 79);
+			at_node = n128.low;
+		}
+
+		// Parse the element, it may be another level of aggregate or just an
+		// expression.
+		if (at_node < ne) {
 			if (lastst == e_sym::begin) {
+				if (lst->tp->type != bt_struct && lst->tp->type != bt_union &&
+					lst->tp->type != bt_array &&
+					!(lst->tp->type == bt_pointer && lst->tp->val_flag))
+					error(ERR_MISMATCH);
 				tptr = ParseAggregate(&node_array[count], lst, lst->tp);
 			}
 			else {
-				tptr = ParseNonCommaExpression(&node_array[at_node], found ? tmp : lst);
+				tptr = ParseNonCommaExpression(&node_array[at_node], found ? tmp : nullptr);
 				opt_const(&node_array[at_node]);
 			}
 			node_array[at_node]->SetType(tptr);
 		}
+		// Check for type consistency. It might be an array.
 		if (tptr2 != nullptr && !TYP::IsSameType(tptr, tptr2, false))
 			consistentType = false;
 		tptr2 = tptr;
-		if (lastst == comma)
+		if (lastst == comma) {
 			NextToken();
+			is_array = true;
+		}
 		else
 			break;
 	}
 xit:
-	for (count = 0; count < maxcount; count++)
+	if (is_array) {
+		maxcount = ne;
+		// Find the union member matching the array, we need this to set the type.
+		if (is_union)
+			for (lst = symi->tp->lst.headp; lst; lst = lst->nextp) {
+				if (lst->tp->isArray) {
+					if (TYP::IsSameType(tptr, lst->tp->btpp, false)) {
+						tptr = lst->tp;
+						break;
+					}
+				}
+			}
+	}
+//	pnode = makenode(en_void, nullptr, nullptr);
+	// Create linked list of node in reverse order. The output routine requires
+	// them in the order they were encountered during parse.
+	for (count = maxcount-1; count >= 0; count--)
 		pnode = makenode(en_void, pnode, node_array[count]);
+	pnode = makenode(en_end_aggregate, pnode, nullptr);
+
+	// Set resulting type.
+	if (is_array) {
+		pnode->SetType(TYP::Copy(&stdptr));
+		pnode->tp->val_flag = true;
+		pnode->tp->btpp = tptr;
+		pnode->tp->numele = ne;
+	}
+	else
+		pnode->SetType(tptr);
 	*node = pnode;
 	return (consistentType);
 }
@@ -541,14 +625,21 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	List* rlst;
 	bool is_array = false;
 	bool is_struct = false;
+	std::string str;
 
-	NextToken();
+	NextToken(0);
 	hnode = pnode = makenode(en_aggregate, nullptr, nullptr);
 	pnode->order = 0;
 	parsingAggregate++;
 	head = tail = nullptr;
-	tptr2 = nullptr;
+	tptr = tptr2 = nullptr;
 	cnode = nullptr;
+	if (tp->type != bt_struct && tp->type != bt_union &&
+		tp->type != bt_array &&
+		!(tp->type == bt_pointer && tp->val_flag))
+		error(ERR_MISMATCH);
+	is_struct = symi->tp->IsStructType();
+	is_array = symi->tp->isArray;
 	if (symi->tp->type == bt_pointer) {
 		is_array = symi->tp->val_flag == true;
 		lst = symi->tp->lst.headp;
@@ -561,7 +652,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		ParseAggregateArray(&pnode, cnode, symi, tp);
 		consistentType = true;
 	}
-	else {//if (symi->tp->IsStructType() || (parsingAggregate==1 && is_struct)) {
+	else {
 		ParseAggregateStruct(&pnode, cnode, symi, tp);
 		consistentType = false;
 	}
@@ -587,9 +678,19 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	}
 	*/
 	sz = tp->size;
+	tptr = pnode->tp;
+
 	pnode = makenode(en_end_aggregate, pnode, nullptr);
-	hnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
-	pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
+	if (tp->type == bt_union) {
+		hnode->SetType(tp);
+		pnode->SetType(tp);
+		tptr = tp;
+	}
+	else
+	{
+		hnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
+		pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
+	}
 	if (consistentType) {
 		hnode->tp->btpp = tptr;
 		pnode->tp->btpp = tptr;
@@ -606,8 +707,10 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 
 	hnode->esize = tp->size;// hnode->tp->size;
 	pnode->esize = tp->size;// pnode->tp->size;
-	hnode->i = litlist(pnode);
-	pnode->i = litlist(pnode);
+	str = "";
+	str.append(*currentFn->sym->GetFullName());
+	hnode->i = litlist(pnode, (char *)str.c_str());
+	pnode->i = litlist(pnode, (char *)str.c_str());
 	hnode->segment = cnst ? rodataseg : dataseg;
 	pnode->segment = cnst ? rodataseg : dataseg;
 	hnode->constflag = true;
@@ -1541,8 +1644,8 @@ ENODE* Expression::ParsePointsTo(TYP* tp1, ENODE* ep1)
 				ep1->isPascal = ep1->p[0]->isPascal;
 			}
 			ep1->tp = tp2;
-			if (ep1->tp == nullptr)
-				printf("hi");
+			//if (ep1->tp == nullptr)
+			//	printf("hi");
 	}
 xit:
 	//	if (ep1) ep1->tp = tp1;
