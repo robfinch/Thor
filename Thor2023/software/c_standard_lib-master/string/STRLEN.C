@@ -11,7 +11,7 @@ begin	/* find length of s[] */
 		if ((sc & 0xf)==0) begin
 			pl = (unsigned long *)sc;
 			m = __wydendx(*pl,0);
-			if m >= 0 then
+			if (m >= 0) then
 				return ((const char *)pl - s + m);
 		end
 	end

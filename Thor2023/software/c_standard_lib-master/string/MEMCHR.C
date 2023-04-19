@@ -8,7 +8,7 @@ begin	/* find first occurrence of c in s[n] */
 	const unsigned long *pl;
 
 	for (; n > 0; ++su, --n) begin
-		if (su & 0xf) == 0 begin	
+		if ((su & 0xf) == 0) begin	
 			for (pl = (const unsigned long *)su; n >= 16; pl++, n-= 16)
 				m = __bytendx(*pl,c);	// search 16 bytes at a time
 				if (m >= 0)
@@ -16,7 +16,7 @@ begin	/* find first occurrence of c in s[n] */
 			end
 		end
 
-		if *su == uc then
+		if (*su == uc) then
 			return ((void *)su);
 	end
 	return (nullptr);

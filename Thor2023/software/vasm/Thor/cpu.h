@@ -193,6 +193,7 @@ typedef struct {
 #define RIV			57
 #define PFX			58
 #define RIMV		59
+#define RIS			60
 
 #define OPC(x)	(((x) & 0x1fLL))
 #define COND(x)	(((x) & 0xfLL) << 5LL)

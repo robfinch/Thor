@@ -52,9 +52,11 @@ mnemonic mnemonics[]={
 
 	"add", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
 	"add", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(4LL),5,SZ_INTALL,SZ_HEXI},	
+	"add", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(4LL),5,SZ_INTALL,SZ_HEXI},	
 
 	"and", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(8LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
 	"and", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(8LL),5,SZ_INTALL,SZ_HEXI},	
+	"and", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(8LL),5,SZ_INTALL,SZ_HEXI},	
 	
 	"andc", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VMREG,0}, {R2M,CPU_ALL,0,FUNC(8LL)|SB(1)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},
 	"andc", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(8LL)|SB(1)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
@@ -203,6 +205,7 @@ mnemonic mnemonics[]={
 	"eor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,OP_VMREG,0}, {RIM,CPU_ALL,0,V(1)|OPC(10LL),5,SZ_INTALL,SZ_HEXI},
 	"eor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(10LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
 	"eor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(10LL),5,SZ_INTALL,SZ_HEXI},	
+	"eor", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(10LL),5,SZ_INTALL,SZ_HEXI},	
 
 	"ext",	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(61)|OPC(13),5,SZ_INTALL,SZ_HEXI},
 	"ext",	{OP_REG,OP_REG,OP_IMM,OP_IMM,0}, {BFR3II,CPU_ALL,0,FUNC3(5)|OPC(13),5,SZ_INTALL,SZ_HEXI},
@@ -391,6 +394,7 @@ mnemonic mnemonics[]={
 	"or", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,OP_VMREG,0}, {RIM,CPU_ALL,0,V(1)|OPC(9LL),5, SZ_INTALL, SZ_HEXI},
 	"or", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(9LL)|OPC(2LL),5, SZ_INTALL, SZ_HEXI},	
 	"or", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(9LL),5, SZ_INTALL, SZ_HEXI},	
+	"or", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(9LL),5, SZ_INTALL, SZ_HEXI},	
 	"orf", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VMREG,0}, {R2M,CPU_ALL,0,FUNC(9LL)|S(1)|OPC(2LL),5, SZ_INTALL, SZ_HEXI},
 	"orf", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,OP_VMREG,0}, {RIM,CPU_ALL,0,S(1)|V(1)|OPC(9LL),5, SZ_INTALL, SZ_HEXI},
 	"orf", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(9LL)|S(1)|OPC(2LL),5, SZ_INTALL, SZ_HEXI},	
@@ -625,7 +629,8 @@ mnemonic mnemonics[]={
 	"xor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VMREG,0}, {R2M,CPU_ALL,0,FUNC(10LL)|OPC(2LL),5, SZ_INTALL, SZ_HEXI},
 	"xor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,OP_VMREG,0}, {RIM,CPU_ALL,0,V(1)|OPC(10LL),5, SZ_INTALL, SZ_HEXI},
 	"xor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,FUNC(10LL)|OPC(2LL),5, SZ_INTALL, SZ_HEXI},	
-	"xor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(10LL),5, SZ_INTALL, SZ_HEXI}
+	"xor", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(10LL),5, SZ_INTALL, SZ_HEXI},
+	"xor", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(10LL),5, SZ_INTALL, SZ_HEXI}
 
 };
 
@@ -1550,6 +1555,7 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
                            19,13,0,0x7ffc0LL);
           break;
         case RI:
+        case RIS:
         case RIV:
         case RIM:
         case RIMV:
@@ -1894,6 +1900,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 				*insn = *insn| (RC(op->basereg & 3LL));
 			break;
 		case RIV:
+		case RIS:
 		case RIMV:			
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
@@ -2037,6 +2044,7 @@ static void encode_vreg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 				*insn = *insn| (RA(op->basereg));
 			break;
 		case RIV:
+		case RIS:
 		case RIMV:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
@@ -2384,7 +2392,8 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 				if (insn)
 					*insn = *insn | BFWID(val.lo);
 		}
-		else if (mnemo->ext.format==RI || mnemo->ext.format==RIV || mnemo->ext.format==RIM || mnemo->ext.format==RIMV) {
+		else if (mnemo->ext.format==RI || mnemo->ext.format==RIV || mnemo->ext.format==RIS || 
+			mnemo->ext.format==RIM || mnemo->ext.format==RIMV) {
 			if (insn)
 				*insn = *insn | ((val.lo & 0xffLL) << 23LL) | (((val.lo >> 8LL) & 0xffLL) << 32LL);
 			if (!is_nbit(hval,16LL)) {

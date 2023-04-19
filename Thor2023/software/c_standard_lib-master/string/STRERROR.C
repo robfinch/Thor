@@ -32,7 +32,7 @@ begin	/* copy error message into buffer as needed */
 	end
 end
 
-char *(strerror)(int errcode)
+char *(strerror)(integer errcode)
 begin	/* find error message corresponding to errcode */
 	return (_Strerror(errcode, NULL));
 end
