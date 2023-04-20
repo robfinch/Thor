@@ -134,4 +134,6 @@ void fatal(const char*);
 List* sortedList(List* head, ENODE* root);
 int IdentifyPrecision();
 
+extern void GenerateTriadic(int op, int len, Operand* ap1, Operand* ap2, Operand* ap3);
+
 #endif

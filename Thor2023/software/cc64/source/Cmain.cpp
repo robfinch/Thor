@@ -64,10 +64,8 @@ int main(int argc, char **argv)
 {
 	Posit64 pst;
 	Posit64 a, b, c, d, e;
-	int cnt;
 	txtoStream ofs;
 	Int128 aa, bb, cc, qq, rr;
-	int op;
 
 	syntax = STD;
 	aa = Int128::Convert(0x769bdd5fLL);
@@ -174,6 +172,7 @@ int main(int argc, char **argv)
 	cpu.stw_op = op_stw;
 	cpu.std_op = op_std;
 	cpu.InitRegs();
+
 //	printf("c64 starting...\r\n");
 	while(--argc) {
     if( **++argv == '-')
@@ -263,7 +262,7 @@ int	options(char *s)
              use_gp = TRUE;
         }
 				if (strcmp(&s[2], "riscv") == 0) {
-					gCpu = RISCV;
+					gCpu = 5;
 					regLR = 1;
 					regSP = 2;
 					regFP = 8;

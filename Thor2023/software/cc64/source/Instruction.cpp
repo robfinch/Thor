@@ -98,6 +98,7 @@ bool Instruction::IsLoad()
 		|| opcode == op_ldp
 		|| opcode == op_ldo
 		|| opcode == op_ldh
+		|| opcode == op_load
 		|| opcode == op_ldbu
 		|| opcode == op_ldwu
 		|| opcode == op_ldtu
@@ -123,6 +124,7 @@ bool Instruction::IsIntegerLoad()
 		|| opcode == op_ldp
 		|| opcode == op_ldh
 		|| opcode == op_ldo
+		|| opcode == op_load
 		|| opcode == op_ldbu
 		|| opcode == op_ldwu
 		|| opcode == op_ldtu

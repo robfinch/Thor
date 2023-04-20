@@ -814,8 +814,8 @@ void BasicBlock::InsertFillCode(int reg, int64_t offs)
 	if (this == nullptr)
 		return;
 	cd = (OCODE *)xalloc(sizeof(OCODE));
-	cd->insn = GetInsn(op_ldh);
-	cd->opcode = op_ldh;
+	cd->insn = GetInsn(op_load);
+	cd->opcode = op_load;
 	cd->oper1 = allocOperand();
 	cd->oper2 = allocOperand();
 	cd->oper1->mode = am_reg;

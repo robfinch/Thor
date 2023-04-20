@@ -767,6 +767,7 @@ void PeepList::OptInstructions()
 			case op_ldw:		ip->OptLoadChar(); break;
 			case op_ldp:		ip->OptLoadHalf(); break;
 			case op_ldo:		ip->OptLoadWord(); break;
+			case op_load:		ip->OptLoadWord(); break;
 			case op_sxb:	ip->OptSxb();	break;
 			case op_sxw:	ip->OptSxw();	break;
 			case op_sxo:	ip->OptSxo();	break;

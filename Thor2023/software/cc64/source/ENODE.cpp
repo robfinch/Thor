@@ -2056,119 +2056,7 @@ Operand *ENODE::GenerateUnary(int flags, int size, int op)
 
 Operand *ENODE::GenerateBinary(int flags, int size, int op)
 {
-	Operand *ap1 = nullptr, *ap2 = nullptr, *ap3, *ap4;
-	bool dup = false;
-
-	if (IsFloatType())
-		return (cg.GenerateBinaryFloat(this, flags, size, op));
-	else if (IsPositType())
-	{
-		ap3 = GetTempPositRegister();
-		if (IsEqual(p[0], p[1]))
-			dup = !opt_nocgo;
-		ap1 = cg.GenerateExpression(p[0], am_preg, size, 0);
-		if (!dup)
-			ap2 = cg.GenerateExpression(p[1], am_preg, size, 1);
-		// Generate a convert operation ?
-		if (!dup) {
-			if (ap1->fpsize() != ap2->fpsize()) {
-				if (ap2->fpsize() == 's')
-					GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
-			}
-		}
-		if (dup)
-			GenerateTriadic(op, 0, ap3, ap1, ap1);
-		else
-			GenerateTriadic(op, 0, ap3, ap1, ap2);
-		ap3->type = ap1->type;
-	}
-	else if (op == op_vex) {
-		ap3 = GetTempRegister();
-		ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
-		ap2 = cg.GenerateExpression(p[1], am_reg, size, 1);
-		GenerateTriadic(op, 0, ap3, ap1, ap2);
-	}
-	else if (IsVectorType()) {
-		ap3 = GetTempVectorRegister();
-		if (ENODE::IsEqual(p[0], p[1]) && !opt_nocgo) {
-			ap1 = cg.GenerateExpression(p[0], am_vreg, size, 0);
-			ap2 = cg.GenerateExpression(vmask, am_vmreg, size, 1);
-			Generate4adic(op, 0, ap3, ap1, ap1, ap2);
-		}
-		else {
-			ap1 = cg.GenerateExpression(p[0], am_vreg, size, 0);
-			ap2 = cg.GenerateExpression(p[1], am_vreg, size, 1);
-			ap4 = cg.GenerateExpression(vmask, am_vmreg, size, 1);
-			Generate4adic(op, 0, ap3, ap1, ap2, ap4);
-			ReleaseTempReg(ap4);
-		}
-		// Generate a convert operation ?
-		//if (fpsize(ap1) != fpsize(ap2)) {
-		//	if (fpsize(ap2)=='s')
-		//		GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
-		//}
-	}
-	else {
-		ap3 = GetTempRegister();
-		if (ENODE::IsEqual(p[0], p[1]) && !opt_nocgo) {
-			// Duh, subtract operand from itself, result would be zero.
-			if (op == op_sub || op == op_ptrdif || op == op_eor)
-				GenerateDiadic(cpu.mov_op, 0, ap3, makereg(0));
-			else {
-				ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
-				GenerateTriadic(op, 0, ap3, ap1, ap1);
-			}
-		}
-		else {
-			ap1 = cg.GenerateExpression(p[0], Instruction::Get(op)->amclass2, size, 0);
-			// modu/ptrdif does not have an immediate mode
-			ap2 = cg.GenerateExpression(p[1], Instruction::Get(op)->amclass3, size, 1);
-			if (Instruction::Get(op)->amclass4) {	// op_ptrdif
-				ap4 = cg.GenerateExpression(p[4], Instruction::Get(op)->amclass4, size, 1);
-				Generate4adic(op, 0, ap3, ap1, ap2, ap4);
-			}
-			else {
-				if (ap2->mode == am_imm) {
-					switch (op) {
-					case op_and:
-						GenerateTriadic(op, 0, ap3, ap1, MakeImmediate(ap2->offset->i));
-						break;
-					case op_or:
-						GenerateTriadic(op, 0, ap3, ap1, MakeImmediate(ap2->offset->i));
-						break;
-					// If there is a pointer plus a constant we really wanted an address calc.
-					case op_add:
-					case op_sub:
-						if (ap1->isPtr && ap2->isPtr)
-							GenerateTriadic(op, 0, ap3, ap1, ap2);
-						else if (ap2->isPtr) {
-							GenerateDiadic(cpu.lea_op, 0, ap3, op == op_sub ? compiler.of.MakeNegIndexed(ap2->offset, ap1->preg) : MakeIndexed(ap2->offset, ap1->preg));
-							//if (!compiler.os_code) {
-							//	switch (ap3->segment) {
-							//	case tlsseg:		GenerateTriadic(op_base, 0, ap3, ap3, MakeImmediate(8));	break;
-							//	case rodataseg:	GenerateTriadic(op_base, 0, ap3, ap3, MakeImmediate(12));	break;
-							//	}
-							//}
-						}
-						else {
-							GenerateTriadic(op, 0, ap3, ap1, ap2);
-						}
-						break;
-					default:
-						GenerateTriadic(op, 0, ap3, ap1, ap2);
-					}
-				}
-				else
-					GenerateTriadic(op, 0, ap3, ap1, ap2);
-			}
-		}
-	}
-	if (ap2)
-		ReleaseTempReg(ap2);
-	if (ap1)
-		ReleaseTempReg(ap1);
-	ap3->MakeLegal( flags, size);
-	return (ap3);
+	return (cg.GenerateBinary(this, flags, size, op));
 }
 
 Operand *ENODE::GenerateAssignAdd(int flags, int size, int op)
@@ -2549,7 +2437,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_labcon:
 	j1:
-		sprintf_s(buf, sizeof(buf), "%s_%lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
+		sprintf_s(buf, sizeof(buf), "%s.%05lld", ""/*(char*)currentFn->sym->GetFullName()->c_str()*/, i);
 		DataLabels[i] = true;
 		ofs.write(buf);
 		if (rshift > 0) {

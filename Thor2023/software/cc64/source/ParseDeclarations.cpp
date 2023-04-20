@@ -1203,7 +1203,7 @@ Symbol* Declaration::CreateNonameVar()
 // There may be only a single identifier in the prefix. This identifier may
 // contain a class spec or namespace spec.
 
-Symbol *Declaration::ParsePrefix(bool isUnion, Symbol* symi, bool local)
+TYP *Declaration::ParsePrefix(bool isUnion, Symbol* symi, bool local, Symbol** os)
 {   
 	TYP *temp1, *temp2, *temp3;
 	Symbol *sp, *symo, *sp1;
@@ -1256,86 +1256,12 @@ j1:
 		temp2 = head;
 		temp3 = tail;
 		head = TYP::Make(bt_pointer, sizeOfPtr);
-		head->btp = temp2->GetIndex();
 		head->btpp = temp2;
 		if (tail == nullptr)
 			tail = head;
 		if (pa_level > 0)
 			isFuncPtr = true;
 		goto j1;
-
-		// Dead code follows
-		if (lastst == closepa) {
-			pa_level--;
-			goto lxit;
-		}
-		if (lastst == semicolon)
-			goto lxit;
-		sp = ParsePrefix(isUnion, symi, local);
-		if (lastst == closepa || lastst == comma) {
-			head->btp = head->GetIndex();
-			head = TYP::Make(bt_func, sizeOfWord);
-			temp1 = TYP::Make(bt_pointer, sizeOfPtr);
-			temp1->btp = head->GetIndex();
-			head = temp1;
-			if (tail == NULL)
-				tail = head;
-			sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
-			goto lxit;
-		}
-		if (lastst == semicolon) {
-			goto lxit;
-		}
-		if (sp == nullptr) {
-			sp = Symbol::alloc();
-			sp->SetName(*UnknownFuncName());
-		}
-		if (sp->fi == nullptr) {
-			sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
-			sp->fi->IsFar = isFar;
-			sp->fi->IsCoroutine = isCoroutine;
-			sp->tp = head;
-			gsyms->insert(sp);
-		}
-		sp = ParseSuffix(sp);
-		temp1 = TYP::Make(bt_pointer, sizeOfPtr);
-		temp1->btp = head->GetIndex();
-		temp1->btpp = head;
-		head = temp1;
-		if (tail == NULL)
-			tail = head;
-		lastst;
-		if (lastst == begin)
-			needParseFunction = 2;
-		goto lxit;
-		//head = temp2;
-		//tail = temp3;
-		//if (lastst == closepa)
-		//	NextToken();
-		//needpunc(closepa, 61);
-		lastst;
-		if (lastst == openpa) {
-			funcdecl = 1;
-			NextToken();
-			if (sp == nullptr) {
-				sp = Symbol::alloc();
-			}
-			if (sp->fi == nullptr) {
-				sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
-				sp->fi->IsFar = isFar;
-				sp->fi->IsCoroutine = isCoroutine;
-			}
-			parsingParameterList++;
-			temp2 = head;
-			temp3 = tail;
-			ParseFunctionJ2(sp->fi);	// will get the ')'
-			head = temp2;
-			tail = temp3;
-			parsingParameterList--;
-			funcdecl = 0;
-		}
-		lastst;
-		goto lxit;
 
 	case openpa:
 		dfs.printf("(");
@@ -1347,21 +1273,18 @@ j1:
 			Function* fn = currentFn;
 			TABLE* table;
 			if (fn) {
-				if (currentFn->body)
-					table = &currentFn->body->ssyms;
-				else {
+				if (fn->body == nullptr) {
 					Statement* bdy;
 					currentFn->body = bdy = Statement::MakeStatement(st_compound, 0);
-					table = &currentFn->body->ssyms;
 				}
+				table = &currentFn->body->ssyms;
 			}
 			else
 				table = &gsyms[0];
 			declare(symi, table, fn ? sc_member : sc_global, 0, 0, &symo, local, currentFn ? currentFn->depth : 0);
-			currentFn = fn;
 		}
 		else {
-			sp = ParsePrefix(isUnion, symi, local);
+			ParsePrefix(isUnion, symi, local, &sp);
 			symo = sp;
 		}
 		level--;
@@ -1429,14 +1352,18 @@ j1:
 lxit:
 	// Strip out extra "Func returns Func" due to (((
 	if (head) {
+		/*
 		while (head->btpp && (head->btpp->type == bt_func || head->btpp->type == bt_ifunc)) {
 			if (tail == head)
 				tail = head->btpp;
 			head = head->btpp;
 		}
+		*/
 	}
 	dfs.puts("</ParseDeclPrefix>\n");
-	return (sp);
+	if (os)
+		*os = sp;
+	return (head);
 }
 
 
@@ -2316,7 +2243,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 		declid = nullptr;
 		dfs.printf("b");
 		bit_width = -1;
-		sp = ParsePrefix(ztype == bt_union, nullptr, local);
+		ParsePrefix(ztype == bt_union, nullptr, local, &sp);
 		if (sp)
 			sp->depth = depth;
 		if (symo)
@@ -2362,7 +2289,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			else if (sp->name->length() == 0) {
 				sp->name = declid;
 			}
-			SetType(sp);
+			SetType(sp);	// sets tp of sym to head
 			fp = FindSymbol(sp, table);
 			// If storage has already been allocated, go back and blank it out.
 			if (fp && fp->storage_pos != 0 && funcdecl == 0) {
@@ -2522,6 +2449,9 @@ xit1:
 	}
 	dfs.printf("</declare>\n");
 	decl_level--;
+	if (symo) {
+		*symo = sp;
+	}
 	currentFn = cf;
 	return (nbytes);
 }

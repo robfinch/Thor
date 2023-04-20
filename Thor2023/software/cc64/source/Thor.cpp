@@ -231,7 +231,7 @@ Operand* ThorCodeGenerator::GenerateNe(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(1), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(1), MakeImmediate(1));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -247,7 +247,7 @@ Operand* ThorCodeGenerator::GenerateLt(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(2), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(2), MakeImmediate(2));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -263,7 +263,7 @@ Operand* ThorCodeGenerator::GenerateLe(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(3), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(3), MakeImmediate(3));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -279,7 +279,7 @@ Operand* ThorCodeGenerator::GenerateGt(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(5), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(5), MakeImmediate(5));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	//		GenerateDiadic(op_sgt,0,ap3,ap3);
@@ -296,7 +296,7 @@ Operand* ThorCodeGenerator::GenerateGe(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(4), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(4), MakeImmediate(4));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -312,7 +312,7 @@ Operand* ThorCodeGenerator::GenerateLtu(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(10), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(10), MakeImmediate(10));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -328,7 +328,7 @@ Operand* ThorCodeGenerator::GenerateLeu(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(11), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(11), MakeImmediate(11));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -344,7 +344,7 @@ Operand* ThorCodeGenerator::GenerateGtu(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(13), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(13), MakeImmediate(13));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	//		GenerateDiadic(op_sgt,0,ap3,ap3);
@@ -361,7 +361,7 @@ Operand* ThorCodeGenerator::GenerateGeu(ENODE* node)
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op_cmp)->amclass2, node->p[0]->GetNaturalSize(), 1);
 	ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op_cmp)->amclass3, node->p[1]->GetNaturalSize(), 1);
 	GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(12), MakeImmediate(0));
+	Generate4adic(op_extu, 0, ap3, ap3, MakeImmediate(12), MakeImmediate(12));
 	ReleaseTempRegister(ap2);
 	ReleaseTempRegister(ap1);
 	return (ap3);
@@ -647,43 +647,15 @@ void ThorCodeGenerator::GenerateBranchFalse(Operand* ap, int label)
 
 void ThorCodeGenerator::GenerateBeq(Operand* ap1, Operand* ap2, int label)
 {
-	Operand* ap3;
-	/*
 	if (ap2->mode == am_imm) {
-		ap3 = GetTempRegister();
-		GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-		GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(0), MakeCodeLabel(label));
-		ReleaseTempReg(ap3);
+		if (Int128::IsEQ(&ap2->offset->i128, Int128::Zero()))
+			GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
+		else {
+			GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
+		}
 	}
 	else
-	*/
-	GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
-	/*
-	if (false && ap2->mode == am_imm && ap2->offset->i >= -128 && ap2->offset->i < 128)
-		GenerateTriadic(op_beqi, 0, ap1, ap2, MakeCodeLabel(label));
-	else if (false && ((ap2->mode == am_imm && ap2->offset->i == 0) || (ap2->mode == am_reg && ap2->preg == regZero)) && ap1->preg >= regFirstArg && ap1->preg < regFirstArg + 4)
-		GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
-	else {
-		if (ap2->mode == am_reg && ap1->mode == am_reg) {
-			//if (ap2->preg == 0)
-			//	GenerateDiadic(op_beqz, 0, ap1, MakeCodeLabel(label));
-			//else if (ap1->preg == 0)
-			//	GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(label));
-			//else
-				GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
-		}
-		else {
-			if (ap2->mode == am_imm && ap2->offset->i < 32 && ap2->offset->i >= -32)
-				GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
-			else {
-				ap3 = GetTempRegister();
-				GenerateTriadic(op_seq, 0, ap3, ap1, ap2);
-				GenerateTriadic(op_bne, 0, ap3, makereg(regZero), MakeCodeLabel(label));
-				ReleaseTempReg(ap3);
-			}
-		}
-	}
-	*/
+		GenerateTriadic(op_beq, 0, ap1, ap2, MakeCodeLabel(label));
 }
 
 void ThorCodeGenerator::GenerateBne(Operand* ap1, Operand* ap2, int label)
@@ -694,45 +666,11 @@ void ThorCodeGenerator::GenerateBne(Operand* ap1, Operand* ap2, int label)
 		if (Int128::IsEQ(&ap2->offset->i128, Int128::Zero()))
 			GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
 		else {
-			/*
-			ap3 = GetTempRegister();
-			GenerateTriadic(op_cmp, 0, ap3, ap1, ap2);
-			GenerateTriadic(op_bbs, 0, ap3, MakeImmediate(8), MakeCodeLabel(label));
-			ReleaseTempReg(ap3);
-			*/
 			GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
 		}
 	}
 	else
 		GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
-	/*
-	if (false && ((ap2->mode == am_imm && ap2->offset->i == 0) || (ap2->mode == am_reg && ap2->preg == regZero)) && ap1->preg >= regFirstArg && ap1->preg < regFirstArg + 4) {
-		GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
-	}
-	else {
-		if (ap2->mode == am_reg && ap1->mode == am_reg) {
-			//if (ap2->preg == 0)
-			//	GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
-			//else if (ap1->preg == 0)
-			//	GenerateDiadic(op_bnez, 0, ap2, MakeCodeLabel(label));
-			//else
-				GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
-		}
-		else {
-			if (ap2->mode == am_imm && ap2->offset->i < 32 && ap2->offset->i >= -32)
-				GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(label));
-			else {
-				ap3 = GetTempRegister();
-				if (ap2->mode == am_imm)
-					GenerateTriadic(op_sne, 0, ap3, ap1, ap2);
-				else
-					Generate4adic(op_sne, 0, ap3, ap1, ap2, MakeImmediate(1));
-				GenerateTriadic(op_bne, 0, ap3, makereg(regZero), MakeCodeLabel(label));
-				ReleaseTempReg(ap3);
-			}
-		}
-	}
-	*/
 }
 
 void ThorCodeGenerator::GenerateBlt(Operand* ap1, Operand* ap2, int label)
@@ -1050,8 +988,17 @@ void SaveRegisterVars(CSet *rmask)
 			cnt = 0;
 			//GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * sizeOfWord));
 			rmask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember()-1);
-			GenerateDiadic(op_bsr, 0, makereg(regLR+1), cg.MakeStringAsNameConst(buf, codeseg));
+			if (rmask->NumMember() == 1) {
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), cg.MakeIndirect(regSP));
+			}
+			else if (rmask->NumMember() == 2) {
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), cg.MakeIndirect(regSP));
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[1]), cg.MakeIndexed(sizeOfWord,regSP));
+			}
+			else {
+				sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember() - 1);
+				GenerateDiadic(op_bsr, 0, makereg(regLR + 1), cg.MakeStringAsNameConst(buf, codeseg));
+			}
 			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
 				// nn = nregs - 1 - regno
@@ -1460,23 +1407,23 @@ void ThorCodeGenerator::GenerateDirectJump(ENODE* node, Operand* ap, Function* s
 	if (sym && sym->IsLeaf) {
 		sprintf_s(buf, sizeof(buf), "%s_ip", sym->sym->name->c_str());
 		if (flags & am_jmp)
-			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_bra, 0, MakeDirect(node->p[0]));
 		else
-			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_bsr, 0, MakeDirect(node->p[0]));
 		currentFn->doesJAL = true;
 	}
 	else if (sym) {
 		if (flags & am_jmp)
-			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_jmp, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bra : op_bra, 0, MakeDirect(node->p[0]));
 		else
-			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_jsr, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(sym->sym->storage_class == sc_static ? op_bsr : op_bsr, 0, MakeDirect(node->p[0]));
 		currentFn->doesJAL = true;
 	}
 	else {
 		if (flags & am_jmp)
-			GenerateMonadic(op_jmp, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(op_bra, 0, MakeDirect(node->p[0]));
 		else
-			GenerateMonadic(op_jsr, 0, MakeDirect(node->p[0]));
+			GenerateMonadic(op_bsr, 0, MakeDirect(node->p[0]));
 		currentFn->doesJAL = true;
 	}
 	GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
@@ -1521,3 +1468,198 @@ void ThorCodeGenerator::GenerateUnlink(int64_t amt)
 		//GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
 	}
 }
+
+// The compiler makes use of local labels for the switch table. The data table label must also be local.
+
+void ThorStatementGenerator::GenerateTabularSwitch(Statement* stmt, int64_t minv, int64_t maxv, Operand* ap, bool HasDefcase, int deflbl, int tablabel)
+{
+	Operand* ap2;
+
+	stmt->tabular = true;
+	ap2 = GetTempRegister();
+	GenerateTriadic(op_sub, 0, ap, ap, MakeImmediate(minv));
+	if (maxv - minv >= 0 && maxv - minv < 64)
+		GenerateTriadic(op_bgeu, 0, ap, MakeImmediate(maxv - minv + 1), MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+	else {
+		GenerateTriadic(op_sltu, 0, ap2, ap, MakeImmediate(maxv - minv - 1));
+		GenerateDiadic(op_beqz, 0, ap2, MakeCodeLabel(HasDefcase ? deflbl : breaklab));
+	}
+	ReleaseTempRegister(ap2);
+	GenerateTriadic(op_asl, 0, ap, ap, MakeImmediate(2));
+	GenerateDiadic(op_ldt, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
+	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+	ReleaseTempRegister(ap);
+	GenerateSwitchStatements(stmt);
+}
+
+void ThorStatementGenerator::GenerateNakedTabularSwitch(Statement* stmt, int64_t minv, Operand* ap, int tablabel)
+{
+	if (minv != 0)
+		GenerateTriadic(op_sub, 0, ap, ap, MakeImmediate(minv));
+	Generate4adic(op_sllp, 0, ap, makereg(regZero), ap, MakeImmediate(3));
+	//	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
+	GenerateDiadic(op_ldt, 0, ap, compiler.of.MakeIndexedName((char*)stmt->GenerateSwitchTargetName(tablabel).c_str(), ap->preg)); // MakeIndexedCodeLabel(tablabel, ap->preg));
+	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+	ReleaseTempRegister(ap);
+	GenerateSwitchStatements(stmt);
+}
+
+//
+// Generate a jump to label if the node passed evaluates to
+// a true condition.
+//
+void ThorCodeGenerator::GenerateTrueJump(ENODE* node, int label, unsigned int prediction)
+{
+	Operand* ap1, * ap2, * ap3;
+	int lab0;
+	int siz1;
+
+	if (node == 0)
+		return;
+	switch (node->nodetype)
+	{
+	case en_bchk:	break;
+	case en_eq:	GenerateBranch(node, op_eq, label, 0, prediction, false); break;
+	case en_ne: GenerateBranch(node, op_ne, label, 0, prediction, false); break;
+	case en_lt: GenerateBranch(node, op_lt, label, 0, prediction, false); break;
+	case en_le:	GenerateBranch(node, op_le, label, 0, prediction, false); break;
+	case en_gt: GenerateBranch(node, op_gt, label, 0, prediction, false); break;
+	case en_ge: GenerateBranch(node, op_ge, label, 0, prediction, false); break;
+	case en_ult: GenerateBranch(node, op_ltu, label, 0, prediction, false); break;
+	case en_ule: GenerateBranch(node, op_leu, label, 0, prediction, false); break;
+	case en_ugt: GenerateBranch(node, op_gtu, label, 0, prediction, false); break;
+	case en_uge: GenerateBranch(node, op_geu, label, 0, prediction, false); break;
+	case en_feq: GenerateBranch(node, op_feq, label, 0, prediction, false); break;
+	case en_fne: GenerateBranch(node, op_fne, label, 0, prediction, false); break;
+	case en_flt: GenerateBranch(node, op_flt, label, 0, prediction, false); break;
+	case en_fle: GenerateBranch(node, op_fle, label, 0, prediction, false); break;
+	case en_fgt: GenerateBranch(node, op_fgt, label, 0, prediction, false); break;
+	case en_fge: GenerateBranch(node, op_fge, label, 0, prediction, false); break;
+	case en_veq: GenerateBranch(node, op_vseq, label, 0, prediction, false); break;
+	case en_vne: GenerateBranch(node, op_vsne, label, 0, prediction, false); break;
+	case en_vlt: GenerateBranch(node, op_vslt, label, 0, prediction, false); break;
+	case en_vle: GenerateBranch(node, op_vsle, label, 0, prediction, false); break;
+	case en_vgt: GenerateBranch(node, op_vsgt, label, 0, prediction, false); break;
+	case en_vge: GenerateBranch(node, op_vsge, label, 0, prediction, false); break;
+	case en_lor_safe:
+		if (GenerateBranch(node, op_or, label, 0, prediction, true))
+			break;
+	case en_lor:
+		GenerateTrueJump(node->p[0], label, prediction);
+		GenerateTrueJump(node->p[1], label, prediction);
+		break;
+	case en_land_safe:
+		if (GenerateBranch(node, op_and, label, 0, prediction, true))
+			break;
+	case en_land:
+		lab0 = nextlabel++;
+		GenerateFalseJump(node->p[0], lab0, prediction);
+		GenerateTrueJump(node->p[1], label, prediction ^ 1);
+		GenerateLabel(lab0);
+		break;
+	default:
+		siz1 = node->GetNaturalSize();
+		ap1 = GenerateExpression(node, am_reg, siz1, 1);
+		//                        GenerateDiadic(op_tst,siz1,ap1,0);
+		ReleaseTempRegister(ap1);
+		if (ap1->tp->IsFloatType()) {
+			ap2 = GetTempRegister();
+			GenerateTriadic(op_fcmp, 0, ap2, ap1, makereg(regZero));
+			GenerateTriadic(op_bbs, 0, ap2, MakeImmediate(0), MakeCodeLabel(label));	// bit 0 is eq
+			ReleaseTempReg(ap2);
+		}
+		else {
+			if (ap1->preg >= regFirstArg && ap1->preg < regFirstArg + 4)
+				GenerateDiadic(op_bnez, 0, ap1, MakeCodeLabel(label));
+			else {
+				ap2 = MakeBoolean(ap1);
+				ReleaseTempReg(ap1);
+				GenerateBranchTrue(ap2, label);
+			}
+		}
+		break;
+	}
+}
+
+// Generate code to execute a jump to label if the expression
+// passed is false.
+//
+void ThorCodeGenerator::GenerateFalseJump(ENODE* node, int label, unsigned int prediction)
+{
+	Operand* ap, * ap1, * ap2, * ap3;
+	int siz1;
+	int lab0;
+
+	if (node == (ENODE*)NULL)
+		return;
+	switch (node->nodetype)
+	{
+	case en_bchk:	break;
+	case en_eq:	GenerateBranch(node, op_ne, label, 0, prediction, false); break;
+	case en_ne: GenerateBranch(node, op_eq, label, 0, prediction, false); break;
+	case en_lt: GenerateBranch(node, op_ge, label, 0, prediction, false); break;
+	case en_le: GenerateBranch(node, op_gt, label, 0, prediction, false); break;
+	case en_gt: GenerateBranch(node, op_le, label, 0, prediction, false); break;
+	case en_ge: GenerateBranch(node, op_lt, label, 0, prediction, false); break;
+	case en_ult: GenerateBranch(node, op_geu, label, 0, prediction, false); break;
+	case en_ule: GenerateBranch(node, op_gtu, label, 0, prediction, false); break;
+	case en_ugt: GenerateBranch(node, op_leu, label, 0, prediction, false); break;
+	case en_uge: GenerateBranch(node, op_ltu, label, 0, prediction, false); break;
+	case en_feq: GenerateBranch(node, op_fne, label, 0, prediction, false); break;
+	case en_fne: GenerateBranch(node, op_feq, label, 0, prediction, false); break;
+	case en_flt: GenerateBranch(node, op_fge, label, 0, prediction, false); break;
+	case en_fle: GenerateBranch(node, op_fgt, label, 0, prediction, false); break;
+	case en_fgt: GenerateBranch(node, op_fle, label, 0, prediction, false); break;
+	case en_fge: GenerateBranch(node, op_flt, label, 0, prediction, false); break;
+	case en_veq: GenerateBranch(node, op_vsne, label, 0, prediction, false); break;
+	case en_vne: GenerateBranch(node, op_vseq, label, 0, prediction, false); break;
+	case en_vlt: GenerateBranch(node, op_vsge, label, 0, prediction, false); break;
+	case en_vle: GenerateBranch(node, op_vsgt, label, 0, prediction, false); break;
+	case en_vgt: GenerateBranch(node, op_vsle, label, 0, prediction, false); break;
+	case en_vge: GenerateBranch(node, op_vslt, label, 0, prediction, false); break;
+	case en_land_safe:
+		if (GenerateBranch(node, op_nand, label, 0, prediction, true))
+			break;
+	case en_land:
+		GenerateFalseJump(node->p[0], label, prediction ^ 1);
+		GenerateFalseJump(node->p[1], label, prediction ^ 1);
+		break;
+	case en_lor_safe:
+		if (GenerateBranch(node, op_nor, label, 0, prediction, true))
+			break;
+	case en_lor:
+		lab0 = nextlabel++;
+		GenerateTrueJump(node->p[0], lab0, prediction);
+		GenerateFalseJump(node->p[1], label, prediction ^ 1);
+		GenerateLabel(lab0);
+		break;
+	case en_not:
+		GenerateTrueJump(node->p[0], label, prediction);
+		break;
+	default:
+		siz1 = node->GetNaturalSize();
+		ap = GenerateExpression(node, am_reg, siz1, 1);
+		//                        GenerateDiadic(op_tst,siz1,ap,0);
+		ReleaseTempRegister(ap);
+		//if (ap->mode == am_fpreg) {
+		//	GenerateTriadic(op_fseq, 0, makecreg(1), ap, makefpreg(0));
+		//	GenerateDiadic(op_bt, 0, makecreg(1), MakeCodeLabel(label));
+		//}
+		//else
+		{
+			GenerateDiadic(op_beqz, 0, ap, MakeCodeLabel(label));
+			if (false) {
+				//				if (ap->offset->nodetype==en_icon && ap->offset->i != 0)
+				//					GenerateMonadic(op_bra, 0, MakeCodeLabel(label));
+				//				else
+				{
+					ap1 = MakeBoolean(ap);
+					ReleaseTempReg(ap);
+					GenerateBranchFalse(ap1, label);
+				}
+			}
+		}
+		break;
+	}
+}
+

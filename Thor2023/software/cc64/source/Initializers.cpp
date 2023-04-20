@@ -191,11 +191,11 @@ void doinit(Symbol *sp)
 				break;
 			default:
 				if (curseg == dataseg)
-					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.data\n");
+					strcat_s(lbl, sizeof(lbl), "\t.data\n");
 				else if (curseg == bssseg)
-					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.bss\n");
+					strcat_s(lbl, sizeof(lbl), "\t.bss\n");
 				else if (curseg == tlsseg)
-					strcat_s(lbl, sizeof(lbl), isRiscv ? "" : "\t.tls\n");
+					strcat_s(lbl, sizeof(lbl), "\t.tls\n");
 			}
 		}
 		switch (syntax) {

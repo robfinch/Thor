@@ -45,7 +45,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[335] =
+Instruction opl[338] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -151,7 +151,7 @@ Instruction opl[335] =
 { "fdiv.s", op_fsdiv,80,1,false },
 { "fi2d", op_i2d,2,1,false },
 { "fix2flt", op_fix2flt },
-{ "fldo", op_fldo, 4, 1, true, am_reg, am_mem, 0, 0 },
+{ "fload", op_fldo, 4, 1, true, am_reg, am_mem, 0, 0 },
 { "flt2fix",op_flt2fix },
 { "fmov", op_fmov,1,1 },
 { "fmov.d", op_fdmov,1,1 },
@@ -164,7 +164,7 @@ Instruction opl[335] =
 { "fsle", op_fsle, 1, 1, false, am_creg, am_reg, am_reg, 0 },
 { "fslt", op_fslt, 1, 1, false, am_creg, am_reg, am_reg, 0 },
 { "fsne", op_fsne, 1, 1, false, am_creg, am_reg, am_reg, 0 },
-{ "fsto", op_fsto, 4, 0, true, am_reg, am_mem, 0, 0 },
+{ "fstore", op_fsto, 4, 0, true, am_reg, am_mem, 0, 0 },
 { "fsub", op_fdsub,6,1,false,am_reg,am_reg,am_reg,0 },
 { "fsub", op_fsub, 6, 1, false, am_reg, am_reg, am_reg, 0 },
 { "fsub.s", op_fssub,6,1,false },
@@ -202,7 +202,6 @@ Instruction opl[335] =
 { "ldft", op_ldft,4,1,true, am_reg, am_mem,0,0 },
 { "ldh", op_ldh,4,1,true,am_reg,am_mem,0,0 },
 { "ldhs", op_ldhs,4,1,true,am_reg,am_mem,0,0 },
-{ "ldi",op_ldi,1,1,false,am_reg,am_imm,0,0 },
 { "ldm", op_ldm,20,1,true,am_mem,0,0,0 },
 { "ldo", op_ldo,4,1,true,am_reg,am_mem,0,0 },
 { "ldos", op_ldos,4,1,true,am_reg,am_mem,0,0 },
@@ -222,6 +221,9 @@ Instruction opl[335] =
 { "lhu", op_lhu,4,1,true,am_reg,am_mem,0,0 },
 { "link",op_link,4,1,true,am_imm,0,0,0 },
 { "lm", op_lm },
+{ "load", op_load,4,1,true,am_reg,am_mem,0,0 },
+{ "loadi",op_ldi,1,1,false,am_reg,am_imm,0,0 },
+{ "loadz", op_loadz,4,1,true,am_reg,am_mem,0,0 },
 { "loop", op_loop,1,0 },
 { "lslor", op_lslor,2,1,false,am_reg,am_reg,am_reg | am_ui6,am_reg|am_ui6 },
 { "lsr", op_lsr,2,1,false,am_reg,am_reg,am_reg|am_ui6,0 },
@@ -338,6 +340,7 @@ Instruction opl[335] =
 { "stm", op_stm,20,1,true,am_mem,0,0,0 },
 { "sto",op_sto,4,0,true,am_reg,am_mem,0,0 },
 { "stop", op_stop },
+{ "store",op_store,4,0,true,am_reg,am_mem,0,0 },
 { "stos",op_stos,4,0,true,am_reg,am_mem,0,0 },
 { "stp",op_stp,4,0,true,am_reg,am_mem,0,0 },
 { "stt",op_stt,4,0,true,am_reg,am_mem,0,0 },
@@ -629,10 +632,10 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 		}
 	}
 	else {
-		sprintf_s(buf, sizeof(buf), "%.400s_%d", ns, lab);
+		sprintf_s(buf, sizeof(buf), "%.400s.%05d", ns, lab);
 		if (syntax == STD) {
-			ofs.printf((char*)"\t.type\t%.400s_%d,@object\n", (char*)ns, lab);
-			ofs.printf((char*)"\t.size\t%.400s_%d,", (char*)ns, lab);
+			ofs.printf((char*)"\t.type\t%.400s.%05d,@object\n", (char*)ns, lab);
+			ofs.printf((char*)"\t.size\t%.400s.%05d,", (char*)ns, lab);
 			ofs.printf("%d\n", sz);
 		}
 		if (nm == NULL)
@@ -952,7 +955,7 @@ void GenerateLabelReference(int n, int64_t offset, char* nmspace)
 { 
 	char buf[200];
 	
-	if (nmspace == nullptr)
+//	if (nmspace == nullptr)
 		nmspace = (char *)"";
 	if( gentype == longgen && outcol < 58) {
 		if (offset==0)
@@ -1237,11 +1240,11 @@ void dumplits()
 	while (casetab != nullptr) {
 		nl();
 		if (casetab->pass == 2) {
-			put_label(casetab->label, "", casetab->nmspace, 'R', casetab->num * 4);// 'D');
+			put_label(casetab->label, "", ""/*casetab->nmspace*/, 'R', casetab->num * 4);// 'D');
 		}
 		for (nn = 0; nn < casetab->num; nn++) {
 			if (casetab->cases[nn].pass==2)
-				GenerateLabelReference(casetab->cases[nn].label, 0, nullptr);
+				GenerateLabelReference(casetab->cases[nn].label, 0, casetab->nmspace);
 		}
 		casetab = casetab->next;
 	}
@@ -1256,7 +1259,7 @@ void dumplits()
 			switch (lp->typ) {
 			case bt_float:
 			case bt_double:
-				put_label(lp->label, (char *)"", lp->nmspace, 'D', sizeOfFPD);
+				put_label(lp->label, (char *)"", ""/*lp->nmspace*/, 'D', sizeOfFPD);
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
@@ -1266,7 +1269,7 @@ void dumplits()
 				outcol += 35;
 				break;
 			case bt_quad:
-				put_label(lp->label, (char *)"", lp->nmspace, 'D', sizeOfFPQ);
+				put_label(lp->label, (char *)"", ""/*lp->nmspace*/, 'D', sizeOfFPQ);
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
@@ -1278,7 +1281,7 @@ void dumplits()
 			case bt_posit:
 				switch (lp->precision) {
 				case 16:
-					put_label(lp->label, "", lp->nmspace, 'D', 2);
+					put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 2);
 					if (syntax == MOT)
 						ofs.printf("\tdc.w\t");
 					else
@@ -1287,7 +1290,7 @@ void dumplits()
 					outcol += 35;
 					break;
 				case 32:
-					put_label(lp->label, "", lp->nmspace, 'D', 4);
+					put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 4);
 					if (syntax == MOT)
 						ofs.printf("\tdc.l\t");
 					else
@@ -1296,7 +1299,7 @@ void dumplits()
 					outcol += 35;
 					break;
 				default:
-					put_label(lp->label, "", lp->nmspace, 'D', 8);
+					put_label(lp->label, "", ""/* lp->nmspace*/, 'D', 8);
 					if (syntax == MOT)
 						ofs.printf("\tdc.q\t");
 					else
@@ -1307,10 +1310,10 @@ void dumplits()
 				}
 				break;
 			case bt_void:
-				put_label(lp->label, "", lp->nmspace, 'D', 0);
+				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 0);
 				break;
 			default:
-				put_label(lp->label, "", lp->nmspace, 'D', 0);
+				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 0);
 				;// printf("hi");
 			}
 		lp = lp->next;
@@ -1333,7 +1336,7 @@ void dumplits()
 	while(quadtab != nullptr) {
 		nl();
 		if (DataLabels[quadtab->label]) {
-			put_label(quadtab->label, "", quadtab->nmspace, 'D', sizeOfFPQ);
+			put_label(quadtab->label, "", ""/*quadtab->nmspace*/, 'D', sizeOfFPQ);
 			ofs.printf("\tdh\t");
 			quadtab->Pack(64);
 			ofs.printf("%s", quadtab->ToString(64));
@@ -1359,7 +1362,7 @@ void dumplits()
 		nl();
 		if (!lit->isString) {
 			if (DataLabels[lit->label])
-				put_label(lit->label, strip_crlf(&lit->str[1]), lit->nmspace, 'D', ep->esize);
+				put_label(lit->label, strip_crlf(&lit->str[1]), ""/*lit->nmspace*/, 'D', ep->esize);
 		}
 		else {
 			cp = lit->str;
@@ -1390,7 +1393,7 @@ void dumplits()
 				ln += 8;
 				break;
 			}
-			put_label(lit->label, strip_crlf(&lit->str[1]), lit->nmspace, 'D', ln);
+			put_label(lit->label, strip_crlf(&lit->str[1]), ""/*lit->nmspace*/, 'D', ln);
 		}
 		if (lit->isString) {
 			cp = lit->str;

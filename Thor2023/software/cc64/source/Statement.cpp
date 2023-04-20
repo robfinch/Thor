@@ -103,8 +103,10 @@ Statement *Statement::ParseWhile()
 	snp->predreg = iflevel;
 	iflevel++;
 	looplevel++;
+#ifdef THOR
 	if ((iflevel > maxPn - 1) && isThor)
 		error(ERR_OUTOFPREDS);
+#endif
 	if (lastst == openpa) {
 		got_pap = true;
 		NextToken();
@@ -135,8 +137,10 @@ Statement *Statement::ParseUntil()
 	snp->predreg = iflevel;
 	iflevel++;
 	looplevel++;
+#ifdef THOR
 	if ((iflevel > maxPn - 1) && isThor)
 		error(ERR_OUTOFPREDS);
+#endif
 	if (lastst != openpa)
 		error(ERR_EXPREXPECT);
 	else {
@@ -199,8 +203,10 @@ Statement *Statement::ParseFor()
 	snp->predreg = iflevel;
 	iflevel++;
 	looplevel++;
+#ifdef THOR
 	if ((iflevel > maxPn - 1) && isThor)
 		error(ERR_OUTOFPREDS);
+#endif
 	needpunc(openpa, 16);
 	if (expression(&(snp->initExpr),nullptr) == nullptr)
 		snp->initExpr = nullptr;
@@ -2025,27 +2031,6 @@ void Statement::GenerateYield()
 		sym->RestoreTemporaries(sp, fsp, psp);
 }
 
-void Statement::GenerateCompound()
-{
-	Symbol *sp;
-
-	sp = ssyms.headp;
-	currentStmt = this;
-	while (sp) {
-		if (sp->fi)
-			;
-		else
-		if (sp->initexp) {
-			initstack();
-			ReleaseTempRegister(cg.GenerateExpression(sp->initexp->p[1], am_all, 8, 0));
-		}
-		sp = sp->nextp;
-	}
-	// Generate statement will process the entire list of statements in
-	// the block.
-	s1->Generate();
-}
-
 // The same as generating a compound statement but leaves out the generation of
 // the prolog and epilog clauses.
 void Statement::GenerateFuncBody()
@@ -2098,7 +2083,7 @@ bool Statement::Generate(int opt)
 			stmt->GenerateFuncBody();
 			break;
 		case st_compound:
-			stmt->GenerateCompound();
+			compiler.sg->GenerateCompound(stmt);
 			break;
 		case st_try:
 			stmt->GenerateTry();
@@ -2176,7 +2161,7 @@ bool Statement::Generate(int opt)
 		case st_continue:
 			if (contlab == -1)
 				error(ERR_NOT_IN_LOOP);
-			GenerateDiadic(isThor ? op_br : op_bra, 0, MakeCodeLabel(contlab), 0);
+			GenerateDiadic(op_bra, 0, MakeCodeLabel(contlab), 0);
 			break;
 		case st_break:
 			if (breaklab == -1)
@@ -2188,7 +2173,7 @@ bool Statement::Generate(int opt)
 				GenerateDiadic(op_bra, 0, MakeCodeLabel(breaklab), 0);
 			break;
 		case st_switch:
-			stmt->GenerateSwitch();
+			compiler.sg->GenerateSwitch(stmt);
 			break;
 		case st_case:
 			if (opt)
@@ -2198,7 +2183,7 @@ bool Statement::Generate(int opt)
 		case st_default:
 			if (opt)
 				return (true);
-			stmt->GenerateDefault();
+			StatementGenerator::GenerateDefault(stmt);
 			break;
 		case st_empty:
 			break;

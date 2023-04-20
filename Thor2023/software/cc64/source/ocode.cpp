@@ -1782,9 +1782,10 @@ void OCODE::store(txtoStream& ofs)
 	ap4 = oper4;
 	if ((ap2 && ap2->mode == am_imm) || (ap3 && ap3->mode == am_imm) || (ap4 && ap4->mode == am_imm))
 		addi = cpu.Addsi;
+#ifdef RISCV
 	if (isRiscv && opcode == op_l)
 		addi = true;
-
+#endif
 	if (bb != b) {
 		if (bb->num == 0) {
 			switch (syntax) {
@@ -1856,10 +1857,11 @@ void OCODE::store(txtoStream& ofs)
 					case 1:	sprintf_s(buf, sizeof(buf), ".b"); nn += 2; break;
 					case 2:	sprintf_s(buf, sizeof(buf), ".w"); nn += 2; break;
 					case 4:	sprintf_s(buf, sizeof(buf), ".t"); nn += 2; break;
+					case 8:	sprintf_s(buf, sizeof(buf), ".o"); nn += 2; break;
 					}
 				}
 				else {
-					if (length != 'w' && length != 'W' && length != ' ') {
+					if (length && length != ' ') {
 						sprintf_s(buf, sizeof(buf), ".%c", length);
 						nn += 2;
 					}
@@ -1874,10 +1876,6 @@ void OCODE::store(txtoStream& ofs)
 			{
 				ofs.write(" ");
 				nn++;
-				while (nn < 7) {
-					ofs.write(" ");
-					nn++;
-				}
 			}
 		}
 	}
@@ -1888,7 +1886,6 @@ void OCODE::store(txtoStream& ofs)
 	}
 	else if (ap1 != 0)
 	{
-		ofs.printf("  ");
 		ap1->store(ofs);
 		if (ap2 != 0)
 		{

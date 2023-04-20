@@ -176,6 +176,7 @@ Statement *Function::ParseBody()
 	ZeroMemory(regs, sizeof(regs));
 	initRegStack();
 	sym->stmt = sym->stmt->ParseCompound(true);
+	currentFn->body = sym->stmt;
 	currentFn = ofn;
 	if (lastst == kw_catch) {
 		int lab1;
@@ -550,8 +551,16 @@ void Function::SaveGPRegisterVars()
 			cnt = 0;
 			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
 			rmask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember());
-			GenerateMonadic(op_bsr, 0, MakeStringAsNameConst(buf, codeseg));
+			if (rmask->NumMember() == 1)
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+			else if (rmask->NumMember() == 2) {
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[1]), MakeIndexed(16,regSP));
+			}
+			else {
+				sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember());
+				GenerateMonadic(op_bsr, 0, MakeStringAsNameConst(buf, codeseg));
+			}
 			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
 				cg.GenerateStore(makereg(nregs - 1 - nn), MakeIndexed(cnt, regSP), sizeOfWord);
@@ -713,8 +722,16 @@ int Function::RestoreGPRegisterVars()
 			cnt2 = cnt = save_mask->NumMember() * sizeOfWord;
 			cnt = 0;
 			save_mask->resetPtr();
-			sprintf_s(buf, sizeof(buf), "__load_s0s%d", save_mask->NumMember()-1);
-			GenerateDiadic(op_bsr, 0, makereg(regLR+1), MakeStringAsNameConst(buf, codeseg));
+			if (save_mask->NumMember() == 1)
+				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+			else if (save_mask->NumMember() == 2) {
+				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[1]), MakeIndexed(sizeOfWord,regSP));
+			}
+			else {
+				sprintf_s(buf, sizeof(buf), "__load_s0s%d", save_mask->NumMember() - 1);
+				GenerateDiadic(op_bsr, 0, makereg(regLR + 1), MakeStringAsNameConst(buf, codeseg));
+			}
 			/*
 			for (nn = save_mask->nextMember(); nn >= 0; nn = save_mask->nextMember()) {
 				cg.GenerateLoad(makereg(nn), MakeIndexed(cnt, regSP), sizeOfWord, sizeOfWord);
@@ -1052,10 +1069,12 @@ void Function::GenerateReturn(Statement* stmt)
 							GenerateDiadic(cpu.sto_op, 0, ap2, MakeIndexed(sizeOfWord * 2, regSP));
 						}
 						ReleaseTempReg(ap2);
-						if (isRiscv)
-							GenerateMonadic(op_call, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));
-						else
-							GenerateMonadic(op_jsr, 0, MakeStringAsNameConst((char*)"__aacpy", codeseg));
+#ifdef RISCV
+						GenerateMonadic(op_call, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));
+#endif
+#ifdef THOR
+						GenerateMonadic(op_jsr, 0, MakeStringAsNameConst((char*)"__aacpy", codeseg));
+#endif
 						GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
 						if (!IsPascal)
 							GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
@@ -1268,11 +1287,11 @@ void Function::GenerateReturn(Statement* stmt)
 		}
 		else {
 			if (toAdd > 0) {
-				GenerateTriadic(op_rtd, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
+				cg.GenerateReturnAndDeallocate(toAdd);
 				toAdd = 0;
 			}
 			else
-				GenerateZeradic(op_rts);
+				cg.GenerateReturnInsn();
 		}
 	}
 	else
@@ -1995,6 +2014,7 @@ void Function::Summary(Statement *stmt)
 	lc_auto = 0;
 	lfs.printf("\n\n*** local symbol table ***\n\n");
 	ListTable(&sym->lsyms, 0);
+	ListTable(&sym->fi->body->ssyms, 0);
 	// Should recurse into all the compound statements
 	if (stmt == NULL)
 		dfs.printf("DIAG: null statement in Function::Summary.\r\n");

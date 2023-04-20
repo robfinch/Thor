@@ -163,4 +163,11 @@ short int loop_active;
 ENODE* gNameRefNode;
 TABLE* gCurrentTbl;
 
+#ifdef THOR
 ThorCodeGenerator cg;
+ThorStatementGenerator sg;
+#endif
+#ifdef RISCV
+RiscvCodeGenerator cg;
+RiscvStatementGenerator sg;
+#endif

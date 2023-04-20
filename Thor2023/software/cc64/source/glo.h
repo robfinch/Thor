@@ -29,12 +29,10 @@
 /*      global ParseSpecifierarations     */
 #define MOT   0
 #define STD   1
-#define THOR		0
 #define TABLE888	888
 #define RAPTOR64	64
 #define W65C816     816
 #define FISA64      164
-#define RISCV       5
 #define DSD7        7
 #define isThor		(gCpu==THOR)
 #define isTable888	(gCpu==TABLE888)
@@ -269,7 +267,14 @@ extern int worstAlignment;
 extern Map map;
 extern int optimized;
 extern short int typ_sp;
+#ifdef THOR
 extern ThorCodeGenerator cg;
+extern ThorStatementGenerator sg;
+#endif
+#ifdef RISCV
+extern RiscvCodeGenerator cg;
+extern RiscvStatementGenerator sg;
+#endif
 extern bool DataLabels[65535];
 extern ENODE* gNameRefNode;
 extern TYP* typ_vector[100];
@@ -414,7 +419,7 @@ extern BasicBlock *basicBlocks[10000];
 extern BasicBlock *sortedBlocks[10000];
 extern Forest forest;
 extern IGraph iGraph;
-extern Instruction opl[335];
+extern Instruction opl[338];
 extern BasicBlock *LastBlock;
 extern Instruction *GetInsn(int);
 extern char inpline[100000];

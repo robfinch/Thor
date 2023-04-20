@@ -926,8 +926,8 @@ TYP* Expression::ParseStar(ENODE** node, Symbol* symi)
 		ep1 = Autoincdec(tp, &ep1, sub, false);
 	}
 	tp = CondDeref(&ep1, tp);
-	*node = ep1;
 j1:
+	*node = ep1;
 	ep1->SetType(tp);
 	return (tp);
 }
@@ -952,7 +952,7 @@ ENODE* Expression::ParseSizeof(Symbol* symi)
 		tp = head;
 		tp1 = tail;
 		decl.ParseSpecifier(0, &sp, sc_none);
-		decl.ParsePrefix(FALSE, nullptr, false);
+		decl.ParsePrefix(FALSE, nullptr, false, nullptr);
 		if (decl.head != NULL)
 			ep1 = makeinode(en_icon, decl.head->size);
 		else {
@@ -1013,7 +1013,7 @@ ENODE* Expression::ParseAlignof(Symbol* symi)
 		tp = head;
 		tp1 = tail;
 		decl.ParseSpecifier(0, &sp, sc_none);
-		decl.ParsePrefix(FALSE, nullptr, false);
+		decl.ParsePrefix(FALSE, nullptr, false, nullptr);
 		if (decl.head != NULL)
 			ep1 = makeinode(en_icon, decl.head->alignment);
 		else {
@@ -1066,7 +1066,7 @@ ENODE* Expression::ParseTypenum()
 	tp = head;
 	tp1 = tail;
 	decl.ParseSpecifier(0, &sp, sc_none);
-	decl.ParsePrefix(FALSE, nullptr, false);
+	decl.ParsePrefix(FALSE, nullptr, false, nullptr);
 	if (head != NULL)
 		ep1 = makeinode(en_icon, head->GetHash());
 	else {
@@ -1100,7 +1100,7 @@ ENODE* Expression::ParseNew(bool autonew, Symbol* symi)
 		tp = head;
 		tp1 = tail;
 		decl.ParseSpecifier(0, &sp, sc_none);
-		decl.ParsePrefix(FALSE, nullptr, false);
+		decl.ParsePrefix(FALSE, nullptr, false, nullptr);
 		if (head != NULL)
 			ep1 = makeinode(en_icon, head->size + 64);
 		else {
@@ -1995,7 +1995,7 @@ bool Expression::ParseGenericCase(ENODE** node, TYP* tp1, Symbol* symi, int coun
 	decl.tail = nullptr;
 	decl.istorage_class = sc_member;
 	decl.ParseSpecifier(0, &sp, sc_none);
-	decl.ParsePrefix(false, nullptr, false);
+	decl.ParsePrefix(false, nullptr, false, nullptr);
 	tph = decl.head;
 	tpt = decl.tail;
 
@@ -2158,7 +2158,7 @@ TYP* Expression::ParseGenericCase(ENODE** node, Symbol* symi, TYP* tp1)
 			decl.tail = nullptr;
 			decl.istorage_class = sc_member;
 			decl.ParseSpecifier(0, &sp, sc_none);
-			decl.ParsePrefix(false, nullptr, false);
+			decl.ParsePrefix(false, nullptr, false, nullptr);
 			tph = decl.head;
 			tpt = decl.tail;
 			needpunc(colon, 72);

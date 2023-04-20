@@ -26,6 +26,10 @@
 //                                                                          
 // ============================================================================
 //
+enum e_cpu { thor, riscv };
+#define THOR	1
+//#define RISCV 5
+
 enum e_bt {
 	bt_none,
 	bt_byte, bt_ubyte, bt_bit, bt_bool, bt_set,
@@ -282,7 +286,7 @@ enum e_op {
 	op_mtlc, op_mflk, op_mtlk, op_sbx,
 	op_exi56, op_exim, op_ldhs, op_sths,
 	// Thor2023
-	op_orf,
+	op_orf, op_load, op_loadz, op_store,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt, op_bmap,
 	op_wydendx,

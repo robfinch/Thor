@@ -2003,7 +2003,7 @@ TYP *Expression::ParseCastExpression(ENODE **node, Symbol* symi)
 			decl.itable = nullptr;
 			decl.istorage_class = sc_member;
 			decl.ParseSpecifier(0, &sp, sc_none); // do cast declaration
-			decl.ParsePrefix(FALSE, nullptr,false);
+			decl.ParsePrefix(FALSE, nullptr,false,nullptr);
 			tp = decl.head;
 			tp1 = decl.tail;
 			needpunc(closepa, 5);

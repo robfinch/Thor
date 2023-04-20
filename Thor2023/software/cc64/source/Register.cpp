@@ -137,6 +137,7 @@ int NumTempRegs()
 
 void CPU::InitRegs()
 {
+#ifdef THOR
 	cpu.NumArgRegs = 10;
 	cpu.argregs[0] = 1;
 	cpu.argregs[1] = 2;
@@ -148,7 +149,20 @@ void CPU::InitRegs()
 	cpu.argregs[7] = 28;
 	cpu.argregs[8] = 29;
 	cpu.argregs[9] = 30;
+#endif
+#ifdef RISCV
+	cpu.NumArgRegs = 8;
+	cpu.argregs[0] = 10;
+	cpu.argregs[1] = 11;
+	cpu.argregs[2] = 12;
+	cpu.argregs[3] = 13;
+	cpu.argregs[4] = 14;
+	cpu.argregs[5] = 15;
+	cpu.argregs[6] = 16;
+	cpu.argregs[7] = 17;
+#endif
 
+#ifdef THOR
 	cpu.NumTmpRegs = 10;
 	cpu.tmpregs[0] = 5;
 	cpu.tmpregs[1] = 6;
@@ -160,7 +174,18 @@ void CPU::InitRegs()
 	cpu.tmpregs[7] = 12;
 	cpu.tmpregs[8] = 13;
 	cpu.tmpregs[9] = 14;
-
+#endif
+#ifdef RISCV
+	cpu.NumTmpRegs = 7;
+	cpu.tmpregs[0] = 5;
+	cpu.tmpregs[1] = 6;
+	cpu.tmpregs[2] = 7;
+	cpu.tmpregs[3] = 28;
+	cpu.tmpregs[4] = 29;
+	cpu.tmpregs[5] = 30;
+	cpu.tmpregs[6] = 31;
+#endif
+#ifdef THOR
 	cpu.NumSavedRegs = 10;
 	cpu.saved_regs[0] = 15;
 	cpu.saved_regs[1] = 16;
@@ -172,6 +197,21 @@ void CPU::InitRegs()
 	cpu.saved_regs[7] = 22;
 	cpu.saved_regs[8] = 23;
 	cpu.saved_regs[9] = 24;
+#endif
+#ifdef RISCV
+	cpu.NumSavedRegs = 11;
+	cpu.saved_regs[0] = 9;
+	cpu.saved_regs[1] = 18;
+	cpu.saved_regs[2] = 19;
+	cpu.saved_regs[3] = 20;
+	cpu.saved_regs[4] = 21;
+	cpu.saved_regs[5] = 22;
+	cpu.saved_regs[6] = 23;
+	cpu.saved_regs[7] = 24;
+	cpu.saved_regs[8] = 25;
+	cpu.saved_regs[9] = 26;
+	cpu.saved_regs[10] = 27;
+#endif
 }
 
 void initRegStack()
@@ -269,7 +309,7 @@ int IsSavedReg(int rg)
 
 void SpillRegister(Operand *ap, int number)
 {
-	GenerateDiadic(op_sth,0,ap,cg.MakeIndexed(currentFn->GetTempBot()+ap->deep*sizeOfWord,regFP));
+	GenerateDiadic(op_store,0,ap,cg.MakeIndexed(currentFn->GetTempBot()+ap->deep*sizeOfWord,regFP));
 	if (pass==1)
 		max_stack_use = max(max_stack_use, (ap->deep+1) * sizeOfWord);
   //reg_stack[reg_stack_ptr].Operand = ap;
@@ -282,7 +322,7 @@ void SpillRegister(Operand *ap, int number)
 
 void SpillFPRegister(Operand *ap, int number)
 {
-	GenerateDiadic(op_sto,0,ap,cg.MakeIndexed(currentFn->GetTempBot()-ap->deep*sizeOfWord,regFP));
+	GenerateDiadic(op_store,0,ap,cg.MakeIndexed(currentFn->GetTempBot()-ap->deep*sizeOfWord,regFP));
 	if (pass==1)
 		max_stack_use = max(max_stack_use, (ap->deep+1) * sizeOfWord);
 	fpreg_stack[fpreg_stack_ptr].Operand = ap;
@@ -294,7 +334,7 @@ void SpillFPRegister(Operand *ap, int number)
 
 void SpillPositRegister(Operand* ap, int number)
 {
-	GenerateDiadic(op_psto, 0, ap, cg.MakeIndexed(currentFn->GetTempBot() + ap->deep * sizeOfWord, regFP));
+	GenerateDiadic(op_store, 0, ap, cg.MakeIndexed(currentFn->GetTempBot() + ap->deep * sizeOfWord, regFP));
 	if (pass == 1)
 		max_stack_use = max(max_stack_use, (ap->deep + 1) * sizeOfWord);
 	preg_stack[preg_stack_ptr].Operand = ap;
@@ -311,7 +351,7 @@ void LoadRegister(int regno, int number)
 	if (reg_in_use[regno] >= 0)
 		fatal("LoadRegister():register still in use");
 	reg_in_use[regno] = number;
-	GenerateDiadic(op_ldh,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP));
+	GenerateDiadic(op_load,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP));
     reg_alloc[number].f.isPushed = 'F';
 }
 
