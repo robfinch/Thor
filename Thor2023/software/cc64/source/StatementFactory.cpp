@@ -7,7 +7,6 @@ Statement* StatementFactory::MakeStatement(int typ, int gt) {
 	s->number = number++;
 	s->stype = (e_stmt)typ;
 	s->predreg = -1;
-	s->outer = currentStmt;
 	s->lptr = my_strdup(inpline);
 	s->prediction = 0;
 	s->depth = stmtdepth;

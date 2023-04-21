@@ -372,6 +372,7 @@ public:
 	int64_t defCatchLabel;
 	int64_t tryCount;
 	OCODE* defCatchLabelPatchPoint;
+	char* outbuf;
 public:
 	Function();
 	void RemoveDuplicates();
@@ -895,6 +896,7 @@ public:
 	int sizeof_flag;
 	bool got_pa;
 	int parsingAggregate;
+	Statement* owning_stmt;
 private:
 	void SetRefType(ENODE** node);
 	ENODE* SetIntConstSize(TYP* tptr, int64_t val);
@@ -996,6 +998,10 @@ private:
 	ENODE* FindLastMulu(ENODE*);
 public:
 	Expression();
+	Expression(Statement* st) {
+		owning_stmt = st;
+	};
+	Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
 	TYP* ParseNameRef(ENODE** node, Symbol* symi);
 	TYP* ParseUnaryExpression(ENODE** node, int got_pa, Symbol* symi);
 	TYP* CondDeref(ENODE** node, TYP* tp);
@@ -1199,6 +1205,8 @@ public:
 
 class CodeGenerator
 {
+public:
+	Statement* stmt;
 public:
 	bool IsPascal(ENODE* ep);
 	Operand* MakeDataLabel(int lab, int ndxreg);
@@ -1852,6 +1860,7 @@ public:
 class Statement {
 public:
 	int number;
+	std::string* name;
 	e_stmt stype;
 	Statement *outer;
 	Statement *next;
@@ -1883,9 +1892,10 @@ public:
 	static bool lc_in_use;
 	bool generated;
 	
-	static Statement* MakeStatement(int typ, int gt);
+	Statement* MakeStatement(int typ, int gt);
 
 	// Parsing
+	Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact) {};
 	static int64_t* GetCasevals();
 	Statement* ParseDefault();
 	Statement* ParseCheckStatement();

@@ -132,13 +132,16 @@ int Statement::CheckForDuplicateCases()
 Statement *Statement::ParseSwitch()
 {
 	Statement *snp;
-	Statement *head, *tail;
+	Statement *head, *tail, *os;
 	bool needEnd = true;
 
+	os = cg.stmt;
 	tail = nullptr;
 	snp = MakeStatement(st_switch, true);
+	snp->outer = this;
 	snp->nkd = false;
 	snp->contains_label = false;
+	cg.stmt = snp;
 	iflevel++;
 	looplevel++;
 	needpunc(openpa, 0);
@@ -153,19 +156,21 @@ Statement *Statement::ParseSwitch()
 	}
 	needpunc(closepa, 0);
 	needpunc(begin, 76);
+	stmtdepth++;
+	//snp->s1 = ParseCompound(false);
+	
 	head = 0;
 	while (lastst != end) {
 		if (head == nullptr) {
-			head = tail = Parse(&snp->contains_label);
-			if (head)
-				head->outer = snp;
+			head = tail = snp->Parse(&snp->contains_label);
+			head->outer = snp;
 		}
 		else {
-			tail->next = Parse(&snp->contains_label);
+			tail->next = snp->Parse(&snp->contains_label);
 			if (tail->next != nullptr) {
-				tail->next->outer = snp;
 				tail = tail->next;
 			}
+			tail->outer = snp;
 		}
 		if (tail == nullptr) break;	// end of file in switch
 		tail->next = nullptr;
@@ -174,10 +179,13 @@ Statement *Statement::ParseSwitch()
 	}
 	snp->s1 = head;
 	needpunc(end, 77);
+	stmtdepth--;
+
 	if (snp->s1->CheckForDuplicateCases())
 		error(ERR_DUPCASE);
 	iflevel--;
 	looplevel--;
+	cg.stmt = os;
 	return (snp);
 }
 

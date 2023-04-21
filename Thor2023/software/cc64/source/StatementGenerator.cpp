@@ -68,9 +68,11 @@ Operand* StatementGenerator::MakeIndirect(int i) {
 void StatementGenerator::GenerateCompound(Statement* stmt)
 {
 	Symbol* sp;
+	Statement* os;
 
+	os = cg.stmt;
+	cg.stmt = stmt;
 	sp = stmt->ssyms.headp;
-	currentStmt = stmt;
 	while (sp) {
 		if (sp->fi)
 			;
@@ -84,6 +86,7 @@ void StatementGenerator::GenerateCompound(Statement* stmt)
 	// Generate statement will process the entire list of statements in
 	// the block.
 	stmt->s1->Generate();
+	cg.stmt = os;
 }
 
 

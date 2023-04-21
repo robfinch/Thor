@@ -708,9 +708,11 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	hnode->esize = tp->size;// hnode->tp->size;
 	pnode->esize = tp->size;// pnode->tp->size;
 	str = "";
-	str.append(*currentFn->sym->GetFullName());
-	hnode->i = litlist(pnode, (char *)str.c_str());
-	pnode->i = litlist(pnode, (char *)str.c_str());
+	if (currentFn) {
+		str.append(*currentFn->sym->GetFullName());
+		hnode->i = litlist(pnode, (char*)str.c_str());
+		pnode->i = litlist(pnode, (char*)str.c_str());
+	}
 	hnode->segment = cnst ? rodataseg : dataseg;
 	pnode->segment = cnst ? rodataseg : dataseg;
 	hnode->constflag = true;
@@ -804,7 +806,7 @@ TYP* Expression::ParseNameRef(ENODE** node, Symbol* symi)
 	if (pnode == nullptr)
 		return (nullptr);
 	pnode->SetType(tptr);
-	pnode->constflag = false;
+	//pnode->constflag = false; ???
 	*node = pnode;
 	return (tptr);
 }
@@ -2309,7 +2311,7 @@ ENODE* Expression::MakeStaticNameNode(Symbol* sp)
 		node = makeinode(en_labcon, sp->value.i);
 		node->constflag = false;
 		node->esize = sp->tp->size;//8;
-		node->segment = dataseg;
+		node->segment = sp->segment;
 	}
 	if (sp->tp->isUnsigned) {
 		node->isUnsigned = TRUE;

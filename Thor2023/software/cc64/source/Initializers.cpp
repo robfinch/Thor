@@ -24,6 +24,7 @@
 // ============================================================================
 //
 #include "stdafx.h"
+#include <map>
 
 extern int catchdecl;
 extern void genstorageskip(int nbytes);
@@ -96,6 +97,33 @@ static void ProcessInitExp(Symbol* sp, ENODE* n2)
 	ProcessInitExp(sp, n2->p[1]);
 }
 
+static int nnn = 0;
+std::map<int, std::string> fnames;
+
+void AppendFiles()
+{
+	List* lst, *plst;
+	txtiStream ifs;
+	std::string fname;
+	char buf[4096];
+	int kkk;
+
+	for (kkk = 0; kkk < nnn; kkk++) {
+		fname = fnames[kkk];
+		if (fname.length()) {
+			ifs.open(fname, std::ios::in);
+			while (!ifs.eof()) {
+				ifs.getline(buf, 4096, '\n');
+				ofs << buf;
+				ofs << "\n";
+			};
+			ofs.flush();
+			ifs.close();
+			remove(fname.c_str());
+		}
+	}
+}
+
 void doinit(Symbol *sp)
 {
 	static bool first = true;
@@ -111,8 +139,24 @@ void doinit(Symbol *sp)
 	TYP *tp;
 	int n;
 	ENODE* node;
-	Expression exp;
+	Expression exp(cg.stmt);
+	txtoStream* old_ofs;
+	std::string ofname;
+	char nmbuf[300];
+	bool move_file = false;
 
+	old_ofs = &ofs;
+	ofname = ofs.name;
+	if (sp->storage_class != sc_global) {
+		move_file = true;
+		ofs.flush();
+		ofs.close();
+		tmpnam_s(nmbuf, sizeof(nmbuf));
+		fnames.insert(std::pair<int, std::string>(nnn, nmbuf));
+		nnn++;
+		std::string fname = nmbuf;
+		ofs.open(fname, std::ios::out | std::ios::trunc);
+	}
 	sp->storage_pos = ofs.tellp();
   hasPointer = false;
   if (first) {
@@ -130,7 +174,7 @@ void doinit(Symbol *sp)
 	if (IsFuncptrAssign(sp)) {
 		algn = sizeOfWord;
 		seg(oseg == noseg ? dataseg : oseg, algn);          /* initialize into data segment */
-		nl();                   /* start a new line in object */
+		nl(&ofs);                   /* start a new line in object */
 	}
 	else if (sp->storage_class == sc_thread) {
         if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
@@ -140,7 +184,7 @@ void doinit(Symbol *sp)
         else
             algn = 2;
 		seg(oseg==noseg ? tlsseg : oseg,algn);
-		nl();
+		nl(&ofs);
 	}
 	else if (sp->storage_class == sc_static || lastst==assign) {
         if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
@@ -150,7 +194,7 @@ void doinit(Symbol *sp)
         else
             algn = 2;
 		seg(oseg==noseg ? dataseg : oseg,algn);          /* initialize into data segment */
-		nl();                   /* start a new line in object */
+		nl(&ofs);                   /* start a new line in object */
 	}
 	else {
         if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
@@ -160,7 +204,7 @@ void doinit(Symbol *sp)
         else
             algn = 2;
 		seg(oseg==noseg ? (lastst==assign ? dataseg : bssseg) : oseg,algn);            /* initialize into data segment */
-		nl();                   /* start a new line in object */
+		nl(&ofs);                   /* start a new line in object */
 	}
 	
 	if (sp->storage_class == sc_static || sp->storage_class == sc_thread) {
@@ -171,7 +215,7 @@ void doinit(Symbol *sp)
 				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t$FFF0200000000001\n");
 			else
 				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t$FFF0200000000001\n");
-			ofs.printf(buf);
+			ofs << buf;
 		}
 		sp->realname = my_strdup(put_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D', sp->tp->size));
 		strcpy_s(glbl2, sizeof(glbl2), gen_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D', sp->tp->size));
@@ -200,10 +244,10 @@ void doinit(Symbol *sp)
 		}
 		switch (syntax) {
 		case MOT:
-			ofs.puts("\talign 4\n");
+			ofs << "\talign 4\n";
 			break;
 		case STD:
-			ofs.puts("\t.align 4\n");
+			ofs << "\t.align 4\n";
 			break;
 		}
 		switch (syntax) {
@@ -238,11 +282,11 @@ void doinit(Symbol *sp)
 			default:
 				sprintf_s(buf, sizeof(buf), "\t.8byte\t$FFF0200000000001\n");
 			}
-			ofs.printf(buf);
+			ofs << buf;
 		}
 		strcpy_s(glbl2, sizeof(glbl2), sp->name->c_str());
 		lblpoint = ofs.tellp();
-		ofs.printf(lbl);
+		ofs << lbl;
 		//gen_strlab(lbl);
 	}
 	if (lastst == kw_firstcall) {
@@ -255,7 +299,7 @@ void doinit(Symbol *sp)
 	}
 	else {
 		ENODE* node;
-		Expression exp;
+		Expression exp(cg.stmt);
 
 		if (!IsFuncptrAssign(sp)) {
 			NextToken();
@@ -275,7 +319,7 @@ void doinit(Symbol *sp)
 					sprintf_s(buf, sizeof(buf), "%s\n\t.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
 				}
 				ofs.seekp(lblpoint);
-				ofs.write(buf);
+				ofs << buf;
 				//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
 				//				NextToken();
 
@@ -304,7 +348,7 @@ void doinit(Symbol *sp)
 					sprintf_s(buf, sizeof(buf), "%s:\n.8byte ", lbl);
 				}
 				ofs.seekp(lblpoint);
-				ofs.write(buf);
+				ofs << buf;
 				n2->PutConstant(ofs, 0, 0, false, 0);
 			}
 			else {
@@ -316,7 +360,7 @@ void doinit(Symbol *sp)
 					sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_func\n", lbl, sp->name->c_str());
 				}
 				ofs.seekp(lblpoint);
-				ofs.write(buf);
+				ofs << buf;
 			}
 			//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
 			//				NextToken();
@@ -375,7 +419,7 @@ void doinit(Symbol *sp)
 		default:
 			sprintf_s(buf, sizeof(buf), "\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
 		}
-		ofs.printf(buf);
+		ofs << buf;
 		ofs.seekp(endpoint);
 		genst_cumulative = 0;
 	}
@@ -389,16 +433,21 @@ void doinit(Symbol *sp)
 		default:
 			sprintf_s(buf, sizeof(buf), "\t  \t                 \n");
 		}
-		ofs.printf(buf);
+		ofs << buf;
 		ofs.seekp(endpoint);
 		genst_cumulative = 0;
 	}
 	if (!IsFuncptrAssign(sp))
 		endinit();
 	if (sp->storage_class == sc_global)
-		ofs.printf("\n");
+		ofs << "\n";
 xit:
+	ofs.flush();
 	sp->storage_endpos = ofs.tellp();
+	if (move_file) {
+		ofs.close();
+		ofs.open(ofname, std::ios::out | std::ios::app);
+	}
 }
 
 
@@ -488,7 +537,7 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 	int64_t lng;
 	TYP *tp;
 	bool need_end = false;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	if (opt==0) {
 		GenerateLong(0);
@@ -589,7 +638,7 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 		lng = GetIntegerExpression(&n,symi,0).low;
 		if (n && n->nodetype == en_cnacon) {
 			if (n->sp->length()) {
-				sp = gsearch(*n->sp);
+				sp = exp.gsearch2(*n->sp, bt_int, nullptr, false);
 				GenerateReference(sp,0);
 			}
 			else

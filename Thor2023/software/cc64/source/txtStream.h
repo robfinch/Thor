@@ -9,11 +9,13 @@ class txtoStream : public std::ofstream
 	char buf[5000];
 public:
 	int level;
+	std::string name;
 public:
+//  txtoStream(std::streambuf* buf, bool addit=false) : std::ostream(buf, addit) {};
   txtoStream() : std::ofstream() {};
 	void write(char *buf) { if (level) {
 		if (buf)
-	   std::ofstream::write(buf, strlen(buf));
+	   std::ostream::write(buf, strlen(buf));
        flush(); }};
 	void write(const char* buf) {
 		write((char*)buf);

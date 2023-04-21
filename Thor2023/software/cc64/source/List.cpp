@@ -33,38 +33,40 @@ void put_typedef(int td)
 }
 
 void put_sc(int scl)
-{       switch(scl) {
-                case sc_static:
-                        lfs.printf("Static      ");
-                        break;
-                case sc_thread:
-                        lfs.printf("Thread      ");
-                        break;
-                case sc_auto:
-                        lfs.printf("Auto        ");
-                        break;
-                case sc_global:
-                        lfs.printf("Global      ");
-                        break;
-                case sc_external:
-                        lfs.printf("External    ");
-                        break;
-                case sc_type:
-                        lfs.printf("Type        ");
-                        break;
-                case sc_const:
-                        lfs.printf("Constant    ");
-                        break;
-                case sc_member:
-                        lfs.printf("Member      ");
-                        break;
-                case sc_label:
-                        lfs.printf("Label");
-                        break;
-                case sc_ulabel:
-                        lfs.printf("Undefined label");
-                        break;
-                }
+{
+  switch(scl) {
+
+  case sc_static:
+    lfs.printf("Static      ");
+    break;
+  case sc_thread:
+    lfs.printf("Thread      ");
+    break;
+  case sc_auto:
+    lfs.printf("Auto        ");
+    break;
+  case sc_global:
+    lfs.printf("Global      ");
+    break;
+  case sc_external:
+    lfs.printf("External    ");
+    break;
+  case sc_type:
+    lfs.printf("Type        ");
+    break;
+  case sc_const:
+    lfs.printf("Constant    ");
+    break;
+  case sc_member:
+    lfs.printf("Member      ");
+    break;
+  case sc_label:
+    lfs.printf("Label");
+    break;
+  case sc_ulabel:
+    lfs.printf("Undefined label");
+    break;
+  }
 }
 
 void put_ty(TYP *tp, int isco)
@@ -214,9 +216,10 @@ void list_var(Symbol *sp, int i)
   		}
 	  }
 	  if (sp->tp) {
-        if((sp->tp->type == bt_struct || sp->tp->type == bt_union || sp->tp->type==bt_class) &&
-                sp->storage_class == sc_type)
-                ListTable(&(sp->tp->lst),i+1);
+      if ((sp->tp->type == bt_struct || sp->tp->type == bt_union || sp->tp->type == bt_class) &&
+        sp->storage_class == sc_type) {
+        ListTable(&(sp->tp->lst), i + 1);
+      }
     }
 }
 
@@ -229,21 +232,20 @@ void ListTable(TABLE *t, int i)
 		for (nn = 0; nn < 257; nn++) {
 			t = &gsyms[nn];
 			sp = t->headp;
-			while(sp != NULL) {
+			while(sp != nullptr) {
 				list_var(sp,i);
 				sp = sp->nextp;
       }
-		}
+    }
 	}
 	else {
 		sp = t->headp;
-		while(sp != NULL) {
+		while(sp != nullptr) {
 			list_var(sp,i);
 			sp = sp->nextp;
     }
 	}
 }
-
 
 // Recursively list the vars contained in compound statements.
 
@@ -251,19 +253,28 @@ void ListCompound(Statement *stmt)
 {
 	Statement *s1;
 
+  if (stmt == nullptr)
+    return;
+
 	ListTable(&stmt->ssyms,0);
 	for (s1 = stmt->s1; s1; s1 = s1->next) {
 		if (s1->stype == st_compound)
 			ListCompound(s1);
-		if (s1->s1) {
+    if (s1->s1) {
 			if (s1->s1->stype==st_compound)
 				ListCompound(s1->s1);
-		}
+      if (s1->s1->stype == st_switch)
+        ListCompound(s1->s1);
+    }
 		if (s1->s2) {
 			if (s1->s2->stype==st_compound)
 				ListCompound(s1->s2);
-		}
-	}
+      if (s1->s2->stype == st_switch)
+        ListCompound(s1->s2);
+    }
+    if (s1->stype == st_switch)
+      ListCompound(s1);
+  }
 }
 
 // Immediate constants have low priority.

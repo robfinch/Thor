@@ -29,6 +29,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <streambuf>
 #include <fstream>
 #include <iomanip>
 #include <string>
@@ -51,3 +52,13 @@
 #include "proto.h"
 
 // TODO: reference additional headers your program requires here
+
+struct membuf : std::streambuf // derive because std::streambuf constructor is protected
+{
+	membuf(char* p, size_t size)
+	{
+		setp(p, p + size); // set start end end pointers
+	}
+	size_t written() { return pptr() - pbase(); } // how many bytes were really written?
+};
+

@@ -128,3 +128,4 @@ void txtiStream::readAsHex(const void *buf, int len)
 		p[n] = val;
 	}
 }
+

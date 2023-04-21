@@ -1275,7 +1275,7 @@ j1:
 			if (fn) {
 				if (fn->body == nullptr) {
 					Statement* bdy;
-					currentFn->body = bdy = Statement::MakeStatement(st_compound, 0);
+					currentFn->body = bdy = cg.stmt->MakeStatement(st_compound, 0);
 				}
 				table = &currentFn->body->ssyms;
 			}
@@ -1298,6 +1298,7 @@ j1:
 		}
 		else if (lastst == semicolon)
 			NextToken();
+		/*
 		if (currentStmt) {
 			if (currentStmt->stype == st_compound) {
 				if (level == 0) {
@@ -1309,7 +1310,9 @@ j1:
 				}
 			}
 		}
-		else {
+		else
+			*/
+		{
 			lastst;
 			//sp = 
 			temp2 = head;
@@ -1371,43 +1374,43 @@ lxit:
 
 void Declaration::ParseSuffixOpenbr()
 {
-	TYP *temp1;
+	TYP *temph, *tempt;
 	long sz2;
+	TYP* dimen[20];
+	int nn, kk;
 
-	NextToken();
-	temp1 = (TYP *)TYP::Make(bt_pointer,sizeOfPtr);
-	temp1->val_flag = 1;
-	temp1->isArray = true;
-	temp1->btp = head->GetIndex();
-	temp1->btpp = head;
-	if(lastst == closebr) {
-		temp1->size = 0;
-		temp1->numele = 0;
-		if (head)
-			temp1->dimen = head->dimen + 1;
-		else
-			temp1->dimen = 1;
+	temph = head;
+	tempt = tail;
+	for (nn = 0; lastst == openbr; nn++) {
 		NextToken();
+		dimen[nn] = (TYP*)TYP::Make(bt_pointer, sizeOfPtr);
+		dimen[nn]->val_flag = 1;
+		dimen[nn]->isArray = true;
+		dimen[nn]->btpp = nullptr;
+		if (lastst != closebr) {
+			sz2 = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 1).low;
+			dimen[nn]->size = head->size;
+			dimen[nn]->numele = sz2;
+			needpunc(closebr, 22);
+		}
+		else {
+			dimen[nn]->size = head->size;
+			dimen[nn]->numele = 0;
+			NextToken();
+			break;
+		}
 	}
-	else if(head != NULL) {
-		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1).low;
-		temp1->size = sz2 * head->size;
-		temp1->numele = sz2;
-		temp1->dimen = head->dimen + 1;
-		dfs.printf("Setting array size:%d\n", (int)temp1->size);
-		temp1->alignment = head->alignment;
-		needpunc(closebr,21);
+	for (kk = nn-1; kk > 0; kk--) {
+		dimen[kk]->dimen = nn - kk + 1;
+		dimen[kk-1]->size = dimen[kk]->size * dimen[kk]->numele;
 	}
-	else {
-		sz2 = (int)GetIntegerExpression((ENODE **)NULL,nullptr,1).low;
-		temp1->size = sz2;
-		temp1->numele = sz2;
-		temp1->dimen = 1;
-		needpunc(closebr,22);
+	head = tail = dimen[0];
+	for (kk = 1; kk < nn; kk++) {
+		tail->btpp = dimen[kk];
+		tail = dimen[kk];
 	}
-	head = temp1;
-	if(tail == NULL)
-		tail = head;
+	tail->btpp = temph;
+	tail = temph;
 }
 
 /*
@@ -1813,7 +1816,7 @@ void Declaration::ParseAssign(Symbol *sp)
 	TYP *tp1, *tp2;
 	enum e_node op;
 	ENODE *ep1, *ep2;
-	Expression exp;
+	Expression exp(cg.stmt);
 	exp.head = head;
 	exp.tail = tail;
 	bool madenode;
@@ -1862,7 +1865,7 @@ void Declaration::DoDeclarationEnd(Symbol *sp, Symbol *sp1)
 	int nn;
 	TYP *tp1;
 	ENODE *ep1, *ep2;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	if (sp == nullptr)
 		return;
@@ -2031,8 +2034,6 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 	Function* ofn;
 	Function* fn;
 	
-	if (!sp->fi)
-		sp->fi = compiler.ff.MakeFunction(sp->number, sp, false);
 	if (currentFn == nullptr)
 		currentFn = sp->fi;
 	sp1 = nullptr;
@@ -2044,7 +2045,8 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 		if (sp1->tp) {
 			dfs.printf("l");
 			flag = sp1->tp->type == bt_func;
-			MakeFunction(sp, sp1);
+			if (flag)
+				MakeFunction(sp, sp1);
 		}
 	}
 	if (sp->tp->type == bt_ifunc && flag) {
@@ -2150,7 +2152,6 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 	dfs.printf("K");
 	if ((al == sc_global || al == sc_static || al == sc_thread) && !fn_doneinit &&
 		sp->tp->type != bt_func && sp->tp->type != bt_ifunc && sp->storage_class != sc_typedef) {
-		if (sp->fi == nullptr)
 		doinit(sp);
 	}
 	return (0);
@@ -2294,6 +2295,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			// If storage has already been allocated, go back and blank it out.
 			if (fp && fp->storage_pos != 0 && funcdecl == 0) {
 				int cnt = 0;
+				/*
 				std::streampos cpos = ofs.tellp();
 				std::streampos pos = fp->storage_pos;
 				ofs.seekp(fp->storage_pos);
@@ -2302,6 +2304,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 					ofs.write(" ");
 				}
 				ofs.seekp(cpos);
+				*/
 			}
 			sp->storage_pos = ofs.tellp();
 			if (funcdecl <= 0)
@@ -2505,7 +2508,6 @@ void GlobalDeclaration::Parse()
 		isFuncPtr = false;
 		currentClass = nullptr;
 		currentFn = nullptr;
-		currentStmt = nullptr;
 		isFuncBody = false;
 		worstAlignment = 0;
 		funcdecl = 0;
@@ -2818,17 +2820,21 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 				inline_threshold = compiler.autoInline;
 				break;
         case kw_static:
-                NextToken();
-								depth++;
-				lc_static += declare(parent,ssyms,sc_static,lc_static,bt_struct,&symo,isLocal,depth);
-				depth--;
-				if (symo)
-					if (symo->fi) {
-						symo->fi->inline_threshold = inline_threshold;
-						symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
+					NextToken();
+					depth++;
+					lc_static += declare(parent,ssyms,sc_static,lc_static,bt_struct,&symo,isLocal,depth);
+					depth--;
+					if (symo) {
+						if (symo->fi) {
+							symo->fi->inline_threshold = inline_threshold;
+							symo->fi->IsInline = inline_threshold > 0 && !symo->fi->IsPrototype;
+							symo->segment = codeseg;
+						}
+						else
+							symo->segment = symo->isConst ? rodataseg : dataseg;
 					}
-				inline_threshold = compiler.autoInline;
-				break;
+					inline_threshold = compiler.autoInline;
+					break;
         case kw_extern:
                 NextToken();
 				if (lastst==kw_oscall || lastst==kw_interrupt || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel)

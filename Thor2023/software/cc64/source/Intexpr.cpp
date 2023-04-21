@@ -29,7 +29,7 @@ Int128 GetIntegerExpression(ENODE **pnode, Symbol* symi, int opt=0)       /* sim
 { 
 	TYP *tp;
 	ENODE *node, *n2, *n3;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	if (opt)
 		tp = exp.ParseNonAssignExpression(&node, symi);
@@ -91,7 +91,7 @@ Float128 *GetFloatExpression(ENODE **pnode, Symbol* symi)
 	TYP *tp;
 	ENODE *node;
 	Float128 *flt;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	flt = (Float128 *)allocx(sizeof(Float128));
 	tp = exp.ParseNonCommaExpression(&node, symi);
@@ -132,7 +132,7 @@ Posit64 GetPositExpression(ENODE** pnode, Symbol* symi)
 	TYP* tp;
 	ENODE* node;
 	Posit64 flt;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	tp = exp.ParseNonCommaExpression(&node, symi);
 	if (node == NULL) {
@@ -168,7 +168,7 @@ Int128 GetConstExpression(ENODE **pnode, Symbol* symi)       /* simple integer v
 	TYP *tp;
 	ENODE *node;
 	Float128 *flt;
-	Expression exp;
+	Expression exp(cg.stmt);
 	Int128 tmp128;
 
 	tp = exp.ParseNonCommaExpression(&node, symi);

@@ -2154,11 +2154,11 @@ Operand* CodeGenerator::GenLabelcon(ENODE* node, int flags, int64_t size)
 		switch (node->segment) {
 		case tlsseg:	ap2->preg = regTP; break;
 		case dataseg:	ap2->preg = regGP; break;
-		case rodataseg: ap2->preg = regPC; break;
+		case rodataseg: ap2->preg = regGP1; break;
 		default:	ap2->preg = regPP;
 		}
 		ap2->offset = node;     // use as constant node
-		GenerateDiadic(cpu.lea_op, 0, ap1, ap2);
+		GenerateDiadic(op_lea, 0, ap1, ap2);
 		//if (!compiler.os_code) {
 		//	switch (node->segment) {
 		//	case tlsseg:		GenerateTriadic(op_base, 0, ap1, ap1, MakeImmediate(8));	break;
@@ -3491,6 +3491,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	TypeArray* ta = nullptr;
 	CSet* mask, * fmask, * pmask;
 	char buf[300];
+	Expression exp(stmt);
 
 	sym = nullptr;
 	ap = nullptr;
@@ -3505,7 +3506,7 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 		if (node->p[0])
 			s = currentSym = node->sym;
 		else
-			s = gsearch(*node->p[0]->sp);
+			s = exp.gsearch2(*node->p[0]->sp, bt_int, nullptr, false);
 		if (s)
 			sym = s->fi;
 		/*

@@ -55,7 +55,7 @@ extern void gen_strlab(char* s);
 extern void dumplits();
 extern int  stringlit(char* s);
 extern int quadlit(Float128* f128);
-extern void nl();
+extern void nl(txtoStream* str = nullptr);
 extern void seg(int sg, int algn);
 extern void cseg();
 extern void dseg();
@@ -135,5 +135,6 @@ List* sortedList(List* head, ENODE* root);
 int IdentifyPrecision();
 
 extern void GenerateTriadic(int op, int len, Operand* ap1, Operand* ap2, Operand* ap3);
+void AppendFiles();
 
 #endif

@@ -853,7 +853,7 @@ int64_t TYP::Initialize(ENODE* pnode, TYP *tp2, int opt, Symbol* symi)
 	int64_t sizes[100];
 	char idbuf[sizeof(lastid)+1];
 	ENODE* node;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	for (base = typ_sp-1; base >= 0; base--) {
 		if (typ_vector[base]->isArray)

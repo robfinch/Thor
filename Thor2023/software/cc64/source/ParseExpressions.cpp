@@ -3348,6 +3348,6 @@ TYP *Expression::ParseExpression(ENODE **node, Symbol* symi)
 
 TYP *expression(ENODE **node, Symbol* symi)
 {
-	Expression k;
+	Expression k(cg.stmt);
 	return (k.ParseExpression(node, symi));
 }

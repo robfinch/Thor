@@ -146,7 +146,6 @@ void ReleaseLocalMemory()
     }
     locblk = (struct blk *)NULL;
     locsize = 0;
-	currentStmt = (Statement *)NULL;
 	if (verbose) printf(" releasing %d bytes local tables.\n",blkcnt * BLKSIZE);
 }
 

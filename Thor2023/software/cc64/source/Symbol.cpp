@@ -183,12 +183,40 @@ Symbol *search(std::string na,TABLE *tbl)
 	return search2(na,tbl,nullptr);
 }
 
+static void SearchStatements(Statement* stmt, std::string na, __int16 rettype, TypeArray* typearray, bool exact)
+{
+	Statement* st = stmt;
+	Symbol* sp;
+	int n;
+	int nn;
+
+	for (; st && gSearchCnt < 100; st = st->outer) {
+		dfs.puts("Looking in statement table: ");
+		dfs.puts((char *)st->name->c_str());
+		dfs.puts("\n");
+		if (st->ssyms.Find(na, rettype, typearray, exact)) {
+			sp = TABLE::match[TABLE::matchno - 1];
+			ADD_SYMS
+				dfs.printf("Found as an auto var\n");
+		}
+		// If the statment is a function body
+		if (st->fi) {
+			dfs.printf("Looking at params %p\n", (char*)&st->fi->params);
+			if (st->fi->params.Find(na, rettype, typearray, exact)) {
+				sp = TABLE::match[TABLE::matchno - 1];
+				ADD_SYMS
+					dfs.printf("Found as parameter\n");
+			}
+		}
+	}
+}
+
 // first look in the current compound statement for the symbol,
 // Next look in progressively more outer compound statements
 // Next look in the local symbol table for the function
 // Finally look in the global symbol table.
 //
-Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exact)
+Symbol *Expression::gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exact)
 {
 	Symbol *sp;
 	Symbol* sp1;
@@ -218,7 +246,7 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 	sp = nullptr;
 	// There might not be a current statement if global declarations are
 	// being processed.
-	if (currentStmt==nullptr) {
+	if (owning_stmt==nullptr) {
 	  dfs.printf("Stmt=null, looking in global table\n");
 		if (gsyms[0].Find(na,rettype,typearray,exact)) {
 			sp = TABLE::match[TABLE::matchno-1];
@@ -241,7 +269,10 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 	}
 	*/
 	// Look in progressively more outer statements for the symbol.
-	for (st = currentStmt; st && gSearchCnt < 100; st = st->outer) {
+	SearchStatements(owning_stmt, na, rettype, typearray, exact);
+
+	/*
+	for (st = owning_stmt; st && gSearchCnt < 100; st = st->outer) {
 		dfs.printf("Looking in statement table\n");
 		if (st->ssyms.Find(na,rettype,typearray,exact)) {
 			sp = TABLE::match[TABLE::matchno-1];
@@ -258,6 +289,7 @@ Symbol *gsearch2(std::string na, __int16 rettype, TypeArray *typearray, bool exa
 			}
 		}
 	}
+	*/
 
 j1:
 	/*
@@ -406,12 +438,12 @@ j1:
 }
 
 // A wrapper for gsearch2() when we only care about finding any match.
-
+/*
 Symbol *gsearch(std::string name)
 {
 	return (gsearch2(name, bt_int, nullptr, false));
 }
-
+*/
 
 // Create a copy of a symbol, used when creating derived classes from base
 // classes. The type is copyied and extended by a derived class.
@@ -774,7 +806,7 @@ int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
 	int64_t sizes[100];
 	char idbuf[sizeof(lastid) + 1];
 	ENODE* node;
-	Expression exp;
+	Expression exp(cg.stmt);
 	bool init_array = false;
 
 	if (ENODE::initializedSet.isMember(pnode->number))
@@ -879,11 +911,12 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 	int64_t count;
 	ENODE* node, *temp;
 	List* lst, *hlst;
+	bool oval;
 
 	nbytes = 0;
 	node = rootnode;
 	hlst = lst = node->ReverseList(node);
-	for (count = tp->numele; count && lst != nullptr; lst = lst->nxt) {
+	for (count = tp->numele; lst != nullptr; lst = lst->nxt) {
 		node = lst->node;
 		/*
 		while (nbytes < sp->tp->size) {// sp->value.i) {     // align properly
@@ -893,10 +926,17 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 		}
 		*/
 		if (node != nullptr && node != rootnode) {
-			if (!ENODE::initializedSet.isMember(node->number)) {
+			tp->dimen;
+			if (tp->dimen < 2) {
+				oval = lst->node->tp->val_flag;
+				lst->node->tp->val_flag = false;
+			}
+			if (true || !ENODE::initializedSet.isMember(node->number)) {
 				nbytes += Initialize(node, node->tp, 0);
 //				ENODE::initializedSet.add(node->number);
 			}
+			if (tp->dimen < 2)
+				lst->node->tp->val_flag = oval;
 			count--;
 		}
 	}
@@ -973,6 +1013,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 	List* lst, *hlst;
 	ENODE* node, *pnode;
 	int64_t ne;
+	bool oval;
 
 	nbytes = 0;
 	node = rootnode;
@@ -1133,11 +1174,16 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 			}
 			else {
 				val = node->i;
-				nbytes = sizeOfPtr;
-				switch (sizeOfPtr) {
-				case 4: GenerateHalf(val); break;
-				case 8: GenerateInt(val); break;
-				case 16: GenerateLong(val); break;
+				if (node->nodetype == en_labcon) {
+					GenerateLabelReference(val, 0, (char *)"");
+				}
+				else {
+					nbytes = sizeOfPtr;
+					switch (sizeOfPtr) {
+					case 4: GenerateHalf(val); break;
+					case 8: GenerateInt(val); break;
+					case 16: GenerateLong(val); break;
+					}
 				}
 			}
 		}

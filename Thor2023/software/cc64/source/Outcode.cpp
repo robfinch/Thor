@@ -609,6 +609,7 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 {
   static char buf[500];
 
+	ns = (char *)"";
 	if (lab < 0) {
 		buf[0] = '\0';
 		return buf;
@@ -662,7 +663,7 @@ char *put_label(int lab, char *nm, char *ns, char d, int sz)
 }
 
 char* put_label(int lab, const char* nm, const char* ns, char d, int sz) {
-	return (put_label(lab, (char*)nm, (char*)ns, d, sz));
+	return (put_label(lab, (char*)nm, (char*)"", d, sz));
 }
 
 
@@ -842,16 +843,16 @@ void GenerateReference(Symbol *sp,int64_t offset)
   if( gentype == longgen && outcol < 55 - (int)sp->name->length()) {
         if( sp->storage_class == sc_static) {
 			ofs.printf(",");
-			ofs.printf(GetNamespace());
-			ofs.printf("_%lld", sp->value.i);
+			//ofs.printf(GetNamespace());
+			ofs.printf(".%05lld", sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld", offset);
 //                fprintf(output,",%s_%ld%c%d",GetNamespace(),sp->value.i,sign,offset);
 		}
         else if( sp->storage_class == sc_thread) {
 			ofs.printf(",");
-			ofs.printf(GetNamespace());
-			ofs.printf("_%lld", sp->value.i);
+			//ofs.printf(GetNamespace());
+			ofs.printf(".%05lld", sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld", offset);
 //                fprintf(output,",%s_%ld%c%d",GetNamespace(),sp->value.i,sign,offset);
@@ -996,7 +997,8 @@ int stringlit(char *s)
 	lp = (struct slit *)allocx(sizeof(struct slit));
 	lp->label = nextlabel++;
 	str = "";
-	str.append(*currentFn->sym->GetFullName());
+	if (currentFn)
+		str.append(*currentFn->sym->GetFullName());
 	lp->str = my_strdup(s);
 	lp->nmspace = my_strdup((char *)str.c_str());
 	if (strtab == nullptr) {
@@ -1435,12 +1437,15 @@ void dumplits()
 	dfs.printf("</Dumplits>\n");
 }
 
-void nl()
+void nl(txtoStream* str)
 {       
 //	if(outcol > 0) {
+	if (str)
+		str->printf("\n");
+	else
 		ofs.printf("\n");
-		outcol = 0;
-		gentype = nogen;
+	outcol = 0;
+	gentype = nogen;
 //	}
 }
 

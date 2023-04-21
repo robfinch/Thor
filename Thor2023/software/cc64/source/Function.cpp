@@ -138,6 +138,13 @@ void Function::GenerateName(bool force)
 	default:
 		ofs.printf("\t.sdreg\t%d\n", regGP);
 	}
+	switch (syntax) {
+	case MOT:
+		ofs.printf("\tsd2reg\t%d\n", regGP1);
+		break;
+	default:
+		ofs.printf("\t.sd2reg\t%d\n", regGP1);
+	}
 	dfs.printf("B");
 	p = my_strdup((char*)lbl.c_str());
 	dfs.printf("b");
@@ -170,12 +177,12 @@ Statement *Function::ParseBody()
 	UsesNew = FALSE;
 	regmask = 0;
 	bregmask = 0;
-	currentStmt = (Statement *)NULL;
 	dfs.printf("C");
 	stmtdepth = 0;
 	ZeroMemory(regs, sizeof(regs));
 	initRegStack();
 	sym->stmt = sym->stmt->ParseCompound(true);
+	cg.stmt = sym->stmt;
 	currentFn->body = sym->stmt;
 	currentFn = ofn;
 	if (lastst == kw_catch) {
@@ -259,6 +266,7 @@ void Function::GenerateBody(bool force_inline)
 		lbl += *sym->GetFullName();
 		//ofs.printf(lbl.c_str());
 		ofs.printf("\n");
+		AppendFiles();
 		//		if (sym->storage_class == sc_global) {
 		//			ofs.printf("endpublic\r\n\r\n");
 		//		}
@@ -292,7 +300,7 @@ void Function::DoFuncptrAssign(Function *sp)
 {
 	ENODE* node, * ep1, * ep2;
 	TYP* tp1, * tp2;
-	Expression exp;
+	Expression exp(cg.stmt);
 	e_node op;
 	Symbol* asym;
 
@@ -1423,11 +1431,12 @@ void Function::Generate()
 		//GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
 		ReleaseTempRegister(ap);
 	}
-	// Compiler now uses PC relative addressing for the rodataseg
-	if (false && gp1 != 0) {
+	// Compiler now uses global pointer one addressing for the rodataseg
+	if (gp1 != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
-		GenerateDiadic(op_lea, 0, makereg(regGP1), MakeStringAsNameConst((char *)"_rodata_start", dataseg));
+		GenerateDiadic(op_ldi,0,makereg(regGP1),MakeStringAsNameConst((char*)currentFn->sym->name->c_str(), codeseg));
+		//GenerateDiadic(op_lea, 0, makereg(regGP1), MakeStringAsNameConst((char *)"_rodata_start", dataseg));
 		//if (!compiler.os_code)
 		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);
@@ -2014,8 +2023,12 @@ void Function::Summary(Statement *stmt)
 	lc_auto = 0;
 	lfs.printf("\n\n*** local symbol table ***\n\n");
 	ListTable(&sym->lsyms, 0);
-	ListTable(&sym->fi->body->ssyms, 0);
+	if (sym->fi->body)
+		ListTable(&sym->fi->body->ssyms, 0);
 	// Should recurse into all the compound statements
+	lfs.printf("\n\n*** symbols by compound statement ***\n\n");
+	ListCompound(sym->fi->body);
+
 	if (stmt == NULL)
 		dfs.printf("DIAG: null statement in Function::Summary.\r\n");
 	else {

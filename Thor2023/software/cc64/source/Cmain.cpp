@@ -408,6 +408,7 @@ int openfiles(char *s)
 		}
 		else {
 			ofs.open(outfile, std::ios::out | std::ios::trunc);
+			ofs.name = outfile;
 		}
 		dfs.open(dbgfile.c_str(), std::ios::out | std::ios::trunc);
 		//		irfs.open(irfile, std::ios::out | std::ios::trunc);

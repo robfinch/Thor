@@ -79,8 +79,16 @@ static Symbol *makeint(char *name)
 	return (sp);
 }
 
+// Usually MakeStatement() is called from a more outer statement, so set the
+// outer field. It will be overridden later if needed. It is not always
+// correct to set outer here.
+
 Statement* Statement::MakeStatement(int typ, int gt) {
-	return (compiler.sf.MakeStatement(typ, gt));
+	Statement* stmt;
+	stmt = compiler.sf.MakeStatement(typ, gt);
+	stmt->name = new std::string("");
+	stmt->outer = this;
+	return (stmt);
 };
 
 Statement *Statement::ParseCheckStatement()
@@ -119,10 +127,8 @@ Statement *Statement::ParseWhile()
 		needpunc(closepa, 13);
 	if (lastst == kw_do)
 		NextToken();
-	snp->s1 = Statement::Parse();
+	snp->s1 = snp->Parse();
 	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
 	iflevel--;
 	looplevel--;
 	return (snp);
@@ -148,10 +154,8 @@ Statement *Statement::ParseUntil()
 		if (expression(&(snp->exp),nullptr) == 0)
 			error(ERR_EXPREXPECT);
 		needpunc(closepa, 14);
-		snp->s1 = Statement::Parse();
+		snp->s1 = snp->Parse();
 		// Empty statements return NULL
-		if (snp->s1)
-			snp->s1->outer = snp;
 	}
 	iflevel--;
 	looplevel--;
@@ -167,11 +171,9 @@ Statement *Statement::ParseDo()
 	snp->predreg = iflevel;
 	iflevel++;
 	looplevel++;
-	snp->s1 = Statement::Parse();
+	snp->s1 = snp->Parse();
 	snp->lptr2 = my_strdup(inpline);
 	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
 	switch (lastst) {
 	case kw_until:	snp->stype = st_dountil; break;
 	case kw_loop:	snp->stype = st_doloop; break;
@@ -200,6 +202,7 @@ Statement *Statement::ParseFor()
 
 	currentFn->UsesPredicate = TRUE;
 	snp = MakeStatement(st_for, TRUE);
+	snp->outer = this;
 	snp->predreg = iflevel;
 	iflevel++;
 	looplevel++;
@@ -217,10 +220,7 @@ Statement *Statement::ParseFor()
 	if (expression(&(snp->incrExpr),nullptr) == NULL)
 		snp->incrExpr = (ENODE *)NULL;
 	needpunc(closepa, 18);
-	snp->s1 = Statement::Parse();
-	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
+	snp->s1 = snp->Parse();
 	iflevel--;
 	looplevel--;
 	return (snp);
@@ -238,12 +238,10 @@ Statement *Statement::ParseForever()
 	snp = MakeStatement(st_forever, TRUE);
 	snp->stype = st_forever;
 	foreverlevel = looplevel;
-	snp->s1 = Statement::Parse();
+	snp->s1 = snp->Parse();
 	if (loopexit == 0)
 		error(ERR_INFINITELOOP);
 	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
 	return (snp);
 }
 
@@ -271,9 +269,6 @@ Statement *Statement::ParseFirstcall()
 	// doinit should set realname
 	snp->fcname = my_strdup(sp->realname);
 	snp->s1 = Statement::Parse();
-	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
 	dfs.puts("</ParseFirstcall>");
 	return snp;
 }
@@ -307,21 +302,15 @@ Statement *Statement::ParseIf()
 		error(ERR_SYNTAX);
 	if (lastst == kw_then)
 		NextToken();
-	snp->s1 = Statement::Parse();
-	if (snp->s1)
-		snp->s1->outer = snp;
+	snp->s1 = snp->Parse();
 	if (lastst == kw_else) {
 		NextToken();
-		snp->s2 = Statement::Parse();
+		snp->s2 = snp->Parse();
 		snp->s2->kw = kw_else;
-		if (snp->s2)
-			snp->s2->outer = snp;
 	}
 	else if (lastst == kw_elsif) {
-		snp->s2 = ParseIf();
+		snp->s2 = snp->ParseIf();
 		snp->s2->kw = kw_elsif;
-		if (snp->s2)
-			snp->s2->outer = snp;
 	}
 	else
 		snp->s2 = 0;
@@ -338,17 +327,13 @@ Statement *Statement::ParseCatch()
 	ENODE *node;
 	static char buf[200];
 	AutoDeclaration ad;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	snp = MakeStatement(st_catch, TRUE);
-	currentStmt = snp;
 	if (lastst != openpa) {
 		snp->label = (int64_t *)NULL;
 		snp->num = 99999;
-		snp->s1 = Statement::Parse();
-		// Empty statements return NULL
-		if (snp->s1)
-			snp->s1->outer = snp;
+		snp->s1 = snp->Parse();
 		return snp;
 	}
 	needpunc(openpa, 33);
@@ -356,10 +341,7 @@ Statement *Statement::ParseCatch()
 		NextToken();
 		snp->label = (int64_t*)NULL;
 		snp->num = 99999;
-		snp->s1 = Statement::Parse();
-		// Empty statements return NULL
-		if (snp->s1)
-			snp->s1->outer = snp;
+		snp->s1 = snp->Parse();
 		return snp;
 	}
 	if (lastst == ellipsis) {
@@ -367,10 +349,7 @@ Statement *Statement::ParseCatch()
 		needpunc(closepa, 33);
 		snp->label = (int64_t*)NULL;
 		snp->num = 99999;
-		snp->s1 = Statement::Parse();
-		// Empty statements return NULL
-		if (snp->s1)
-			snp->s1->outer = snp;
+		snp->s1 = snp->Parse();
 		return snp;
 	}
 	catchdecl = TRUE;
@@ -391,16 +370,10 @@ Statement *Statement::ParseCatch()
 	exp.nameref(&node, FALSE, sp);
 	strcpy_s(lastid, sizeof(lastid), buf);
 	snp->s1 = Statement::Parse();
-	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
 	snp->exp = node;	// save name reference
 	if (sp->tp->typeno >= bt_last)
 		error(ERR_CATCHSTRUCT);
 	snp->num = sp->tp->GetHash();
-	// Empty statements return NULL
-	//	if (snp->s2)
-	//		snp->s2->outer = snp;
 	return snp;
 }
 
@@ -545,22 +518,18 @@ Statement *Statement::ParseTry()
 	hd = (Statement *)NULL;
 	tl = (Statement *)NULL;
 	snp = MakeStatement(st_try, TRUE);
-	snp->s1 = Statement::Parse();
-	// Empty statements return NULL
-	if (snp->s1)
-		snp->s1->outer = snp;
+	snp->s1 = snp->Parse();
 	if (lastst != kw_catch)
 		error(ERR_CATCHEXPECT);
 	while (lastst == kw_catch) {
 		if (hd == NULL) {
-			hd = tl = ParseCatch();
+			hd = tl = snp->ParseCatch();
 			if (hd)
 				hd->outer = snp;
 		}
 		else {
-			tl->next = ParseCatch();
+			tl->next = snp->ParseCatch();
 			if (tl->next != NULL) {
-				tl->next->outer = snp;
 				tl = tl->next;
 			}
 		}
@@ -574,7 +543,7 @@ Statement *Statement::ParseTry()
 Statement* Statement::ParseExpression(ENODE** node, Symbol* symi)
 {
 	Statement* snp;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	dfs.printf("<ParseExpression>\n");
 	snp = MakeStatement(st_expr, FALSE);
@@ -602,18 +571,19 @@ Statement *Statement::ParseCompound(bool assign_cf)
 {
 	Statement *snp;
 	Statement *head, *tail;
-	Statement *p;
 	Function* fn;
+	Statement* os;
 
 	fn = currentFn;
-	p = currentStmt;
 	tail = nullptr;
-	snp = MakeStatement(st_compound, FALSE);
+	snp = MakeStatement(st_compound, false);
+	snp->outer = this;
+	os = cg.stmt;
+	cg.stmt = snp;
 	if (assign_cf) {
 		snp->fi = currentFn;
 		snp->fi->body = snp;
 	}
-	currentStmt = snp;
 	head = 0;
 	if (lastst == colon) {
 		NextToken();
@@ -621,6 +591,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 			if (strcmp(lastid, "clockbug") == 0)
 				printf("clockbug\r\n");
 		if (lastst == id) {
+			snp->name = new std::string(lastid);
 			snp->label = (int64_t*)stringlit(lastid);
 		}
 		NextToken();
@@ -630,23 +601,21 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	//ad.Parse(nullptr, &snp->ssyms);
 	cseg();
 	// Add the first statement at the head of the list.
-	p = currentStmt;
 	if (lastst == kw_prolog) {
 		NextToken();
-		currentFn->prolog = snp->prolog = Statement::Parse();
+		currentFn->prolog = snp->prolog = snp->Parse();
 	}
 	if (lastst == kw_epilog) {
 		NextToken();
-		currentFn->epilog = snp->epilog = Statement::Parse();
+		currentFn->epilog = snp->epilog = snp->Parse();
 	}
 	if (lastst == kw_prolog) {
 		NextToken();
-		currentFn->prolog = snp->prolog = Statement::Parse();
+		currentFn->prolog = snp->prolog = snp->Parse();
 	}
 	if (lastst != end) {
-		head = tail = Statement::Parse();
-		if (head)
-			head->outer = snp;
+		head = tail = snp->Parse();
+		head->outer = snp;
 	}
 	//else {
 	//       head = tail = NewStatement(st_empty,1);
@@ -657,11 +626,11 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	while (lastst != end) {
 		if (lastst == kw_prolog) {
 			NextToken();
-			currentFn->prolog = snp->prolog = Statement::Parse();
+			currentFn->prolog = snp->prolog = snp->Parse();
 		}
 		else if (lastst == kw_epilog) {
 			NextToken();
-			currentFn->epilog = snp->epilog = Statement::Parse();
+			currentFn->epilog = snp->epilog = snp->Parse();
 		}
 		else
 		{
@@ -670,17 +639,17 @@ Statement *Statement::ParseCompound(bool assign_cf)
 				//tail->iexp = ad.Parse(nullptr, &snp->ssyms);
 				snp->ssyms.ownerp = currentFn->sym;
 			}
-			tail->next = Statement::Parse();
-			if (tail->next != NULL) {
-				tail->next->outer = snp;
+			tail->next = snp->Parse();
+			if (tail->next != nullptr) {
 				tail = tail->next;
 			}
+			tail->outer = snp;
 		}
 	}
-	currentStmt = p;
 	NextToken();
 	snp->s1 = head;
 	currentFn = fn;
+	cg.stmt = os;
 	return (snp);
 }
 
@@ -755,7 +724,7 @@ Statement* Statement::ParseYield()
 	Statement* snp;
 	Symbol* sp;
 	ENODE* ep;
-	Expression exp;
+	Expression exp(cg.stmt);
 
 	snp = MakeStatement(st_yield, TRUE);
 	expression(&(snp->exp), nullptr);
@@ -776,20 +745,17 @@ j1:
 	switch (lastst) {
 	case semicolon:
 		snp = MakeStatement(st_empty, 1);
-		currentStmt = snp;
 		break;
 	case begin:
 		NextToken();
 		stmtdepth++;
 		snp = ParseCompound(false);
-		currentStmt = snp;
 		stmtdepth--;
 		return snp;
 	case end:
 		return (snp);
 	case kw_check:
 		snp = ParseCheckStatement();
-		currentStmt = snp;
 		break;
 		/*
 		case kw_prolog:
@@ -827,16 +793,13 @@ j1:
 			snp = ParseLabel(true);
 			if (has_label)
 				*has_label = true;
-			currentStmt = snp;
 			goto j1;
 		}
 		// else fall through to parse expression
 	default:
 		snp = ParseExpression(node, symi);
-		currentStmt = snp;
 		break;
 	}
-	currentStmt = snp;
 	if (snp != NULL) {
 		snp->next = (Statement *)NULL;
 		//snp->casevals = bf;
@@ -1967,6 +1930,7 @@ void Statement::GenerateYield()
 	ENODE* node = exp;
 	Function* sym;
 	Symbol* s;
+	Expression sexp(cg.stmt);
 	int i;
 	int sp = 0;
 	int fsp = 0;
@@ -1981,7 +1945,7 @@ void Statement::GenerateYield()
 	if (node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon) {
 		if (node->p[2])
 			currentSym = node->p[2]->sym;
-		s = gsearch(*node->p[0]->sp);
+		s = sexp.gsearch2(*node->p[0]->sp,bt_int, nullptr, false);
 		sym = s->fi;
 		i = 0;
 		sym->SaveTemporaries(&sp, &fsp, &psp);
@@ -2038,7 +2002,6 @@ void Statement::GenerateFuncBody()
 	Symbol *sp;
 
 	sp = ssyms.headp;
-	currentStmt = this;
 	while (sp) {
 		if (sp->fi)
 			;
@@ -2076,7 +2039,6 @@ bool Statement::Generate(int opt)
 			}
 		}*/
 		stmt->GenMixedSource();
-		currentStmt = stmt;
 		switch (stmt->stype)
 		{
 		case st_funcbody:
