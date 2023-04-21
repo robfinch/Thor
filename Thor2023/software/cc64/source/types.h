@@ -550,7 +550,7 @@ public:
 	void SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype);
 	int AdjustNbytes(int nbytes, int al, int ztype);
 	int64_t Initialize(ENODE* pnode, TYP* tp2, int opt);
-	int64_t InitializeArray(ENODE*);
+	int64_t InitializeArray(ENODE*, TYP*);
 	int64_t InitializeStruct(ENODE*, TYP*);
 	int64_t InitializeUnion(ENODE*, TYP*);
 	int64_t GenerateT(ENODE* node, TYP* tp);
@@ -817,6 +817,10 @@ public:
 	void PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshift, bool opt = false, int display_opt = 0);
 	void PutConstantHex(txtoStream& ofs, unsigned int lowhigh, unsigned int rshift);
 	static ENODE *GetConstantHex(std::ifstream& ifs);
+	void GenerateHalf() {};
+	void GenerateInt();
+	void GenerateShort();
+	void GenerateLong();
 
 	// Utility
 	void ResetSegmentCount() { ZeroMemory(&segcount, sizeof(segcount)); };
@@ -2201,6 +2205,7 @@ public:
 	Symbol symbolTable[32768];
 	Symbol* symTables[10];
 	Function functionTable[3000];
+	Function* programFn;
 	TYP typeTable[32768];
 	OperandFactory of;
 	FunctionFactory ff;

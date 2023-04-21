@@ -153,7 +153,7 @@ int opt_vreg = FALSE;
 int opt_loop_invariant = TRUE;
 int exceptions = FALSE;
 int mixedSource = FALSE;
-Function *currentFn = (Function *)NULL;
+Function *currentFn = nullptr;
 int callsFn = FALSE;
 int stmtdepth = 0;
 

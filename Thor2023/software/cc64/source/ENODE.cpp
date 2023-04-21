@@ -2437,7 +2437,11 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_labcon:
 	j1:
+#ifdef LOCAL_LABELS
 		sprintf_s(buf, sizeof(buf), "%s.%05lld", ""/*(char*)currentFn->sym->GetFullName()->c_str()*/, i);
+#else
+		sprintf_s(buf, sizeof(buf), "%s.%05lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
+#endif
 		DataLabels[i] = true;
 		ofs.write(buf);
 		if (rshift > 0) {
@@ -2446,7 +2450,11 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		}
 		break;
 	case en_clabcon:
+#ifdef LOCAL_LABELS
 //		sprintf_s(buf, sizeof(buf), ".C%s_%lld", GetNamespace(), i);
+#else
+//		sprintf_s(buf, sizeof(buf), ".C%s_%lld", GetNamespace(), i);
+#endif
 		sprintf_s(buf, sizeof(buf), ".%05d", (int)i);
 		DataLabels[i] = true;
 		ofs.write(buf);
@@ -2512,6 +2520,168 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 			printf("DIAG - illegal constant node.\n");
 		break;
 	}
+}
+
+extern int outcol;
+extern int gentype;
+
+void ENODE::GenerateShort()
+{
+	int64_t sz;
+	Int128 i128, t128;
+
+	if (gentype == halfgen && outcol < 60) {
+		ofs.printf(",");
+		if (p[1]) {
+			i128 = p[1]->i128;
+			t128 = Int128(p[0]->tp->btpp->size);
+			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+			PutConstant(ofs, 0, 0, false, 0);
+			p[1]->i128 = i128;
+			p[1]->i = i128.low;
+		}
+		else
+			PutConstant(ofs, 0, 0, false, 0);
+		outcol += 10;
+	}
+	else {
+		nl();
+		if (syntax == MOT) {
+			ofs.printf("\tdc.l\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		else {
+			ofs.printf("\t.4byte\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		gentype = halfgen;
+		outcol = 25;
+	}
+	genst_cumulative += 4;
+}
+
+void ENODE::GenerateInt()
+{
+	int64_t sz;
+	Int128 i128, t128;
+
+	if (gentype == halfgen && outcol < 60) {
+		ofs.printf(",");
+		if (p[1]) {
+			i128 = p[1]->i128;
+			t128 = Int128(p[0]->tp->btpp->size);
+			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+			PutConstant(ofs, 0, 0, false, 0);
+			p[1]->i128 = i128;
+			p[1]->i = i128.low;
+		}
+		else
+			PutConstant(ofs, 0, 0, false, 0);
+		outcol += 10;
+	}
+	else {
+		nl();
+		if (syntax == MOT) {
+			ofs.printf("\tdc.d\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		else {
+			ofs.printf("\t.8byte\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		gentype = halfgen;
+		outcol = 25;
+	}
+	genst_cumulative += 4;
+}
+
+void ENODE::GenerateLong()
+{
+	int64_t sz;
+	Int128 i128, t128;
+
+	if (gentype == longgen && outcol < 60) {
+		ofs.printf(",");
+		if (p[1]) {
+			i128 = p[1]->i128;
+			t128 = Int128(p[0]->tp->btpp->size);
+			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+			PutConstant(ofs, 0, 0, false, 0);
+			p[1]->i128 = i128;
+			p[1]->i = i128.low;
+		}
+		else
+			PutConstant(ofs, 0, 0, false, 0);
+		outcol += 10;
+	}
+	else {
+		nl();
+		if (syntax == MOT) {
+			ofs.printf("\tdc.q\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		else {
+			ofs.printf("\t.8byte\t");
+			if (p[1]) {
+				i128 = p[1]->i128;
+				t128 = Int128(p[0]->tp->btpp->size);
+				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
+				PutConstant(ofs, 0, 0, false, 0);
+				p[1]->i128 = i128;
+				p[1]->i = i128.low;
+			}
+			else
+				PutConstant(ofs, 0, 0, false, 0);
+		}
+		gentype = longgen;
+		outcol = 25;
+	}
+	genst_cumulative += 4;
 }
 
 ENODE *ENODE::GetConstantHex(std::ifstream& ifs)

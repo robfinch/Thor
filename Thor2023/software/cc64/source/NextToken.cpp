@@ -364,7 +364,8 @@ void getbase(int64_t b)
                 else break;
                 }
         if (lastch == 'L' || lastch == 'U' || lastch == 'l' || lastch == 'u' || lastch == 'S' || lastch == 's') { // ignore a 'L'ong suffix and 'U'nsigned
-          int_precision = toupper(lastch);
+          if (lastch != 'U' && lastch != 'u')
+            int_precision = toupper(lastch);
           getch();
         }
     ival128 = i128;

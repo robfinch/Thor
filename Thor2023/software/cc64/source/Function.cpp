@@ -45,7 +45,7 @@ void Function::GenerateName(bool force)
 	char* p;
 	Symbol* sy;
 	
-	currentFn = this;
+	//currentFn = this;
 	pl.head = pl.tail = nullptr;
 //	for (sy = sym; sy; sym = sy->parentp)
 //		nme = nme + "_" + *sym->mangledName;
@@ -197,6 +197,7 @@ Statement *Function::ParseBody()
 	// local functions that are found.
 	GenerateLocalFunctions();
 
+	currentFn = this;
 	if (!this->Islocal)
 		GenerateName(false);
 	if (!this->Islocal)
@@ -205,6 +206,7 @@ Statement *Function::ParseBody()
 	//ofs.printf("%sSTKSIZE_ EQU %d\r\n", (char *)sp->mangledName->c_str(), sp->stkspace);
 	isFuncBody = false;
 	dfs.printf("</ParseFunctionBody>\n");
+	currentFn = ofn;
 	return (sym->stmt);
 }
 
@@ -266,7 +268,6 @@ void Function::GenerateBody(bool force_inline)
 		lbl += *sym->GetFullName();
 		//ofs.printf(lbl.c_str());
 		ofs.printf("\n");
-		AppendFiles();
 		//		if (sym->storage_class == sc_global) {
 		//			ofs.printf("endpublic\r\n\r\n");
 		//		}

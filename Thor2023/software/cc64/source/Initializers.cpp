@@ -250,6 +250,7 @@ void doinit(Symbol *sp)
 			ofs << "\t.align 4\n";
 			break;
 		}
+		lblpoint = ofs.tellp();
 		switch (syntax) {
 		case MOT:
 			if (curseg == bssseg)
@@ -282,10 +283,10 @@ void doinit(Symbol *sp)
 			default:
 				sprintf_s(buf, sizeof(buf), "\t.8byte\t$FFF0200000000001\n");
 			}
+//			lblpoint = ofs.tellp();
 			ofs << buf;
 		}
 		strcpy_s(glbl2, sizeof(glbl2), sp->name->c_str());
-		lblpoint = ofs.tellp();
 		ofs << lbl;
 		//gen_strlab(lbl);
 	}
@@ -318,7 +319,8 @@ void doinit(Symbol *sp)
 				default:
 					sprintf_s(buf, sizeof(buf), "%s\n\t.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
 				}
-				ofs.seekp(lblpoint);
+				ofs.flush();
+				ofs.seekp(lblpoint, std::ios::beg);
 				ofs << buf;
 				//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
 				//				NextToken();
@@ -446,7 +448,7 @@ xit:
 	sp->storage_endpos = ofs.tellp();
 	if (move_file) {
 		ofs.close();
-		ofs.open(ofname, std::ios::out | std::ios::app);
+		ofs.open(ofname, std::ios::out);// | std::ios::app);
 	}
 }
 

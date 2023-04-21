@@ -78,6 +78,7 @@ void Compiler::compile()
 	GlobalDeclaration *gd;
 	int nn;
 	Symbol* sp;
+	Symbol* fsp;
 
 	dfs.printf("<compile>\n");
 	genst_cumulative = 0;
@@ -97,6 +98,13 @@ void Compiler::compile()
 	ZeroMemory(&functionTable, sizeof(functionTable));
 	ZeroMemory(&DataLabels, sizeof(DataLabels));
 	AddStandardTypes();
+
+	// Setup a master function.
+	fsp = allocSYM();
+	fsp->name = new std::string("__program");
+	fsp->storage_class = sc_global;
+	fsp->tp = &stdint;
+	programFn = currentFn = ff.MakeFunction(fsp->id, fsp, false);
 
 	RTFClasses::Random::srand((RANDOM_TYPE)time(NULL));
 	decls = GlobalDeclaration::Make();

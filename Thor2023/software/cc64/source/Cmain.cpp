@@ -184,7 +184,8 @@ int main(int argc, char **argv)
 				lineno = 0;
 				initsym();
 	compiler.compile();
-//				compile();
+	AppendFiles();
+	//				compile();
 				summary();
 				MBlk::ReleaseAll();
 //				ReleaseGlobalMemory();

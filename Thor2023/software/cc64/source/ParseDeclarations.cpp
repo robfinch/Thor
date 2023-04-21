@@ -1402,8 +1402,11 @@ void Declaration::ParseSuffixOpenbr()
 	}
 	for (kk = nn-1; kk > 0; kk--) {
 		dimen[kk]->dimen = nn - kk + 1;
-		dimen[kk-1]->size = dimen[kk]->size * dimen[kk]->numele;
+		dimen[kk]->size = dimen[kk]->size * dimen[kk]->numele;
+		dimen[kk - 1]->size *= dimen[kk]->size;
 	}
+	if (nn == 1)
+		dimen[0]->size = dimen[0]->size * dimen[0]->numele;
 	head = tail = dimen[0];
 	for (kk = 1; kk < nn; kk++) {
 		tail->btpp = dimen[kk];
@@ -1710,9 +1713,11 @@ Function* Declaration::ParseSuffixOpenpa(Function *sp)
 		 // needParseFunction = 0;
 		 // dfs.printf("Set false\n");
 	  //}
-	  currentFn = sp;
-	  sp->NumParms = 0;
-	  sp->numa = 0;
+		if (sp) {
+			currentFn = sp;
+			sp->NumParms = 0;
+			sp->numa = 0;
+		}
   }
 	else {
 		sp = ParseFunctionJ2(sp);
@@ -2034,8 +2039,6 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 	Function* ofn;
 	Function* fn;
 	
-	if (currentFn == nullptr)
-		currentFn = sp->fi;
 	sp1 = nullptr;
 	if (sp1 == nullptr)
 		sp1 = FindSymbol(sp, table);
@@ -2069,7 +2072,8 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 			sp->fi->depth = sp->depth;
 		}
 		ofn = currentFn;
-		currentFn = sp->fi;
+		if (sp->fi)
+			currentFn = sp->fi;
 		fn_doneinit = sp->fi->Parse(local);
 		if (lastst == closepa) {
 			return(0);
@@ -2115,7 +2119,8 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 		}
 		*/
 		if (sp->tp->type != bt_pointer) {
-			currentFn = ofn;
+			if (ofn)
+				currentFn = ofn;
 			return (1);
 		}
 	}
@@ -2368,7 +2373,8 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 						table->insert(sp);// ownerp->lsyms.insert(sp);
 					sp->storage_endpos = ofs.tellp();
 					decl_level--;
-					currentFn = cf;
+					if (cf)
+						currentFn = cf;
 					return (nbytes);
 				}
 			}
@@ -2455,7 +2461,8 @@ xit1:
 	if (symo) {
 		*symo = sp;
 	}
-	currentFn = cf;
+	if (cf)
+		currentFn = cf;
 	return (nbytes);
 }
 
@@ -2507,7 +2514,7 @@ void GlobalDeclaration::Parse()
 		bool notVal = false;
 		isFuncPtr = false;
 		currentClass = nullptr;
-		currentFn = nullptr;
+		currentFn = compiler.programFn;
 		isFuncBody = false;
 		worstAlignment = 0;
 		funcdecl = 0;

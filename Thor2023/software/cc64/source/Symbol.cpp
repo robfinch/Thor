@@ -905,7 +905,7 @@ j2:
 	return (nbytes);
 }
 
-int64_t Symbol::InitializeArray(ENODE* rootnode)
+int64_t Symbol::InitializeArray(ENODE* rootnode, TYP* tp)
 {
 	int64_t nbytes;
 	int64_t count;
@@ -932,7 +932,7 @@ int64_t Symbol::InitializeArray(ENODE* rootnode)
 				lst->node->tp->val_flag = false;
 			}
 			if (true || !ENODE::initializedSet.isMember(node->number)) {
-				nbytes += Initialize(node, node->tp, 0);
+				nbytes += Initialize(node, tp->btpp, 0);
 //				ENODE::initializedSet.add(node->number);
 			}
 			if (tp->dimen < 2)
@@ -952,7 +952,7 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
 	Symbol* sp, *hd;
 	int64_t nbytes;
 	int count;
-	TYP* typ;
+	TYP* typ, *t;
 	TABLE* tbl;
 	List* lst, *hlst;
 	ENODE* node, *temp;
@@ -981,7 +981,14 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
 			continue;
 		if (node != nullptr && node != rootnode) {
 			if (!ENODE::initializedSet.isMember(node->number)) {
-				nbytes += sp->Initialize(node, node->tp, 0);
+				t = node->tp;
+				if (t == nullptr)
+					t = sp->tp;
+				if (node->nodetype == en_unknown) {
+					node = makeinode(en_icon, 0);
+					node->SetType(&stdint);
+				}
+				nbytes += sp->Initialize(node, t, 0);
 //				ENODE::initializedSet.add(node->number);
 			}
 		}
@@ -1164,7 +1171,7 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 	case bt_pointer:
 		// Is it an array?
 		if (ptp->val_flag)
-			nbytes = InitializeArray(node);
+			nbytes = InitializeArray(node, ptp);
 		else {
 			if (ptp->btpp->IsAggregateType()) {
 				if (ptp->btpp->type == bt_union)
@@ -1180,16 +1187,16 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 				else {
 					nbytes = sizeOfPtr;
 					switch (sizeOfPtr) {
-					case 4: GenerateHalf(val); break;
-					case 8: GenerateInt(val); break;
-					case 16: GenerateLong(val); break;
+					case 4: node->GenerateShort(); break;
+					case 8: node->GenerateInt(); break;
+					case 16: node->GenerateLong(); break;
 					}
 				}
 			}
 		}
 		break;
 	case bt_array:
-		nbytes = InitializeArray(node);
+		nbytes = InitializeArray(node, ptp);
 		break;
 		//case bt_struct:	nbytes = InitializeStruct(); break;
 	default:

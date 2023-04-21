@@ -648,7 +648,8 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	}
 	NextToken();
 	snp->s1 = head;
-	currentFn = fn;
+	if (fn)
+		currentFn = fn;
 	cg.stmt = os;
 	return (snp);
 }

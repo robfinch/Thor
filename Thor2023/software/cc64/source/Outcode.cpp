@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2021  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -24,6 +24,7 @@
 // ============================================================================
 //
 #include "stdafx.h"
+//#define LOCAL_LABELS 1
 
 void put_mask(int mask);
 void align(int n);
@@ -33,7 +34,7 @@ int64_t genst_cumulative;
 
 /*      variable initialization         */
 
-enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
+
 //enum e_sg { noseg, codeseg, dataseg, bssseg, idataseg };
 
 int	       gentype = nogen;
@@ -843,7 +844,7 @@ void GenerateReference(Symbol *sp,int64_t offset)
   if( gentype == longgen && outcol < 55 - (int)sp->name->length()) {
         if( sp->storage_class == sc_static) {
 			ofs.printf(",");
-			//ofs.printf(GetNamespace());
+			ofs.printf(GetNamespace());
 			ofs.printf(".%05lld", sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld", offset);
@@ -851,7 +852,7 @@ void GenerateReference(Symbol *sp,int64_t offset)
 		}
         else if( sp->storage_class == sc_thread) {
 			ofs.printf(",");
-			//ofs.printf(GetNamespace());
+			ofs.printf(GetNamespace());
 			ofs.printf(".%05lld", sp->value.i);
 			ofs.putch(sign);
 			ofs.printf("%lld", offset);
@@ -956,7 +957,7 @@ void GenerateLabelReference(int n, int64_t offset, char* nmspace)
 { 
 	char buf[200];
 	
-//	if (nmspace == nullptr)
+	if (nmspace == nullptr)
 		nmspace = (char *)"";
 	if( gentype == longgen && outcol < 58) {
 		if (offset==0)
@@ -1242,7 +1243,11 @@ void dumplits()
 	while (casetab != nullptr) {
 		nl();
 		if (casetab->pass == 2) {
+#ifdef LOCAL_LABELS
 			put_label(casetab->label, "", ""/*casetab->nmspace*/, 'R', casetab->num * 4);// 'D');
+#else
+			put_label(casetab->label, "", casetab->nmspace, 'R', casetab->num * 4);// 'D');
+#endif
 		}
 		for (nn = 0; nn < casetab->num; nn++) {
 			if (casetab->cases[nn].pass==2)
@@ -1261,7 +1266,11 @@ void dumplits()
 			switch (lp->typ) {
 			case bt_float:
 			case bt_double:
-				put_label(lp->label, (char *)"", ""/*lp->nmspace*/, 'D', sizeOfFPD);
+#ifdef LOCAL_LABELS
+				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', sizeOfFPD);
+#else
+				put_label(lp->label, "", lp->nmspace, 'D', sizeOfFPD);
+#endif
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
@@ -1271,7 +1280,11 @@ void dumplits()
 				outcol += 35;
 				break;
 			case bt_quad:
-				put_label(lp->label, (char *)"", ""/*lp->nmspace*/, 'D', sizeOfFPQ);
+#ifdef LOCAL_LABELS
+				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', sizeOfFPQ);
+#else
+				put_label(lp->label, "", lp->nmspace, 'D', sizeOfFPQ);
+#endif
 				if (syntax == MOT)
 					ofs.printf("\tdc.l\t");
 				else
@@ -1283,7 +1296,11 @@ void dumplits()
 			case bt_posit:
 				switch (lp->precision) {
 				case 16:
+#ifdef LOCAL_LABELS
 					put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 2);
+#else
+					put_label(lp->label, "", lp->nmspace, 'D', 2);
+#endif
 					if (syntax == MOT)
 						ofs.printf("\tdc.w\t");
 					else
@@ -1292,7 +1309,11 @@ void dumplits()
 					outcol += 35;
 					break;
 				case 32:
+#ifdef LOCAL_LABELS
 					put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 4);
+#else
+					put_label(lp->label, "", lp->nmspace, 'D', 4);
+#endif
 					if (syntax == MOT)
 						ofs.printf("\tdc.l\t");
 					else
@@ -1301,7 +1322,11 @@ void dumplits()
 					outcol += 35;
 					break;
 				default:
-					put_label(lp->label, "", ""/* lp->nmspace*/, 'D', 8);
+#ifdef LOCAL_LABELS
+					put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 8);
+#else
+					put_label(lp->label, "", lp->nmspace, 'D', 8);
+#endif
 					if (syntax == MOT)
 						ofs.printf("\tdc.q\t");
 					else
@@ -1312,10 +1337,18 @@ void dumplits()
 				}
 				break;
 			case bt_void:
+#ifdef LOCAL_LABELS
 				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 0);
+#else
+				put_label(lp->label, "", lp->nmspace, 'D', 0);
+#endif
 				break;
 			default:
+#ifdef LOCAL_LABELS
 				put_label(lp->label, "", ""/*lp->nmspace*/, 'D', 0);
+#else
+				put_label(lp->label, "", lp->nmspace, 'D', 0);
+#endif
 				;// printf("hi");
 			}
 		lp = lp->next;
@@ -1338,7 +1371,11 @@ void dumplits()
 	while(quadtab != nullptr) {
 		nl();
 		if (DataLabels[quadtab->label]) {
+#ifdef LOCAL_LABELS
 			put_label(quadtab->label, "", ""/*quadtab->nmspace*/, 'D', sizeOfFPQ);
+#else
+			put_label(quadtab->label, "", quadtab->nmspace, 'D', sizeOfFPQ);
+#endif
 			ofs.printf("\tdh\t");
 			quadtab->Pack(64);
 			ofs.printf("%s", quadtab->ToString(64));
@@ -1364,7 +1401,11 @@ void dumplits()
 		nl();
 		if (!lit->isString) {
 			if (DataLabels[lit->label])
+#ifdef LOCAL_LABELS
 				put_label(lit->label, strip_crlf(&lit->str[1]), ""/*lit->nmspace*/, 'D', ep->esize);
+#else
+				put_label(lit->label, strip_crlf(&lit->str[1]), lit->nmspace, 'D', ep->esize);
+#endif
 		}
 		else {
 			cp = lit->str;
@@ -1395,7 +1436,11 @@ void dumplits()
 				ln += 8;
 				break;
 			}
+#ifdef LOCAL_LABELS
 			put_label(lit->label, strip_crlf(&lit->str[1]), ""/*lit->nmspace*/, 'D', ln);
+#else
+			put_label(lit->label, strip_crlf(&lit->str[1]), lit->nmspace, 'D', ln);
+#endif
 		}
 		if (lit->isString) {
 			cp = lit->str;

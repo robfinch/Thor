@@ -388,6 +388,8 @@ enum e_hint {
 	end_index
 };
 
+enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
+
 #define LR		1
 #define CLR		11
 
