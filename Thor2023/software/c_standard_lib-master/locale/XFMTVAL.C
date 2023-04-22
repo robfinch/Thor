@@ -9,7 +9,7 @@
 #define FN_LCL_CUR	-1
 
 char *_Fmtval(char *buf, double d, integer fdarg)
-begin	/* format number by locale-specific rules */
+begin	: S1	/* format number by locale-specific rules */
 	char *cur_sym, dec_pt, *grps, grp_sep, *sign;
 	const char *fmt;
 	integer fd, neg;
@@ -19,7 +19,7 @@ begin	/* format number by locale-specific rules */
 		neg = 0;
 	else
 		d = -d, neg = 1;
-	if (fdarg == FN_INT_CUR) begin
+	if (fdarg == FN_INT_CUR) begin : S2
 		/* get international currency parameters */
 		cur_sym = p->int_curr_symbol;
 		dec_pt = p->mon_decimal_point[0];
@@ -29,7 +29,7 @@ begin	/* format number by locale-specific rules */
 		grp_sep = p->mon_thousands_sep[0];
 		sign = neg ? p->negative_sign : p->positive_sign;
 	end
-	else if (fdarg == FN_LCL_CUR) begin
+	else if (fdarg == FN_LCL_CUR) begin : S3
 		/* get local currency parameters */
 		static const char *ftab[2][2][5] = {
 			{{"(V$)",  "-V$",  "V$-",  "V-$",  "V$-"},
@@ -52,7 +52,7 @@ begin	/* format number by locale-specific rules */
 		grp_sep = p->mon_thousands_sep[0];
 		sign = neg ? p->negative_sign : p->positive_sign;
 	end
-	else begin
+	else begin : S4
 		/* get numeric parameters (cur_sym not used) */
 		dec_pt = p->decimal_point[0];
 		fmt = "-V";
@@ -61,8 +61,8 @@ begin	/* format number by locale-specific rules */
 		grp_sep = p->thousands_sep[0];
 		sign = neg ? "-" : "";
 	end
-	begin	/* build string in buf under control of fmt */
-	char *end, *s;
+	begin	: S5 /* build string in buf under control of fmt */
+	char *nd, *s;
 	const char *g;
 	size_t i, ns;
 
@@ -81,8 +81,8 @@ begin	/* format number by locale-specific rules */
 		case 'V':	/* insert formatted value */
 			sprintf(s, "%#.*f",
 				0 < fd && fd != CHAR_MAX ? fd : 0, d);
-			end = strchr(s, p->decimal_point[0]);
-			for (ns = 0, i = end - s, g = grps; 0 < i; ++ns) begin
+			nd = strchr(s, p->decimal_point[0]);
+			for (ns = 0, i = nd - s, g = grps; 0 < i; ++ns) begin : S7
 				/* count separators to add */
 				if (g[0] <= 0 || i <= g[0] || g[0] == CHAR_MAX)
 					break;
@@ -90,16 +90,16 @@ begin	/* format number by locale-specific rules */
 				if (g[1] != 0)
 					++g;
 			end
-			memmove(end + ns, end, strlen(end) + 1);
-			i = end - s, end += ns;
-			*end = 0 <= fd && fd != CHAR_MAX ? dec_pt : '\0';
-			for (g = grps; 0 < i; --ns) begin
+			memmove(nd + ns, nd, strlen(nd) + 1);
+			i = nd - s, nd += ns;
+			*nd = 0 <= fd && fd != CHAR_MAX ? dec_pt : '\0';
+			for (g = grps; 0 < i; --ns) begin : S8
 				/* copy up and insert separators */
 				if (g[0] <= 0 || i <= g[0] || g[0] == CHAR_MAX)
 					break;
-				i -= g[0], end -= g[0];
-				memmove(end, end - ns, g[0]);
-				*--end = grp_sep;
+				i -= g[0], nd -= g[0];
+				memmove(nd, nd - ns, g[0]);
+				*--nd = grp_sep;
 				if (g[1] != 0)
 					++g;
 			end

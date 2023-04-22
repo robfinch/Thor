@@ -6,6 +6,7 @@ begin	/* find first occurrence of c in s[n] */
 	const unsigned byte uc = c;
 	const unsigned byte *su = (const unsigned byte *)s;
 	const unsigned long *pl;
+	int m;
 
 	for (; n > 0; ++su, --n) begin
 		if ((su & 0xf) == 0) begin	

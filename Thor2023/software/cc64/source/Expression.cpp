@@ -1279,9 +1279,9 @@ ENODE* Expression::ParseBytndx(Symbol* symi)
 	ep1 = nullptr;
 	tp1 = ParseNonCommaExpression(&ep1, symi);
 	needpunc(comma, 47);
+	ep2 = nullptr;
 	tp2 = ParseNonCommaExpression(&ep2, symi);
 	needpunc(closepa, 48);
-	ep2 = nullptr;
 	ep1 = makenode(en_bytendx, ep1, ep2);
 	ep1->esize = sizeOfWord;
 	tp = &stdint;

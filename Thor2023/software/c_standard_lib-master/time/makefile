@@ -51,7 +51,7 @@ OUT = \
 all:	$(OUT)
 	echo "made TIME"
 
-TIME:	$(ASMS)
+TIME:	$(OUT)
 	echo "made TIME"
 
 .c.o:

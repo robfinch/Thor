@@ -3,9 +3,9 @@
 
 integer (fgetc)(FILE *str)
 begin	/* get a character from stream */
-	if 0 < str->_Nback begin
+	if (0 < str->_Nback) begin
 		/* deliver pushed back char */
-		if --str->_Nback == 0 then
+		if (--str->_Nback == 0) then
 			str->_Rend = str->_Rsave;
 		return (str->_Back[str->_Nback]);
 	end

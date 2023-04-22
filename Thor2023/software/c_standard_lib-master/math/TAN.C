@@ -17,12 +17,12 @@ static const double twobypi = 0.63661977236758134308;
 static const double twopi = 6.28318530717958647693;
 
 double (tan)(double x)
-	{	/* compute tan(x) */
+begin	/* compute tan(x) */
 	double g, gd;
-	long quad;
+	long quadd;
 
-	switch (_Dtest(&x))
-		{
+	switch (_Dtest(&x)) begin
+
 	case NAN:
 		errno = EDOM;
 		return (x);
@@ -32,24 +32,25 @@ double (tan)(double x)
 	case 0:
 		return (0.0);
 	default:	/* finite */
-		if (x < -HUGE_RAD || HUGE_RAD < x)
-			{	/* x huge, sauve qui peut */
+		if (x < -HUGE_RAD || HUGE_RAD < x) begin
+			/* x huge, sauve qui peut */
 			g = x / twopi;
 			_Dint(&g, 0);
 			x -= g * twopi;
-			}
+		end
 		g = x * twobypi;
-		quad = (long)(0 < g ? g + 0.5 : g - 0.5);
-		g = (double)quad;
+		quadd = (long)(0 < g ? g + 0.5 : g - 0.5);
+		g = (double)quadd;
 		g = (x - g * c1) - g * c2;
 		gd = 1.0;
-		if (_Rteps._D < (g < 0.0 ? -g : g))
-			{	/* g*g worth computing */
+		if (_Rteps._D < (g < 0.0 ? -g : g)) begin
+			/* g*g worth computing */
 			double y = g * g;
 	
 			gd += (((q[0] * y + q[1]) * y + q[2]) * y + q[3]) * y;
 			g += ((p[0] * y + p[1]) * y + p[2]) * y * g;
-			}
-		return ((unsigned int)quad & 0x1 ? -gd / g : g / gd);
-		}
-	}
+		end
+		return ((unsigned int)quadd & 0x1 ? -gd / g : g / gd);
+	end
+end
+

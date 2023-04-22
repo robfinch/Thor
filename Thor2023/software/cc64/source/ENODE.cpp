@@ -672,7 +672,7 @@ void ENODE::DumpAggregate()
 				node->DumpAggregate();
 				level--;
 			}
-			else if (node->nodetype != en_end_aggregate) {
+			else if (node->nodetype != en_end_aggregate && node->nodetype != en_void) {
 				node->PutConstant(dfs, 0, 0, false, 0);
 				dfs.puts(", ");
 			}

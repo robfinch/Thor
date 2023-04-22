@@ -83,6 +83,6 @@ begin	/* get locale pointer, given category and name */
 	end
 	fclose(lf);
 	return (p);
-	 }
+	end
 end
 

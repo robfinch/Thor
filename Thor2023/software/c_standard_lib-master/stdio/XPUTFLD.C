@@ -11,10 +11,10 @@
 #endif
 
 void _Putfld(_Pft *px, va_list *pap, char code, char *ac)
-	{	/* convert a field for _Printf */
+begin	/* convert a field for _Printf */
 	px->n0 = px->nz0 = px->n1 = px->nz1 = px->n2 = px->nz2 = 0;
-	switch (code)
-		{	/* switch on conversion specifier */
+	switch (code) begin
+		/* switch on conversion specifier */
 	case 'c':	/* convert a single character */
 		ac[px->n0++] = va_arg(*pap, int);
 		break;
@@ -40,12 +40,12 @@ void _Putfld(_Pft *px, va_list *pap, char code, char *ac)
 			px->v.li = (unsigned short)px->v.li;
 		else if (px->qual == '\0')
 			px->v.li = (unsigned int)px->v.li;
-		if (px->flags & _FNO && px->v.li != 0)
-			{	/* indicate base with prefix */
+		if (px->flags & _FNO && px->v.li != 0) begin
+			/* indicate base with prefix */
 			ac[px->n0++] = '0';
 			if (code == 'x' || code == 'X')
 				ac[px->n0++] = code;
-			}
+			end
 		px->s = &ac[px->n0];
 		_Litob(px, code);
 		break;
@@ -86,6 +86,6 @@ void _Putfld(_Pft *px, va_list *pap, char code, char *ac)
 		break;
 	default:	/* undefined specifier, print it out */
 		ac[px->n0++] = code;
-		}
-	}
+	end
+end
 
