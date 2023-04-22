@@ -219,6 +219,22 @@ Operand *OperandFactory::MakeIndexedCodeLabel(int lab, int i)
 	return (ap);
 }
 
+Operand* OperandFactory::MakeIndexedDataLabel(int lab, int i)
+{
+	Operand* ap;
+	ENODE* ep;
+
+	ep = allocEnode();
+	ep->nodetype = en_labcon;
+	ep->i = lab;
+	ap = allocOperand();
+	ap->mode = am_indx;
+	ap->preg = i;
+	ap->offset = ep;
+	ap->isUnsigned = TRUE;
+	return (ap);
+}
+
 
 Operand* OperandFactory::MakeIndexedName(std::string nme, int i)
 {

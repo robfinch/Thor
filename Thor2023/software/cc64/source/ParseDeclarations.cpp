@@ -1946,6 +1946,10 @@ void Declaration::DoInsert(Symbol *sp, TABLE *table)
 				sp->fi->InsertMethod();
 				sp->fi->depth = sp->depth;
 			}
+			// A pointer to a function still needs to be placed in the symbol table. It
+			// does not need to be as a method.
+			else if (sp->tp->type == bt_pointer)
+				table->insert(sp);
 		}
 		else {
 			//insState = 2;
@@ -2372,8 +2376,9 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 				table->insert(sp);
 			else {
 				if (ParseFunction(table, sp, parent, al, local)) {
-					if (local)
+					if (local) {
 						table->insert(sp);// ownerp->lsyms.insert(sp);
+					}
 					sp->storage_endpos = ofs.tellp();
 					decl_level--;
 					if (cf)

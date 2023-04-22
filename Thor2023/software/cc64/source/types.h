@@ -611,6 +611,28 @@ public:
 		if (this == nullptr)
 			return (false);
 		return (type == bt_posit); };
+	int IsIntrinsicType()
+	{
+		return  
+			type == bt_byte || type == bt_char || type == bt_short || type == bt_int || type == bt_void ||
+			type == bt_ubyte || type == bt_uchar || type == bt_ushort || type == bt_uint || type == bt_void ||
+			type == bt_long || type == bt_float || type == bt_double || type == bt_quad || type == bt_ulong ||
+			type == bt_enum || type == bt_struct || type == bt_union || type == bt_bool ||
+			type == bt_ichar || type == bt_iuchar || type == bt_decimal ||
+			type == bt_unsigned || type == bt_exception
+			;
+	};
+	static int IsIntrinsicType(int st)
+	{
+		return
+			st == bt_byte || st == bt_char || st == bt_short || st == bt_int || st == bt_void ||
+			st == bt_ubyte || st == bt_uchar || st == bt_ushort || st == bt_uint || st == bt_void ||
+			st == bt_long || st == bt_float || st == bt_double || st == bt_quad || st == bt_ulong ||
+			st == bt_enum || st == bt_struct || st == bt_union || st == bt_bool ||
+			st == bt_ichar || st == bt_iuchar || st == bt_decimal ||
+			st == bt_unsigned || st == bt_exception
+			;
+	};
 	bool IsFunc() const { if (this == nullptr) return (false); return (type == bt_func || type == bt_ifunc); };
 	bool IsVectorType() const { if (this == nullptr) return (false);  return (type == bt_vector); };
 	bool IsUnion() const { if (this == nullptr) return (false); return (type == bt_union); };
@@ -1011,8 +1033,8 @@ private:
 	ENODE* FindLastMulu(ENODE*);
 public:
 	Expression();
-	Expression(Statement* st) {
-		owning_stmt = st;
+	Expression(Statement* type) {
+		owning_stmt = type;
 	};
 	Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
 	TYP* ParseNameRef(ENODE** node, Symbol* symi);
@@ -1202,6 +1224,7 @@ public:
 	Operand* MakeMemoryIndirect(int disp, int regno);
 	Operand *MakeIndirect(short int regno);
 	Operand *MakeIndexedCodeLabel(int lab, int i);
+	Operand* MakeIndexedDataLabel(int lab, int i);
 	Operand *MakeIndexed(int64_t offset, int regno);
 	Operand *MakeIndexed(ENODE *node, int regno);
 	Operand *MakeNegIndexed(ENODE *node, int regno);
@@ -1353,14 +1376,14 @@ public:
 	Operand* GenerateCase(ENODE* node, Operand* sw);
 //	Operand* GenerateSwitch(ENODE* node);
 	void GenerateTabularSwitch(int64_t minv, int64_t maxv, Operand* ap, bool HasDefcase, int deflbl, int tablabel);
-	void GenerateCall(Operand* tgt) {
+	virtual void GenerateCall(Operand* tgt) {
 		GenerateMonadic(op_call, 0, tgt);
 	};
-	void GenerateLocalCall(Operand* tgt) {
+	virtual void GenerateLocalCall(Operand* tgt) {
 		GenerateMonadic(op_call, 0, tgt);
 	};
-	void GenerateReturnAndDeallocate(int64_t amt);
-	void GenerateReturnInsn() {
+	virtual void GenerateReturnAndDeallocate(int64_t amt);
+	virtual void GenerateReturnInsn() {
 		GenerateZeradic(op_ret);
 	};
 };
@@ -2018,8 +2041,8 @@ public:
 
 	void storeHex(txtoStream& ofs);
 	void storeHexIf(txtoStream& ofs);
-	void storeHexDo(txtoStream& ofs, e_stmt st);
-	void storeHexWhile(txtoStream& fs, e_stmt st);
+	void storeHexDo(txtoStream& ofs, e_stmt type);
+	void storeHexWhile(txtoStream& fs, e_stmt type);
 	void storeHexFor(txtoStream& fs);
 	void storeHexForever(txtoStream& fs);
 	void storeHexSwitch(txtoStream& fs);
@@ -2036,10 +2059,10 @@ public:
 	static Operand* GenerateCase(ENODE* node, Operand* sw_ap);
 	static Operand* GenerateSwitch(ENODE* node);
 	static void GenerateDefault(Statement* stmt);
-	static void GenerateSwitchStatements(Statement* st);
+	static void GenerateSwitchStatements(Statement* type);
 	static bool IsTabularSwitch(int64_t numcases, int64_t min, int64_t max, bool nkd);
 	void GenerateSwitch(Statement* stmt);
-	virtual void GenerateLinearSwitch(Statement* st);
+	virtual void GenerateLinearSwitch(Statement* type);
 	virtual void GenerateNakedTabularSwitch(Statement* stmt, int64_t minv, Operand* ap, int tablabel) {};
 	virtual void GenerateTabularSwitch(Statement* stmt, int64_t minv, int64_t maxv, Operand* ap, bool HasDefcase, int deflbl, int tablabel) {};
 	static void GenerateSwitchLo(Statement* stmt, Case* cases, Operand* ap, Operand* ap2, int lo, int xitlab, int deflab, bool is_unsigned, bool one_hot, bool last_case);

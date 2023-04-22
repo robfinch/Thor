@@ -650,9 +650,20 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	// A string constant enclosed in aggregate brackets is treated as just a
 	// string constant.
 
-	if (lastst == sconst) {
-		tptr = ParseStringConst(node);
-		needpunc(e_sym::end, 79);
+	if (tp->type == bt_pointer && tp->btpp && tp->btpp->IsCharType()) {
+		if (lastst == sconst) {
+			tptr = ParseStringConst(node);
+			needpunc(e_sym::end, 79);
+			return (tptr);
+		}
+	}
+
+	// {0} is allowed to be specified as the value of an intrinsic type. It is not
+	// really an aggregate.
+
+	if (tp->IsIntrinsicType()) {
+		tptr = ParseExpression(node, symi);
+		needpunc(e_sym::end, 80);
 		return (tptr);
 	}
 

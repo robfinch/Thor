@@ -1483,7 +1483,7 @@ void ThorStatementGenerator::GenerateTabularSwitch(Statement* stmt, int64_t minv
 	ReleaseTempRegister(ap2);
 	GenerateTriadic(op_asl, 0, ap, ap, MakeImmediate(2));
 	//GenerateDiadic(op_ldt, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
-	cg.GenerateLoad(ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg), 4, 4);
+	cg.GenerateLoad(ap, compiler.of.MakeIndexedDataLabel(tablabel, ap->preg), 4, 4);
 	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
 	ReleaseTempRegister(ap);
 	GenerateSwitchStatements(stmt);
@@ -1496,7 +1496,8 @@ void ThorStatementGenerator::GenerateNakedTabularSwitch(Statement* stmt, int64_t
 	GenerateTriadic(op_sll, 0, ap, ap, MakeImmediate(2));
 	//	GenerateDiadic(cpu.ldo_op, 0, ap, compiler.of.MakeIndexedCodeLabel(tablabel, ap->preg));
 //	GenerateDiadic(op_ldt, 0, ap, compiler.of.MakeIndexedName((char*)stmt->GenerateSwitchTargetName(tablabel).c_str(), ap->preg)); // MakeIndexedCodeLabel(tablabel, ap->preg));
-	cg.GenerateLoad(ap, compiler.of.MakeIndexedName((char*)stmt->GenerateSwitchTargetName(tablabel).c_str(), ap->preg), 4, 4);
+	cg.GenerateLoad(ap, compiler.of.MakeIndexedDataLabel(tablabel, ap->preg), 4, 4);
+	//cg.GenerateLoad(ap, compiler.of.MakeIndexedName((char*)stmt->GenerateSwitchTargetName(tablabel).c_str(), ap->preg), 4, 4);
 	GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
 	ReleaseTempRegister(ap);
 	GenerateSwitchStatements(stmt);

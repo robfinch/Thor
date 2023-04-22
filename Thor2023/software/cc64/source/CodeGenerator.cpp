@@ -2770,8 +2770,6 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GenerateExpression(node->p[1], flags, natsize, rhs);
 		ap1->tp = node->p[0]->tp;
 		ap1->isPtr = node->p[0]->IsPtr();
-		delete node->p[0];
-		node->p[0] = nullptr;
 		goto retpt;
 
   case en_fcall:
@@ -2781,14 +2779,14 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 	case en_sxb:
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0], am_reg, 1, rhs);
-		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(7), MakeImmediate(119));
+		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(7), MakeImmediate(127));
 		ReleaseTempReg(ap2);
 		goto retpt;
 
 	case en_sxc:
 		ap1 = GetTempRegister();
 		ap2 = GenerateExpression(node->p[0], am_reg, 2, rhs);
-		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(111));
+		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(15), MakeImmediate(127));
 		//GenerateDiadic(op_sxw, 0, ap1, ap2);
 		ReleaseTempReg(ap2);
 		goto retpt;
@@ -2811,7 +2809,8 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 				goto retpt;
 			}
 		}
-		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(31), MakeImmediate(95));
+		ap2->MakeLegal(am_reg, 4);
+		Generate4adic(op_sbx, 0, ap1, ap2, MakeImmediate(31), MakeImmediate(127));
 		//GenerateDiadic(op_sxt, 0, ap1, ap2);
 		ReleaseTempReg(ap2);
 		goto retpt;

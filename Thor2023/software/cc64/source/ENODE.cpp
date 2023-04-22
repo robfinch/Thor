@@ -2549,7 +2549,7 @@ void ENODE::GenerateShort(txtoStream& tfs)
 		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
-			t128 = Int128(p[0]->tp->btpp->size);
+			t128 = Int128(p[0]->tp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
@@ -2565,7 +2565,7 @@ void ENODE::GenerateShort(txtoStream& tfs)
 			ofs.printf("\tdc.l\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(ofs, 0, 0, false, 0);
 				p[1]->i128 = i128;
@@ -2578,7 +2578,7 @@ void ENODE::GenerateShort(txtoStream& tfs)
 			ofs.printf("\t.4byte\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
@@ -2602,7 +2602,7 @@ void ENODE::GenerateInt(txtoStream& tfs)
 		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
-			t128 = Int128(p[0]->tp->btpp->size);
+			t128 = Int128(p[0]->tp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
@@ -2618,7 +2618,7 @@ void ENODE::GenerateInt(txtoStream& tfs)
 			tfs.printf("\tdc.d\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
@@ -2631,7 +2631,7 @@ void ENODE::GenerateInt(txtoStream& tfs)
 			tfs.printf("\t.8byte\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
@@ -2655,7 +2655,7 @@ void ENODE::GenerateLong(txtoStream& tfs)
 		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
-			t128 = Int128(p[0]->tp->btpp->size);
+			t128 = Int128(p[0]->tp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
@@ -2671,7 +2671,7 @@ void ENODE::GenerateLong(txtoStream& tfs)
 			ofs.printf("\tdc.q\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
@@ -2684,7 +2684,7 @@ void ENODE::GenerateLong(txtoStream& tfs)
 			tfs.printf("\t.8byte\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
-				t128 = Int128(p[0]->tp->btpp->size);
+				t128 = Int128(p[0]->tp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
 				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;

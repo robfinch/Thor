@@ -1107,12 +1107,12 @@ ENODE *Expression::ParseArgumentList(ENODE *hidden, TypeArray *typearray, Symbol
  */
 static int IsIntrinsicType(int st)
 {
-	return  st == kw_byte || st==kw_char || st == kw_short || st == kw_int || st==kw_void ||
-				st == kw_int16 || st == kw_int8 || st == kw_int32 || st == kw_int16 ||
-                st == kw_long || st == kw_float || st == kw_double || st == kw_triple ||
-                st == kw_enum || st == kw_struct || st == kw_union ||
-                st== kw_unsigned || st==kw_signed || st==kw_exception ||
-				st == kw_const;
+	return  st == kw_byte || st == kw_char || st == kw_short || st == kw_int || st == kw_void ||
+		st == kw_int16 || st == kw_int8 || st == kw_int32 || st == kw_int16 || st == kw_bool ||
+		st == kw_long || st == kw_float || st == kw_double || st == kw_quad || st == kw_decimal ||
+		st == kw_enum || st == kw_struct || st == kw_union ||
+		st == kw_unsigned || st == kw_signed || st == kw_exception ||
+		st == kw_const;
 }
 
 bool IsBeginningOfTypecast(int st)
