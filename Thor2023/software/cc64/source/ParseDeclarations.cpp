@@ -1396,6 +1396,7 @@ void Declaration::ParseSuffixOpenbr()
 		else {
 			dimen[nn]->size = head->size;
 			dimen[nn]->numele = 0;
+			dimen[nn]->unknown_size = true;
 			NextToken();
 			break;
 		}
@@ -1848,6 +1849,8 @@ void Declaration::ParseAssign(Symbol *sp)
 		op = en_assign;
 		ep2 = nullptr;
 		tp2 = exp.ParseAssignOps(&ep2, sp);
+		ep2->i_rhs = ep1->i;
+		ep1->i_lhs = ep2->i;
 		if (tp2 == nullptr || !IsLValue(ep1))
 			error(ERR_LVALUE);
 		else {
@@ -2345,7 +2348,7 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 				nbytes = old_nbytes - ilc;
 			old_nbytes = ilc + nbytes;
 			if (!sp->IsTypedef() && !sp->tp->IsFunc() && nbytes > 0)
-				nbytes = GenerateStorage(nbytes, al, ilc);
+				nbytes = GenerateStorage(ofs, nbytes, al, ilc);
 			dfs.printf("G");
 			// Why the follwing???
 			//if ((sp->tp->type == bt_func) && sp->storage_class == sc_global)
@@ -2520,6 +2523,14 @@ void GlobalDeclaration::Parse()
 		funcdecl = 0;
 
 		switch(lastst) {
+		/* Under Construction
+		case kw_namespace:
+			NextToken();
+			GetNamespace();
+			if (lastst == id)
+				strcpy_s(nmspace[0],sizeof(nmspace[0]), lastid);
+			break;
+		*/
 		case kw_leaf:
 			NextToken();
 			isLeaf = true;

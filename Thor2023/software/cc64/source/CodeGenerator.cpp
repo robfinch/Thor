@@ -2219,10 +2219,10 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 			sym->storage_class = sc_global;
 			node->AssignTypeToList(sym->tp);
 			ofs.puts("\n");
-			put_label(sym->acnt, nmbuf, nmbuf, 'D', sym->tp->size);
+			put_label(ofs, sym->acnt, nmbuf, GetNamespace(), 'D', sym->tp->size);
 			sprintf_s(nmbuf, sizeof(nmbuf), "__aggregate_tag_%d", sym->acnt);
 			sym->SetName(std::string((char*)nmbuf));
-			sym->Initialize(node, sym->tp, 1);
+			sym->Initialize(ofs, node, sym->tp, 1);
 			ofs.puts("\n\n");
 			node->sp = sym->name;
 		}

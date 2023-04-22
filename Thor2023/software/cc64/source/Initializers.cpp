@@ -24,7 +24,6 @@
 // ============================================================================
 //
 #include "stdafx.h"
-#include <map>
 
 extern int catchdecl;
 extern void genstorageskip(int nbytes);
@@ -124,6 +123,221 @@ void AppendFiles()
 	}
 }
 
+static std::string GetObjdecl(Symbol* sp, int64_t sz)
+{
+	std::string objdecl;
+	char buf[100];
+
+	_itoa_s(sz, buf, sizeof(buf), 10);
+	switch (syntax) {
+	case MOT:
+		if (curseg == bssseg) {
+			objdecl = "comm ";
+			objdecl.append((char*)sp->name->c_str());
+			objdecl.append(",");
+			objdecl.append(buf);
+			objdecl.append("\n");
+		}
+		else {
+			objdecl = "";
+			objdecl.append((char*)sp->name->c_str());
+			objdecl.append(":\n");
+			objdecl.append("\tdc.b\t");
+			objdecl.append(buf);
+			objdecl.append("\n");
+		}
+		break;
+	default:
+		if (curseg == bssseg) {
+			objdecl = ".lcomm ";
+			objdecl.append((char*)sp->name->c_str());
+			objdecl.append(",");
+			objdecl.append(buf);
+			objdecl.append("\n");
+		}
+		else {
+			objdecl = "";
+			objdecl.append((char*)sp->name->c_str());
+			objdecl.append(":\n");
+		}
+		objdecl.append("\t.type\t");
+		objdecl.append((char*)sp->name->c_str());
+		objdecl.append(",@object\n");
+		objdecl.append("\t.size\t");
+		objdecl.append((char*)sp->name->c_str());
+		objdecl.append(",");
+		objdecl.append(buf);
+	}
+	return (objdecl);
+}
+
+static std::string GetSegmentDecl(Symbol* sp)
+{
+	std::string decl;
+
+	if (sp->storage_class == sc_global) {
+		//strcpy_s(lbl, sizeof(lbl), ".global ");
+		decl = "";
+		switch (syntax) {
+		case MOT:
+			if (curseg == dataseg)
+				decl.append("\tdata\n");
+			else if (curseg == bssseg)
+				decl.append("\tbss\n");
+			else if (curseg == tlsseg)
+				decl.append("\ttls\n");
+			break;
+		default:
+			if (curseg == dataseg)
+				decl.append("\t.data\n");
+			else if (curseg == bssseg)
+				decl.append("\t.bss\n");
+			else if (curseg == tlsseg)
+				decl.append("\t.tls\n");
+		}
+	}
+	return (decl);
+}
+
+std::string GetAlignStatement()
+{
+	switch (syntax) {
+	case MOT:
+		return (std::string("\talign 4\n"));
+	case STD:
+		return (std::string("\t.align 4\n"));
+	}
+	return (std::string("\t.align 4\n"));
+}
+
+std::string GetSkipFormatWord(Symbol* sp)
+{
+	if (sp->tp->IsSkippable()) {
+		switch (syntax) {
+		case MOT:
+			return (std::string("\talign 3\n\tdc.q\t$FFF0200000000001\n"));
+		default:
+			return (std::string("\t.align 3\t.8byte\t$FFF0200000000001\n"));
+		}
+		//			lblpoint = ofs.tellp();
+		return (std::string("\t.align 3\t.8byte\t$FFF0200000000001\n"));
+	}
+	return (std::string(""));
+}
+
+// The skip amount word indicates how far ahead the garbage collector can skip
+// while scanning for pointers. The compiler "knows" that there are no pointers
+// in the area, so we make the collectors job a little easier.
+
+std::string GetSkipAmountWord()
+{
+	char buf[200];
+
+	switch (syntax) {
+	case MOT:
+		sprintf_s(buf, sizeof(buf), "\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+		break;
+	default:
+		sprintf_s(buf, sizeof(buf), "\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
+	}
+	genst_cumulative = 0;
+	return (std::string(buf));
+}
+
+std::string GetBlankSkipAmountWord()
+{
+	switch (syntax) {
+	case MOT:
+		return (std::string("\t  \t                 \n"));
+	default:
+		return (std::string("\t  \t                 \n"));
+	}
+}
+
+std::string GetBitandReference(Symbol* sp)
+{
+	std::string bar;
+	std::string delim;
+
+	if (sp->storage_class == sc_global)
+		delim = "\n";
+	else
+		delim = "";
+	switch (syntax) {
+	case MOT:
+		bar = "";
+		bar.append((char*)sp->name->c_str());
+		bar.append(":\n\tdc.q ");
+		bar.append((char*)sp->name->c_str());
+		bar.append("_dat\n");
+		bar.append(delim);
+		bar.append((char*)sp->name->c_str());
+		bar.append("_dat:\n");
+		break;
+	default:
+		bar = "";
+		bar.append((char*)sp->name->c_str());
+		bar.append(":\n\t.8byte ");
+		bar.append((char*)sp->name->c_str());
+		bar.append("_dat\n");
+		bar.append(delim);
+		bar.append((char*)sp->name->c_str());
+		bar.append("_dat:\n");
+	}
+	return (bar);
+}
+
+static void SetFuncPointerAlign(Symbol* sp, e_sg oseg)
+{
+	int64_t algn;
+
+	algn = sizeOfWord;
+	seg(ofs, oseg == noseg ? dataseg : oseg, algn);          /* initialize into data segment */
+	nl(ofs);                   /* start a new line in object */
+}
+
+static void SetThreadAlign(Symbol* sp, e_sg oseg)
+{
+	int64_t algn;
+
+	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
+		algn = imax(sp->tp->alignment, 8);
+	else if (sp->tp->type == bt_pointer)// && sp->tp->val_flag)
+		algn = imax(sp->tp->btpp->alignment, 8);
+	else
+		algn = 2;
+	seg(ofs, oseg == noseg ? tlsseg : oseg, algn);
+	nl(ofs);
+}
+
+static void SetStaticAlign(Symbol* sp, e_sg oseg)
+{
+	int64_t algn;
+
+	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
+		algn = imax(sp->tp->alignment, 8);
+	else if (sp->tp->type == bt_pointer)// && sp->tp->val_flag)
+		algn = imax(sp->tp->btpp->alignment, 8);
+	else
+		algn = 2;
+	seg(ofs, oseg == noseg ? dataseg : oseg, algn);          /* initialize into data segment */
+	nl(ofs);                   /* start a new line in object */
+}
+
+static void SetDefaultAlign(Symbol* sp, e_sg oseg)
+{
+	int64_t algn;
+
+	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
+		algn = imax(sp->tp->alignment, 8);
+	else if (sp->tp->type == bt_pointer)// && sp->tp->val_flag)
+		algn = imax(sp->tp->btpp->alignment, 8);
+	else
+		algn = 2;
+	seg(ofs, oseg == noseg ? (lastst == assign ? dataseg : bssseg) : oseg, algn);            /* initialize into data segment */
+	nl(ofs);                   /* start a new line in object */
+}
+
 void doinit(Symbol *sp)
 {
 	static bool first = true;
@@ -134,6 +348,8 @@ void doinit(Symbol *sp)
   char buf[500];
   std::streampos endpoint;
 	std::streampos lblpoint;
+	std::streampos patchsz;
+	std::streampos patch_saw;
 	int64_t szpoint;
 	bool setsz = false;
 	TYP *tp;
@@ -144,6 +360,16 @@ void doinit(Symbol *sp)
 	std::string ofname;
 	char nmbuf[300];
 	bool move_file = false;
+	int64_t bytes_inserted_or_deleted = 0;
+
+	std::string objdecl;
+	std::string segdecl;
+	std::string aligndecl;
+	std::string skipfmtword;
+	std::string bar;
+	std::string output_name;
+	std::string init_str;
+	std::string saw;
 
 	old_ofs = &ofs;
 	ofname = ofs.name;
@@ -166,137 +392,57 @@ void doinit(Symbol *sp)
 
   oseg = noseg;
 	lbl[0] = 0;
+
 	// Initialize constants into read-only data segment. Constants may be placed
 	// in ROM along with code.
-	if (sp->isConst) {
+	if (sp->isConst)
     oseg = rodataseg;
-  }
-	if (IsFuncptrAssign(sp)) {
-		algn = sizeOfWord;
-		seg(oseg == noseg ? dataseg : oseg, algn);          /* initialize into data segment */
-		nl(&ofs);                   /* start a new line in object */
-	}
-	else if (sp->storage_class == sc_thread) {
-        if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
-           algn = imax(sp->tp->alignment,8);
-        else if (sp->tp->type==bt_pointer)// && sp->tp->val_flag)
-           algn = imax(sp->tp->btpp->alignment,8);
-        else
-            algn = 2;
-		seg(oseg==noseg ? tlsseg : oseg,algn);
-		nl(&ofs);
-	}
-	else if (sp->storage_class == sc_static || lastst==assign) {
-        if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
-           algn = imax(sp->tp->alignment,8);
-        else if (sp->tp->type==bt_pointer)// && sp->tp->val_flag)
-           algn = imax(sp->tp->btpp->alignment,8);
-        else
-            algn = 2;
-		seg(oseg==noseg ? dataseg : oseg,algn);          /* initialize into data segment */
-		nl(&ofs);                   /* start a new line in object */
-	}
-	else {
-        if (sp->tp->type==bt_struct || sp->tp->type==bt_union)
-           algn = imax(sp->tp->alignment,8);
-        else if (sp->tp->type==bt_pointer)// && sp->tp->val_flag)
-           algn = imax(sp->tp->btpp->alignment,8);
-        else
-            algn = 2;
-		seg(oseg==noseg ? (lastst==assign ? dataseg : bssseg) : oseg,algn);            /* initialize into data segment */
-		nl(&ofs);                   /* start a new line in object */
-	}
+
+	// Spit out an alignment pseudo-op
+	if (IsFuncptrAssign(sp))
+		SetFuncPointerAlign(sp, oseg);
+	else if (sp->storage_class == sc_thread)
+		SetThreadAlign(sp, oseg);
+	else if (sp->storage_class == sc_static || lastst==assign)
+		SetStaticAlign(sp, oseg);
+	else
+		SetDefaultAlign(sp, oseg);
 	
 	if (sp->storage_class == sc_static || sp->storage_class == sc_thread) {
-		//strcpy_s(glbl, sizeof(glbl), gen_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D'));
-		if (sp->tp->IsSkippable()) {
-			patchpoint = ofs.tellp();
-			if (syntax == MOT)
-				sprintf_s(buf, sizeof(buf), "\talign\t3\n\tdc.q\t$FFF0200000000001\n");
-			else
-				sprintf_s(buf, sizeof(buf), "\t.align\t3\n\t.8byte\t$FFF0200000000001\n");
-			ofs << buf;
-		}
-		sp->realname = my_strdup(put_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D', sp->tp->size));
-		strcpy_s(glbl2, sizeof(glbl2), gen_label((int)sp->value.i, (char *)sp->name->c_str(), GetNamespace(), 'D', sp->tp->size));
+		segdecl = "";
+		aligndecl = "";
+		objdecl = "";
+		skipfmtword = GetSkipFormatWord(sp);
+		sp->realname = my_strdup(put_label(ofs,(int)sp->value.i, (char *)sp->name->c_str(), GetPrivateNamespace(), 'D', sp->tp->size));
+		output_name = sp->realname;
 	}
 	else {
-		if (sp->storage_class == sc_global) {
-			//strcpy_s(lbl, sizeof(lbl), ".global ");
-			strcpy_s(lbl, sizeof(lbl), "");
-			switch (syntax) {
-			case MOT:
-				if (curseg == dataseg)
-					strcat_s(lbl, sizeof(lbl), "\tdata\n");
-				else if (curseg == bssseg)
-					strcat_s(lbl, sizeof(lbl), "\tbss\n");
-				else if (curseg == tlsseg)
-					strcat_s(lbl, sizeof(lbl), "\ttls\n");
-				break;
-			default:
-				if (curseg == dataseg)
-					strcat_s(lbl, sizeof(lbl), "\t.data\n");
-				else if (curseg == bssseg)
-					strcat_s(lbl, sizeof(lbl), "\t.bss\n");
-				else if (curseg == tlsseg)
-					strcat_s(lbl, sizeof(lbl), "\t.tls\n");
-			}
-		}
-		switch (syntax) {
-		case MOT:
-			ofs << "\talign 4\n";
-			break;
-		case STD:
-			ofs << "\t.align 4\n";
-			break;
-		}
-		lblpoint = ofs.tellp();
-		switch (syntax) {
-		case MOT:
-			if (curseg == bssseg)
-				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "comm %s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
-			else {
-				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
-				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\tdcb.b\t%I64d\n", sp->tp->size);
-			}
-			break;
-		default:
-			if (curseg == bssseg) {
-				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), ".lcomm %s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
-			}
-			else
-				sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "%s:\n", (char*)sp->name->c_str());
-			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.type\t%s,@object\n", (char*)sp->name->c_str());
-			szpoint = strlen(lbl);
-			sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "\t.size\t%s,%I64d\n", (char*)sp->name->c_str(), sp->tp->size);
-			if (sp->tp->size == 0)
-				setsz = true;
-		}
-		//		strcat_s(lbl, sizeof(lbl), sp->name->c_str());
-//		sprintf_s(&lbl[strlen(lbl)], sizeof(lbl) - strlen(lbl), "[xxx%d]", sp->tp->size);
-		if (sp->tp->IsSkippable()) {
-			patchpoint = ofs.tellp();
-			switch (syntax) {
-			case MOT:
-				sprintf_s(buf, sizeof(buf), "\tdc.q\t$FFF0200000000001\n");
-				break;
-			default:
-				sprintf_s(buf, sizeof(buf), "\t.8byte\t$FFF0200000000001\n");
-			}
-//			lblpoint = ofs.tellp();
-			ofs << buf;
-		}
-		strcpy_s(glbl2, sizeof(glbl2), sp->name->c_str());
-		ofs << lbl;
-		//gen_strlab(lbl);
+		segdecl = GetSegmentDecl(sp);
+		aligndecl = GetAlignStatement();
+		objdecl = GetObjdecl(sp, sp->tp->size);
+		skipfmtword = GetSkipFormatWord(sp);
+		output_name = sp->name->c_str();
 	}
+
+	init_str = "";
+	init_str.append(segdecl);
+	init_str.append(aligndecl);
+	init_str.append(objdecl);
+	// Insert garbage collector command word to skip pointerless area.
+	if (sp->tp->IsSkippable()) {
+		init_str.append(skipfmtword);
+		patch_saw = ofs.tellp();
+		init_str.append(GetSkipAmountWord());
+	}
+	ofs << init_str;
+
 	if (lastst == kw_firstcall) {
-        GenerateByte(1);
-        goto xit;
-    }
+    GenerateByte(ofs,1);
+    goto xit;
+  }
 	else if( lastst != assign && !IsFuncptrAssign(sp)) {
 		hasPointer = sp->tp->FindPointer();
-		genstorage(sp->tp->size);
+		genstorage(ofs, sp->tp->size);
 	}
 	else {
 		ENODE* node;
@@ -304,42 +450,17 @@ void doinit(Symbol *sp)
 
 		if (!IsFuncptrAssign(sp)) {
 			NextToken();
-			if (lastst == bitandd) {
-				ENODE* n;
-				char buf[400];
-				char buf2[40];
-				if (sp->storage_class == sc_global)
-					strcpy_s(buf2, sizeof(buf2), "\n");
-				else
-					strcpy_s(buf2, sizeof(buf2), "");
-				switch (syntax) {
-				case MOT:
-					sprintf_s(buf, sizeof(buf), "%s\n\tdc.q %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
-					break;
-				default:
-					sprintf_s(buf, sizeof(buf), "%s\n\t.8byte %s_dat\n%s%s_dat:\n", lbl, sp->name->c_str(), buf2, sp->name->c_str());
-				}
-				ofs.flush();
-				ofs.seekp(lblpoint, std::ios::beg);
-				ofs << buf;
-				//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
-				//				NextToken();
-
-			}
+			if (lastst == bitandd)
+				bar = GetBitandReference(sp);
 		}
 		else {
 			ENODE* n, *n2;
 			char buf[400];
-			char buf2[40];
 			int64_t val = 0;
 			Int128 val128;
 
 			val128.low = val128.high = 0;
-			if (sp->storage_class == sc_global)
-				strcpy_s(buf2, sizeof(buf2), "\n");
-			else
-				strcpy_s(buf2, sizeof(buf2), "");
-			if (sp->initexp) {
+			if (sp->initexp) { /*
 				n2 = sp->initexp->p[1];
 				ProcessInitExp(sp, n2);
 				switch (syntax) {
@@ -352,6 +473,7 @@ void doinit(Symbol *sp)
 				ofs.seekp(lblpoint);
 				ofs << buf;
 				n2->PutConstant(ofs, 0, 0, false, 0);
+				*/
 			}
 			else {
 				switch (syntax) {
@@ -364,14 +486,13 @@ void doinit(Symbol *sp)
 				ofs.seekp(lblpoint);
 				ofs << buf;
 			}
-			//			while (lastst != begin && lastst != semicolon && lastst != my_eof)
-			//				NextToken();
-
 		}
 		hasPointer = false;
 		if (!IsFuncptrAssign(sp)) {
 			Symbol* s2;
 			TYP* et;
+			int64_t sz = 0;
+
 			hasPointer = sp->tp->FindPointer();
 			typ_sp = 0;
 			tp = sp->tp;
@@ -381,14 +502,9 @@ void doinit(Symbol *sp)
 			}
 			brace_level = 0;
 			strncpy_s(lastid, sizeof(lastid), sp->name->c_str(), sizeof(lastid));
-			//gNameRefNode = exp.ParseNameRef(sp);
 			s2 = currentSym;
-			//currentSym = sp;
 			et = exp.ParseExpression(&node, sp);	// Collect up aggregate initializers
 			opt_const_unchecked(&node);			// This should reduce to a single integer expression
-			//if (!node->AssignTypeToList(sp->tp)) {
-			//	error(ERR_CASTAGGR);
-			//}
 			if (sp->tp->type == bt_array || (sp->tp->type==bt_pointer && sp->tp->val_flag)) {
 				if (sp->tp->size == 0) {
 					sp->tp->size = et->size;
@@ -398,7 +514,11 @@ void doinit(Symbol *sp)
 			currentSym = s2;
 			ENODE::initializedSet.clear();
 			if (node != nullptr)
-				sp->Initialize(node, sp->tp, 1);
+				sz = sp->Initialize(ofs, node, sp->tp, 1);
+			if (sp->tp->unknown_size) {
+				sp->tp->size = sz;
+				sp->tp->unknown_size = false;
+			}
 			if (sp->tp->numele == 0) {
 				if (sp->tp->btpp) {
 					if (sp->tp->btpp->type == bt_char || sp->tp->btpp->type == bt_uchar
@@ -409,36 +529,35 @@ void doinit(Symbol *sp)
 					}
 				}
 			}
+			// Under construction
+			// It is allowed to specify an unknown size for the last array dimension.
+			// This size will be unknown until initializers are output.
+			// Override the object size if it was unknown with the size of initializers.
+			/*
+			if (sp->tp->unknown_size) {
+				ofs.flush();
+				std::streampos pos = ofs.tellp();
+				ofs.seekp(patchsz+bytes_inserted_or_deleted);
+				ofs << sz;
+				ofs.flush();
+				ofs.seekp(pos);
+			}
+			*/
 		}
 	}
-	if (!hasPointer && sp->tp->IsSkippable()) {
-		endpoint = ofs.tellp();
-		ofs.seekp(patchpoint);
-		switch (syntax) {
-		case MOT:
-			sprintf_s(buf, sizeof(buf), "\tdc.q\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
-			break;
-		default:
-			sprintf_s(buf, sizeof(buf), "\t.8byte\t0x%I64X\n", ((genst_cumulative + 7LL) >> 3LL) | 0xFFF0200000000000LL);
-		}
-		ofs << buf;
-		ofs.seekp(endpoint);
-		genst_cumulative = 0;
-	}
-	else if (sp->tp->IsSkippable()) {
-		endpoint = ofs.tellp();
-		ofs.seekp(patchpoint);
-		switch (syntax) {
-		case MOT:
-			sprintf_s(buf, sizeof(buf), "\t  \t                 \n");
-			break;
-		default:
-			sprintf_s(buf, sizeof(buf), "\t  \t                 \n");
-		}
-		ofs << buf;
-		ofs.seekp(endpoint);
-		genst_cumulative = 0;
-	}
+
+	// Go back and patch the skip amount with the cumulative number of bytes
+	// output.
+	endpoint = ofs.tellp();
+	ofs.seekp(patch_saw);
+	if (!hasPointer && sp->tp->IsSkippable())
+		saw = GetSkipAmountWord();
+	else if (sp->tp->IsSkippable())
+		saw = GetBlankSkipAmountWord();
+	ofs << saw;
+	ofs.seekp(endpoint);
+	genst_cumulative = 0;
+
 	if (!IsFuncptrAssign(sp))
 		endinit();
 	if (sp->storage_class == sc_global)
@@ -480,58 +599,59 @@ void doInitCleanup()
 
 int64_t initbyte(Symbol* symi, int opt)
 {   
-	GenerateByte(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
+	GenerateByte(ofs, opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (1LL);
 }
 
 int64_t initchar(Symbol* symi, int opt)
 {   
-	GenerateChar(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
+	GenerateChar(ofs, opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : 0);
     return (2LL);
 }
 
 int64_t initshort(Symbol* symi, int64_t i, int opt)
 {
-	GenerateHalf(opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : i);
+	GenerateHalf(ofs, opt ? (int)GetIntegerExpression((ENODE **)NULL,symi,0).low : i);
     return (4LL);
 }
 
 int64_t initint(Symbol* symi, int64_t i, int opt)
 {
-	GenerateInt(opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : i);
+	GenerateInt(ofs, opt ? GetIntegerExpression((ENODE**)NULL, symi, 0).low : i);
 	return (8LL);
 }
 
 int64_t initlong(Symbol* symi, int opt)
 {
-	GenerateLong(opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i128 : *Int128::Zero());
+	GenerateLong(ofs, opt ? GetIntegerExpression((ENODE**)NULL,symi,0) : symi->enode ? symi->enode->i128 : *Int128::Zero());
     return (16LL);
 }
 
 int64_t initquad(Symbol* symi, int opt)
 {
-	GenerateQuad(opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
+	GenerateQuad(ofs, opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
 	return (16LL);
 }
 
 int64_t initfloat(Symbol* symi, int opt)
 {
-	GenerateFloat(opt ? GetFloatExpression((ENODE **)NULL, symi): symi->enode ? &symi->enode->f128 : &symi->f128);
+	GenerateFloat(ofs, opt ? GetFloatExpression((ENODE **)NULL, symi): symi->enode ? &symi->enode->f128 : &symi->f128);
 	return (8LL);
 }
 
 int64_t initPosit(Symbol* symi, int opt)
 {
-	GeneratePosit(opt ? GetPositExpression((ENODE**)NULL, symi) : 0);
+	GeneratePosit(ofs, opt ? GetPositExpression((ENODE**)NULL, symi) : 0);
 	return (8LL);
 }
 
 int64_t inittriple(Symbol* symi, int opt)
 {
-	GenerateQuad(opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
+	GenerateQuad(ofs, opt ? GetFloatExpression((ENODE **)NULL, symi) : Float128::Zero());
 	return (12LL);
 }
 
+// Dead code
 int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 {   
 	Symbol *sp;
@@ -540,9 +660,9 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 	TYP *tp;
 	bool need_end = false;
 	Expression exp(cg.stmt);
-
+/*
 	if (opt==0) {
-		GenerateLong(0);
+		GenerateLong(ofs, 0);
 		return (sizeOfPtr);
 	}
 	sp = nullptr;
@@ -557,7 +677,7 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 			return (lng);
 		}
 	}
-    if(lastst == bitandd) {     /* address of a variable */
+    if(lastst == bitandd) {     /* address of a variable
         NextToken();
 				//tp = expression(&n);
 				n = nullptr;
@@ -610,7 +730,7 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
             if( sp->storage_class == sc_auto)
                     error(ERR_NOINIT);
         }
-				*/
+				
     }
     else if(lastst == sconst || lastst == asconst) {
 			char *str;
@@ -663,7 +783,9 @@ int64_t InitializePointer(TYP *tp2, int opt, Symbol* symi)
 	if (need_end)
 		needpunc(end, 8);
 	endinit();
-    return (sizeOfPtr);       /* pointers are 8 bytes long */
+    return (sizeOfPtr);       /* pointers are 8 bytes long
+	*/
+	return(0);
 }
 
 void endinit()

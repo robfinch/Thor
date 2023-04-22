@@ -140,7 +140,7 @@ void error(int n)
 
 void fatal(char *str)
 {
-	currentFn->pl.flush();
+	currentFn->pl.flush(ofs);
 	printf(str);
 	closefiles();
 	getchar();

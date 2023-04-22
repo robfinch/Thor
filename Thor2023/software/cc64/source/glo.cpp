@@ -162,6 +162,8 @@ int bsave_mask;
 short int loop_active;
 ENODE* gNameRefNode;
 TABLE* gCurrentTbl;
+std::map<int, std::string*> DataLabelMap;
+CSet string_exclude;
 
 #ifdef THOR
 ThorCodeGenerator cg;

@@ -63,7 +63,7 @@ void Function::GenerateName(bool force)
 	lbl = std::string("");
 	if (IsCoroutine)
 		GenerateCoroutineData();
-	cseg();
+	cseg(ofs);
 	if (sym->storage_class == sc_static)
 	{
 		//lbl = GetNamespace() + std::string("_");
@@ -255,7 +255,7 @@ void Function::GenerateBody(bool force_inline)
 				(insn_cnt < inline_threshold)) && force_inline && !IsPrototype)
 			IsInline = true;
 		PeepOpt();
-		FlushPeep();
+		FlushPeep(ofs);
 		switch (syntax) {
 		case MOT:
 			break;
@@ -1311,26 +1311,26 @@ void Function::GenerateCoroutineData()
 {
 	std::string str;
 
-	seg(dataseg, 8);
+	seg(ofs, dataseg, 8);
 	str = MakeConame(*sym->mangledName, "target");
-	gen_strlab((char *)str.c_str());
+	gen_strlab(ofs,(char *)str.c_str());
 	ofs.printf("\t.8byte\t%s\n", (char*)MakeConame(*sym->mangledName, "first").c_str());
 	str = MakeConame(*sym->mangledName, "orig_lr");
-	gen_strlab((char*)str.c_str());
+	gen_strlab(ofs, (char*)str.c_str());
 	ofs.printf("\t.8byte\t0\n");
 	str = MakeConame(*sym->mangledName, "orig_fp");
-	gen_strlab((char*)str.c_str());
+	gen_strlab(ofs, (char*)str.c_str());
 	ofs.printf("\t.8byte\t0\n");
 	str = MakeConame(*sym->mangledName, "orig_sp");
-	gen_strlab((char*)str.c_str());
+	gen_strlab(ofs, (char*)str.c_str());
 	ofs.printf("\t.8byte\t0\n");
 	str = MakeConame(*sym->mangledName, "fp_save");
-	gen_strlab((char*)str.c_str());
+	gen_strlab(ofs, (char*)str.c_str());
 	ofs.printf("\t.8byte\t0\n");
 	str = MakeConame(*sym->mangledName, "sp_save");
-	gen_strlab((char*)str.c_str());
+	gen_strlab(ofs, (char*)str.c_str());
 	ofs.printf("\t.8byte\t0\n");
-	seg(codeseg, 16);
+	seg(ofs, codeseg, 16);
 }
 
 // Generate the entry code for a coroutine
@@ -2019,7 +2019,7 @@ void Function::Summary(Statement *stmt)
 
 	dfs.printf("<FuncSummary>\n");
 	irfs.printf("\nFunction:%s\n", (char *)this->sym->name->c_str());
-	nl();
+	nl(ofs);
 	CheckForUndefinedLabels();
 	lc_auto = 0;
 	lfs.printf("\n\n*** local symbol table ***\n\n");

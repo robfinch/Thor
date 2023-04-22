@@ -39,33 +39,33 @@ extern int litlist(ENODE *, char*);
 void FreeFunction(Function *fn);
 
 // Outcode.cpp
-extern std::streampos genstorage(int64_t nbytes);
-extern void GenerateByte(int64_t val);
-extern void GenerateChar(int64_t val);
-extern void GenerateHalf(int64_t val);
-extern void GenerateWord(int64_t val);
-extern void GenerateInt(int64_t val);
-extern void GenerateLong(Int128 val);
-extern void GenerateFloat(Float128 *val);
-extern void GenerateQuad(Float128 *);
-extern void GenerateReference(Symbol *sp, int64_t offset);
-extern void GenerateLabelReference(int n, int64_t, char*);
+extern std::streampos genstorage(txtoStream& tfs, int64_t nbytes);
+extern void GenerateByte(txtoStream&, int64_t val);
+extern void GenerateChar(txtoStream&, int64_t val);
+extern void GenerateHalf(txtoStream&, int64_t val);
+extern void GenerateWord(txtoStream&, int64_t val);
+extern void GenerateInt(txtoStream&, int64_t val);
+extern void GenerateLong(txtoStream&, Int128 val);
+extern void GenerateFloat(txtoStream&, Float128 *val);
+extern void GenerateQuad(txtoStream&, Float128 *);
+extern void GenerateReference(txtoStream&, Symbol *sp, int64_t offset);
+extern void GenerateLabelReference(txtoStream&, int n, int64_t, char*);
 // Outcode.c
-extern void gen_strlab(char* s);
-extern void dumplits();
+extern void gen_strlab(txtoStream& tfs, char* s);
+extern void dumplits(txtoStream& tfs);
 extern int  stringlit(char* s);
 extern int quadlit(Float128* f128);
-extern void nl(txtoStream* str = nullptr);
-extern void seg(int sg, int algn);
-extern void cseg();
-extern void dseg();
-extern void tseg();
+extern void nl(txtoStream&);
+extern void seg(txtoStream&, int sg, int algn);
+extern void cseg(txtoStream&);
+extern void dseg(txtoStream&);
+extern void tseg(txtoStream&);
 //extern void put_code(int op, int len,Operand *aps, Operand *apd, Operand *);
-extern void put_code(OCODE*);
-extern char* put_label(int lab, char*, char*, char, int);
-extern char* put_label(int lab, const char*, const char*, char, int);
+extern void put_code(txtoStream&, OCODE*);
+extern char* put_label(txtoStream&, int lab, char*, char*, char, int);
+extern char* put_label(txtoStream&, int lab, const char*, const char*, char, int);
 extern char* gen_label(int lab, char*, char*, char, int);
-extern char* put_labels(char*);
+extern char* put_labels(txtoStream&, char*);
 extern char* opstr(int op);
 
 extern char *RegMoniker(int regno);
@@ -110,7 +110,7 @@ extern int countLeadingZeros(int64_t val);
 extern Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
 
 extern Posit64 GetPositExpression(ENODE** pnode, Symbol* symi);
-extern void GeneratePosit(Posit64 val);
+extern void GeneratePosit(txtoStream& tfs, Posit64 val);
 
 extern int64_t initbyte(Symbol* symi, int opt);
 extern int64_t initchar(Symbol* symi, int opt);
@@ -136,5 +136,6 @@ int IdentifyPrecision();
 
 extern void GenerateTriadic(int op, int len, Operand* ap1, Operand* ap2, Operand* ap3);
 void AppendFiles();
+char* GetPrivateNamespace();
 
 #endif

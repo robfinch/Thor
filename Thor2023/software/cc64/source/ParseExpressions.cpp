@@ -3101,6 +3101,8 @@ ascomm:
 				NextToken();
 				tp2 = ParseAssignOps(&ep2, symi);
 ascomm2:
+				ep1->i_rhs = ep2->i;
+				ep2->i_lhs = ep1->i;
 		    if ( tp2 == 0 || !IsLValue(ep1) )
           error(ERR_LVALUE);
 				else {

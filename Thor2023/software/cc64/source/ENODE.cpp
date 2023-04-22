@@ -2334,6 +2334,26 @@ e_node StringToNodetype(char* str)
 	return ((e_node)-1);
 };
 
+std::string* ENODE::GetLabconLabel(int64_t ii)
+{
+	char buf[400];
+
+#ifdef LOCAL_LABELS
+	sprintf_s(buf, sizeof(buf), "%s.%05lld", ""/*(char*)currentFn->sym->GetFullName()->c_str()*/, i);
+#else
+	//		sprintf_s(buf, sizeof(buf), "%s.%05lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
+	if (DataLabelMap[ii])
+		sprintf_s(buf, sizeof(buf), "%s.%05lld", DataLabelMap[ii]->c_str(), ii);
+	else {
+		if (sym && sym->storage_class == sc_static)
+			DataLabelMap[ii] = new std::string(GetPrivateNamespace());
+		else
+			DataLabelMap[ii] = new std::string(GetNamespace());
+		sprintf_s(buf, sizeof(buf), "%s.%05lld", (char*)DataLabelMap[ii]->c_str(), ii);
+	}
+#endif
+	return (new std::string(buf));
+}
 
 void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshift, bool opt, int display_opt)
 {
@@ -2437,13 +2457,8 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_labcon:
 	j1:
-#ifdef LOCAL_LABELS
-		sprintf_s(buf, sizeof(buf), "%s.%05lld", ""/*(char*)currentFn->sym->GetFullName()->c_str()*/, i);
-#else
-		sprintf_s(buf, sizeof(buf), "%s.%05lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
-#endif
 		DataLabels[i] = true;
-		ofs.write(buf);
+		ofs.write(GetLabconLabel(i)->c_str());
 		if (rshift > 0) {
 			sprintf_s(buf, sizeof(buf), ">>%d", rshift);
 			ofs.write(buf);
@@ -2525,27 +2540,27 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 extern int outcol;
 extern int gentype;
 
-void ENODE::GenerateShort()
+void ENODE::GenerateShort(txtoStream& tfs)
 {
 	int64_t sz;
 	Int128 i128, t128;
 
 	if (gentype == halfgen && outcol < 60) {
-		ofs.printf(",");
+		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
 			t128 = Int128(p[0]->tp->btpp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
 			p[1]->i = i128.low;
 		}
 		else
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 		outcol += 10;
 	}
 	else {
-		nl();
+		nl(tfs);
 		if (syntax == MOT) {
 			ofs.printf("\tdc.l\t");
 			if (p[1]) {
@@ -2557,7 +2572,7 @@ void ENODE::GenerateShort()
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		else {
 			ofs.printf("\t.4byte\t");
@@ -2565,12 +2580,12 @@ void ENODE::GenerateShort()
 				i128 = p[1]->i128;
 				t128 = Int128(p[0]->tp->btpp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		gentype = halfgen;
 		outcol = 25;
@@ -2578,52 +2593,52 @@ void ENODE::GenerateShort()
 	genst_cumulative += 4;
 }
 
-void ENODE::GenerateInt()
+void ENODE::GenerateInt(txtoStream& tfs)
 {
 	int64_t sz;
 	Int128 i128, t128;
 
 	if (gentype == halfgen && outcol < 60) {
-		ofs.printf(",");
+		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
 			t128 = Int128(p[0]->tp->btpp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
 			p[1]->i = i128.low;
 		}
 		else
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 		outcol += 10;
 	}
 	else {
-		nl();
+		nl(tfs);
 		if (syntax == MOT) {
-			ofs.printf("\tdc.d\t");
+			tfs.printf("\tdc.d\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
 				t128 = Int128(p[0]->tp->btpp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		else {
-			ofs.printf("\t.8byte\t");
+			tfs.printf("\t.8byte\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
 				t128 = Int128(p[0]->tp->btpp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		gentype = halfgen;
 		outcol = 25;
@@ -2631,52 +2646,52 @@ void ENODE::GenerateInt()
 	genst_cumulative += 4;
 }
 
-void ENODE::GenerateLong()
+void ENODE::GenerateLong(txtoStream& tfs)
 {
 	int64_t sz;
 	Int128 i128, t128;
 
 	if (gentype == longgen && outcol < 60) {
-		ofs.printf(",");
+		tfs.printf(",");
 		if (p[1]) {
 			i128 = p[1]->i128;
 			t128 = Int128(p[0]->tp->btpp->size);
 			Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 			p[1]->i128 = i128;
 			p[1]->i = i128.low;
 		}
 		else
-			PutConstant(ofs, 0, 0, false, 0);
+			PutConstant(tfs, 0, 0, false, 0);
 		outcol += 10;
 	}
 	else {
-		nl();
+		nl(tfs);
 		if (syntax == MOT) {
 			ofs.printf("\tdc.q\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
 				t128 = Int128(p[0]->tp->btpp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		else {
-			ofs.printf("\t.8byte\t");
+			tfs.printf("\t.8byte\t");
 			if (p[1]) {
 				i128 = p[1]->i128;
 				t128 = Int128(p[0]->tp->btpp->size);
 				Int128::Mul(&p[1]->i128, &p[1]->i128, &t128);
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 				p[1]->i128 = i128;
 				p[1]->i = i128.low;
 			}
 			else
-				PutConstant(ofs, 0, 0, false, 0);
+				PutConstant(tfs, 0, 0, false, 0);
 		}
 		gentype = longgen;
 		outcol = 25;
@@ -2918,6 +2933,7 @@ int ENODE::load(char *buf)
 		p[3] = compiler.ef.Makenode();
 		ndx += p[3]->load(&buf[ndx]);
 	}
+	return (0);
 }
 
 int ENODE::PutStructConst(txtoStream& ofs)

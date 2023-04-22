@@ -46,7 +46,7 @@ void Declaration::MakeFunction(Symbol* sp, Symbol* sp1)
 	dfs.printf("</MakeFunction>\n");
 }
 
-int Declaration::GenerateStorage(int nbytes, int al, int ilc)
+int Declaration::GenerateStorage(txtoStream& tfs, int nbytes, int al, int ilc)
 {
 	static long old_nbytes;
 	int bcnt;
@@ -59,9 +59,9 @@ int Declaration::GenerateStorage(int nbytes, int al, int ilc)
 	dfs.printf("E");
 	if ((ilc + nbytes) % head->roundAlignment()) {
 		if (al == sc_thread)
-			tseg();
+			tseg(tfs);
 		else
-			dseg();
+			dseg(tfs);
 	}
 	bcnt = 0;
 	while ((ilc + nbytes) % head->roundAlignment()) {
@@ -70,7 +70,7 @@ int Declaration::GenerateStorage(int nbytes, int al, int ilc)
 	}
 	if (al != sc_member && al != sc_external && al != sc_auto) {
 		if (bcnt > 0)
-			genstorage(bcnt);
+			genstorage(tfs, bcnt);
 	}
 	return (nbytes);
 }

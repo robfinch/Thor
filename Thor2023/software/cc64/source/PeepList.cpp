@@ -1274,7 +1274,7 @@ void PeepList::loadHex(txtiStream& ifs)
 //
 // Output all code and labels in the peep list.
 //
-void PeepList::flush()
+void PeepList::flush(txtoStream& tfs)
 {
 	static bool first = true;
 	txtoStream* oofs;
@@ -1297,14 +1297,14 @@ void PeepList::flush()
 	{
 		if (ip->opcode == op_label) {
 			if (ip->str) {
-				ofs.printf("%s:\n", (char*)ip->oper1);
+				tfs.printf("%s:\n", (char*)ip->oper1);
 				//ofs.printf("%s", (char *)currentFn->sym->mangledName->c_str());
 			}
 			else
-				put_label((int)ip->oper1, (char *)"", GetNamespace(), 'C', 0);
+				put_label(tfs, (int)ip->oper1, (char *)"", GetNamespace(), 'C', 0);
 		}
 		else
-			ip->store(ofs);
+			ip->store(tfs);
 	}
 }
 

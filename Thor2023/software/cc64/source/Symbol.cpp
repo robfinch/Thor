@@ -798,7 +798,7 @@ int Symbol::AdjustNbytes(int nbytes, int al, int ztype)
 // Initialize the type. Unions can't be initialized. Oh yes they can.
 // The node list coming in already has proper types assigned to it.
 
-int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
+int64_t Symbol::Initialize(txtoStream& tfs, ENODE* pnode, TYP* tp2, int opt)
 {
 	static int level = 0;
 	int64_t nbytes;
@@ -818,7 +818,7 @@ int64_t Symbol::Initialize(ENODE* pnode, TYP* tp2, int opt)
 		else if (tp2->IsScalar())
 			pnode = makeinode(en_icon, 0);
 	}
-	return (GenerateT(pnode, tp2));
+	return (GenerateT(tfs, pnode, tp2));
 	/*
 	do {
 		//if (lastst == assign)
@@ -905,15 +905,42 @@ j2:
 	return (nbytes);
 }
 
-int64_t Symbol::InitializeArray(ENODE* rootnode, TYP* tp)
+int64_t Symbol::InitializeArray(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 {
 	int64_t nbytes;
 	int64_t count;
 	ENODE* node, *temp;
+	ENODE tnode;
 	List* lst, *hlst;
 	bool oval;
 
 	nbytes = 0;
+
+	// Do we have a pointer to a character type? These may be initialized with a
+	// string.
+	if (rootnode->tp->btpp->IsCharType()) {
+		if (rootnode->sp) {
+			string_exclude.add(rootnode->i);
+			for (count = 0; count < rootnode->sp->length() && (count < tp->size || tp->unknown_size); count++) {
+				tnode.nodetype = en_icon;
+				tnode.i = rootnode->sp->c_str()[count];
+				nbytes += GenerateT(tfs, &tnode, rootnode->tp->btpp);
+			}
+			// Generate null character at end of string.
+			tnode.nodetype = en_icon;
+			tnode.i = 0;
+			nbytes += GenerateT(tfs, &tnode, rootnode->tp->btpp);
+			count++;
+			if (nbytes < tp->size)
+				genstorage(tfs, tp->size - nbytes);
+			if (tp->unknown_size) {
+				tp->numele = count;
+				return (count * tp->btpp->size);
+			}
+			return (tp->size);
+		}
+	}
+
 	node = rootnode;
 	hlst = lst = node->ReverseList(node);
 	for (count = tp->numele; lst != nullptr; lst = lst->nxt) {
@@ -932,7 +959,7 @@ int64_t Symbol::InitializeArray(ENODE* rootnode, TYP* tp)
 				lst->node->tp->val_flag = false;
 			}
 			if (true || !ENODE::initializedSet.isMember(node->number)) {
-				nbytes += Initialize(node, tp->btpp, 0);
+				nbytes += Initialize(tfs, node, tp->btpp, 0);
 //				ENODE::initializedSet.add(node->number);
 			}
 			if (tp->dimen < 2)
@@ -941,12 +968,12 @@ int64_t Symbol::InitializeArray(ENODE* rootnode, TYP* tp)
 		}
 	}
 	if (nbytes < tp->size)
-		genstorage(tp->size - nbytes);
+		genstorage(tfs, tp->size - nbytes);
 	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
+int64_t Symbol::InitializeStruct(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 {
 	static int level = 0;
 	Symbol* sp, *hd;
@@ -988,14 +1015,14 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
 					node = makeinode(en_icon, 0);
 					node->SetType(&stdint);
 				}
-				nbytes += sp->Initialize(node, t, 0);
+				nbytes += sp->Initialize(tfs, node, t, 0);
 //				ENODE::initializedSet.add(node->number);
 			}
 		}
 		else {
 			temp = makeinode(en_icon, 0);
 			temp->tp = &stdint;
-			nbytes += sp->Initialize(temp, sp->tp, 0);
+			nbytes += sp->Initialize(tfs, temp, sp->tp, 0);
 		}
 		sp = sp->nextp;
 		if (sp == hd || sp == nullptr)
@@ -1003,14 +1030,14 @@ int64_t Symbol::InitializeStruct(ENODE* rootnode, TYP* tp)
 		count++;
 	}
 	if (nbytes < tp->size)
-		genstorage(tp->size - nbytes);
+		genstorage(tfs, tp->size - nbytes);
 	//	needpunc(end, 26);
 	level--;
 	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
+int64_t Symbol::InitializeUnion(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 {
 	Symbol* sp, * osp;
 	int64_t nbytes;
@@ -1043,7 +1070,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 		ne = ntp->numele;
 		ntp = ntp->btpp;
 		for (count = 0; count < 1; count++)
-			nbytes += ntp->GenerateT(node);
+			nbytes += ntp->GenerateT(tfs, node);
 //		ENODE::initializedSet.add(node->number);
 	}
 	else if (ntp->type != bt_union) {
@@ -1052,7 +1079,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 				if (lst->node == rootnode)
 					continue;
 				if (!ENODE::initializedSet.isMember(lst->node->number)) {
-					nbytes += GenerateT(lst->node, ntp);
+					nbytes += GenerateT(tfs, lst->node, ntp);
 //					ENODE::initializedSet.add(lst->node->number);
 				}
 				ntp = lst->node->tp;
@@ -1081,7 +1108,7 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 			for (osp = sp = tp->lst.headp; sp != nullptr; sp = sp->nextp) {
 				if (TYP::IsSameType(sp->tp, node->tp, false)) {
 					if (!ENODE::initializedSet.isMember(node->number)) {
-						nbytes = GenerateT(node, sp->tp);
+						nbytes = GenerateT(tfs, node, sp->tp);
 						ENODE::initializedSet.add(node->number);
 					}
 					found = true;
@@ -1097,12 +1124,12 @@ int64_t Symbol::InitializeUnion(ENODE* rootnode, TYP* tp)
 		}
 	}
 	if (nbytes < tp->size)
-		genstorage(tp->size - nbytes);
+		genstorage(tfs, tp->size - nbytes);
 	delete[] hlst;
 	return (tp->size);
 }
 
-int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
+int64_t Symbol::GenerateT(txtoStream& tfs, ENODE* node, TYP* ptp)
 {
 	int64_t nbytes;
 	int64_t val;
@@ -1121,82 +1148,81 @@ int64_t Symbol::GenerateT(ENODE* node, TYP* ptp)
 	switch (ptp->type) {
 	case bt_byte:
 		val = node->i;
-		nbytes = 1; GenerateByte(val);
+		nbytes = 1; GenerateByte(tfs, val);
 		break;
 	case bt_ubyte:
 		val = node->i;
 		nbytes = 1;
-		GenerateByte(val);
+		GenerateByte(tfs, val);
 		break;
 	case bt_ichar:
 	case bt_char:
 	case bt_enum:
 		val = node->i;
-		nbytes = 2; GenerateChar(val); break;
+		nbytes = 2; GenerateChar(tfs, val); break;
 	case bt_iuchar:
 	case bt_uchar:
 		val = node->i;
-		nbytes = 2; GenerateChar(val); break;
+		nbytes = 2; GenerateChar(tfs, val); break;
 	case bt_short:
 		val = node->i;
-		nbytes = 4; GenerateHalf(val); break;
+		nbytes = 4; GenerateHalf(tfs, val); break;
 	case bt_ushort:
 		val = node->i;
-		nbytes = 4; GenerateHalf(val); break;
+		nbytes = 4; GenerateHalf(tfs, val); break;
 	case bt_int:
 	case bt_uint:
 		val = node->i;
-		nbytes = 8; GenerateInt(val); break;
+		nbytes = 8; GenerateInt(tfs, val); break;
 	case bt_long:
 		val = node->i;
-		nbytes = 8; GenerateLong(val); break;
+		nbytes = 8; GenerateLong(tfs, val); break;
 	case bt_exception:
 	case bt_ulong:
 		val = node->i;
-		nbytes = 8; GenerateLong(val); break;
+		nbytes = 8; GenerateLong(tfs, val); break;
 	case bt_float:
-		nbytes = 8; GenerateFloat((Float128*)&node->f128); break;
+		nbytes = 8; GenerateFloat(tfs, (Float128*)&node->f128); break;
 	case bt_double:
-		nbytes = 8; GenerateFloat((Float128*)&node->f128); break;
+		nbytes = 8; GenerateFloat(tfs, (Float128*)&node->f128); break;
 	case bt_quad:
-		nbytes = 16; GenerateQuad((Float128*)&node->f128); break;
+		nbytes = 16; GenerateQuad(tfs, (Float128*)&node->f128); break;
 	case bt_posit:
-		nbytes = 8; GeneratePosit(node->posit); break;
+		nbytes = 8; GeneratePosit(tfs, node->posit); break;
 	case bt_struct:
-		nbytes = InitializeStruct(node, ptp);
+		nbytes = InitializeStruct(tfs, node, ptp);
 		break;
 	case bt_union:
-		nbytes = InitializeUnion(node, ptp);
+		nbytes = InitializeUnion(tfs, node, ptp);
 		break;
 	case bt_pointer:
 		// Is it an array?
 		if (ptp->val_flag)
-			nbytes = InitializeArray(node, ptp);
+			nbytes = InitializeArray(tfs, node, ptp);
 		else {
 			if (ptp->btpp->IsAggregateType()) {
 				if (ptp->btpp->type == bt_union)
-					InitializeUnion(node, ptp->btpp);
+					nbytes = InitializeUnion(tfs, node, ptp->btpp);
 				else if (ptp->btpp->type == bt_struct)
-					InitializeStruct(node, ptp->btpp);
+					nbytes = InitializeStruct(tfs, node, ptp->btpp);
 			}
 			else {
-				val = node->i;
 				if (node->nodetype == en_labcon) {
-					GenerateLabelReference(val, 0, (char *)"");
+					GenerateLabelReference(tfs, node->i_lhs, 0, (char *)node->GetLabconLabel(node->i_lhs)->c_str());
 				}
 				else {
 					nbytes = sizeOfPtr;
 					switch (sizeOfPtr) {
-					case 4: node->GenerateShort(); break;
-					case 8: node->GenerateInt(); break;
-					case 16: node->GenerateLong(); break;
+					case 4: node->GenerateShort(tfs); break;
+					case 8: node->GenerateInt(tfs); break;
+					case 16: node->GenerateLong(tfs); break;
 					}
 				}
 			}
 		}
 		break;
 	case bt_array:
-		nbytes = InitializeArray(node, ptp);
+		nbytes = this->InitializeArray(tfs, node, ptp);
 		break;
 		//case bt_struct:	nbytes = InitializeStruct(); break;
 	default:

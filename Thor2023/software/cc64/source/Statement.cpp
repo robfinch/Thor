@@ -354,7 +354,7 @@ Statement *Statement::ParseCatch()
 	}
 	catchdecl = TRUE;
 	compiler.ad.Parse(nullptr, &snp->ssyms);
-	cseg();
+	cseg(ofs);
 	catchdecl = FALSE;
 	needpunc(closepa, 34);
 
@@ -599,7 +599,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	snp->ssyms.ownerp = currentFn->sym;
 	compiler.ad.Parse(currentFn->sym, &snp->ssyms);
 	//ad.Parse(nullptr, &snp->ssyms);
-	cseg();
+	cseg(ofs);
 	// Add the first statement at the head of the list.
 	if (lastst == kw_prolog) {
 		NextToken();

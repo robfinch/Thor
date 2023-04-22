@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <string>
 #include <math.h>
+#include <map>
 #include <stdlib.h>
 
 #define snprintf	sprintf_s

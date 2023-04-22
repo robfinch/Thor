@@ -362,7 +362,7 @@ Symbol** TABLE::GetParameters()
 				params[thead->parmno] = thead;
 			}
 		}
-		thead = thead->GetNextPtr();
+		thead = thead->nextp;
 		if (thead == first) {
 			dfs.printf("Circular list.\n");
 			throw new C64PException(ERR_CIRCULAR_LIST, 1);
@@ -378,7 +378,7 @@ void TABLE::AddTo(TABLE* dst)
 	thead = headp;
 	first = thead;
 	while (thead != nullptr) {
-		next = thead->GetNextPtr();
+		next = thead->nextp;
 		if (thead->IsParameter) {
 			dst->insert(thead);
 		}

@@ -261,7 +261,7 @@ public:
 	void RemoveGPLoad();
 	void RemoveRegsave();
 	void RemoveEnterLeave();
-	void flush();
+	void flush(txtoStream& tfs);
 	void SetLabelReference();
 	void EliminateUnreferencedLabels();
 	OCODE* FindTarget(OCODE *ip, int reg, OCODE* eip = nullptr);
@@ -424,7 +424,7 @@ public:
 
 	// Optimization
 	void PeepOpt();
-	void FlushPeep() { pl.flush(); };
+	void FlushPeep(txtoStream& tfs) { pl.flush(tfs); };
 
 	// Code generation
 	Operand *MakeDataLabel(int lab, int ndxreg);
@@ -549,11 +549,11 @@ public:
 } ;
 	void SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype);
 	int AdjustNbytes(int nbytes, int al, int ztype);
-	int64_t Initialize(ENODE* pnode, TYP* tp2, int opt);
-	int64_t InitializeArray(ENODE*, TYP*);
-	int64_t InitializeStruct(ENODE*, TYP*);
-	int64_t InitializeUnion(ENODE*, TYP*);
-	int64_t GenerateT(ENODE* node, TYP* tp);
+	int64_t Initialize(txtoStream& tfs, ENODE* pnode, TYP* tp2, int opt);
+	int64_t InitializeArray(txtoStream& tfs, ENODE*, TYP*);
+	int64_t InitializeStruct(txtoStream& tfs, ENODE*, TYP*);
+	int64_t InitializeUnion(txtoStream& tfs, ENODE*, TYP*);
+	int64_t GenerateT(txtoStream& tfs, ENODE* node, TYP* tp);
 	void storeHex(txtoStream& ofs);
 };
 
@@ -572,6 +572,7 @@ public:
 	bool isResv;
 	bool isBits;
 	bool isDecimal;
+	bool unknown_size;	// true if the array size is unknown
 	__int16 precision;			// precision of the numeric in bits
 	ENODE* bit_width;
 	ENODE* bit_offset;
@@ -597,6 +598,11 @@ public:
 	static TYP *Copy(TYP *src);
 	bool IsScalar();
 	static bool IsScalar(e_sym kw);
+	bool IsCharType() const {
+		if (this == nullptr)
+			return (false);
+		return (type == bt_char || type == bt_uchar || type == bt_ichar || type == bt_iuchar);
+	};
 	bool IsFloatType() const { 
 		if (this == nullptr)
 			return (false);
@@ -624,12 +630,12 @@ public:
 	ENODE *BuildEnodeTree();
 
 	// Initialization
-	int64_t GenerateT(ENODE *node);
-	int64_t InitializeArray(int64_t sz, Symbol* symi);
-	int64_t InitializeStruct(ENODE*, Symbol* symi);
-	int64_t InitializeUnion(Symbol* symi, ENODE* node);
-	int64_t Initialize(int64_t val, Symbol* symi);
-	int64_t Initialize(ENODE* node, TYP *, int opt, Symbol* symi);
+	int64_t GenerateT(txtoStream& tfs, ENODE *node);
+	int64_t InitializeArray(txtoStream& tfs, int64_t sz, Symbol* symi);
+	int64_t InitializeStruct(txtoStream& tfs, ENODE*, Symbol* symi);
+	int64_t InitializeUnion(txtoStream& tfs, Symbol* symi, ENODE* node);
+	int64_t Initialize(txtoStream& tfs, int64_t val, Symbol* symi);
+	int64_t Initialize(txtoStream& tfs, ENODE* node, TYP *, int opt, Symbol* symi);
 
 	// Serialization
 	char* ToString(int ndx = 0);
@@ -703,6 +709,8 @@ public:
 	// The value information is represented directly in the class for several
 	// classes for convenience in referencing.
 	int64_t i;
+	int64_t i_lhs;					// i of node being assign to
+	int64_t i_rhs;					// i of node being assigned from
 	double f;
 	double f1, f2;
 	Int128 i128;
@@ -813,14 +821,15 @@ public:
 	void storeHex(txtoStream& ofs);
 	void loadHex(txtiStream& ifs);
 
+	std::string* GetLabconLabel(int64_t ii);
 	int PutStructConst(txtoStream& ofs);
 	void PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshift, bool opt = false, int display_opt = 0);
 	void PutConstantHex(txtoStream& ofs, unsigned int lowhigh, unsigned int rshift);
 	static ENODE *GetConstantHex(std::ifstream& ifs);
-	void GenerateHalf() {};
-	void GenerateInt();
-	void GenerateShort();
-	void GenerateLong();
+	void GenerateHalf(txtoStream& tfs) {};
+	void GenerateInt(txtoStream& tfs);
+	void GenerateShort(txtoStream& tfs);
+	void GenerateLong(txtoStream& tfs);
 
 	// Utility
 	void ResetSegmentCount() { ZeroMemory(&segcount, sizeof(segcount)); };
@@ -2139,7 +2148,7 @@ public:
 	void DoInsert(Symbol *sp, TABLE *table);
 	Symbol *FindSymbol(Symbol *sp, TABLE *table);
 
-	int GenerateStorage(int nbytes, int al, int ilc);
+	int GenerateStorage(txtoStream& tfs, int nbytes, int al, int ilc);
 	static Function* MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline);
 	static void MakeFunction(Symbol* sp, Symbol* sp1);
 	void FigureStructOffsets(int64_t bgn, Symbol* sp);

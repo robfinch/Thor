@@ -124,6 +124,8 @@ extern int64_t rodata_base_address;
 extern int64_t bss_base_address;
 extern int64_t data_base_address;
 
+extern CSet string_exclude;
+
 /*
 extern FILE             *input,
                         *list,
@@ -308,30 +310,15 @@ extern int my_isspace(char c);
 extern void getbase(int64_t);
 extern void SkipSpaces();
 
-// Stmt.c
-extern Statement *ParseCompoundStatement();
-
 // Symbol.c
 extern Symbol *gsearch(std::string na);
 extern Symbol *search(std::string na,TABLE *thead);
 extern void insert(Symbol* sp, TABLE *table);
 
-// ParseFunction.c
-extern Symbol *BuildParameterList(Symbol *sp, int *);
-
 extern char *my_strdup(char *);
 // Decl.c
 extern int imax(int i, int j);
 extern TYP *maketype(int bt, int siz);
-extern void dodecl(int defclass);
-extern int ParseParameterDeclarations(int);
-extern void ParseAutoDeclarations(Symbol *sym, TABLE *table);
-extern int ParseSpecifier(TABLE *table);
-extern Symbol* ParseDeclarationPrefix(char isUnion);
-extern int ParseStructDeclaration(int);
-extern void ParseEnumerationList(TABLE *table);
-extern int ParseFunction(Symbol *sp);
-extern int declare(Symbol *sym,TABLE *table,int al,int ilc,int ztype);
 extern void initstack();
 extern int getline(int listflag);
 extern void compile();
@@ -431,5 +418,6 @@ extern int window_pos;
 extern txtoStream irfs;
 extern CSet* ru, * rru;
 extern OCODE* gHeadif;
+extern std::map<int, std::string*> DataLabelMap;
 
 #endif

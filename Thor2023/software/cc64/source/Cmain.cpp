@@ -495,6 +495,13 @@ void closefiles()
 
 char *GetNamespace()
 {
-	return nmspace[0];
+	return ((char *)currentFn->sym->name->c_str());
+//	return nmspace[0];
 //	return nmspace[incldepth];
+}
+
+char* GetPrivateNamespace()
+{
+	return nmspace[0];
+	//	return nmspace[incldepth];
 }

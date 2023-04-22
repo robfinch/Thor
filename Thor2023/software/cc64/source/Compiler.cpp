@@ -101,7 +101,7 @@ void Compiler::compile()
 
 	// Setup a master function.
 	fsp = allocSYM();
-	fsp->name = new std::string("__program");
+	fsp->name = new std::string(nmspace[0]);
 	fsp->storage_class = sc_global;
 	fsp->tp = &stdint;
 	programFn = currentFn = ff.MakeFunction(fsp->id, fsp, false);
@@ -121,6 +121,7 @@ void Compiler::compile()
 	lstackptr = 0;
 	lastst = 0;
 	NextToken();
+	string_exclude.clear();
 	try {
 		while(lastst != my_eof)
 		{
@@ -142,7 +143,11 @@ void Compiler::compile()
 		dfs.printf(errtext(ex->errnum));
  		dfs.printf("</compile>\n");
 	}
-	dumplits();
+	dumplits(ofs);
+	// Cleanup the label map
+	for (nn = 0; nn < nextlabel; nn++)
+		if (DataLabelMap[nn])
+			delete DataLabelMap[nn];
 }
 
 int Compiler::PreprocessFile(char *nm)

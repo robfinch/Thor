@@ -209,24 +209,27 @@ TYP* Expression::ParseStringConst(ENODE** node)
 	TYP* tptr;
 
 	str = GetStrConst();
-	if (sizeof_flag) {
+//	if (sizeof_flag) {
 		tptr = (TYP*)TYP::Make(bt_pointer, 0);
-		tptr->size = strlen(str) + (int64_t)1;
+		tptr->size = strlen(str);
 		tptr->btpp = TYP::Make(bt_char, 2);
-		tptr->btp = tptr->btpp->GetIndex();// stdchar.GetIndex();
 		tptr->val_flag = true;
 		tptr->isUnsigned = true;
-	}
+//	}
+	/*
 	else {
 		tptr = &stdstring;
 	}
+	*/
 	pnode = makenodei(en_labcon, (ENODE*)NULL, 0);
-	if (sizeof_flag == 0)
+	if (sizeof_flag == 0) {
 		pnode->i = stringlit(str);
+		pnode->sp = new std::string(&str[1]);
+	}
 	free(str);
 	*node = pnode;
 	pnode->etype = bt_pointer;
-	pnode->esize = 2;
+	pnode->esize = sizeOfPtr;
 	pnode->constflag = true;
 	pnode->segment = rodataseg;
 	pnode->SetType(tptr);
@@ -408,9 +411,24 @@ void Expression::ParseAggregateArray(ENODE** node, ENODE* cnode, Symbol* symi, T
 		else
 			break;
 	}
-	maxcount = count+1;
-	for (count = 0; count < maxcount; count++)
+	maxcount = max(count+1,tp->numele);
+	for (count = 0; count < maxcount; count++) {
+		if (node_array[count] == nullptr)
+			node_array[count] = makenode(en_void, nullptr, nullptr);
 		pnode = makenode(en_void, pnode, node_array[count]);
+		if (node_array[count]->tp == nullptr) {
+			if (tp->type == bt_pointer)
+				node_array[count]->nodetype = en_icon;
+			else
+				node_array[count]->nodetype = en_icon;
+			node_array[count]->tp = tp->btpp;
+			node_array[count]->i = 0;
+			node_array[count]->i128.low = 0;
+			node_array[count]->i128.high = 0;
+			node_array[count]->f = 0.0;
+			node_array[count]->f128 = *Float128::Zero();
+		}
+	}
 	/*
 	pnode = makenode(en_end_aggregate, pnode, nullptr);
 	pnode->SetType(TYP::Copy(&stdptr));
@@ -628,6 +646,16 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	std::string str;
 
 	NextToken(0);
+
+	// A string constant enclosed in aggregate brackets is treated as just a
+	// string constant.
+
+	if (lastst == sconst) {
+		tptr = ParseStringConst(node);
+		needpunc(e_sym::end, 79);
+		return (tptr);
+	}
+
 	hnode = pnode = makenode(en_aggregate, nullptr, nullptr);
 	pnode->order = 0;
 	parsingAggregate++;
@@ -708,11 +736,10 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	hnode->esize = tp->size;// hnode->tp->size;
 	pnode->esize = tp->size;// pnode->tp->size;
 	str = "";
-	if (currentFn) {
-		str.append(*currentFn->sym->GetFullName());
-		hnode->i = litlist(pnode, (char*)str.c_str());
-		pnode->i = litlist(pnode, (char*)str.c_str());
-	}
+//	str.append(*currentFn->sym->GetFullName());
+	str.append(GetPrivateNamespace());
+	hnode->i = litlist(pnode, (char*)str.c_str());
+	pnode->i = litlist(pnode, (char*)str.c_str());
 	hnode->segment = cnst ? rodataseg : dataseg;
 	pnode->segment = cnst ? rodataseg : dataseg;
 	hnode->constflag = true;
