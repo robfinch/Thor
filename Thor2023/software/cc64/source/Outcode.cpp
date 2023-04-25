@@ -46,7 +46,7 @@ struct nlit *numeric_tab = nullptr;
 // Please keep table in alphabetical order.
 // Instruction.cpp has the number of table elements hard-coded in it.
 //
-Instruction opl[338] =
+Instruction opl[345] =
 {   
 { "#", op_remark },
 { "#asm",op_asm,300 },
@@ -152,12 +152,12 @@ Instruction opl[338] =
 { "fdiv.s", op_fsdiv,80,1,false },
 { "fi2d", op_i2d,2,1,false },
 { "fix2flt", op_fix2flt },
-{ "fload", op_fldo, 4, 1, true, am_reg, am_mem, 0, 0 },
+{ "fload", op_fload, 4, 1, true, am_reg, am_mem, 0, 0 },
 { "flt2fix",op_flt2fix },
 { "fmov", op_fmov,1,1 },
 { "fmov.d", op_fdmov,1,1 },
 { "fmul", op_fdmul,10,1,false,am_reg,am_reg,am_reg,0 },
-{ "fmul", op_fmul, 10, 1, false, am_reg, am_reg, am_reg, 0 },
+{ "fmul", op_fmul, 10, 1, false, am_reg|am_vreg, am_reg|am_vreg, am_reg|am_vreg, 0 },
 { "fmul.s", op_fsmul,10,1,false },
 { "fneg", op_fneg,2,1,false,am_reg,am_reg,0,0 },
 { "fs2d", op_fs2d,2,1,false,am_reg,am_reg,0,0 },
@@ -223,14 +223,15 @@ Instruction opl[338] =
 { "link",op_link,4,1,true,am_imm,0,0,0 },
 { "lm", op_lm },
 { "load", op_load,4,1,true,am_reg,am_mem,0,0 },
+{ "loadg", op_loadg,4,1,true,am_reg,am_mem,0,0 },
 { "loadi",op_ldi,1,1,false,am_reg,am_imm,0,0 },
+{ "loadv", op_loadv,4,1, true, am_vreg, am_mem,0,0 },
 { "loadz", op_loadz,4,1,true,am_reg,am_mem,0,0 },
 { "loop", op_loop,1,0 },
 { "lslor", op_lslor,2,1,false,am_reg,am_reg,am_reg | am_ui6,am_reg|am_ui6 },
 { "lsr", op_lsr,2,1,false,am_reg,am_reg,am_reg|am_ui6,0 },
 { "lt",op_lt },
 { "ltu", op_ltu },
-{ "lv", op_lv,256,1 },
 { "lvbu", op_lvbu,4,1,true ,am_reg,am_mem,0,0 },
 { "lvcu", op_lvcu,4,1,true ,am_reg,am_mem,0,0 },
 { "lvhu", op_lvhu,4,1,true ,am_reg,am_mem,0,0 },
@@ -342,6 +343,7 @@ Instruction opl[338] =
 { "sto",op_sto,4,0,true,am_reg,am_mem,0,0 },
 { "stop", op_stop },
 { "store",op_store,4,0,true,am_reg,am_mem,0,0 },
+{ "storeg",op_storeg,4,0,true,am_reg,am_mem,0,0 },
 { "stos",op_stos,4,0,true,am_reg,am_mem,0,0 },
 { "stp",op_stp,4,0,true,am_reg,am_mem,0,0 },
 { "stt",op_stt,4,0,true,am_reg,am_mem,0,0 },
@@ -364,12 +366,17 @@ Instruction opl[338] =
 { "tst",op_tst,1,1 },
 { "unlink",op_unlk,4,2,true },
 { "vadd", op_vadd,10,1,false, am_vreg,am_vreg,am_vreg,0 },
-{ "vadds", op_vadds,10 },
+{ "vadds", op_vadds,1,1,false,am_vreg,am_vreg | am_reg,am_reg,am_vmreg },
 { "vdiv", op_vdiv,100,1,false, am_vreg,am_vreg,am_vreg,0 },
 { "vdivs", op_vdivs,100 },
 { "veins",op_veins,10 },
 { "ver", op_verbatium,0,1,false, 0,0,0,0 },
 { "vex", op_vex,10 },
+{ "vfadd", op_vfadd,10,1,false, am_vreg,am_vreg,am_vreg,0 },
+{ "vfadds", op_vfadds,10,1,false, am_vreg, am_vreg, am_reg,0 },
+{ "vfmul", op_vfmul,10,1,false, am_vreg,am_vreg,am_vreg,0 },
+{ "vfmuls", op_vfmuls,10,1,false, am_vreg, am_vreg, am_reg,0 },
+{ "vmask", op_vmask,1,1,false, am_reg,am_reg,am_reg,am_reg },
 { "vmul", op_vmul,10,1,false, am_vreg,am_vreg,am_vreg,0 },
 { "vmuls", op_vmuls,10 },
 { "vseq", op_vseq,10,1,false, am_vreg,am_vreg,am_vreg,0 },
@@ -423,30 +430,63 @@ char *RegMoniker(int regno)
 	static char buf[4][20];
 	static int n;
 	int rg;
+	bool invert = false;
+	bool vector = false;
+	bool group = false;
 
+	if (regno & rt_group) {
+		group = true;
+		regno &= 0xff;
+	}
+	if (regno & rt_invert) {
+		invert = true;
+		regno &= 0xbf;
+	}
+	if (regno & rt_vector) {
+		vector = true;
+		regno &= 0x3f;
+	}
 	n = (n + 1) & 3;
+	if (vector) {
+		if (invert)
+			sprintf_s(&buf[n][0], 20, "~v%d", regno);
+		else
+			sprintf_s(&buf[n][0], 20, "v%d", regno);
+		return (&buf[n][0]);
+	}
+	if (group) {
+		if (invert)
+			sprintf_s(&buf[n][0], 20, "~g%d", regno);
+		else
+			sprintf_s(&buf[n][0], 20, "g%d", regno);
+		return (&buf[n][0]);
+	}
+
 	if (rg = IsTempReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "t%d", rg-1);// tmpregs[rg - 1]);
+		if (invert)
+			sprintf_s(&buf[n][0], 20, "~t%d", rg - 1);// tmpregs[rg - 1]);
+		else
+			sprintf_s(&buf[n][0], 20, "t%d", rg-1);// tmpregs[rg - 1]);
 	}
 	else if (rg = IsArgReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
+		if (invert)
+			sprintf_s(&buf[n][0], 20, "~a%d", rg - 1);// tmpregs[rg - 1]);
+		else
+			sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
 	}
 	else if (rg = IsSavedReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "s%d", rg - 1);
+		if (invert)
+			sprintf_s(&buf[n][0], 20, "~s%d", rg - 1);
+		else
+			sprintf_s(&buf[n][0], 20, "s%d", rg - 1);
 	}
 	else
-		if (regno==regCS)
-			sprintf_s(&buf[n][0], 20, "$b15");
-		else if (regno == regRS)
-			sprintf_s(&buf[n][0], 20, "$b14");
-		else if (regno==regFP)
+		if (regno==regFP)
 			sprintf_s(&buf[n][0], 20, "fp");
 //		else if (regno == regAFP)
 //			sprintf_s(&buf[n][0], 20, "$afp");
 		else if (regno==regGP)
 			sprintf_s(&buf[n][0], 20, "gp");
-		else if (regno==regPC)
-			sprintf_s(&buf[n][0], 20, "pc");
 		else if (regno == regGP1)
 			sprintf_s(&buf[n][0], 20, "gp1");
 		else if (regno==regXLR)
@@ -459,21 +499,14 @@ char *RegMoniker(int regno)
 		sprintf_s(&buf[n][0], 20, "lr1");
 	else if (regno == regLR+1)
 		sprintf_s(&buf[n][0], 20, "lr2");
-	else if (regno==114)
-		sprintf_s(&buf[n][0], 20, "$cn");
-	else if (regno >= 128 && regno < 144) {
-		sprintf_s(&buf[n][0], 20, "ca%d", (regno-128)>>1);
-	}
-	else if (regno==1)
-		sprintf_s(&buf[n][0], 20, "r%d", regno);
+	else if (regno == 0) {
+			if (invert)
+				sprintf_s(&buf[n][0], 20, "~r%d", regno);
+			else
+				sprintf_s(&buf[n][0], 20, "r%d", regno);
+		}
 	else if (regno == 2)
 			sprintf_s(&buf[n][0], 20, "r%d", regno);
-	else if (regno >= regFirstArg && regno <= regLastArg)
-		sprintf_s(&buf[n][0], 20, "a%d", regno-regFirstArg);
-	else if (regno >= regFirstTemp && regno <= regLastTemp)
-		sprintf_s(&buf[n][0], 20, "t%d", regno-regFirstTemp);
-	else if (regno >= regFirstRegvar && regno <= regLastRegvar)
-		sprintf_s(&buf[n][0], 20, "s%d", regno - regFirstRegvar);
 	else {
 		if ((regno & 0x70) == 0x040)
 			sprintf_s(&buf[n][0], 20, "$p%d", regno & 0x1f);
@@ -482,70 +515,6 @@ char *RegMoniker(int regno)
 		else
 			sprintf_s(&buf[n][0], 20, "r%d", regno);
 	}
-	return &buf[n][0];
-}
-
-char *RegMoniker2(int regno)
-{
-	static char buf[4][20];
-	static int n;
-	int rg;
-
-	n = (n + 1) & 3;
-	if (rg = IsTempReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "t%d", rg-1);// tmpregs[rg - 1]);
-	}
-	else if (rg = IsArgReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "a%d", rg - 1);// tmpregs[rg - 1]);
-	}
-	else if (rg = IsSavedReg(regno)) {
-		sprintf_s(&buf[n][0], 20, "s%d", rg - 1);
-	}
-	else
-		if (regno == regCS)
-			sprintf_s(&buf[n][0], 20, "$b15");
-		else if (regno == regRS)
-			sprintf_s(&buf[n][0], 20, "$b14");
-		else if (regno == regFP)
-		sprintf_s(&buf[n][0], 20, "fp");
-//	else if (regno == regAFP)
-//		sprintf_s(&buf[n][0], 20, "$afp");
-	else if (regno == regGP)
-		sprintf_s(&buf[n][0], 20, "gp");
-	else if (regno == regPC)
-		sprintf_s(&buf[n][0], 20, "pc");
-	else if (regno == regGP1)
-		sprintf_s(&buf[n][0], 20, "gp1");
-	else if (regno == regXLR)
-		sprintf_s(&buf[n][0], 20, "$xlr");
-//	else if (regno == regPC)
-//		sprintf_s(&buf[n][0], 20, "$pc");
-	else if (regno == regSP)
-		sprintf_s(&buf[n][0], 20, "sp");
-	else if (regno == regLR)
-		sprintf_s(&buf[n][0], 20, "lr1");
-	else if (regno == regLR + 1)
-		sprintf_s(&buf[n][0], 20, "lr2");
-	else if (regno == 1)
-		sprintf_s(&buf[n][0], 20, "r%d", regno);
-	else if (regno == 2)
-		sprintf_s(&buf[n][0], 20, "r%d", regno);
-	else if (regno >= regFirstArg && regno <= regLastArg)
-		sprintf_s(&buf[n][0], 20, "a%d", regno - regFirstArg);
-	else if (regno >= regFirstTemp && regno <= regLastTemp)
-		sprintf_s(&buf[n][0], 20, "t%d", regno - regFirstTemp);
-	else if (regno >= regFirstRegvar && regno <= regLastRegvar)
-		sprintf_s(&buf[n][0], 20, "s%d", regno - regFirstRegvar);
-	else if (regno >= 128 && regno < 144) {
-		sprintf_s(&buf[n][0], 20, "ca%d", (regno - 128) >> 1);
-	}
-	else
-		if ((regno & 0x70) == 0x040)
-			sprintf_s(&buf[n][0], 20, "$p%d", regno & 0x1f);
-		else if ((regno & 0x70) == 0x070)
-			sprintf_s(&buf[n][0], 20, "$cr%d", regno & 0x3);
-		else
-			sprintf_s(&buf[n][0], 20, "r%d", regno);
 	return &buf[n][0];
 }
 

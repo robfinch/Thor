@@ -43,6 +43,12 @@ int64_t roundWord(int64_t n)
 	return (n);
 }
 
+int64_t roundQuadWord(int64_t n)
+{
+	while (n % (sizeOfWord * 4)) n++;
+	return (n);
+}
+
 int popcnt(int64_t m)
 {
 	int n;
@@ -96,7 +102,6 @@ int countLeadingBits(int64_t val)
 
 int countLeadingZeros(int64_t val)
 {
-	int64_t b;
 	int64_t mask;
 	int count;
 

@@ -10,13 +10,13 @@
 									used for temporaries. */
 #define MARK	-1			/* Marks cells that are in use but are not the
 									first cell of the region */
-typedef int CELL;			/* In-use (Region) map is an array of these */
+typedef int64_t CELL;			/* In-use (Region) map is an array of these */
 
-int tmpVarSpace();
+int64_t tmpVarSpace();
 void tmpFreeAll();
 void tmpReset();
-int tmpAlloc(int);
-void tmpFree(int);
+int64_t tmpAlloc(int64_t);
+void tmpFree(int64_t);
 
 static CELL Region[REGION_MAX];
 static CELL *HighWaterMark = Region;
@@ -32,7 +32,7 @@ static CELL *HighWaterMark = Region;
 	(Bad code is generated, but so what?)
 --------------------------------------------------------------------------- */
 
-int tmpAlloc(int size)
+int64_t tmpAlloc(int64_t size)
 {
 	CELL *start, *p;
 	int i;
@@ -83,13 +83,13 @@ int tmpAlloc(int size)
    tmp_alloc().
 --------------------------------------------------------------------------- */
 
-void tmpFree(int offset)
+void tmpFree(int64_t offset)
 {
 	CELL *p = Region + offset/SWIDTH;
 	int size;
 
 	if (p < Region || p > HighWaterMark || !*p || *p == MARK)
-		printf("INTERNAL, tmpFree: Bad offset (%d)\n", offset);
+		printf("INTERNAL, tmpFree: Bad offset (%i64d)\n", offset);
 	else
 		for (size = *p; --size >= 0; *p++ = 0)
 			;
@@ -136,7 +136,7 @@ void tmpFreeAll()
 		Size in stack elements of temporary variable area.
 --------------------------------------------------------------- */
 
-int tmpVarSpace()
+int64_t tmpVarSpace()
 {
 	return (HighWaterMark - Region)*SWIDTH;
 }

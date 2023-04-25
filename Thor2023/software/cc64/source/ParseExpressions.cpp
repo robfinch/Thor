@@ -67,9 +67,11 @@ TYP             stdistring;
 TYP             stdastring;
 TYP				stddbl;
 TYP				stdtriple;
-TYP				stdflt;
-TYP				stddouble;
-TYP				stdquad;
+TYP	stdflt;
+TYP stdhalf;
+TYP	stdsingle;
+TYP	stddouble;
+TYP	stdquad;
 TYP				stdposit;
 TYP				stdposit32;
 TYP				stdposit16;
@@ -1386,7 +1388,7 @@ j1:
 		pnode->SetType(tptr);
 		break;
 
-  case kw_this:
+	case kw_this:
 		pnode = ParseThis(node);
 		tptr = currentSym->tp;
 		break;
@@ -1505,6 +1507,8 @@ bool IsLValue(ENODE *node)
 		return (IsLValue(node->p[1]));
 	// Pointer to function?
 	case en_cnacon:
+		return (true);
+	case en_regvar:
 		return (true);
 	}
 /*
@@ -1819,6 +1823,7 @@ j1:
 												__bytendx(a,b)
 												__wydendx(a,b)
 												__bmap(a,b)
+												__save_context()
  //                     new 
  *
  */
@@ -1908,6 +1913,11 @@ TYP *Expression::ParseUnaryExpression(ENODE **node, int got_pa, Symbol* symi)
 
 	case kw_bmap:
 		ep1 = ParseBmap(symi);
+		tp = ep1->tp;
+		break;
+
+	case kw_save_context:
+		ep1 = ParseSaveContext(symi);
 		tp = ep1->tp;
 		break;
 

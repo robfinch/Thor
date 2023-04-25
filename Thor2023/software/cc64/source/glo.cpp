@@ -32,6 +32,7 @@ CPU cpu;
 int pass;
 int maxPn = 15;
 int gCpu = 7;
+int regTS = 52;
 int regPC = 53;
 int regSP = 63;
 int regFP = 62;
@@ -78,7 +79,7 @@ int address_bits = 32;
 int maxVL = 64;
 int nregs = 128;
 
-int64_t sizeOfWord = 16;
+int sizeOfWord = 16;
 int sizeOfFP = 16;
 int sizeOfFPS = 4;
 int sizeOfFPD = 8;
@@ -120,7 +121,7 @@ char int_precision = ' ';
 int parseEsc = TRUE;
 
 TABLE           gsyms[257];// = {0,0},
-bool DataLabels[65535];
+int DataLabels[65535];
 	           
 Symbol             *lasthead = (Symbol *)NULL;
 Float128		*quadtab = nullptr;

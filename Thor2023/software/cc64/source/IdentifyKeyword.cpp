@@ -221,6 +221,20 @@ int IdentifyKeyword()
 			return lastst = kw_void;
 		if (p[1]=='o' && p[2]=='l' && p[3]=='a' && p[4]=='t' && p[5]=='i' && p[6]=='l' && p[7]=='e' && p[8]=='\0')
 			return lastst = kw_volatile;
+		if (p[1] == 'm') {
+			if (p[3] == '\0') {
+				switch (p[2]) {
+				case '0': return (lastst = kw_vm0);
+				case '1': return (lastst = kw_vm1);
+				case '2': return (lastst = kw_vm2);
+				case '3': return (lastst = kw_vm3);
+				case '4': return (lastst = kw_vm4);
+				case '5': return (lastst = kw_vm5);
+				case '6': return (lastst = kw_vm6);
+				case '7': return (lastst = kw_vm7);
+				}
+			}
+		}
 	}
 	if (p[0]=='r' && p[1]=='e') {	// return,register,restrict
 		if (p[2]=='t' && p[3]=='u' && p[4]=='r' && p[5]=='n' && p[6]=='\0')
@@ -344,7 +358,7 @@ int IdentifyKeyword()
 
 
 	// __cdecl,__asm,__int64,__int32,__int16,__int8,__check,__exception,__task,__unordered,__leafs,__attribute__
-	// __no_temps __no_parms __floatmax __mulf __bmap
+	// __no_temps __no_parms __floatmax __mulf __bmap __save_context
 	if (p[0]=='_' && p[1]=='_') {
 		if (p[2]=='a' && p[3]=='s' && p[4]=='m' && p[5]=='\0')
 			return lastst = kw_asm;
@@ -398,6 +412,8 @@ int IdentifyKeyword()
 			return (lastst = kw_bmap);
 		if (p[2] == 'd' && p[3] == 'e' && p[4] == 'c' && p[5] == 'l' && p[6] == 's' && p[7] == 'p' && p[8] == 'e' && p[9] == 'c' && p[10] == '\0')
 			return (lastst = kw_declspec);
+		if (strcmp(&p[2], "save_context") == 0)
+			return (lastst == kw_save_context);
 	}
 
 	if (p[0] == '_') {

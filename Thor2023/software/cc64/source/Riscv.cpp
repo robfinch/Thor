@@ -1035,3 +1035,55 @@ void RiscvCodeGenerator::GenerateReturnInsn()
 {
 	GenerateDiadic(op_jal, 0, makereg(regZero), makereg(regLR));
 }
+
+void RiscvCodeGenerator::GenerateInterruptSave(Function* func)
+{
+	int nn, kk;
+	int64_t tsm = func->int_save_mask;
+
+	nn = popcnt(tsm);
+	// Allocate storage for registers on stack
+	GenerateSubtractFrom(makereg(regSP), MakeImmediate(nn * sizeOfWord));
+	for (kk = nn = 0; nn < 63; nn++) {
+		if (tsm & 1) {
+			GenerateStore(makereg(nn), MakeIndexed(kk * sizeOfWord, regSP), sizeOfWord);
+			kk++;
+			tsm = tsm >> 1;
+		}
+	}
+	if (DoesContextSave) {
+		for (kk = 0; kk < 16; kk++)
+			GenerateDiadic(op_storeg, 0, makereg(kk | rt_group), MakeIndexed(kk * sizeOfWord * 4, regTS));
+	}
+	if (sp_init) {
+		GenerateLoadConst(MakeImmediate(sp_init), makereg(regSP));
+	}
+	/*
+	if (stkname) {
+		GenerateDiadic(op_lea, 0, makereg(SP), MakeStringAsNameConst(stkname,dataseg));
+		GenerateTriadic(op_ori, 0, makereg(SP), makereg(SP), MakeImmediate(0xFFFFF00000000000LL));
+	}
+	*/
+}
+
+void RiscvCodeGenerator::GenerateInterruptLoad(Function* func)
+{
+	int nn, kk;
+	int64_t tsm = func->int_save_mask;
+
+	if (DoesContextSave) {
+		for (kk = 0; kk < 16; kk++)
+			GenerateDiadic(op_loadg, 0, makereg(kk | rt_group), MakeIndexed(kk * sizeOfWord * 4, regTS));
+	}
+
+	nn = popcnt(tsm);
+	for (kk = nn = 0; nn < 63; nn++) {
+		if (tsm & 1) {
+			GenerateLoad(makereg(nn), MakeIndexed(kk * sizeOfWord, regSP), sizeOfWord, sizeOfWord);
+			kk++;
+			tsm = tsm >> 1;
+		}
+	}
+	// Deallocate stack storage
+	GenerateAddOnto(makereg(regSP), MakeImmediate(nn * sizeOfWord));
+}

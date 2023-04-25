@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 MachineReg regs[3072];
+MachineReg vregs[3072];
 
 bool MachineReg::IsCalleeSave(int regno)
 {
@@ -26,6 +27,11 @@ bool MachineReg::IsFloatReg()
 bool MachineReg::IsArgReg()
 {
 	return (::IsArgReg(number & 0x3ff));
+};
+
+bool MachineReg::IsArgReg(int regno)
+{
+	return (::IsArgReg(regno & 0x3ff));
 };
 
 void MachineReg::MarkColorable()

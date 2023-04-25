@@ -48,7 +48,7 @@ public:
 		zr.high = 0LL;
 		return (&zr);
 	};
-	static Int128 MakeMask(int64_t width) {
+	static Int128 MakeMask(int width) {
 		Int128 a;
 		Int128 one;
 
@@ -59,7 +59,7 @@ public:
 		return (a);
 	};
 
-	static Int128 MakeMask(int64_t offset, int64_t width) {
+	static Int128 MakeMask(int offset, int width) {
 		Int128 a;
 
 		a = MakeMask(width);

@@ -169,6 +169,7 @@ int OCODE::GetTargetReg(int *rg1, int *rg2) const
 		*rg2 = 0;
 		return (0);
 	}
+	return (0);
 }
 
 OCODE *OCODE::Clone(OCODE *c)
@@ -195,6 +196,73 @@ void OCODE::Swap(OCODE *ip1, OCODE *ip2)
 	ip1->back = ip2;
 	ip2->fwd = ip1;
 	ip2->back = ip1b;
+}
+
+void OCODE::OptVmask()
+{
+	int count;
+	OCODE* ip;
+
+	ip = this->fwd;
+	for (count = 1; count < 5; count++, ip = ip->fwd) {
+
+		// If there is no room in the vmask modifier, exit.
+		if (oper2 != nullptr && oper3 != nullptr && oper4 != nullptr)
+			return;
+
+		// Abort if a label encountered.
+		if (ip->opcode == op_label)
+			return;
+		// If pc changing instruction encountered, exit.
+		if (ip->insn->IsFlowControl())
+			return;
+		if (ip->opcode == op_vmask) {
+			if (count==2)
+				if (this->oper2 == nullptr) {
+					this->oper2 = ip->oper1;
+					ip->oper1 = nullptr;
+				}
+			if (count==3)
+				if (this->oper3 == nullptr) {
+					if (ip->oper1 != nullptr) {
+						this->oper3 = ip->oper1;
+						ip->oper1 = nullptr;
+					}
+					else {
+						this->oper3 = ip->oper2;
+						ip->oper2 = nullptr;
+					}
+				}
+			if (count==4)
+				if (this->oper4 == nullptr) {
+					if (ip->oper1 != nullptr) {
+						this->oper4 = ip->oper1;
+						ip->oper1 = nullptr;
+					}
+					else if (ip->oper2 != nullptr) {
+						this->oper4 = ip->oper2;
+						ip->oper2 = nullptr;
+					}
+					else {
+						this->oper4 = ip->oper3;
+						ip->oper3 = nullptr;
+					}
+				}
+				if (ip->oper1 == nullptr && ip->oper2 == nullptr && ip->oper3 == nullptr && ip->oper4 == nullptr) {
+					ip->MarkRemove();
+					optimized++;
+				}
+			if (ip->remove)
+				count--;
+			continue;
+		}
+		if (count == 2)
+			this->oper2 = makereg(regZero);
+		if (count == 3)
+			this->oper3 = makereg(regZero);
+		if (count == 4)
+			this->oper4 = makereg(regZero);
+	}
 }
 
 
@@ -735,7 +803,7 @@ void OCODE::OptBra()
 	bool opt = false;
 
 	for (p = fwd; p && (p->opcode == op_label); p = p->fwd)
-		if (oper1->offset->i == (int)p->oper1) {
+		if (oper1->offset->i == (int64_t)p->oper1) {
 			MarkRemove();
 			optimized++;
 			opt = true;
@@ -767,8 +835,9 @@ void OCODE::OptUctran()
 	while (fwd != nullptr && fwd->opcode != op_label)
 	{
 		fwd = fwd->fwd;
-		if (fwd != nullptr)
+		if (fwd != nullptr) {
 			fwd->back = this;
+		}
 		optimized++;
 	}
 }
@@ -1017,7 +1086,7 @@ void OCODE::OptSll()
 		if (retargetted && dorem) {
 			if (ip->oper2->sreg == oper1->preg) {
 				ip->oper2->sreg = oper3->preg;
-				ip->oper2->scale = oper4->offset->i;
+				ip->oper2->scale = (int8_t)oper4->offset->i;
 				ip->oper2->scale = 1 << oper4->offset->i;
 				optimized++;
 				this->MarkRemove();
@@ -1037,7 +1106,7 @@ void OCODE::OptSll()
 	}
 	if (ip->oper2->sreg == oper1->preg) {
 		ip->oper2->sreg = oper3->preg;
-		ip->oper2->scale = oper4->offset->i;
+		ip->oper2->scale = (int8_t)oper4->offset->i;
 		ip->oper2->scale = 1 << oper4->offset->i;
 		optimized++;
 		this->MarkRemove();
@@ -1203,7 +1272,6 @@ void OCODE::OptHint()
 {
 	OCODE *frwd, *bck;
 	Operand *am;
-	int rg1, rg2;
 
 	if ((back && back->opcode == op_label) || (fwd && fwd->opcode == op_label))
 		return;
@@ -1229,7 +1297,7 @@ void OCODE::OptHint()
 			return;
 		}
 
-		if (fwd && fwd->oper1->preg >= regFirstArg && fwd->oper1->preg < regLastArg) {
+		if (fwd && IsArgReg(fwd->oper1->preg)) {
 			if (OCODE::IsEqualOperand(fwd->oper2, back->oper1)) {
 				back->oper1 = fwd->oper1;
 				MarkRemove();
@@ -1285,7 +1353,8 @@ void OCODE::OptHint()
 			if (back->HasTargetReg()) {
 				int rg1, rg2;
 				back->GetTargetReg(&rg1, &rg2);
-				if (!(fwd->oper1->mode == am_reg && (back->opcode & 0x7fff) == cpu.ldi_op)) {
+				if (!((fwd->oper1->mode == am_reg || fwd->oper1->mode == am_vreg) &&
+					(back->opcode & 0x7fff) == cpu.ldi_op)) {
 					// Search forward to see if the target register is used anywhere.
 					for (frwd = fwd->fwd; frwd; frwd = frwd->fwd) {
 						// If the register has been targeted again, it is okay to opt.

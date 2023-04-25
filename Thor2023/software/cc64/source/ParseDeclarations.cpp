@@ -181,9 +181,10 @@ void Declaration::ParseInterrupt()
 	sp_init = 0LL;
 	DoesContextSave = false;
 	NextToken();
+	int_save_mask = 0;
 	if (lastst == openpa) {
 		NextToken();
-		sp_init = GetIntegerExpression(nullptr,nullptr,0).low;
+		int_save_mask = GetIntegerExpression(nullptr,nullptr,0).low;
 		/*
 		if (lastst!=id)
 				error(ERR_IDEXPECT);
@@ -573,21 +574,28 @@ void Declaration::ParseFloat128()
 	bit_max = head->precision;
 }
 
-void Declaration::ParseVector()
+void Declaration::ParseVector(TABLE* table, Symbol** sym, e_sc sc)
 {
 	TYP* btp;
 
-	head = (TYP *)TYP::Make(bt_double,sizeOfFPD);
-	tail = head;
+	NextToken();
+	if (IsScalar((e_sym)lastst)) {
+		ParseSpecifier(table, sym, sc);
+		btp = head;
+	}
+	else if (IsFloat((e_sym)lastst)) {
+		ParseSpecifier(table, sym, sc);
+		btp = head;
+	}
+	else {
+		btp = head = TYP::Make(bt_single, sizeOfFPS);
+	}
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
-	NextToken();
-	btp = head;
-	head = TYP::Make(bt_vector,512);
-	head->numele = maxVL;
+	head = TYP::Make(bt_vector,64);
+	head->numele = 64 / btp->size;
 	head->btpp = btp;
 	tail = head;
-	NextToken();
 	bit_max = head->precision;
 }
 
@@ -810,6 +818,17 @@ bool Declaration::IsScalar(e_sym lastst)
 		);
 }
 
+bool Declaration::IsFloat(e_sym lastst)
+{
+	return (
+		lastst == kw_half ||
+		lastst == kw_float ||
+		lastst == kw_double ||
+		lastst == kw_quad ||
+		lastst == kw_single
+		);
+}
+
 // Parse a specifier. This is the first part of a declaration.
 // Returns:
 // 0 usually, 1 if only a specifier is present
@@ -959,7 +978,7 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 				bit_max = head->precision;
 				goto lxit;
 
-			case kw_vector:	ParseVector(); goto lxit;
+			case kw_vector:	ParseVector(table, sym, sc); goto lxit;
 			case kw_vector_mask: ParseVectorMask(); goto lxit;
 
 			case kw_void:	ParseVoid(); goto lxit;
@@ -1383,6 +1402,21 @@ void Declaration::ParseSuffixOpenbr()
 	tempt = tail;
 	for (nn = 0; lastst == openbr; nn++) {
 		NextToken();
+		// We allow a vector type variable to specify the working number of elements,
+		// which is an optional specification. Empty brackets mean to use the full
+		// size of the vector.
+		if (head->type == bt_vector) {
+			if (lastst != closebr) {
+				sz2 = (int)GetIntegerExpression((ENODE**)NULL, nullptr, 1).low;
+				head->numele = sz2;
+				needpunc(closebr, 22);
+				return;
+			}
+			else {
+				NextToken();
+				return;
+			}
+		}
 		dimen[nn] = (TYP*)TYP::Make(bt_pointer, sizeOfPtr);
 		dimen[nn]->val_flag = 1;
 		dimen[nn]->isArray = true;
@@ -2375,6 +2409,8 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			if (sp->storage_class == sc_member)
 				table->insert(sp);
 			else {
+				if (sp && sp->fi)
+					sp->fi->int_save_mask = int_save_mask;
 				if (ParseFunction(table, sp, parent, al, local)) {
 					if (local) {
 						table->insert(sp);// ownerp->lsyms.insert(sp);

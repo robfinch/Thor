@@ -54,7 +54,7 @@ void txtoStream::printf(char *fmt, int n)
 	write(buf);
 }
 
-void txtoStream::printf(char *fmt, __int64 n)
+void txtoStream::printf(char *fmt, int64_t n)
 {
   if (level==0)
     return;

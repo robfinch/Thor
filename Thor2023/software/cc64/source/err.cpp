@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2012-2022  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2012-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -104,14 +104,17 @@ static const char *errtextstr[] = {
 	"E Integer constant between 0 and 255 required.",
 	"E Extra ')'.",
 	"E End of file reached.",
-	"E Bad precision."
+	"E Bad precision.",
+	"E Calling unknown function, arguments may not be removed correctly.",
+	"E Missing parameter specification, is the function declared?"
 };
 
 static const char *errtext1000[] =
 {
 	"E Compiler: null pointer encountered",
 	"E Compiler: circular list",
-	"E Compiler: missing hidden structure pointer"
+	"E Compiler: missing hidden structure pointer",
+	"E Compiler: code generation missing"
 };
 
 char *errtext(int errnum)

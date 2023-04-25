@@ -36,7 +36,7 @@ Operand *OperandFactory::MakeDataLabel(int lab, int ndxreg)
 	lnode = allocEnode();
 	lnode->nodetype = en_labcon;
 	lnode->i = lab;
-	DataLabels[lab] = true;
+	DataLabels[lab]++;
 	ap = allocOperand();
 	if (ndxreg != regZero) {
 		ap->mode = am_indx;

@@ -209,111 +209,101 @@ void CodeGenerator::GenerateLoadAddress(Operand* ap3, Operand* ap1)
 	GenerateDiadic(op_lea, 0, ap3, ap1);
 }
 
-void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size)
+void CodeGenerator::GenerateLoad(Operand *ap3, Operand *ap1, int ssize, int size, Operand* mask)
 {
 	if (ap3->typep==&stdposit) {
 		switch (ap3->tp->precision) {
 		case 16:
-			GenerateDiadic(op_pldw, 0, ap3, ap1);
+			GenerateTriadic(op_pldw, 0, ap3, ap1, mask);
 			break;
 		case 32:
-			GenerateDiadic(op_pldt, 0, ap3, ap1);
+			GenerateTriadic(op_pldt, 0, ap3, ap1, mask);
 			break;
 		default:
-			GenerateDiadic(op_pldo, 0, ap3, ap1);
+			GenerateTriadic(op_pldo, 0, ap3, ap1, mask);
 			break;
 		}
 	}
 	else if (ap3->typep==&stdvector) {
-        GenerateDiadic(op_lv,0,ap3,ap1);
+		GenerateTriadic(op_loadv,0,ap3,ap1, mask);
 	}
-	else if (ap3->typep == &stdflt) {
-		GenerateDiadic(op_fldo, 0, ap3, ap1);
-	}
-	else if (ap3->typep==&stddouble) {
-		GenerateDiadic(op_fldo, 0, ap3,ap1);
-	}
-	else if (ap3->typep == &stdquad) {
-		GenerateDiadic(op_ldf, 'q', ap3, ap1);
-	}
-	else if (ap3->typep == &stdtriple) {
-		GenerateDiadic(op_ldf, 't', ap3, ap1);
-	}
+	else if (ap3->typep->IsFloatType())
+		GenerateLoadFloat(ap3, ap1, ssize, size, mask);
 	//else if (ap3->mode == am_fpreg) {
-	//	GenerateDiadic(op_fldo, 0, ap3, ap1);
+	//	GenerateTriadic(op_fldo, 0, ap3, ap1);
 	//}
 	else if (ap3->isUnsigned) {
 		// If size is zero, probably a pointer to void being processed.
 			switch (size) {
-			case 0: GenerateDiadic(op_loadz, 0, ap3, ap1); break;
-			case 1:	GenerateDiadic(op_loadz, 'b', ap3, ap1); break;
-			case 2:	GenerateDiadic(op_loadz, 'w', ap3, ap1); break;
-			case 4:	GenerateDiadic(op_loadz, 't', ap3, ap1); break;
-			case 8: GenerateDiadic(op_loadz, 'o', ap3, ap1); break;
-			case 16:	GenerateDiadic(op_load, 0, ap3, ap1); break;
+			case 0: GenerateTriadic(op_loadz, 0, ap3, ap1, mask); break;
+			case 1:	GenerateTriadic(op_loadz, 'b', ap3, ap1, mask); break;
+			case 2:	GenerateTriadic(op_loadz, 'w', ap3, ap1, mask); break;
+			case 4:	GenerateTriadic(op_loadz, 't', ap3, ap1, mask); break;
+			case 8: GenerateTriadic(op_loadz, 'o', ap3, ap1, mask); break;
+			case 16:	GenerateTriadic(op_load, 0, ap3, ap1, mask); break;
 			}
     }
     else {
 			switch (size) {
-			case 0: GenerateDiadic(op_load, 0, ap3, ap1); break;
-			case 1:	GenerateDiadic(op_load, 'b', ap3, ap1); break;
-			case 2:	GenerateDiadic(op_load, 'w', ap3, ap1); break;
-			case 4:	GenerateDiadic(op_load, 't', ap3, ap1); break;
-			case 8:	GenerateDiadic(op_load, 'o', ap3, ap1); break;
-			case 16: GenerateDiadic(op_load, 0, ap3, ap1); break;
+			case 0: GenerateTriadic(op_load, 0, ap3, ap1, mask); break;
+			case 1:	GenerateTriadic(op_load, 'b', ap3, ap1, mask); break;
+			case 2:	GenerateTriadic(op_load, 'w', ap3, ap1, mask); break;
+			case 4:	GenerateTriadic(op_load, 't', ap3, ap1, mask); break;
+			case 8:	GenerateTriadic(op_load, 'o', ap3, ap1, mask); break;
+			case 16: GenerateTriadic(op_load, 0, ap3, ap1, mask); break;
 			}
     }
 	ap3->memref = true;
 	ap3->memop = ap1->Clone();
 }
 
-void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size)
+void CodeGenerator::GenerateStore(Operand *ap1, Operand *ap3, int size, Operand* mask)
 {
 	//if (ap1->isPtr) {
-	//	GenerateDiadic(op_std, 0, ap1, ap3);
+	//	GenerateTriadic(op_std, 0, ap1, ap3);
 	//}
 	//else
 	if (ap3->tp && ap3->tp->IsPositType()) {
 		switch (ap3->tp->precision) {
 		case 16:
-			GenerateDiadic(op_pstw, 0, ap1, ap3);
+			GenerateTriadic(op_pstw, 0, ap1, ap3, mask);
 			break;
 		case 32:
-			GenerateDiadic(op_pstt, 0, ap1, ap3);
+			GenerateTriadic(op_pstt, 0, ap1, ap3, mask);
 			break;
 		default:
-			GenerateDiadic(op_psto, 0, ap1, ap3);
+			GenerateTriadic(op_psto, 0, ap1, ap3, mask);
 			break;
 		}
 	}
 	if (ap3->typep==&stdposit) {
-		GenerateDiadic(op_sto, 0, ap1, ap3);
+		GenerateTriadic(op_sto, 0, ap1, ap3, mask);
 	}
 	else if (ap1->typep==&stdvector)
-	    GenerateDiadic(op_sv,0,ap1,ap3);
+	    GenerateTriadic(op_sv,0,ap1,ap3, mask);
 	else if (ap1->typep == &stdflt) {
-		GenerateDiadic(op_sto, 0, ap1, ap3);
+		GenerateTriadic(op_sto, 0, ap1, ap3, mask);
 	}
 	else if (ap1->typep == &stddouble) {
 		if (ap1->mode == am_fpreg)
 			printf("ho");
-		GenerateDiadic(op_sto, 0, ap1, ap3);
+		GenerateTriadic(op_sto, 0, ap1, ap3, mask);
 	}
 	else if (ap1->typep == &stdquad) {
-		GenerateDiadic(op_stf, 'q', ap1, ap3);
+		GenerateTriadic(op_stf, 'q', ap1, ap3, mask);
 	}
 	else if (ap1->typep == &stdtriple) {
-		GenerateDiadic(op_stf, 't', ap1, ap3);
+		GenerateTriadic(op_stf, 't', ap1, ap3, mask);
 	}
 	//else if (ap1->mode==am_fpreg)
-	//	GenerateDiadic(op_fsto,0,ap1,ap3);
+	//	GenerateTriadic(op_fsto,0,ap1,ap3, mask);
 	else {
 		switch (size) {
-		case 1: GenerateDiadic(op_store, 'b', ap1, ap3); break;
-		case 2: GenerateDiadic(op_store, 'w', ap1, ap3); break;
-		case 4: GenerateDiadic(op_store, 't', ap1, ap3); break;
-		case 8:	GenerateDiadic(op_store, 'o', ap1, ap3); break;
-		case 16:	GenerateDiadic(op_store, 0, ap1, ap3); break;
+		case 1: GenerateTriadic(op_store, 'b', ap1, ap3, mask); break;
+		case 2: GenerateTriadic(op_store, 'w', ap1, ap3, mask); break;
+		case 4: GenerateTriadic(op_store, 't', ap1, ap3, mask); break;
+		case 8:	GenerateTriadic(op_store, 'o', ap1, ap3, mask); break;
+		case 16:	GenerateTriadic(op_store, 0, ap1, ap3, mask); break;
 		default:
 			;
 		}
@@ -575,8 +565,10 @@ Operand* CodeGenerator::GenerateAutovconDereference(ENODE* node, TYP* tp, bool i
 	ap1->tp = tp;
 	if (node->tp)
 		switch (node->tp->precision) {
+		case 16: ap1->FloatSize = 'h'; break;
 		case 32: ap1->FloatSize = 's'; break;
 		case 64: ap1->FloatSize = 'd'; break;
+		case 128: ap1->FloatSize = 'q'; break;
 		default: ap1->FloatSize = 'd'; break;
 		}
 	else
@@ -1083,19 +1075,31 @@ Operand* CodeGenerator::GenerateBitfieldAssignAdd(ENODE* node, int flags, int si
 	return (ap3);
 }
 
-Operand* CodeGenerator::GenerateBinaryFloat(ENODE* node, int flags, int size, int op)
+Operand* CodeGenerator::GenerateVectorBinaryFloat(ENODE* node, int flags, int size, e_op op)
 {
-	Operand* ap1 = nullptr, * ap2 = nullptr, * ap3, * ap4;
+	Operand* ap1 = nullptr, * ap2 = nullptr, * ap3, * ap4, * vap3, * vap4, *apm;
 	bool dup = false;
+	bool vec = false;
+	int flags2;
 
-	ap3 = GetTempRegister();
-	ap4 = GetTempRegister();
+	ap3 = GetTempVectorRegister();
+	ap4 = GetTempVectorRegister();
 	if (ENODE::IsEqual(node->p[0], node->p[1]))
 		dup = !opt_nocgo;
+	switch (op) {
+	case op_vadds: op = op_vfadds; break;
+	case op_vmul: op = op_vfmul; break;
+	case op_fadd: op = op_vfadd; break;
+	case op_fsub: op = op_vfsub; break;
+	case op_fmul: op = op_vfmul; break;
+	}
 	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op)->amclass2, size, 0);
 	if (!dup) {
-		ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op)->amclass3, size, 1);
+		flags2 = Instruction::Get(op)->amclass3;
+		ap2 = cg.GenerateExpression(node->p[1], flags2, size, 1);
 	}
+	apm = cg.GenerateExpression(node->vmask, am_reg, size, 0);
+
 	// Generate a convert operation ?
 	if (!dup) {
 		if (ap1->fpsize() != ap2->fpsize()) {
@@ -1109,17 +1113,135 @@ Operand* CodeGenerator::GenerateBinaryFloat(ENODE* node, int flags, int size, in
 		ap1 = ap4;
 	}
 	if (dup)
-		GenerateTriadic(op, 0, ap3, ap1, ap1);
+		Generate4adic(op, 0, ap3, ap1, ap1, apm);
 	else
-		GenerateTriadic(op, 0, ap3, ap1, ap2);
+		Generate4adic(op, 0, ap3, ap1, ap2, apm);
 	ap3->type = ap1->type;
 
 	if (ap2)
 		ReleaseTempReg(ap2);
 	if (ap1)
 		ReleaseTempReg(ap1);
-	ap3->MakeLegal(flags, size);
+	ReleaseTempReg(ap4);
 	return (ap3);
+}
+
+Operand* CodeGenerator::GenerateVectorBinary(ENODE* node, int flags, int size, e_op op)
+{
+	Operand* ap1 = nullptr, * ap2 = nullptr, * ap3, * ap4, * vap3, * vap4, * apm;
+	bool dup = false;
+	bool vec = false;
+	int flags2;
+
+	if (node->IsFloatType())
+		return (GenerateVectorBinaryFloat(node, flags, size, op));
+
+	ap3 = GetTempVectorRegister();
+	ap4 = GetTempVectorRegister();
+	if (ENODE::IsEqual(node->p[0], node->p[1]))
+		dup = !opt_nocgo;
+	switch (op) {
+	case op_add: op = op_vadd; break;
+	case op_sub: op = op_vsub; break;
+	case op_mul: op = op_vmul; break;
+	}
+	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op)->amclass2, size, 0);
+	if (!dup) {
+		flags2 = Instruction::Get(op)->amclass3;
+		ap2 = cg.GenerateExpression(node->p[1], flags2, size, 1);
+	}
+	apm = cg.GenerateExpression(node->vmask, am_reg, size, 0);
+
+	// Generate a convert operation ?
+	if (!dup) {
+		if (ap1->fpsize() != ap2->fpsize()) {
+			if (ap2->fpsize() == 's')
+				GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
+		}
+	}
+	// Two immediate operands not supported.
+	if (ap1->mode == am_imm && ap2->mode == am_imm) {
+		GenerateLoadFloatConst(ap4, ap1);
+		ap1 = ap4;
+	}
+	if (dup)
+		Generate4adic(op, 0, ap3, ap1, ap1, apm);
+	else
+		Generate4adic(op, 0, ap3, ap1, ap2, apm);
+	ap3->type = ap1->type;
+
+	if (ap2)
+		ReleaseTempReg(ap2);
+	if (ap1)
+		ReleaseTempReg(ap1);
+	ReleaseTempReg(ap4);
+	return (ap3);
+}
+
+Operand* CodeGenerator::GenerateBinaryFloat(ENODE* node, int flags, int size, e_op op)
+{
+	Operand* ap1 = nullptr, * ap2 = nullptr, * ap3, * ap4, *vap3, *vap4;
+	bool dup = false;
+	bool vec = false;
+
+	if (node->IsVectorType())
+		return (GenerateVectorBinary(node, flags, size, op));
+
+	vap3 = GetTempVectorRegister();
+	ap3 = GetTempRegister();
+	vap4 = GetTempVectorRegister();
+	ap4 = GetTempRegister();
+	if (ENODE::IsEqual(node->p[0], node->p[1]))
+		dup = !opt_nocgo;
+	ap1 = cg.GenerateExpression(node->p[0], Instruction::Get(op)->amclass2, size, 0);
+	if (!dup) {
+		ap2 = cg.GenerateExpression(node->p[1], Instruction::Get(op)->amclass3, size, 1);
+	}
+	if (ap1->mode == am_vreg || (ap2 && ap2->mode == am_vreg)) {
+		vec = true;
+		op = op_vfmul;
+	}
+	// Generate a convert operation ?
+	if (!dup) {
+		if (ap1->fpsize() != ap2->fpsize()) {
+			if (ap2->fpsize() == 's')
+				GenerateDiadic(op_fcvtsq, 0, ap2, ap2);
+		}
+	}
+	// Two immediate operands not supported.
+	if (ap1->mode == am_imm && ap2->mode == am_imm) {
+		GenerateLoadFloatConst(ap4, ap1);
+		ap1 = ap4;
+	}
+	if (vec) {
+		if (dup)
+			GenerateTriadic(op, 0, vap3, ap1, ap1);
+		else
+			GenerateTriadic(op, 0, vap3, ap1, ap2);
+		vap3->type = ap1->type;
+	}
+	else {
+		if (dup)
+			GenerateTriadic(op, 0, ap3, ap1, ap1);
+		else
+			GenerateTriadic(op, 0, ap3, ap1, ap2);
+		ap3->type = ap1->type;
+	}
+
+	if (ap2)
+		ReleaseTempReg(ap2);
+	if (ap1)
+		ReleaseTempReg(ap1);
+	ReleaseTempReg(vap4);
+	if (vec) {
+		ReleaseTempReg(ap3);
+		return (vap3);
+	}
+	else {
+		ReleaseTempReg(vap3);
+		ap3->MakeLegal(flags, size);
+		return (ap3);
+	}
 }
 
 Operand* CodeGenerator::GenerateAssignAdd(ENODE* node, int flags, int size, int op)
@@ -1713,8 +1835,8 @@ Operand* CodeGenerator::GenerateBigAssign(Operand* ap1, Operand* ap2, int size, 
 {
 	Operand* ap3;
 
-	if (ap1->typep == &stdvector && ap2->typep == &stdvector) {
-		if (ap2->mode == am_reg)
+	if (ap1->typep == &stdvector && (ap2->typep == &stdvector || ap2->mode == am_vreg)) {
+		if (ap2->mode == am_vreg)
 			GenerateStore(ap2, ap1, ssize);
 		else {
 			ap3 = GetTempVectorRegister();
@@ -1801,7 +1923,7 @@ Operand* CodeGenerator::GenerateRegToRegAssign(ENODE* node, Operand* ap1, Operan
 	else if (node->p[1]->IsRefType()) {
 		ap3 = GetTempRegister();
 		GenerateLoad(ap3, MakeIndirect(ap2->preg), ssize, node->p[1]->GetReferenceSize());
-		GenerateDiadic(cpu.mov_op, 0, ap1, ap3);
+		GenerateMove(ap1, ap3);
 		ReleaseTempRegister(ap3);
 		//GenerateZeradic(op_setwb);
 		ap1->isPtr = TRUE;
@@ -1810,8 +1932,40 @@ Operand* CodeGenerator::GenerateRegToRegAssign(ENODE* node, Operand* ap1, Operan
 		GenerateStore(ap2, MakeIndirect(ap1->preg), ssize);
 	}
 	else {
-		GenerateDiadic(cpu.mov_op, 0, ap1, ap2);
+		GenerateMove(ap1, ap2);
 	}
+	return (ap1);
+}
+
+Operand* CodeGenerator::GenerateVregToVregAssign(ENODE* node, Operand* ap1, Operand* ap2, int ssize)
+{
+	Operand* ap3, *mask;
+
+	GenerateHint(2);
+	mask = nullptr;
+	if (node->mask)
+		mask = GenerateExpression(node->vmask, am_reg, sizeOfWord, 0);
+	if (node->p[0]->IsRefType() && node->p[1]->IsRefType()) {
+		ap3 = GetTempVectorRegister();
+		GenerateLoad(ap3, MakeIndirect(ap2->preg), ssize, node->p[1]->GetReferenceSize(), mask);
+		GenerateStore(ap3, MakeIndirect(ap1->preg), ssize, mask);
+		ReleaseTempRegister(ap3);
+	}
+	else if (node->p[1]->IsRefType()) {
+		ap3 = GetTempVectorRegister();
+		GenerateLoad(ap3, MakeIndirect(ap2->preg), ssize, node->p[1]->GetReferenceSize(), mask);
+		GenerateMove(ap1, ap3, mask);
+		ReleaseTempRegister(ap3);
+		//GenerateZeradic(op_setwb);
+		ap1->isPtr = TRUE;
+	}
+	else if (node->p[0]->IsRefType()) {
+		GenerateStore(ap2, MakeIndirect(ap1->preg), ssize, mask);
+	}
+	else {
+		GenerateMove(ap1, ap2, mask);
+	}
+	ReleaseTempRegister(mask);
 	return (ap1);
 }
 
@@ -1898,7 +2052,7 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 	//else {
 		ap1 = GenerateExpression(node->p[0], am_reg | am_mem | am_vreg, ssize, 1);
 		flg = am_all;
-		flg = am_reg | am_mem | am_imm;
+		flg = am_reg | am_mem | am_imm | am_vreg;
 		/*
 		if (ap1->typep == &stddouble)
 			flg = am_fpreg;
@@ -1952,8 +2106,12 @@ Operand *CodeGenerator::GenerateAssign(ENODE *node, int flags, int64_t size)
 		}
 	}
 	else if (ap1->mode == am_vreg) {
+		mr = &vregs[ap1->preg];
 		if (ap2->mode==am_vreg) {
-			GenerateDiadic(cpu.mov_op,0,ap1,ap2);
+			ap1 = GenerateVregToVregAssign(node, ap1, ap2, ssize);
+			mr->val = vregs[ap2->preg].val;
+			mr->val128 = vregs[ap2->preg].val128;
+			mr->isConst = ap2->isConst;
 		}
 		else
 			GenerateLoad(ap1,ap2,ssize,size);
@@ -2110,7 +2268,7 @@ Operand* CodeGenerator::GenerateFloatcon(ENODE* node, int flags, int64_t size)
 			ap1->mode = am_direct;
 		ap1->offset = node;
 		if (node)
-			DataLabels[node->i] = true;
+			DataLabels[node->i]++;
 	}
 	ap1->typep = &stddouble;
 	if (node)
@@ -2134,7 +2292,7 @@ Operand* CodeGenerator::GenPositcon(ENODE* node, int flags, int64_t size)
 		ap1->mode = am_direct;
 	ap1->offset = node;
 	if (node)
-		DataLabels[node->i] = true;
+		DataLabels[node->i]++;
 	ap1->typep = &stdposit;
 	if (node)
 		ap1->tp = node->tp;
@@ -2316,7 +2474,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 			//else
 	      ap2->offset = node;     // use as constant node
 			if (node)
-				DataLabels[node->i] = true;
+				DataLabels[node->i]++;
       GenerateDiadic(cpu.lea_op,0,ap1,ap2);
 			//if (!compiler.os_code) {
 			//	switch (node->segment) {
@@ -3433,7 +3591,7 @@ bool CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 					if (ip->oper1->offset->nodetype == en_clabcon) {
 						if (labelmap[ip->oper1->offset->i] == 1) {
 							ip->oper1->offset->i = ip->oper1->offset->i + instance;
-							DataLabels[ip->oper1->offset->i] = true;
+							DataLabels[ip->oper1->offset->i]++;
 						}
 					}
 			if (ip->oper2)
@@ -3441,7 +3599,7 @@ bool CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 					if (ip->oper2->offset->nodetype == en_clabcon) {
 						if (labelmap[ip->oper2->offset->i] == 1) {
 							ip->oper2->offset->i = ip->oper2->offset->i + instance;
-							DataLabels[ip->oper2->offset->i] = true;
+							DataLabels[ip->oper2->offset->i]++;
 						}
 					}
 			if (ip->oper3)
@@ -3449,7 +3607,7 @@ bool CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 					if (ip->oper3->offset->nodetype == en_clabcon) {
 						if (labelmap[ip->oper3->offset->i] == 1) {
 							ip->oper3->offset->i = ip->oper3->offset->i + instance;
-							DataLabels[ip->oper3->offset->i] = true;
+							DataLabels[ip->oper3->offset->i]++;
 						}
 					}
 			if (ip->oper4)
@@ -3457,7 +3615,7 @@ bool CodeGenerator::GenerateInlineCall(ENODE* node, Function* sym)
 					if (ip->oper4->offset->nodetype == en_clabcon) {
 						if (labelmap[ip->oper4->offset->i] == 1) {
 							ip->oper4->offset->i = ip->oper4->offset->i + instance;
-							DataLabels[ip->oper4->offset->i] = true;
+							DataLabels[ip->oper4->offset->i]++;
 						}
 					}
 			}
@@ -3610,6 +3768,306 @@ Operand* CodeGenerator::GenerateFunctionCall(ENODE* node, int flags, int lab)
 	return (ap);
 }
 
+void CodeGenerator::GenerateCoroutineExit(Function* func)
+{
+	Operand* ap;
+
+	ap = GetTempRegister();
+	GenerateLoadConst(MakeStringAsNameConst((char*)MakeConame(*func->sym->mangledName, "first").c_str(), codeseg), ap);
+	GenerateStore(ap, MakeIndexedName(MakeConame(*func->sym->mangledName, "target"), regGP), sizeOfWord);
+	GenerateLoad(ap, MakeIndexedName(MakeConame(*func->sym->mangledName, "orig_lr"), regGP), sizeOfWord, sizeOfWord);
+	GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+	ReleaseTempRegister(ap);
+	GenerateLoad(makereg(regFP), MakeIndexedName(MakeConame(*func->sym->mangledName, "orig_fp"), regGP), sizeOfWord, sizeOfWord);
+	GenerateLoad(makereg(regSP), MakeIndexedName(MakeConame(*func->sym->mangledName, "orig_sp"), regGP), sizeOfWord, sizeOfWord);
+}
+
+// Generate a return statement.
+//
+void CodeGenerator::GenerateReturn(Function* func, Statement* stmt)
+{
+	Operand* ap, * ap2;
+	int nn;
+	int cnt, cnt2;
+	int64_t toAdd;
+	Symbol* p;
+	bool isFloat, isPosit, isVector;
+	int64_t sz;
+
+	if (func == nullptr)
+		throw new C64PException(ERR_NULLPOINTER, 0);
+
+	// Generate the return expression and force the result into r1.
+	if (stmt != NULL && stmt->exp != NULL)
+	{
+		initstack();
+		isFloat = func->sym->tp->btpp && func->sym->tp->btpp->IsFloatType();
+		isPosit = func->sym->tp->btpp && func->sym->tp->btpp->IsPositType();
+		isVector = func->sym->tp->btpp && func->sym->tp->btpp->IsVectorType();
+		if (isFloat)
+			ap = cg.GenerateExpression(stmt->exp, am_reg, sizeOfFP, 1);
+		else if (isPosit)
+			ap = cg.GenerateExpression(stmt->exp, am_reg, sizeOfPosit, 1);
+		else if (isVector)
+			ap = cg.GenerateExpression(stmt->exp, am_vreg, 64, 1);
+		else
+			ap = cg.GenerateExpression(stmt->exp, am_reg | am_imm, sizeOfWord, 1);
+		GenerateMonadic(op_hint, 0, MakeImmediate(2));
+		if (ap->mode == am_imm)
+			GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[0]), ap);
+		else if (ap->mode == am_reg || ap->mode == am_vreg) {
+			if (func->sym->tp->btpp && (func->sym->tp->btpp->type == bt_struct || func->sym->tp->btpp->type == bt_union || func->sym->tp->btpp->type == bt_class)) {
+				if ((sz = func->sym->tp->btpp->size) > sizeOfWord) {
+					p = func->params.Find("_pHiddenStructPtr", false);
+					if (p) {
+						if (p->IsRegister)
+							GenerateMove(makereg(cpu.argregs[0]), makereg(p->reg));
+						else
+							GenerateLoad(makereg(cpu.argregs[0]), MakeIndexed(p->value.i, regFP), sizeOfWord, sizeOfWord);
+						ap2 = GetTempRegister();
+						GenerateLoadConst(MakeImmediate(func->sym->tp->btpp->size), ap2);
+						if (cpu.SupportsPush) {
+							GenerateMonadic(op_push, 0, ap2);
+							GenerateMonadic(op_push, 0, ap);
+							GenerateMonadic(op_push, 0, makereg(cpu.argregs[0]));
+						}
+						else {
+							GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
+							GenerateStore(makereg(cpu.argregs[0]), MakeIndirect(regSP), sizeOfWord);
+							GenerateStore(ap, MakeIndexed(sizeOfWord, regSP), sizeOfWord);
+							GenerateStore(ap2, MakeIndexed(sizeOfWord * 2, regSP), sizeOfWord);
+						}
+						ReleaseTempReg(ap2);
+						GenerateCall(MakeStringAsNameConst((char*)"__aacpy", codeseg));
+						GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
+						if (!func->IsPascal)
+							GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
+					}
+					else
+						throw new C64PException(ERR_MISSING_HIDDEN_STRUCTPTR,0);
+				}
+				else {
+					if (ap->isPtr) {
+						if (sz > 4)
+							GenerateLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 8, 8);
+						else if (sz > 2)
+							GenerateLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 4, 4);
+						else if (sz > 1)
+							GenerateLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 2, 2);
+						else
+							GenerateLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 1, 1);
+					}
+					else
+						GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
+				}
+			}
+			else {
+				if (func->sym->tp->btpp->IsFloatType() || func->sym->tp->btpp->IsPositType())
+					cg.GenerateMove(makereg(cpu.argregs[0]), ap);
+				else if (func->sym->tp->btpp->IsVectorType())
+					cg.GenerateMove(makevreg(cpu.vargregs[0]), ap, makereg(regZero | rt_invert));
+				else
+					cg.GenerateMove(makereg(cpu.argregs[0]), ap);
+			}
+		}
+		/* I think this code cannot be reached. am_reg checked above
+		else if (ap->mode == am_reg) {
+			if (isFloat)
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
+			else
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
+		}
+		else if (ap->mode == am_reg) {
+			if (isPosit)
+				GenerateDiadic(cpu.mov_op, 0, compiler.of.makepreg(cpu.argregs[0]), ap);
+			else
+				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
+		}
+		*/
+		else if (ap->typep == &stddouble) {
+			if (isFloat)
+				GenerateDiadic(op_ldf, 'd', makereg(cpu.argregs[0]), ap);
+			else
+				GenerateLoad(makereg(cpu.argregs[0]), ap, sizeOfFPD, sizeOfFPD);
+		}
+		else {
+			if (func->sym->tp->btpp->IsVectorType())
+				GenerateLoad(makevreg(cpu.vargregs[0]), ap, sizeOfWord, sizeOfWord, makereg(regZero | rt_invert));
+			else
+				GenerateLoad(makereg(cpu.argregs[0]), ap, sizeOfWord, sizeOfWord);
+		}
+		ReleaseTempRegister(ap);
+	}
+
+	// Generate the return code only once. Branch to the return code for all returns.
+	if (func->retGenerated) {
+		GenerateMonadic(op_bra, 0, MakeCodeLabel(retlab));
+		return;
+	}
+	func->retGenerated = true;
+	GenerateLabel(retlab);
+
+	if (func->IsCoroutine)
+		GenerateCoroutineExit(func);
+
+	func->rcode = func->pl.tail;
+
+	// Unreferenced objects are garbage collected by the system. There's no need
+	// to manage a list of them.
+
+	//if (currentFn->UsesNew) {
+	//	if (cpu.SupportsPush)
+	//		GenerateMonadic(op_push, 0, makereg(regFirstArg));
+	//	else {
+	//		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(8));
+	//		GenerateDiadic(op_std, 0, makereg(regFirstArg), MakeIndirect(regSP));
+	//	}
+	//	GenerateDiadic(op_lea, 0, makereg(regFirstArg), MakeIndexed(-sizeOfWord, regFP));
+	//	GenerateMonadic(op_call, 0, MakeStringAsNameConst("__AddGarbage"));
+	//	GenerateDiadic(op_ldd, 0, makereg(regFirstArg), MakeIndirect(regSP));
+	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(8));
+	//}
+
+	// Unlock any semaphores that may have been set
+	for (nn = lastsph - 1; nn >= 0; nn--)
+		GenerateStore(makereg(0), MakeStringAsNameConst(semaphores[nn], dataseg), 1);
+
+	// Restore fp registers used as register variables.
+	//if (fpsave_mask->NumMember()) {
+	//	cnt2 = cnt = (fpsave_mask->NumMember() - 1)*sizeOfFP;
+	//	fpsave_mask->resetPtr();
+	//	for (nn = fpsave_mask->lastMember(); nn >= 1; nn = fpsave_mask->prevMember()) {
+	//		GenerateDiadic(op_lf, 'd', makefpreg(nregs - 1 - nn), MakeIndexed(cnt2 - cnt, regSP));
+	//		cnt -= sizeOfWord;
+	//	}
+	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(cnt2 + sizeOfFP));
+	//}
+	RestoreRegisterVars();
+	if (func->IsNocall) {
+		if (func->epilog) {
+			func->epilog->Generate();
+			return;
+		}
+		return;
+	}
+	toAdd = 0;
+	if (!cpu.SupportsLeave) {
+		func->UnlinkStack(0);
+		toAdd = compiler.GetReturnBlockSize();
+	}
+	if (!func->alstk) {
+		// The size of the return block is included in the link instruction, so the
+		// unlink instruction will reverse the allocation.
+		if (cpu.SupportsLink)
+			toAdd = 0;
+		else if (cpu.SupportsLeave)
+			toAdd = 0;
+	}
+	//else if (currentFn->IsLeaf)
+	//	toAdd = 0;
+
+	if (func->epilog) {
+		func->epilog->Generate();
+		return;
+	}
+
+	// Local variables and the return block must be deallocated before the return instruction.
+	// The return address is between these and the parameters. Parameters can be deallocated
+	// during the return. For leaf routines, the return address is not present, so it is 
+	// safe to combine the de-allocations.
+	//if (!currentFn->IsLeaf) {
+	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
+	//	toAdd = 0;
+	//}
+
+	// If Pascal calling convention remove parameters from stack by adding to stack pointer
+	// based on the number of parameters. However if a non-auto register parameter is
+	// present, then don't add to the stack pointer for it. (Remove the previous add effect).
+	// Also, do not add to the stack pointer for the ellipsis parameter.
+	/*
+	if (IsPascal) {
+		TypeArray *ta;
+		int nn;
+		ta = GetProtoTypes();
+		for (nn = 0; nn < ta->length; nn++) {
+			switch (ta->types[nn]) {
+			case bt_float:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfFP;
+				break;
+			case bt_quad:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfFPQ;
+				break;
+			case bt_double:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfFPD;
+				break;
+			case bt_posit:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfPosit;
+				break;
+			case bt_ellipsis:
+				break;
+			default:
+				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
+					;
+				else
+					toAdd += sizeOfWord;
+			}
+		}
+	}
+	*/
+	if (func->IsPascal)
+		toAdd += func->arg_space;
+
+	//	if (toAdd != 0)
+	//		GenerateTriadic(op_add,0,makereg(regSP),makereg(regSP),MakeImmediate(toAdd));
+	// Generate the return instruction. For the Pascal calling convention pop the parameters
+	// from the stack.
+	if (func->IsInterrupt) {
+		//RestoreRegisterSet(sym);
+		GenerateInterruptLoad(func);
+		GenerateZeradic(op_rti);
+		return;
+	}
+
+	if (!func->IsInline) {
+		if (cpu.SupportsLeave) {
+			if (func->arg_space < 32760)
+				func->UnlinkStack(func->arg_space);
+			else {
+				GenerateMove(makereg(regSP), makereg(regFP));
+				GenerateLoad(makereg(regFP), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
+				ap = GetTempRegister();
+				GenerateLoad(ap, MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
+				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
+				ReleaseTempRegister(ap);
+				GenerateAddOnto(makereg(regSP), MakeImmediate(func->arg_space));
+			}
+		}
+		else {
+			if (toAdd > 0) {
+				cg.GenerateReturnAndDeallocate(func->arg_space);
+				toAdd = 0;
+			}
+			else
+				GenerateReturnInsn();
+		}
+	}
+	else
+		GenerateAddOnto(makereg(regSP), MakeImmediate(func->arg_space));
+}
+
+
 // Generate code for a binary expression
 
 Operand* CodeGenerator::GenerateBinary(ENODE* node, int flags, int size, int op)
@@ -3618,7 +4076,7 @@ Operand* CodeGenerator::GenerateBinary(ENODE* node, int flags, int size, int op)
 	bool dup = false;
 
 	if (node->IsFloatType())
-		return (cg.GenerateBinaryFloat(node, flags, size, op));
+		return (cg.GenerateBinaryFloat(node, flags, size, (e_op)op));
 	else if (node->IsPositType())
 	{
 		ap3 = GetTempPositRegister();
@@ -3650,15 +4108,15 @@ Operand* CodeGenerator::GenerateBinary(ENODE* node, int flags, int size, int op)
 		ap3 = GetTempVectorRegister();
 		if (ENODE::IsEqual(node->p[0], node->p[1]) && !opt_nocgo) {
 			ap1 = cg.GenerateExpression(node->p[0], am_vreg, size, 0);
-			ap2 = cg.GenerateExpression(node->vmask, am_vmreg, size, 1);
-			Generate4adic(op, 0, ap3, ap1, ap1, ap2);
+			//ap2 = cg.GenerateExpression(node->vmask, am_vmreg, size, 1);
+			Generate4adic(op, 0, ap3, ap1, ap1, makevmreg(node->mask) );
 		}
 		else {
-			ap1 = cg.GenerateExpression(node->p[0], am_vreg, size, 0);
-			ap2 = cg.GenerateExpression(node->p[1], am_vreg, size, 1);
-			ap4 = cg.GenerateExpression(node->vmask, am_vmreg, size, 1);
-			Generate4adic(op, 0, ap3, ap1, ap2, ap4);
-			ReleaseTempReg(ap4);
+			ap1 = cg.GenerateExpression(node->p[0], am_vreg|am_reg, size, 0);
+			ap2 = cg.GenerateExpression(node->p[1], am_vreg|am_reg, size, 1);
+			//ap4 = cg.GenerateExpression(node->vmask, am_vmreg, size, 1);
+			Generate4adic(op, 0, ap3, ap1, ap2, makevmreg(node->mask));
+			//ReleaseTempReg(ap4);
 		}
 		// Generate a convert operation ?
 		//if (fpsize(ap1) != fpsize(ap2)) {
@@ -3732,3 +4190,4 @@ Operand* CodeGenerator::GenerateBinary(ENODE* node, int flags, int size, int op)
 void CodeGenerator::GenerateReturnAndDeallocate(int64_t amt) {
 	GenerateTriadic(op_rtd, 0, makereg(regSP), makereg(regSP), MakeImmediate(amt));
 }
+

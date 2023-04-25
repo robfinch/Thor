@@ -847,7 +847,7 @@ void Function::UnlinkStack(int64_t amt)
 	if (cpu.SupportsLeave) {
 	}
 	else if (!IsLeaf) {
-		if (doesJAL) {
+//		if (doesJAL) {	// ??? Not a leaf, so it must be transferring control
 			if (alstk) {
 				cg.GenerateLoad(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
 				//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
@@ -860,7 +860,7 @@ void Function::UnlinkStack(int64_t amt)
 				GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
 				cg.GenerateLoad(makereg(regFP), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
 			}
-		}
+//		}
 	}
 	// Else leaf routine, reverse any stack allocation but do not pop link register
 	else {
@@ -873,7 +873,7 @@ void Function::UnlinkStack(int64_t amt)
 	if (cpu.SupportsLeave) {
 	}
 	else if (!IsLeaf && doesJAL) {
-		if (!alstk) {
+		if (alstk) {
 			cg.GenerateLoad(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord, sizeOfWord);
 			//GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
 			if (IsFar) {
@@ -940,6 +940,7 @@ void Function::SetupReturnBlock()
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(Compiler::GetReturnBlockSize()));
 		cg.GenerateStore(makereg(regFP), MakeIndirect(regSP), sizeOfWord);
 		GenerateDiadic(cpu.mov_op, 0, makereg(regFP), makereg(regSP));
+		GenerateDiadic(cpu.mov_op, 0, makereg(regLR), MakeIndexed(sizeOfWord * 2, regFP));	// Store link register on stack
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(stkspace));
 		alstk = true;
 	}
@@ -994,7 +995,7 @@ void Function::SetupReturnBlock()
 	if (exceptions) {
 		ap = GetTempRegister();
 		sprintf_s(buf, sizeof(buf), ".%05lld", defCatchLabel);
-		DataLabels[defCatchLabel] = true;
+		DataLabels[defCatchLabel]++;
 		defCatchLabelPatchPoint = currentFn->pl.tail;
 		GenerateDiadic(cpu.ldi_op, 0, ap, MakeStringAsNameConst(buf, codeseg));
 		if (IsFar)
@@ -1011,300 +1012,6 @@ void Function::SetupReturnBlock()
 		GenerateMonadic(op_bex, 0, cg.MakeCodeLabel(currentFn->defCatchLabel));
 	}
 	tryCount = 0;
-}
-
-void Function::GenerateCoroutineExit()
-{
-	Operand* ap;
-
-	ap = GetTempRegister();
-	GenerateDiadic(op_ldi, 0, ap, MakeStringAsNameConst((char*)MakeConame(*sym->mangledName, "first").c_str(), codeseg));
-	cg.GenerateStore(ap, cg.MakeIndexedName(MakeConame(*sym->mangledName, "target"), regGP), sizeOfWord);
-	cg.GenerateLoad(ap, cg.MakeIndexedName(MakeConame(*sym->mangledName, "orig_lr"), regGP), sizeOfWord, sizeOfWord);
-	GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
-	ReleaseTempRegister(ap);
-	cg.GenerateLoad(makereg(regFP), cg.MakeIndexedName(MakeConame(*sym->mangledName, "orig_fp"), regGP), sizeOfWord, sizeOfWord);
-	cg.GenerateLoad(makereg(regSP), cg.MakeIndexedName(MakeConame(*sym->mangledName, "orig_sp"), regGP), sizeOfWord, sizeOfWord);
-}
-
-// Generate a return statement.
-//
-void Function::GenerateReturn(Statement* stmt)
-{
-	Operand* ap, * ap2;
-	int nn;
-	int cnt, cnt2;
-	int64_t toAdd;
-	Symbol* p;
-	bool isFloat, isPosit;
-	int64_t sz;
-
-
-	// Generate the return expression and force the result into r1.
-	if (stmt != NULL && stmt->exp != NULL)
-	{
-		initstack();
-		isFloat = sym->tp->btpp && sym->tp->btpp->IsFloatType();
-		isPosit = sym->tp->btpp && sym->tp->btpp->IsPositType();
-		if (isFloat)
-			ap = cg.GenerateExpression(stmt->exp, am_reg, sizeOfFP, 1);
-		else if (isPosit)
-			ap = cg.GenerateExpression(stmt->exp, am_reg, sizeOfPosit, 1);
-		else
-			ap = cg.GenerateExpression(stmt->exp, am_reg | am_imm, sizeOfWord, 1);
-		GenerateMonadic(op_hint, 0, MakeImmediate(2));
-		if (ap->mode == am_imm)
-			GenerateDiadic(cpu.ldi_op, 0, makereg(cpu.argregs[0]), ap);
-		else if (ap->mode == am_reg) {
-			if (sym->tp->btpp && (sym->tp->btpp->type == bt_struct || sym->tp->btpp->type == bt_union || sym->tp->btpp->type == bt_class)) {
-				if ((sz = sym->tp->btpp->size) > sizeOfWord) {
-					p = params.Find("_pHiddenStructPtr", false);
-					if (p) {
-						if (p->IsRegister)
-							GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), makereg(p->reg));
-						else
-							GenerateDiadic(cpu.ldo_op, 0, makereg(cpu.argregs[0]), MakeIndexed(p->value.i, regFP));
-						ap2 = GetTempRegister();
-						GenerateDiadic(cpu.ldi_op, 0, ap2, MakeImmediate(sym->tp->btpp->size));
-						if (cpu.SupportsPush) {
-							GenerateMonadic(op_push, 0, ap2);
-							GenerateMonadic(op_push, 0, ap);
-							GenerateMonadic(op_push, 0, makereg(cpu.argregs[0]));
-						}
-						else {
-							GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
-							GenerateDiadic(cpu.sto_op, 0, makereg(cpu.argregs[0]), MakeIndirect(regSP));
-							GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(sizeOfWord, regSP));
-							GenerateDiadic(cpu.sto_op, 0, ap2, MakeIndexed(sizeOfWord * 2, regSP));
-						}
-						ReleaseTempReg(ap2);
-#ifdef RISCV
-						GenerateMonadic(op_call, 0, MakeStringAsNameConst((char *)"__aacpy", codeseg));
-#endif
-#ifdef THOR
-						GenerateMonadic(op_jsr, 0, MakeStringAsNameConst((char*)"__aacpy", codeseg));
-#endif
-						GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));
-						if (!IsPascal)
-							GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(sizeOfWord * 3));
-					}
-					else {
-						error(ERR_MISSING_HIDDEN_STRUCTPTR);
-					}
-				}
-				else {
-					if (ap->isPtr) {
-						if (sz > 4)
-							GenLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 8, 8);
-						else if (sz > 2)
-							GenLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 4, 4);
-						else if (sz > 1)
-							GenLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 2, 2);
-						else
-							GenLoad(makereg(cpu.argregs[0]), MakeIndirect(ap->preg), 1, 1);
-					}
-					else
-						GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-				}
-			}
-			else {
-				if (sym->tp->btpp->IsFloatType() || sym->tp->btpp->IsPositType())
-					GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-				else if (sym->tp->btpp->IsVectorType())
-					GenerateDiadic(cpu.mov_op, 0, makevreg(regFirstArg), ap);
-				else
-					GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-			}
-		}
-		else if (ap->mode == am_reg) {
-			if (isFloat)
-				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-			else
-				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-		}
-		else if (ap->mode == am_reg) {
-			if (isPosit)
-				GenerateDiadic(cpu.mov_op, 0, compiler.of.makepreg(cpu.argregs[0]), ap);
-			else
-				GenerateDiadic(cpu.mov_op, 0, makereg(cpu.argregs[0]), ap);
-		}
-		else if (ap->typep == &stddouble) {
-			if (isFloat)
-				GenerateDiadic(op_ldf, 'd', makereg(cpu.argregs[0]), ap);
-			else
-				GenerateDiadic(cpu.ldo_op, 0, makereg(cpu.argregs[0]), ap);
-		}
-		else {
-			if (sym->tp->btpp->IsVectorType())
-				GenLoad(makevreg(regFirstArg), ap, sizeOfWord, sizeOfWord);
-			else
-				GenLoad(makereg(cpu.argregs[0]), ap, sizeOfWord, sizeOfWord);
-		}
-		ReleaseTempRegister(ap);
-	}
-
-	// Generate the return code only once. Branch to the return code for all returns.
-	if (retGenerated) {
-		GenerateMonadic(op_bra, 0, MakeCodeLabel(retlab));
-		return;
-	}
-	retGenerated = true;
-	GenerateLabel(retlab);
-
-	if (IsCoroutine)
-		GenerateCoroutineExit();
-
-	rcode = pl.tail;
-
-	// Unreferenced objects are garbage collected by the system. There's no need
-	// to manage a list of them.
-
-	//if (currentFn->UsesNew) {
-	//	if (cpu.SupportsPush)
-	//		GenerateMonadic(op_push, 0, makereg(regFirstArg));
-	//	else {
-	//		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(8));
-	//		GenerateDiadic(op_std, 0, makereg(regFirstArg), MakeIndirect(regSP));
-	//	}
-	//	GenerateDiadic(op_lea, 0, makereg(regFirstArg), MakeIndexed(-sizeOfWord, regFP));
-	//	GenerateMonadic(op_call, 0, MakeStringAsNameConst("__AddGarbage"));
-	//	GenerateDiadic(op_ldd, 0, makereg(regFirstArg), MakeIndirect(regSP));
-	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(8));
-	//}
-
-	// Unlock any semaphores that may have been set
-	for (nn = lastsph - 1; nn >= 0; nn--)
-		GenerateDiadic(cpu.stb_op, 0, makereg(0), MakeStringAsNameConst(semaphores[nn], dataseg));
-
-	// Restore fp registers used as register variables.
-	//if (fpsave_mask->NumMember()) {
-	//	cnt2 = cnt = (fpsave_mask->NumMember() - 1)*sizeOfFP;
-	//	fpsave_mask->resetPtr();
-	//	for (nn = fpsave_mask->lastMember(); nn >= 1; nn = fpsave_mask->prevMember()) {
-	//		GenerateDiadic(op_lf, 'd', makefpreg(nregs - 1 - nn), MakeIndexed(cnt2 - cnt, regSP));
-	//		cnt -= sizeOfWord;
-	//	}
-	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(cnt2 + sizeOfFP));
-	//}
-	RestoreRegisterVars();
-	if (IsNocall) {
-		if (epilog) {
-			epilog->Generate();
-			return;
-		}
-		return;
-	}
-	toAdd = 0;
-	if (!cpu.SupportsLeave) {
-		UnlinkStack(0);
-		toAdd = SizeofReturnBlock();
-	}
-	if (!alstk) {
-		// The size of the return block is included in the link instruction, so the
-		// unlink instruction will reverse the allocation.
-		if (cpu.SupportsLink)
-			toAdd = 0;
-		else if (cpu.SupportsLeave)
-			toAdd = 0;
-	}
-	//else if (currentFn->IsLeaf)
-	//	toAdd = 0;
-
-	if (epilog) {
-		epilog->Generate();
-		return;
-	}
-
-	// Local variables and the return block must be deallocated before the return instruction.
-	// The return address is between these and the parameters. Parameters can be deallocated
-	// during the return. For leaf routines, the return address is not present, so it is 
-	// safe to combine the de-allocations.
-	//if (!currentFn->IsLeaf) {
-	//	GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
-	//	toAdd = 0;
-	//}
-
-	// If Pascal calling convention remove parameters from stack by adding to stack pointer
-	// based on the number of parameters. However if a non-auto register parameter is
-	// present, then don't add to the stack pointer for it. (Remove the previous add effect).
-	// Also, do not add to the stack pointer for the ellipsis parameter.
-	if (IsPascal) {
-		TypeArray *ta;
-		int nn;
-		ta = GetProtoTypes();
-		for (nn = 0; nn < ta->length; nn++) {
-			switch (ta->types[nn]) {
-			case bt_float:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfFP;
-				break;
-			case bt_quad:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfFPQ;
-				break;
-			case bt_double:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfFPD;
-				break;
-			case bt_posit:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfPosit;
-				break;
-			case bt_ellipsis:
-				break;
-			default:
-				if (ta->preg[nn] && (ta->preg[nn] & 0x8000) == 0)
-					;
-				else
-					toAdd += sizeOfWord;
-			}
-		}
-	}
-	//	if (toAdd != 0)
-	//		GenerateTriadic(op_add,0,makereg(regSP),makereg(regSP),MakeImmediate(toAdd));
-	// Generate the return instruction. For the Pascal calling convention pop the parameters
-	// from the stack.
-	if (IsInterrupt) {
-		//RestoreRegisterSet(sym);
-		GenerateZeradic(op_rti);
-		return;
-	}
-
-	if (!IsInline) {
-		if (cpu.SupportsLeave) {
-			if (toAdd < 32760)
-				UnlinkStack(toAdd);
-			else {
-				GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
-				GenerateDiadic(cpu.ldo_op, 0, makereg(regFP), MakeIndirect(regSP));
-				ap = GetTempRegister();
-				GenerateDiadic(cpu.ldo_op, 0, ap, MakeIndexed(2 * sizeOfWord, regFP));
-				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3102));
-				ReleaseTempRegister(ap);
-				if (IsFar)
-					GenerateDiadic(cpu.ldo_op, 0, makereg(regCS), MakeIndexed(3 * sizeOfWord, regFP));
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
-			}
-		}
-		else {
-			if (toAdd > 0) {
-				cg.GenerateReturnAndDeallocate(toAdd);
-				toAdd = 0;
-			}
-			else
-				cg.GenerateReturnInsn();
-		}
-	}
-	else
-		GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(toAdd));
 }
 
 void Function::GenerateCoroutineData()
@@ -1370,7 +1077,7 @@ void Function::Generate()
 	OCODE* ip;
 	OCODE* ip2;
 	bool doCatch = true;
-	int n;
+	int n, nn;
 	int sp, bp, gp, gp1;
 	bool o_retgen;
 	Operand* ap;
@@ -1398,6 +1105,13 @@ void Function::Generate()
 
 	while (lc_auto % sizeOfWord)	// round frame size to word
 		++lc_auto;
+
+	if (currentFn->csetbl == nullptr) {
+		currentFn->csetbl = new CSETable;
+	}
+	if (pass == 1)
+		currentFn->csetbl->Clear();
+
 	// The prolog code can't be optimized because it'll run *before* any variables
 	// assigned to registers are available. About all we can do here is constant
 	// optimizations.
@@ -1405,20 +1119,9 @@ void Function::Generate()
 		prolog->scan();
 		prolog->Generate();
 	}
-	if (IsInterrupt) {
-		if (DoesContextSave)
-			GenerateMonadic(op_asm, 0, MakeStringAsNameConst((char *)"\n  mSaveContext", codeseg));
-		if (sp_init) {
-			GenerateDiadic(cpu.ldi_op, 0, makereg(regSP), MakeImmediate(sp_init));
-		}
-		/*
-		if (stkname) {
-			GenerateDiadic(op_lea, 0, makereg(SP), MakeStringAsNameConst(stkname,dataseg));
-			GenerateTriadic(op_ori, 0, makereg(SP), makereg(SP), MakeImmediate(0xFFFFF00000000000LL));
-		}
-		*/
-		//		StackGPRs();
-	}
+	if (IsInterrupt)
+		cg.GenerateInterruptSave(this);
+
 	// Setup the return block.
 	if (!IsNocall && !prolog)
 		SetupReturnBlock();
@@ -1443,14 +1146,8 @@ void Function::Generate()
 		ReleaseTempRegister(ap);
 	}
 
-	if (optimize) {
-		if (currentFn->csetbl == nullptr) {
-			currentFn->csetbl = new CSETable;
-		}
-		if (pass == 1)
-			currentFn->csetbl->Clear();
+	if (optimize)
 		currentFn->csetbl->Optimize(stmt);
-	}
 	if (prolog) {
 		fpsave_mask = 0;
 		save_mask = 0;
@@ -1479,7 +1176,7 @@ void Function::Generate()
 	}
 */
 //	if (!IsInline)
-		GenerateReturn(nullptr);
+		cg.GenerateReturn(this,nullptr);
 
 	// Inline code needs to branch around the default exception handler.
 	if (exceptions && sym->IsInline)
@@ -1782,6 +1479,8 @@ int Function::BPLAssignReg(Symbol* sp1, int reg, bool* noParmOffset)
 	return (reg);
 }
 
+// As far as I can tell the numa parameter is not used. It is dead code.
+
 void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 {
 	int64_t poffset;
@@ -1832,6 +1531,11 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 			sp1 = makeint2(names[i].str);
 			//			lsyms.insert(sp1);
 		}
+		// Set the alignment of the parameter
+		if (sp1->tp->type == bt_vector)
+			poffset = roundQuadWord(poffset);
+		else
+			poffset = roundWord(poffset);
 		sp1->parmno = i;
 		sp1->parent = sym->parent;
 		sp1->IsParameter = true;
@@ -1844,13 +1548,20 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 			reg = BPLAssignReg(sp1, reg, &noParmOffset);
 		else
 			reg = BPLAssignReg(sp1, reg, &noParmOffset);
-		if (!sp1->IsRegister)// && !sp1->IsInline)
+		if (sp1->tp->type == bt_vector && !sp1->IsRegister)
+			*numa += 4;
+		else if (!sp1->IsRegister)// && !sp1->IsInline)
 			*numa += 1;
+		// Increment stack offset.
 		// Check for aggregate types passed as parameters. Structs
 		// and unions use the type size. There could also be arrays
 		// passed.
-		if (!noParmOffset)
-			poffset += roundWord(sp1->tp->size);
+		if (!noParmOffset) {
+			if (sp1->tp->type == bt_vector)
+				poffset += roundQuadWord(64);
+			else
+				poffset += roundWord(sp1->tp->size);
+		}
 		if (roundWord(sp1->tp->size) > sizeOfWord && !sp1->tp->IsVectorType())
 			IsLeaf = FALSE;
 		sp1->storage_class = sc_auto;
@@ -1884,6 +1595,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 			}
 		}
 	}
+	arg_space = poffset;
 	nparms = old_nparms;
 	for (np = 0; np < nparms; np++)
 		names[np] = oldnames[np];

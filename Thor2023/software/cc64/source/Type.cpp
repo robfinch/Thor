@@ -102,7 +102,7 @@ TYP *TYP::GetPtr(int n) {
     return nullptr;
   return &compiler.typeTable[n];
 };
-int TYP::GetIndex() { return this - &compiler.typeTable[0]; };
+int64_t TYP::GetIndex() { return this - &compiler.typeTable[0]; };
 
 TYP *TYP::Copy(TYP *src)
 {
@@ -118,7 +118,6 @@ TYP *TYP::Copy(TYP *src)
 		if (src->btp && src->btpp) {
   		dfs.printf("B");
 			dst->btpp = Copy(src->btpp);
-			dst->btp = dst->btpp->GetIndex();// Copy(src->btpp)->GetIndex();
 		}
 		dfs.printf("C");
 		// We want to keep any base type indicator so Clear() isn't called.
@@ -852,7 +851,6 @@ int64_t TYP::Initialize(txtoStream& tfs, ENODE* pnode, TYP *tp2, int opt, Symbol
 	int base, nn;
 	int64_t sizes[100];
 	char idbuf[sizeof(lastid)+1];
-	ENODE* node;
 	Expression exp(cg.stmt);
 
 	for (base = typ_sp-1; base >= 0; base--) {
@@ -1538,7 +1536,6 @@ int64_t TYP::GenerateT(txtoStream& tfs, ENODE *node)
 	int64_t val;
 	int64_t n, nele;
 	ENODE *nd, *pnode;
-	List* lst;
 
 	if (this == nullptr)
 		return (0);
@@ -1782,7 +1779,7 @@ ENODE *TYP::BuildEnodeTree()
 
 // Get the natural alignment for a given type.
 
-int TYP::Alignment()
+int64_t TYP::Alignment()
 {
 	//printf("DIAG: type NULL in alignment()\r\n");
 	if (this == NULL)
@@ -1815,7 +1812,7 @@ int TYP::Alignment()
 
 // Figure out the worst alignment required.
 
-int TYP::walignment()
+int64_t TYP::walignment()
 {
 	Symbol *sp;
 	int64_t retval = 0;
@@ -1877,7 +1874,7 @@ xit:
 }
 
 
-int TYP::roundAlignment()
+int64_t TYP::roundAlignment()
 {
 	worstAlignment = 0;
 	if (this == nullptr)

@@ -157,7 +157,7 @@ Operand *Operand::GenerateSignExtend(int isize, int osize, int flags)
 	return (ap);
 }
 
-void Operand::MakeLegalReg(int flags, int size)
+void Operand::MakeLegalReg(int flags, int64_t size)
 {
 	Operand* ap2;
 
@@ -223,7 +223,7 @@ void Operand::MakeLegalReg(int flags, int size)
 // MakeLegal will coerce the addressing mode in ap1 into a mode that is
 // satisfactory for the flag word.
 // ----------------------------------------------------------------------------
-void Operand::MakeLegal(int flags, int size)
+void Operand::MakeLegal(int flags, int64_t size)
 {
 	Operand *ap2, *ap1;
 	int64_t i;
@@ -303,6 +303,10 @@ void Operand::MakeLegal(int flags, int size)
 			break;
 		case am_fpreg:
 			if (flags & am_reg)
+				return;
+			break;
+		case am_vreg:
+			if (flags & am_vreg)
 				return;
 			break;
 		case am_preg:
@@ -430,6 +434,7 @@ void Operand::MakeLegal(int flags, int size)
 			return;
 		}
 	}
+
 	// Here we wanted the mode to be non-register (memory/immed)
 	// Should fix the following to place the result in memory and
 	// not a register.
@@ -454,7 +459,14 @@ void Operand::MakeLegal(int flags, int size)
 		pdeep = ap2->pdeep;
 		size = 2;
 	}
-	ap2 = GetTempRegister();
+	if (tp->type == bt_vector) {
+		ap2 = GetTempVectorRegister();
+		ap2->typep = &stdvector;
+	}
+	else {
+		ap2 = GetTempRegister();
+		ap2->typep = &stdlong;
+	}
 	switch (mode) {
 	case am_ind:
 	case am_indx:
@@ -470,7 +482,10 @@ void Operand::MakeLegal(int flags, int size)
 	default:
 		cg.GenerateLoad(ap2, this, size, size);
 	}
-	mode = am_reg;
+	if (tp->type == bt_vector)
+		mode = am_vreg;
+	else
+		mode = am_reg;
 	preg = ap2->preg;
 	deep = ap2->deep;
 	pdeep = ap2->pdeep;
@@ -624,7 +639,7 @@ void Operand::store(txtoStream& ofs)
 		break;
 	case am_reg:
 		if (typep == &stdvector)
-			ofs.printf("v%d", (int)preg);
+			ofs.write(RegMoniker(preg | rt_vector));
 		else if (typep == &stdvectormask)
 			ofs.printf("vm%d", (int)preg);
 		else {
@@ -632,6 +647,9 @@ void Operand::store(txtoStream& ofs)
 			//if (renamed)
 			//	ofs.printf(".%d", (int)pregs);
 		}
+		break;
+	case am_vreg:
+		ofs.write(RegMoniker(preg|rt_vector));
 		break;
 	case am_vmreg:
 		ofs.printf("vm%d", (int)preg);

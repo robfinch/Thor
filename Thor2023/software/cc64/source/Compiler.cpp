@@ -79,6 +79,7 @@ void Compiler::compile()
 	int nn;
 	Symbol* sp;
 	Symbol* fsp;
+	char buf[10];
 
 	dfs.printf("<compile>\n");
 	genst_cumulative = 0;
@@ -105,6 +106,16 @@ void Compiler::compile()
 	fsp->storage_class = sc_global;
 	fsp->tp = &stdint;
 	programFn = currentFn = ff.MakeFunction(fsp->id, fsp, false);
+
+	// Create built-in variables.
+	for (nn = 0; nn < 8; nn++) {
+		fsp = allocSYM();
+		sprintf_s(buf, sizeof(buf), "_vm%d", nn);
+		fsp->name = new std::string(buf);
+		fsp->storage_class = sc_global;
+		fsp->tp = &stdint;
+		gsyms[0].insert(fsp);
+	}
 
 	RTFClasses::Random::srand((RANDOM_TYPE)time(NULL));
 	decls = GlobalDeclaration::Make();
@@ -277,6 +288,22 @@ void Compiler::AddStandardTypes()
 	p->precision = sizeOfPtr * 8;
 	p->isUnsigned = true;
 	stdastring = *p;
+
+	p = allocTYP();
+	p->type = bt_half;
+	p->typeno = bt_half;
+	p->size = 2;
+	p->bit_width = nullptr;
+	p->precision = 16;
+	stdhalf = *p;
+
+	p = allocTYP();
+	p->type = bt_single;
+	p->typeno = bt_single;
+	p->size = 4;
+	p->bit_width = nullptr;
+	p->precision = 32;
+	stdsingle = *p;
 
 	p = allocTYP();
 	p->type = bt_double;

@@ -968,6 +968,8 @@ j1:
 		return srctp;
 	case bt_void:
 		return (dsttp);
+	case bt_vector:
+		return (dsttp);
 	}
 	error(ERR_MISMATCH);
 	return srctp;

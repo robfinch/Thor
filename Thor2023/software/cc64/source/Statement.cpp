@@ -1745,7 +1745,7 @@ void Statement::GenerateTry()
 //	GenerateDiadic(op_ldo, 0, ap, MakeIndexed((int64_t)16,regFP));	// Get current handler
 //	GenerateMonadic(op_push, 0, ap);	// stack it
 	sprintf_s(buf, sizeof(buf), ".C%05lld", (int64_t)throwlab);
-	DataLabels[throwlab] = true;
+	DataLabels[throwlab]++;
 	GenerateDiadic(cpu.ldi_op, 0, ap, MakeStringAsNameConst(buf, codeseg));
 	if (currentFn->IsFar)
 		GenerateMonadic(op_di, 0, MakeImmediate(2));
@@ -1812,7 +1812,7 @@ void Statement::GenerateCatch(int opt, int oldthrow, int olderthrow)
 	// Restore previous handler
 	ap = GetTempRegister();
 	sprintf_s(buf, sizeof(buf), ".C%05lld", (int64_t)oldthrow);
-	DataLabels[oldthrow] = true;
+	DataLabels[oldthrow]++;
 	GenerateDiadic(cpu.ldi_op, 0, ap, MakeStringAsNameConst(buf, codeseg));
 	if (currentFn->IsFar)
 		GenerateMonadic(op_di, 0, MakeImmediate(2));
@@ -2088,7 +2088,7 @@ bool Statement::Generate(int opt)
 			}
 			break;
 		case st_return:
-			currentFn->GenerateReturn(stmt);
+			cg.GenerateReturn(currentFn,stmt);
 			break;
 		case st_if:
 			stmt->GenerateIf();

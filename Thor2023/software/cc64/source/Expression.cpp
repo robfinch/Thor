@@ -763,14 +763,14 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	return (pnode->tp);
 }
 
-TYP* Expression::ParseNameRef(ENODE** node, Symbol* symi)
+TYP* Expression::ParseNameRef(ENODE** node, Symbol* symi, int nt)
 {
 	ENODE* pnode;
 	TYP* tptr;
 
 	// Try and find the name, if it is not found then see if it could be the
 	// current symbol.
-	tptr = nameref(&pnode, TRUE, symi);
+	tptr = nameref(&pnode, nt, symi);
 	if (tptr == nullptr) {
 		if (currentSym) {
 			if (currentSym->name->compare(lastid) == 0) {
@@ -1248,6 +1248,49 @@ ENODE* Expression::ParseAddressOf(Symbol* symi)
 	return (ep1);
 }
 
+TYP* Expression::ParseVm(ENODE** node, Symbol* symi, int vmn)
+{
+	ENODE* pnode;
+	Symbol* sp;
+	TYP* tptr;
+	char buf[8];
+
+	NextToken();
+
+	// Do we have: vmn(<expr>)
+	if (lastst == openpa) {
+		NextToken();
+		tptr = expression(&pnode, symi);
+		needpunc(closepa, 81);
+
+		// Get the associated vector mask variable
+		strcpy_s(buf, sizeof(buf), "_vm?");
+		buf[3]= '0' + vmn;
+		sp = gsearch2(buf, bt_int, nullptr, false);
+
+		// Better be able to find the compiler defined global variable. It is
+		// probably a compiler error if it cannot.
+		if (sp == nullptr)
+			//error(ERR_VM);
+			return (tptr);
+
+		pnode->mask = vmn;
+	}
+	// Else: process as a variable reference. Easy as it is always a register
+	// variable that is an long int.
+	else {
+		if (symi && symi->fi)
+			currentSym = symi;
+		tptr = &stdulong;
+		pnode = makenode(en_regvar, nullptr, nullptr);
+		pnode->rg = 32 + vmn;
+		pnode->SetType(tptr);
+	}
+	if (node)
+		*node = pnode;
+	return (tptr);
+}
+
 ENODE* Expression::ParseMulf(Symbol* symi)
 {
 	ENODE* ep1, * ep2;
@@ -1323,6 +1366,21 @@ ENODE* Expression::ParseBmap(Symbol* symi)
 	tp2 = ParseNonCommaExpression(&ep2, symi);
 	needpunc(closepa, 48);
 	ep1 = makenode(en_bmap, ep1, ep2);
+	ep1->esize = sizeOfWord;
+	tp = &stdint;
+	if (ep1) ep1->SetType(tp);
+	return (ep1);
+}
+
+ENODE* Expression::ParseSaveContext(Symbol* symi)
+{
+	ENODE* ep1, * ep2;
+	TYP* tp, * tp1, * tp2;
+
+	NextToken();
+	needpunc(openpa, 81);
+	needpunc(closepa, 82);
+	ep1 = makenode(en_save_context, nullptr, nullptr);
 	ep1->esize = sizeOfWord;
 	tp = &stdint;
 	if (ep1) ep1->SetType(tp);

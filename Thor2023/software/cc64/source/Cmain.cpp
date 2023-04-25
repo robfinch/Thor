@@ -187,7 +187,7 @@ int main(int argc, char **argv)
 	AppendFiles();
 	//				compile();
 				summary();
-				MBlk::ReleaseAll();
+//				MBlk::ReleaseAll();
 //				ReleaseGlobalMemory();
 				closefiles();
 			}
@@ -454,7 +454,7 @@ int openfiles(char *s)
 
 void makename_s(char *s, size_t L, char *e)
 {
-	int n;
+	size_t n;
 
 	n = strlen(s);
 	while(s[n]!='.' && n >= 0) n--;

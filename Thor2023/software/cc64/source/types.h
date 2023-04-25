@@ -195,6 +195,7 @@ public:
 	Int128 val128;
 public:
 	static bool IsCalleeSave(int regno);
+	static bool IsArgReg(int regno);
 	bool IsArgReg();
 	bool IsPositReg();
 	bool IsFloatReg();
@@ -347,6 +348,7 @@ public:
 	int64_t argbot;
 	int64_t tempbot;
 	int64_t regvarbot;
+	int64_t arg_space;					// space used by pushed arguments.
 	TABLE proto;								// Table holding protoype information
 	TABLE params;
 	Statement* prolog;					// Function prolog
@@ -358,6 +360,7 @@ public:
 	Symbol *parms;					    // List of parameters associated with symbol
 	Symbol *nextparm;
 	DerivedMethod *derivitives;	
+	int64_t int_save_mask;
 	CSet *mask, *rmask;					// Register saved/restored masks
 	CSet *fpmask, *fprmask;
 	CSet* pmask, * prmask;
@@ -441,7 +444,6 @@ public:
 	void GenLoad(Operand *ap3, Operand *ap1, int ssize, int size);
 	int64_t SizeofReturnBlock();
 	void SetupReturnBlock();
-	void GenerateReturn(Statement *stmt);
 	void GenerateLocalFunctions();
 	void GenerateCoroutineData();
 	void GenerateCoroutineEntry();
@@ -587,7 +589,7 @@ public:
 
 	TYP *GetBtp();
 	static TYP *GetPtr(int n);
-	int GetIndex();
+	int64_t GetIndex();
 	int GetHash();
 	static int64_t GetSize(int num);
 	int64_t GetElementSize();
@@ -644,9 +646,9 @@ public:
 	static bool IsSameUnionType(TYP* a, TYP* b);
 	void put_ty();
 
-	int Alignment();
-	int walignment();
-	int roundAlignment();
+	int64_t Alignment();
+	int64_t walignment();
+	int64_t roundAlignment();
 	int64_t roundSize();
 
 	ENODE *BuildEnodeTree();
@@ -745,6 +747,7 @@ public:
 	void* dtor;
 	ENODE* p[4];
 	ENODE* pfl;			// postfix list
+	int8_t mask;						// vector mask register
 
 	ENODE* Clone();
 
@@ -753,11 +756,19 @@ public:
 			printf("hello");
 		if (this) { tp = t; if (t) etype = t->type; } };
 	bool IsPtr() { return (etype == bt_pointer || etype == bt_struct || etype == bt_union || etype == bt_class || nodetype == en_addrof); };
-	bool IsFloatType() { return (nodetype == en_addrof || nodetype == en_autofcon) ? false : (etype == bt_double || etype == bt_quad || etype == bt_float); };
+	bool IsFloatType() {
+		if (nodetype == en_addrof || nodetype == en_autofcon)
+			return (false);
+		if (etype == bt_double || etype == bt_quad || etype == bt_float)
+			return (true);
+		if (etype == bt_vector)
+			return (tp->btpp->IsFloatType());
+		return (false);
+	};
 	bool IsPositType() {
 		return (nodetype == en_addrof || nodetype == en_autopcon) ? false : (etype == bt_posit);
 	};
-	bool IsVectorType() { return (etype == bt_vector); };
+	bool IsVectorType() { return (etype == bt_vector) || vmask != nullptr; };
 	bool IsAutocon() { return (nodetype == en_autocon || nodetype == en_autofcon || nodetype == en_autopcon || nodetype == en_autovcon || nodetype == en_classcon); };
 	bool IsUnsignedType() { return (etype == bt_ubyte || etype == bt_uchar || etype == bt_ushort || etype == bt_ulong || etype == bt_pointer || nodetype==en_addrof || nodetype==en_autofcon || nodetype==en_autocon); };
 	// ??? Use of this method is dubious
@@ -956,6 +967,7 @@ private:
 	TYP* ParseSwitch(ENODE** node, Symbol* symi);
 	TYP* ParseGenericCase(ENODE** node, Symbol* symi, TYP* tp1);
 	TYP* ParseGeneric(ENODE** node, Symbol* symi);
+	TYP* ParseVm(ENODE** node, Symbol* symi, int vmn);
 	ENODE* ParseTypenum();
 	ENODE* ParseNew(bool autonew, Symbol* symi);
 	ENODE* ParseDelete(Symbol* symi);
@@ -964,6 +976,7 @@ private:
 	ENODE* ParseBytndx(Symbol* symi);
 	ENODE* ParseWydndx(Symbol* symi);
 	ENODE* ParseBmap(Symbol* symi);
+	ENODE* ParseSaveContext(Symbol* symi);
 	// Unary Expression Parsing
 	TYP* ParseMinus(ENODE** node, Symbol* symi);
 	TYP* ParseNot(ENODE** node, Symbol* symi);
@@ -1037,7 +1050,7 @@ public:
 		owning_stmt = type;
 	};
 	Symbol* gsearch2(std::string na, __int16 rettype, TypeArray* typearray, bool exact);
-	TYP* ParseNameRef(ENODE** node, Symbol* symi);
+	TYP* ParseNameRef(ENODE** node, Symbol* symi, int nt = 1);
 	TYP* ParseUnaryExpression(ENODE** node, int got_pa, Symbol* symi);
 	TYP* CondDeref(ENODE** node, TYP* tp);
 	ENODE* MakeAutoNameNode(Symbol* sp);
@@ -1108,8 +1121,8 @@ public:
 
 	void GenZeroExtend(int isize, int osize);
 	Operand *GenerateSignExtend(int isize, int osize, int flags);
-	void MakeLegalReg(int flags, int size);
-	void MakeLegal(int flags, int size);
+	void MakeLegalReg(int flags, int64_t size);
+	void MakeLegal(int flags, int64_t size);
 	int OptRegConst(int regclass, bool tally=false);
 
 	// Storage
@@ -1195,6 +1208,7 @@ public:
 	void OptSll();
 	void OptSxw();
 	void OptSxo() {};
+	void OptVmask();
 	void OptZxb();
 	void OptZxw();
 	int TargetDistance(int64_t i);
@@ -1258,6 +1272,12 @@ public:
 	Operand* MakeDirect(ENODE* node);
 	Operand* MakeIndexed(ENODE* node, int rg);
 
+	virtual void GenerateAddOnto(Operand* dst, Operand* src, int sz = 0) {
+		GenerateTriadic(op_add, sz, dst, dst, src);
+	};
+	virtual void GenerateSubtractFrom(Operand* dst, Operand* src, int sz = 0) {
+		GenerateTriadic(op_sub, sz, dst, dst, src);
+	};
 	virtual void GenerateBne(Operand* ap1, Operand* ap2, int lab) {
 		GenerateTriadic(op_bne, 0, ap1, ap2, MakeCodeLabel(lab));
 	};
@@ -1280,9 +1300,12 @@ public:
 	void GenerateHint(int num);
 	void GenerateComment(char* cm);
 	void GenMemop(int op, Operand* ap1, Operand* ap2, int ssize, int typ);
-	void GenerateLoad(Operand* ap3, Operand* ap1, int ssize, int size);
+	void GenerateLoadFloat(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr) {
+		throw new C64PException(ERR_CODEGEN, 0);
+	};
+	virtual void GenerateLoad(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
 	void GenerateLoadAddress(Operand* ap3, Operand* ap1);
-	void GenerateStore(Operand* ap1, Operand* ap3, int size);
+	void GenerateStore(Operand* ap1, Operand* ap3, int size, Operand* mask = nullptr);
 	Operand* GenerateHook(ENODE*, int flags, int size);
 	Operand* GenerateSafeLand(ENODE*, int flags, int op) { return (nullptr); };
 	virtual void GenerateBranchTrue(Operand* ap, int label) {};
@@ -1290,6 +1313,9 @@ public:
 	virtual bool GenerateBranch(ENODE* node, int op, int label, int predreg, unsigned int prediction, bool limit) { return (false); };
 	virtual void GenerateLea(Operand* ap1, Operand* ap2) {
 		GenerateDiadic(op_lea, 0, ap1, ap2);
+	};
+	virtual void GenerateMove(Operand* dstreg, Operand* srcreg, Operand* mask=nullptr) {
+		GenerateTriadic(op_mov, 0, dstreg, srcreg, mask);
 	};
 	virtual void SignExtendBitfield(Operand* ap3, uint64_t mask) {};
 	Operand* GenerateBitfieldAssign(ENODE* node, int flags, int size);
@@ -1300,7 +1326,9 @@ public:
 	virtual Operand* GenerateBitfieldExtract(Operand* ap1, ENODE* offset, ENODE* width) { return (nullptr); };
 	virtual Operand* GenerateBitfieldExtract(Operand* ap1, Operand* offset, Operand* width) { return (nullptr); };
 	Operand* GenerateBinary(ENODE*, int flags, int size, int op);
-	Operand* GenerateBinaryFloat(ENODE* node, int flags, int size, int op);
+	Operand* GenerateBinaryFloat(ENODE* node, int flags, int size, e_op op);
+	Operand* GenerateVectorBinary(ENODE* node, int flags, int size, e_op op);
+	Operand* GenerateVectorBinaryFloat(ENODE* node, int flags, int size, e_op op);
 	Operand* GenerateAsaddDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su, bool neg);
 	Operand* GenerateAddDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su);
 	Operand* GenerateAutoconDereference(ENODE* node, TYP* tp, bool isRefType, int flags, int64_t size, int64_t siz1, int su);
@@ -1334,6 +1362,7 @@ public:
 	Operand* GenerateImmToMemAssign(Operand* ap1, Operand* ap2, int ssize);
 	Operand* GenerateRegToMemAssign(Operand* ap1, Operand* ap2, int ssize);
 	Operand* GenerateRegToRegAssign(ENODE* node, Operand* ap1, Operand* ap2, int ssize);
+	Operand* GenerateVregToVregAssign(ENODE* node, Operand* ap1, Operand* ap2, int ssize);
 	Operand* GenerateImmToRegAssign(Operand* ap1, Operand* ap2, int ssize);
 	Operand* GenerateMemToRegAssign(Operand* ap1, Operand* ap2, int size, int ssize);
 	Operand* GenerateExpression(ENODE* node, int flags, int64_t size, int rhs);
@@ -1360,6 +1389,12 @@ public:
 	void GenerateLoadConst(Operand *ap1, Operand *ap2);
 	void SaveTemporaries(Function *sym, int *sp, int *fsp, int* psp);
 	void RestoreTemporaries(Function *sym, int sp, int fsp, int psp);
+	virtual void GenerateInterruptSave(Function* func) {
+		throw new C64PException(ERR_CODEGEN, 0);
+	};
+	virtual void GenerateInterruptLoad(Function* func) {
+		throw new C64PException(ERR_CODEGEN, 0);
+	};
 	int GenerateInlineArgumentList(Function *func, ENODE *plist);
 	virtual int PushArgument(ENODE *ep, int regno, int stkoffs, bool *isFloat) { return(0); };
 	virtual int PushArguments(Function *func, ENODE *plist) { return (0); };
@@ -1370,6 +1405,8 @@ public:
 	virtual Operand *GenerateFunctionCall(ENODE *node, int flags, int lab=0);
 	virtual int GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp);
 	void GenerateFunction(Function *fn) { fn->Generate(); };
+	virtual void GenerateCoroutineExit(Function* func);
+	virtual void GenerateReturn(Function* func, Statement* stmt);
 	Operand* GenerateTrinary(ENODE* node, int flags, int size, int op);
 	virtual void GenerateUnlink(int64_t amt) {};
 	virtual void RestoreRegisterVars() {};
@@ -1452,6 +1489,9 @@ public:
 	void GenerateReturnInsn() {
 		GenerateZeradic(op_rts);
 	};
+	void GenerateLoadFloat(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
+	void GenerateInterruptSave(Function* func);
+	void GenerateInterruptLoad(Function* func);
 };
 
 class RiscvCodeGenerator : public CodeGenerator
@@ -1493,8 +1533,13 @@ public:
 	Operand* GenerateFgt(ENODE* node);
 	Operand* GenerateFge(ENODE* node);
 	Operand* GenExpr(ENODE* node);
+	void GenerateLea(Operand* ap1, Operand* ap2) {
+		GenerateDiadic(op_la, 0, ap1, ap2);
+	};
 	void GenerateReturnAndDeallocate(int64_t amt);
 	void GenerateReturnInsn();
+	void GenerateInterruptSave(Function* func);
+	void GenerateInterruptLoad(Function* func);
 };
 
 // Control Flow Graph
@@ -1846,12 +1891,13 @@ class CSE {
 public:
 	short int nxt;
   ENODE *exp;           /* optimizable expression */
-  short int       uses;           /* number of uses */
-  short int       duses;          /* number of dereferenced uses */
-  short int       reg;            /* AllocateRegisterVarsd register */
-  unsigned int    voidf : 1;      /* cannot optimize flag */
-  unsigned int    isfp : 1;
-	unsigned int	isPosit : 1;
+  short int uses;           /* number of uses */
+  short int duses;          /* number of dereferenced uses */
+  short int reg;            /* AllocateRegisterVarsd register */
+  bool voidf;      /* cannot optimize flag */
+  bool isfp;
+	bool isPosit;
+	bool is_vector;
 public:
 	void AccUses(int val);					// accumulate uses
 	void AccDuses(int val);					// accumulate duses
@@ -2117,6 +2163,7 @@ public:
 	e_sc istorage_class;
 	TABLE* itable;
 	short inline_threshold;
+	int64_t int_save_mask;
 public:
 	Declaration();
 	Declaration *next;
@@ -2149,7 +2196,7 @@ public:
 	void ParsePosit();
 	void ParseClass();
 	int ParseStruct(TABLE* table, e_bt typ, Symbol** sym);
-	void ParseVector();
+	void ParseVector(TABLE* table, Symbol** sym, e_sc sc);
 	void ParseVectorMask();
 	Symbol *ParseId();
 	void ParseDoubleColon(Symbol *sp);
@@ -2176,6 +2223,7 @@ public:
 	static void MakeFunction(Symbol* sp, Symbol* sp1);
 	void FigureStructOffsets(int64_t bgn, Symbol* sp);
 	bool IsScalar(e_sym lastst);
+	bool IsFloat(e_sym lastst);
 };
 
 class StructDeclaration : public Declaration
@@ -2286,9 +2334,21 @@ public:
 	int NumArgRegs;
 	int NumTmpRegs;
 	int NumSavedRegs;
+	int NumvArgRegs;
+	int NumvTmpRegs;
+	int NumvSavedRegs;
+	int NumvmArgRegs;
+	int NumvmTmpRegs;
+	int NumvmSavedRegs;
 	int argregs[64];
 	int tmpregs[64];
 	int saved_regs[64];
+	int vargregs[64];
+	int vtmpregs[64];
+	int vsaved_regs[64];
+	int vmargregs[64];
+	int vmtmpregs[64];
+	int vmsaved_regs[64];
 	bool SupportsBand;
 	bool SupportsBor;
 	bool SupportsBBS;

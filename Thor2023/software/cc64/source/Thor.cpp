@@ -1259,6 +1259,10 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
 							cg.GenerateStore(ap, MakeIndexed(stkoffs, regSP), sizeOfWord);
 							nn = 1;
 						}
+						else if (ap->type == bt_vector) {
+							cg.GenerateStore(ap, MakeIndexed(stkoffs, regSP), sizeOfWord);
+							nn = 4;
+						}
 						else {
 							regs[ap->preg].IsArg = true;
 							cg.GenerateStore(ap,MakeIndexed(stkoffs,regSP),sizeOfWord);
@@ -1271,7 +1275,7 @@ int ThorCodeGenerator::PushArgument(ENODE *ep, int regno, int stkoffs, bool *isF
     	break;
     }
 	ReleaseTempReg(ap);
-	return nn;
+	return (nn);
 }
 
 // Store entire argument list onto stack
@@ -1293,6 +1297,8 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	bool o_supportsPush;
 	bool large_argcount = false;
 	Symbol** sy = nullptr;
+	int64_t stkoffs;
+	int regno;
 
 	sum = 0;
 	push_count = 0;
@@ -1301,7 +1307,14 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 
 	sumFloat = false;
 	ip = currentFn->pl.tail;
-	GenerateTriadic(op_sub,0,makereg(regSP),makereg(regSP),MakeImmediate(0));
+
+	// Allocate stack space for arguments.
+	if (sym) {
+		if (sym->arg_space > 0)
+			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sym->arg_space));
+		sy = sym->params.GetParameters();
+	}
+
 	// Capture the parameter list. It is needed in the reverse order.
 	for (nn = 0, p = plist; p != NULL; p = p->p[1], nn++) {
 		pl[nn] = p->p[0];
@@ -1326,26 +1339,42 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 		// Variable argument list functions may cause the type array values to be
 		// exhausted before all the parameters are pushed. So, we check the parm number.
 		if (pl[nn]->etype == bt_none) {	// was there an empty parameter?
-			if (sy==nullptr && sym)
-				sy = sym->params.GetParameters();
-			if (sy) {
+			if (sy != nullptr) {
 				if (sy[nn]) {
-					sum += PushArgument(sy[nn]->defval, ta ? (i < ta->length ? ta->preg[i] : 0) : 0, sum * sizeOfWord, &isFloat, &pc, large_argcount);
+					sum += PushArgument(sy[nn]->defval, ta ? (i < ta->length ? ta->preg[i] : 0) : 0, sy[nn] ? sy[nn]->value.i : sum * sizeOfWord, &isFloat, &pc, large_argcount);
 					push_count += pc;
+				}
+				else {
+					error(ERR_MISSING_PARM);
 				}
 			}
 		}
 		else {
-			sum += PushArgument(pl[nn], ta ? (i < ta->length ? ta->preg[i] : 0) : 0, sum * sizeOfWord, &isFloat, &pc, large_argcount);
-			push_count += pc;
+			if (sy != nullptr) {
+				if (sy[nn]) {
+					regno = ta ? (i < ta->length ? ta->preg[i] : 0) : 0;
+					stkoffs = sy[nn] ? sy[nn]->value.i : sum * sizeOfWord;
+					sum += PushArgument(pl[nn], regno, stkoffs, &isFloat, &pc, large_argcount);
+					push_count += pc;
+				}
+				else {
+					error(ERR_MISSING_PARM);
+				}
+			}
+			else {
+				sum += PushArgument(pl[nn], ta ? (i < ta->length ? ta->preg[i] : 0) : 0, sum * sizeOfWord, &isFloat, &pc, large_argcount);
+				push_count += pc;
+			}
 		}
 		sumFloat |= isFloat;
 //		plist = plist->p[1];
   }
+	/*
 	if (sum == 0 || !large_argcount)
 		ip->fwd->MarkRemove();
 	else
 		ip->fwd->oper3 = MakeImmediate(sum*sizeOfWord);
+	*/
 	/*
 	if (!sumFloat) {
 		o_supportsPush = cpu.SupportsPush;
@@ -1371,6 +1400,8 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 	*/
 	if (ta)
 		delete ta;
+	if (sy)
+		delete[] sy;
   return (sum);
 }
 
@@ -1381,11 +1412,12 @@ void ThorCodeGenerator::PopArguments(Function *fnc, int howMany, bool isPascal)
 	if (howMany != 0) {
 		if (fnc) {
 			if (!fnc->IsPascal)
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(howMany * sizeOfWord));
+				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(fnc->arg_space));
 			else if (howMany - fnc->NumFixedAutoParms > 0)
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate((howMany - fnc->NumFixedAutoParms) * sizeOfWord));
+				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(fnc->arg_space - (fnc->NumFixedAutoParms * sizeOfWord)));
 		}
 		else {
+			error(ERR_UNKNOWN_FN);
 			if (!isPascal)
 				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(howMany * sizeOfWord));
 		}
@@ -1660,5 +1692,90 @@ void ThorCodeGenerator::GenerateFalseJump(ENODE* node, int label, unsigned int p
 		}
 		break;
 	}
+}
+
+void ThorCodeGenerator::GenerateLoadFloat(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask)
+{
+	if (ap3->typep == &stdflt) {
+		GenerateTriadic(op_fload, 'd', ap3, ap1, mask);
+	}
+	else if (ap3->typep == &stddouble) {
+		GenerateTriadic(op_fload, 'd', ap3, ap1, mask);
+	}
+	else if (ap3->typep == &stdquad) {
+		GenerateTriadic(op_fload, 'q', ap3, ap1, mask);
+	}
+	else if (ap3->typep == &stdsingle) {
+		GenerateTriadic(op_fload, 's', ap3, ap1, mask);
+	}
+	else if (ap3->typep == &stdhalf) {
+		GenerateTriadic(op_fload, 'h', ap3, ap1, mask);
+	}
+	//	else
+	//		throw C64PException(ERR_UNKNOWN_FLOAT_TYPE, 0);
+}
+
+void ThorCodeGenerator::GenerateInterruptSave(Function* func)
+{
+	int nn, kk;
+	int64_t tsm = func->int_save_mask;
+
+	nn = popcnt(tsm);
+	// Allocate storage for registers on stack
+	GenerateSubtractFrom(makereg(regSP), MakeImmediate(nn * sizeOfWord));
+	for (kk = nn = 0; nn < 63; nn++) {
+		if ((tsm & 15) == 15 && ((nn % 4) == 0)) {
+			GenerateDiadic(op_storeg, 0, makereg((nn / 4) | rt_group), MakeIndexed(kk * sizeOfWord, regSP));
+			kk += 4;
+			tsm = tsm >> 4;
+			nn += 3;
+		}
+		else if (tsm & 1) {
+			GenerateStore(makereg(nn), MakeIndexed(kk * sizeOfWord, regSP), sizeOfWord);
+			kk++;
+			tsm = tsm >> 1;
+		}
+	}
+	if (DoesContextSave) {
+		for (kk = 0; kk < 16; kk++)
+			GenerateDiadic(op_storeg, 0, makereg(kk | rt_group), MakeIndexed(kk * sizeOfWord * 4, regTS));
+	}
+	if (sp_init) {
+		GenerateLoadConst(MakeImmediate(sp_init), makereg(regSP));
+	}
+	/*
+	if (stkname) {
+		GenerateDiadic(op_lea, 0, makereg(SP), MakeStringAsNameConst(stkname,dataseg));
+		GenerateTriadic(op_ori, 0, makereg(SP), makereg(SP), MakeImmediate(0xFFFFF00000000000LL));
+	}
+	*/
+}
+
+void ThorCodeGenerator::GenerateInterruptLoad(Function* func)
+{
+	int nn, kk;
+	int64_t tsm = func->int_save_mask;
+
+	if (DoesContextSave) {
+		for (kk = 0; kk < 16; kk++)
+			GenerateDiadic(op_loadg, 0, makereg(kk | rt_group), MakeIndexed(kk * sizeOfWord * 4, regTS));
+	}
+
+	nn = popcnt(tsm);
+	for (kk = nn = 0; nn < 63; nn++) {
+		if ((tsm & 15) == 15 && ((nn % 4) == 0)) {
+			GenerateDiadic(op_loadg, 0, makereg((nn >> 2) | rt_group), MakeIndexed(kk * sizeOfWord, regSP));
+			kk += 4;
+			nn += 3;
+			tsm = tsm >> 4;
+		}
+		else if (tsm & 1) {
+			GenerateLoad(makereg(nn), MakeIndexed(kk * sizeOfWord, regSP), sizeOfWord, sizeOfWord);
+			kk++;
+			tsm = tsm >> 1;
+		}
+	}
+	// Deallocate stack storage
+	GenerateAddOnto(makereg(regSP), MakeImmediate(nn * sizeOfWord));
 }
 

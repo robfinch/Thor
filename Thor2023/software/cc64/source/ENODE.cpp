@@ -952,14 +952,20 @@ void ENODE::repexpr()
 					ru->add(rg);
 					rru->add(nregs - 1 - rg);
 				}
-				else
+				else {
 					p[0]->repexpr();
+					vmask->repexpr();
+				}
 			}
-			else
+			else {
 				p[0]->repexpr();
+				vmask->repexpr();
+			}
 		}
-		else
+		else {
 			p[0]->repexpr();
+			vmask->repexpr();
+		}
 		break;
 	case en_ubyt2tetra: case en_uwyde2tetra:
 	case en_byt2wyde: case en_ubyt2wyde: case en_ubyt2octa:
@@ -977,22 +983,27 @@ void ENODE::repexpr()
 	case en_abs:
 	case en_sxb: case en_sxh: case en_sxc:
 		p[0]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_chk:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_compl:
 		p[0]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_not:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_i2p:
 	case en_i2d:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_i2q:
 	case en_d2i:
@@ -1001,11 +1012,13 @@ void ENODE::repexpr()
 	case en_d2q:
 	case en_t2q:
 		p[0]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_asadd:
 	case en_add:    
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_bmap:
 	case en_bytendx:	case en_wydendx:
@@ -1057,23 +1070,28 @@ void ENODE::repexpr()
 		p[0]->repexpr();
 	case en_cast:
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_fcall:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_assign:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_cond:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_list:
 		for (ep = p[2]; ep; ep = ep->p[2]) {
 			ep->p[0]->repexpr();
 			ep->p[1]->repexpr();
+			ep->vmask->repexpr();
 		}
 		break;
 	case en_regvar:
@@ -1081,16 +1099,19 @@ void ENODE::repexpr()
 	case en_pregvar:
 		p[0]->repexpr();
 		p[1]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_ptrdif:
 	case en_bchk:
 		p[0]->repexpr();
 		p[1]->repexpr();
 		p[2]->repexpr();
+		vmask->repexpr();
 		break;
 	case en_isnullptr:
 	case en_addrof:
 		p[0]->repexpr();
+		vmask->repexpr();
 		break;
 	default:
 		dfs.printf("Uncoded node in repexr():%d\r\n", nodetype);
@@ -1152,12 +1173,14 @@ CSE *ENODE::OptInsertRef(int duse)
 		if (currentFn->csetbl->Search(p[0]) != NULL || currentFn->csetbl->Search(p[1]) != NULL) {
 			csp->voidf = 1;
 			p[0]->scanexpr(1);
+			vmask->scanexpr(1);
 			if (pfl)
 				pfl->scanexpr(1);
 		}
 		else {
 			if (csp->voidf) {
 				p[0]->scanexpr(1);
+				vmask->scanexpr(1);
 				if (pfl)
 					pfl->scanexpr(1);
 			}
@@ -1176,8 +1199,10 @@ CSE *ENODE::OptInsertRef(int duse)
 				}
 				// even if that item must not be put in a register,
 				// it is legal to put its address therein
-				if (csp->voidf)
-				  p[0]->scanexpr(1);
+				if (csp->voidf) {
+					p[0]->scanexpr(1);
+					vmask->scanexpr(1);
+				}
 			}
 		}
 	}
@@ -1187,6 +1212,7 @@ CSE *ENODE::OptInsertRef(int duse)
 		p[0]->scanexpr(1);
 		p[1]->scanexpr(1);
 		p[2]->scanexpr(1);
+		vmask->scanexpr(1);
 		if (pfl)
 			pfl->scanexpr(1);
 	}
@@ -1250,6 +1276,7 @@ void ENODE::scanexpr(int duse)
 	case en_tetra2octa: case en_tetra2hexi:
 	case en_octa2hexi: case en_uocta2hexi:
 		p[0]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_fieldref:
 		bit_offset->scanexpr(1);
@@ -1264,13 +1291,16 @@ void ENODE::scanexpr(int duse)
 	case en_compl:
 	case en_chk:
 		p[0]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_not:
 		p[0]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_i2p:
 	case en_i2d:
 		p[0]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_i2q:
 	case en_d2i:
@@ -1279,12 +1309,14 @@ void ENODE::scanexpr(int duse)
 	case en_d2q:
 	case en_t2q:
 		p[0]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_asadd:  
 	case en_assub:
 	case en_add:    case en_sub:
 		p[0]->scanexpr(duse);
 		p[1]->scanexpr(duse);
+		vmask->scanexpr(duse);
 		break;
 	case en_bmap:
 	case en_ext: case en_extu:
@@ -1333,30 +1365,36 @@ void ENODE::scanexpr(int duse)
 		p[0]->scanexpr(0);
 	case en_cast:
 		p[1]->scanexpr(0);
+		vmask->scanexpr(0);
 		break;
 	case en_list:
 		for (ep = p[2]; ep; ep = ep->p[2]) {
 			ep->p[0]->scanexpr(0);
 			ep->p[1]->scanexpr(0);
+			vmask->scanexpr(0);
 		}
 		break;
 	case en_assign:
 		p[0]->scanexpr(0);
 		p[1]->scanexpr(0);
+		vmask->scanexpr(0);
 		break;
 	case en_fcall:
 		p[0]->scanexpr(1);
 		p[1]->scanexpr(0);
+		vmask->scanexpr(0);
 		break;
 	case en_ptrdif:
 	case en_bchk:
 		p[0]->scanexpr(0);
 		p[1]->scanexpr(0);
 		p[2]->scanexpr(0);
+		vmask->scanexpr(0);
 		break;
 	case en_isnullptr:
 	case en_addrof:
 		p[0]->scanexpr(0);
+		vmask->scanexpr(0);
 		break;
 	default: dfs.printf("Uncoded node in ENODE::scanexpr():%d\r\n", nodetype);
 	}
@@ -1531,7 +1569,7 @@ Operand *ENODE::GenIndex(bool neg)
 		if (ap2->mode == am_reg && ap2->preg==0) {	// value is zero
 			ap1->mode = am_direct;
 			if (ap1->offset)
-				DataLabels[ap1->offset->i] = true;
+				DataLabels[ap1->offset->i]++;
 			return (ap1);
 		}
 		ap2->isConst = ap2->mode==am_imm;
@@ -1923,26 +1961,36 @@ Operand *ENODE::GenDivMod(int flags, int size, int op)
 //
 Operand *ENODE::GenMultiply(int flags, int size, int op)
 {
-	Operand *ap1, *ap2, *ap3;
+	Operand *ap1, *ap2, *ap3, *vap3;
 	bool square = false;
+	bool vec = false;
 
 	//Enter("Genmul");
 	ap2 = nullptr;
-	if (p[0]->nodetype == en_icon)
+	vap3 = GetTempVectorRegister();
+	if (p[0]->nodetype == en_icon || p[0]->nodetype == en_fcon || p[0]->nodetype == en_pcon)
 		swap_nodes(this);
 	if (IsEqual(p[0], p[1]))
 		square = !opt_nocgo;
 	if (op == op_fmul) {
 		ap3 = GetTempFPRegister();
-		ap1 = cg.GenerateExpression(p[0], am_reg, size, 0);
+		ap1 = cg.GenerateExpression(p[0], am_reg|am_vreg, size, 0);
 		if (!square)
-			ap2 = cg.GenerateExpression(p[1], am_reg, size, 1);
+			ap2 = cg.GenerateExpression(p[1], am_reg|am_vreg|am_imm, size, 1);
+		if (ap1->mode == am_vreg || (ap2 && ap2->mode == am_vreg)) {
+			vec = true;
+			op = op_vfmul;
+		}
 	}
 	else {
 		ap3 = GetTempRegister();
-		ap1 = cg.GenerateExpression(p[0], am_reg, 8, 0);
+		ap1 = cg.GenerateExpression(p[0], am_reg|am_vreg, sizeOfWord, 0);
 		if (!square)
-			ap2 = cg.GenerateExpression(p[1], am_reg | am_imm, 8, 1);
+			ap2 = cg.GenerateExpression(p[1], am_reg | am_vreg | am_imm, sizeOfWord, 1);
+		if (ap1->mode == am_vreg || (ap2 && ap2->mode == am_vreg)) {
+			vec = true;
+			op = op_vmul;
+		}
 	}
 	if (op == op_fmul) {
 		// Generate a convert operation ?
@@ -1966,9 +2014,18 @@ Operand *ENODE::GenMultiply(int flags, int size, int op)
 	if (!square)
 		ReleaseTempReg(ap2);
 	ReleaseTempReg(ap1);
-	ap3->MakeLegal(flags, 2);
-	//Leave("Genmul", 0);
-	return (ap3);
+	if (vec) {
+		ReleaseTempRegister(ap3);
+		//		ap3->MakeLegal(flags, 2);
+		//Leave("Genmul", 0);
+		return (vap3);
+	}
+	else {
+		ReleaseTempRegister(vap3);
+		ap3->MakeLegal(flags, 2);
+		//Leave("Genmul", 0);
+		return (ap3);
+	}
 }
 
 
@@ -2380,7 +2437,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		// Floats support immediate mode
 		if (false && !opt) {
 			sprintf_s(buf, sizeof(buf), "%s_%lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
-			DataLabels[i] = true;
+			DataLabels[i]++;
 			ofs.write(buf);
 			break;
 		}
@@ -2457,7 +2514,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		break;
 	case en_labcon:
 	j1:
-		DataLabels[i] = true;
+		DataLabels[i]++;
 		ofs.write(GetLabconLabel(i)->c_str());
 		if (rshift > 0) {
 			sprintf_s(buf, sizeof(buf), ">>%d", rshift);
@@ -2471,7 +2528,7 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 //		sprintf_s(buf, sizeof(buf), ".C%s_%lld", GetNamespace(), i);
 #endif
 		sprintf_s(buf, sizeof(buf), ".%05d", (int)i);
-		DataLabels[i] = true;
+		DataLabels[i]++;
 		ofs.write(buf);
 		if (rshift > 0) {
 			sprintf_s(buf, sizeof(buf), ">>%d", rshift);

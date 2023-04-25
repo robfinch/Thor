@@ -60,7 +60,7 @@ public:
 		a->midHigh = b->midHigh;
 		a->high = b->high;
 	};
-	static Int256 MakeMask(int64_t width) {
+	static Int256 MakeMask(int width) {
 		Int256 a;
 		Int256 one;
 
@@ -70,7 +70,7 @@ public:
 		a.Sub(&a, &a, &one);
 		return (a);
 	};
-	static Int256 MakeMask(int64_t offset, int64_t width) {
+	static Int256 MakeMask(int offset, int width) {
 		Int256 a;
 
 		a = MakeMask(width);

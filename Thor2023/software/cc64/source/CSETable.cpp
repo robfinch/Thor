@@ -91,6 +91,7 @@ CSE *CSETable::InsertNode(ENODE *node, int duse, bool *first)
 		csp->exp = node->Clone();
 		csp->isfp = false;// csp->exp->IsFloatType();// && !csp->exp->constflag;
 		csp->isPosit = false;// csp->exp->IsPositType();// && !csp->exp->constflag;
+		csp->is_vector = csp->exp->IsVectorType();
 		return (csp);
 	}
 	*first = false;
@@ -282,24 +283,31 @@ int CSETable::AllocateVectorRegisters()
 	CSE *csp;
 	bool alloc;
 
-	vreg = regFirstRegvar;
+	vreg = 0;
 	for (nn = 0; nn < 4; nn++) {
 		for (csp = First(); csp; csp = Next()) {
 			if (csp->exp) {
-				if (csp->exp->etype == bt_vector && csp->reg == -1 && vreg <= regLastRegvar) {
-					switch (nn) {
-					case 0:
-					case 1:
-					case 2: alloc = (csp->OptimizationDesireability() >= 4 - nn)
-						&& (csp->duses > csp->uses / (8 << nn));
-						break;
-					case 3:	alloc = (!csp->voidf) && (csp->uses > 3);
-						break;
+				if (csp->exp->etype == bt_vector) {
+					if (csp->reg == -1) {
+						if (vreg < cpu.NumvSavedRegs) {
+							switch (nn) {
+							case 0:
+							case 1:
+							case 2: alloc = (csp->OptimizationDesireability() >= 4);
+								//						&& (csp->duses > csp->uses / (8 << nn));
+								break;
+							case 3: alloc = (csp->OptimizationDesireability() >= 3);
+								//					case 3:	alloc = (!csp->voidf) && (csp->uses > 3);
+								break;
+							}
+							if (alloc) {
+								printf("hi");
+								csp->reg = cpu.vsaved_regs[vreg++] | rt_vector;
+							}
+							else
+								csp->reg = -1;
+						}
 					}
-					if (alloc)
-						csp->reg = vreg++;
-					else
-						csp->reg = -1;
 				}
 			}
 		}
@@ -309,7 +317,7 @@ int CSETable::AllocateVectorRegisters()
 
 void CSETable::InitializeTempRegs()
 {
-	Operand *ap, *ap2, *ap3;
+	Operand *ap, *ap2;
 	CSE *csp;
 	ENODE *exptr;
 	int size;
@@ -328,10 +336,14 @@ void CSETable::InitializeTempRegs()
 			{
 				if (exptr->tp || true) {
 					initstack();
-					ap = cg.GenerateExpression(exptr, am_reg | am_imm | am_mem, exptr->tp ? exptr->tp->size : sizeOfInt, 1);
+					ap = cg.GenerateExpression(exptr, am_reg | am_vreg | am_imm | am_mem, exptr->tp ? exptr->tp->size : sizeOfInt, 1);
 					if (ap == nullptr)
 						continue;
-					ap2 = csp->isfp ? makefpreg(csp->reg) : csp->isPosit ? compiler.of.makepreg(csp->reg) : makereg(csp->reg);
+					if (csp->is_vector)
+						ap2 = makevreg(csp->reg);
+					else
+						ap2 = makereg(csp->reg);
+					//ap2 = csp->isfp ? makefpreg(csp->reg) : csp->isPosit ? compiler.of.makepreg(csp->reg) : makereg(csp->reg);
 					/* ??? Why different from scalar?
 					if (csp->isfp | csp->isPosit) {
 						ap2->type = ap->type;
@@ -360,6 +372,9 @@ void CSETable::InitializeTempRegs()
 						}
 					}
 					else if (ap->mode == am_reg) {
+						GenerateDiadic(cpu.mov_op, 0, ap2, ap);
+					}
+					else if (ap->mode == am_vreg) {
 						GenerateDiadic(cpu.mov_op, 0, ap2, ap);
 					}
 					else {
@@ -479,7 +494,6 @@ int CSETable::AllocateRegisterVars()
 int CSETable::Optimize(Statement *block)
 {
 	int nn;
-	int cnt;
 	CSE *cse;
 
 	//csendx = 0;
@@ -547,11 +561,11 @@ void CSETable::Dump()
 		if (csp->exp && csp->exp->sym)
 			dfs.printf("%s   ", (char*)csp->exp->sym->name->c_str());
 		else if (csp->exp)
-			dfs.printf("%lld ", csp->exp->i);
+			dfs.printf("%I64d ", csp->exp->i);
 		if (csp->exp && csp->exp->sp)
 			dfs.printf("%s   ", (char *)((std::string *)(csp->exp->sp))->c_str());
 		else if (csp->exp)
-			dfs.printf("%lld ", csp->exp->i);
+			dfs.printf("%I64d ", csp->exp->i);
 		dfs.printf("\n");
 	}
 	dfs.printf("</CSETable>\n");

@@ -45,7 +45,7 @@ void CPU::SetRealRegisters()
 	regLastRegvar = 17;
 	regFirstArg = 18;
 	regLastArg = 22;
-	nregs = 96;
+	nregs = 64;
 	for (n = 0; n < nregs; n++) {
 		regs[n].number = n;
 		regs[n].assigned = false;
@@ -56,6 +56,13 @@ void CPU::SetRealRegisters()
 		regs[n].isGP = (n < 32);
 		regs[n].isFP = (n >= 32 && n < 64);
 		regs[n].isPosit = (n >= 64 && n < 96);
+
+		vregs[n].number = n;
+		vregs[n].assigned = false;
+		vregs[n].isConst = false;
+		vregs[n].modified = false;
+		vregs[n].offset = nullptr;
+		vregs[n].IsArg = false;
 	}
 	MachineReg::MarkColorable();
 }
@@ -89,6 +96,13 @@ void CPU::SetVirtualRegisters()
 		regs[n].modified = false;
 		regs[n].offset = nullptr;
 		regs[n].IsArg = false;
+
+		vregs[n].number = n;
+		vregs[n].assigned = false;
+		vregs[n].isConst = false;
+		vregs[n].modified = false;
+		vregs[n].offset = nullptr;
+		vregs[n].IsArg = false;
 	}
 	MachineReg::MarkColorable();
 }

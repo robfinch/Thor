@@ -10,6 +10,7 @@ int IsTempReg(int rg);
 
 extern TYP* expression(ENODE** node, Symbol* symi);
 extern ENODE* makefqnode(int nt, Float128* f128);
+extern Operand* makevmreg(int reg);
 
 // Intexpr.c
 extern Int128 GetIntegerExpression(ENODE** p, Symbol* symi, int opt);
@@ -103,6 +104,7 @@ extern Operand* GenerateFunctionCall(ENODE* node, int flags);
 
 // Utility
 extern int64_t roundWord(int64_t);
+extern int64_t roundQuadWord(int64_t);
 extern int countLeadingBits(int64_t val);
 extern int countLeadingZeros(int64_t val);
 
@@ -137,5 +139,11 @@ int IdentifyPrecision();
 extern void GenerateTriadic(int op, int len, Operand* ap1, Operand* ap2, Operand* ap3);
 void AppendFiles();
 char* GetPrivateNamespace();
+
+extern int64_t tmpVarSpace();
+extern void tmpFreeAll();
+extern void tmpReset();
+extern int64_t tmpAlloc(int64_t);
+extern void tmpFree(int64_t);
 
 #endif

@@ -349,11 +349,11 @@ Symbol* TABLE::Find(std::string na, bool opt, e_bt bt)
 
 Symbol** TABLE::GetParameters()
 {
-	static Symbol* params[30];
-
+	Symbol** params;
 	Symbol* thead, * first;
 
-	ZeroMemory(&params, sizeof(params));
+	params = new Symbol * [30];
+	ZeroMemory(&params[0], sizeof(params));
 	thead = headp;
 	first = thead;
 	while (thead != nullptr) {

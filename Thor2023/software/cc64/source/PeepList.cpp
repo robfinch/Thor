@@ -271,7 +271,7 @@ void PeepList::SetLabelReference()
 	for (p = head; p; p = p->fwd) {
 		if (p->opcode == op_label && !p->str) {
 			LabelTable[(int)p->oper1] = p;
-			p->isReferenced = DataLabels[(int)p->oper1];
+			p->isReferenced = DataLabels[(int)p->oper1] > 0;
 		}
 	}
 	for (q = head; q; q = q->fwd) {
@@ -798,6 +798,7 @@ void PeepList::OptInstructions()
 			case op_seq:	ip->OptScc(); break;
 			case op_sne:	ip->OptScc(); break;
 			case op_sllp:	ip->OptSll(); break;
+			case op_vmask: ip->OptVmask(); break;
 			case op_zxb:	ip->OptZxb();	break;
 			case op_zxw:	ip->OptZxw();	break;
 			case op_not:	break;

@@ -46,6 +46,8 @@ static unsigned short int next_vmreg;
 static short int next_breg;
 int max_reg_alloc_ptr;
 int max_stack_use;
+int max_vreg_alloc_ptr;
+int max_vstack_use;
 #define MAX_REG 4			/* max. scratch data	register (D2) */
 #define	MAX_REG_STACK	30
 
@@ -138,17 +140,32 @@ int NumTempRegs()
 void CPU::InitRegs()
 {
 #ifdef THOR
-	cpu.NumArgRegs = 10;
+	cpu.NumArgRegs = 11;
 	cpu.argregs[0] = 1;
 	cpu.argregs[1] = 2;
 	cpu.argregs[2] = 3;
-	cpu.argregs[3] = 4;
-	cpu.argregs[4] = 25;
-	cpu.argregs[5] = 26;
-	cpu.argregs[6] = 27;
-	cpu.argregs[7] = 28;
-	cpu.argregs[8] = 29;
-	cpu.argregs[9] = 30;
+	cpu.argregs[3] = 40;
+	cpu.argregs[4] = 41;
+	cpu.argregs[5] = 42;
+	cpu.argregs[6] = 43;
+	cpu.argregs[7] = 44;
+	cpu.argregs[8] = 45;
+	cpu.argregs[9] = 46;
+	cpu.argregs[10] = 47;
+
+	cpu.NumvArgRegs = 10;
+	cpu.vargregs[0] = 1;
+	cpu.vargregs[1] = 2;
+	cpu.vargregs[2] = 3;
+	cpu.vargregs[3] = 40;
+	cpu.vargregs[4] = 41;
+	cpu.vargregs[5] = 42;
+	cpu.vargregs[6] = 43;
+	cpu.vargregs[7] = 44;
+	cpu.vargregs[8] = 45;
+	cpu.vargregs[9] = 46;
+	cpu.vargregs[10] = 47;
+
 #endif
 #ifdef RISCV
 	cpu.NumArgRegs = 8;
@@ -163,17 +180,34 @@ void CPU::InitRegs()
 #endif
 
 #ifdef THOR
-	cpu.NumTmpRegs = 10;
-	cpu.tmpregs[0] = 5;
-	cpu.tmpregs[1] = 6;
-	cpu.tmpregs[2] = 7;
-	cpu.tmpregs[3] = 8;
-	cpu.tmpregs[4] = 9;
-	cpu.tmpregs[5] = 10;
-	cpu.tmpregs[6] = 11;
-	cpu.tmpregs[7] = 12;
-	cpu.tmpregs[8] = 13;
-	cpu.tmpregs[9] = 14;
+	cpu.NumTmpRegs = 12;
+	cpu.tmpregs[0] = 4;
+	cpu.tmpregs[1] = 5;
+	cpu.tmpregs[2] = 6;
+	cpu.tmpregs[3] = 7;
+	cpu.tmpregs[4] = 8;
+	cpu.tmpregs[5] = 9;
+	cpu.tmpregs[6] = 10;
+	cpu.tmpregs[7] = 11;
+	cpu.tmpregs[8] = 12;
+	cpu.tmpregs[9] = 13;
+	cpu.tmpregs[10] = 14;
+	cpu.tmpregs[11] = 15;
+
+	cpu.NumvTmpRegs = 12;
+	cpu.vtmpregs[0] = 4;
+	cpu.vtmpregs[1] = 5;
+	cpu.vtmpregs[2] = 6;
+	cpu.vtmpregs[3] = 7;
+	cpu.vtmpregs[4] = 8;
+	cpu.vtmpregs[5] = 9;
+	cpu.vtmpregs[6] = 10;
+	cpu.vtmpregs[7] = 11;
+	cpu.vtmpregs[8] = 12;
+	cpu.vtmpregs[9] = 13;
+	cpu.vtmpregs[10] = 14;
+	cpu.vtmpregs[11] = 15;
+
 #endif
 #ifdef RISCV
 	cpu.NumTmpRegs = 7;
@@ -186,17 +220,42 @@ void CPU::InitRegs()
 	cpu.tmpregs[6] = 31;
 #endif
 #ifdef THOR
-	cpu.NumSavedRegs = 10;
-	cpu.saved_regs[0] = 15;
-	cpu.saved_regs[1] = 16;
-	cpu.saved_regs[2] = 17;
-	cpu.saved_regs[3] = 18;
-	cpu.saved_regs[4] = 19;
-	cpu.saved_regs[5] = 20;
-	cpu.saved_regs[6] = 21;
-	cpu.saved_regs[7] = 22;
-	cpu.saved_regs[8] = 23;
-	cpu.saved_regs[9] = 24;
+	cpu.NumSavedRegs = 16;
+	cpu.saved_regs[0] = 16;
+	cpu.saved_regs[1] = 17;
+	cpu.saved_regs[2] = 18;
+	cpu.saved_regs[3] = 19;
+	cpu.saved_regs[4] = 20;
+	cpu.saved_regs[5] = 21;
+	cpu.saved_regs[6] = 22;
+	cpu.saved_regs[7] = 23;
+	cpu.saved_regs[8] = 24;
+	cpu.saved_regs[9] = 25;
+	cpu.saved_regs[10] = 26;
+	cpu.saved_regs[11] = 27;
+	cpu.saved_regs[12] = 28;
+	cpu.saved_regs[13] = 29;
+	cpu.saved_regs[14] = 30;
+	cpu.saved_regs[15] = 31;
+
+	cpu.NumvSavedRegs = 16;
+	cpu.vsaved_regs[0] = 16;
+	cpu.vsaved_regs[1] = 17;
+	cpu.vsaved_regs[2] = 18;
+	cpu.vsaved_regs[3] = 19;
+	cpu.vsaved_regs[4] = 20;
+	cpu.vsaved_regs[5] = 21;
+	cpu.vsaved_regs[6] = 22;
+	cpu.vsaved_regs[7] = 23;
+	cpu.vsaved_regs[8] = 24;
+	cpu.vsaved_regs[9] = 25;
+	cpu.vsaved_regs[10] = 26;
+	cpu.vsaved_regs[11] = 27;
+	cpu.vsaved_regs[12] = 28;
+	cpu.vsaved_regs[13] = 29;
+	cpu.vsaved_regs[14] = 30;
+	cpu.vsaved_regs[15] = 31;
+
 #endif
 #ifdef RISCV
 	cpu.NumSavedRegs = 11;
@@ -277,7 +336,7 @@ int IsTempReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumTmpRegs; nn++) {
-		if (rg == cpu.tmpregs[nn])
+		if (rg == cpu.tmpregs[nn] || rg==cpu.vtmpregs[nn])
 			return (nn+1);
 	}
 	return (0);
@@ -288,7 +347,7 @@ int IsArgReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumArgRegs; nn++) {
-		if (rg == cpu.argregs[nn])
+		if (rg == cpu.argregs[nn] || rg == cpu.vargregs[nn])
 			return (nn + 1);
 	}
 	return (0);
@@ -299,7 +358,7 @@ int IsSavedReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumSavedRegs; nn++) {
-		if (rg == cpu.saved_regs[nn])
+		if (rg == cpu.saved_regs[nn] || rg == cpu.vsaved_regs[nn])
 			return (nn + 1);
 	}
 	return (0);
@@ -318,6 +377,19 @@ void SpillRegister(Operand *ap, int number)
 	fatal("SpillRegister(): register already spilled");
   reg_alloc[number].f.isPushed = 'T';
 	reg_in_use[ap->preg] = -1;
+}
+
+void SpillVectorRegister(Operand* ap, int number)
+{
+	GenerateDiadic(op_store, 0, ap, cg.MakeIndexed(currentFn->GetTempBot() + ap->deep * (sizeOfWord * 4), regFP));
+	if (pass == 1)
+		max_stack_use = max(max_stack_use, (ap->deep + 1) * (sizeOfWord * 4));
+	//reg_stack[reg_stack_ptr].Operand = ap;
+	//reg_stack[reg_stack_ptr].f.allocnum = number;
+	if (vreg_alloc[number].f.isPushed == 'T')
+		fatal("SpillVectorRegister(): register already spilled");
+	vreg_alloc[number].f.isPushed = 'T';
+	vreg_in_use[ap->preg] = -1;
 }
 
 void SpillFPRegister(Operand *ap, int number)
@@ -353,6 +425,17 @@ void LoadRegister(int regno, int number)
 	reg_in_use[regno] = number;
 	GenerateDiadic(op_load,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP));
     reg_alloc[number].f.isPushed = 'F';
+}
+
+// Load vector register from memory.
+
+void LoadVectorRegister(int regno, int number)
+{
+	if (vreg_in_use[regno] >= 0)
+		fatal("LoadVectorRegister():register still in use");
+	vreg_in_use[regno] = number;
+	GenerateDiadic(op_load, 0, makevreg(regno), cg.MakeIndexed(currentFn->GetTempBot() + number * (sizeOfWord * 4), regFP));
+	vreg_alloc[number].f.isPushed = 'F';
 }
 
 void LoadFPRegister(int regno, int number)
@@ -488,34 +571,38 @@ Operand *GetTempRegister()
 Operand *GetTempVectorRegister()
 {
 	Operand *ap;
-    Function *sym = currentFn;
+  Function *sym = currentFn;
+	int number;
 
+	number = vreg_in_use[cpu.vtmpregs[next_vreg]];
 	if (vreg_in_use[next_vreg] >= 0) {
 //		if (isThor)	
 //			GenerateTriadic(op_addui,0,makereg(regSP),makereg(regSP),MakeImmediate(-8));
-		GenerateTempVectorRegPush(next_vreg, am_reg, vreg_in_use[next_vreg],0);
+		SpillVectorRegister(makereg(cpu.vtmpregs[next_vreg]), number);
 	}
-	TRACE(printf("GetTempRegister:r%d\r\n", next_vreg);)
-    vreg_in_use[next_vreg] = vreg_alloc_ptr;
-    ap = allocOperand();
-    ap->mode = am_reg;
-    ap->preg = next_vreg;
-    ap->deep = vreg_alloc_ptr;
-	ap->typep = &stdvector;
-    vreg_alloc[vreg_alloc_ptr].reg = next_vreg;
-    vreg_alloc[vreg_alloc_ptr].Operand = ap;
-    vreg_alloc[vreg_alloc_ptr].f.isPushed = 'F';
-    if (next_vreg++ >= 10)
-		next_vreg = 3;		/* wrap around */
-    if (vreg_alloc_ptr++ == MAX_REG_STACK)
-		fatal("GetTempVectorRegister(): register stack overflow");
-	return ap;
+	TRACE(printf("GetTempVectorRegister:r%d\r\n", next_vreg);)
+  vreg_in_use[next_vreg] = vreg_alloc_ptr;
+  ap = allocOperand();
+  ap->mode = am_vreg;
+  ap->preg = next_vreg;
+  ap->deep = vreg_alloc_ptr;
+//	ap->typep = &stdvector;
+  vreg_alloc[vreg_alloc_ptr].reg = next_vreg;
+  vreg_alloc[vreg_alloc_ptr].Operand = ap;
+  vreg_alloc[vreg_alloc_ptr].f.isPushed = 'F';
+	next_vreg++;
+  if (next_vreg >= cpu.NumvTmpRegs)
+	next_vreg = 0;		/* wrap around */
+  if (vreg_alloc_ptr++ == MAX_REG_STACK)
+	fatal("GetTempVectorRegister(): register stack overflow");
+	max_vreg_alloc_ptr = max(max_vreg_alloc_ptr, vreg_alloc_ptr);
+	return (ap);
 }
 
 Operand *GetTempVectorMaskRegister()
 {
 	Operand *ap;
-    Symbol *sym = currentFn->sym;
+  Symbol *sym = currentFn->sym;
 
 	if (vmreg_in_use[next_vmreg] >= 0) {
 //		GenerateTempVectorMaskRegPush(next_vreg, am_reg, vreg_in_use[next_vreg],0);
@@ -721,9 +808,9 @@ void validate(Operand *ap)
 void ReleaseTempRegister(Operand *ap)
 {
 	int nn;
-    int number;
-    Function *sym = currentFn;
-		unsigned int frg = 0;// regFirstTemp;
+  int number;
+  Function *sym = currentFn;
+	unsigned int frg = 0;// regFirstTemp;
 
 	TRACE(printf("ReleaseTempRegister:r%d r%d\r\n", ap->preg, ap->sreg);)
 
@@ -744,11 +831,12 @@ void ReleaseTempRegister(Operand *ap)
 	if (ap->typep==&stdvector) {
 		switch (ap->mode) {
 		case am_vmreg:
-			if (ap->preg >= 1 && ap->preg <= 3) {
+			if (ap->preg >= 0 && ap->preg <= cpu.NumvTmpRegs) {
 				if (vmreg_in_use[ap->preg]==-1)
 					return;
-				if (next_vmreg-- <= 1)
-					next_vmreg = 3;
+				next_vreg--;
+				if (next_vmreg < 0)
+					next_vmreg = cpu.NumvTmpRegs;
 				number = vmreg_in_use[ap->preg];
 				vmreg_in_use[ap->preg] = -1;
 				break;
@@ -760,22 +848,24 @@ void ReleaseTempRegister(Operand *ap)
 		case am_adec:
 		case am_reg:
 	commonv:
-			if (ap->preg >= frg && ap->preg <= 10) {
+			if (ap->preg >= frg && ap->preg <= cpu.NumvTmpRegs) {
 				if (vreg_in_use[ap->preg]==-1)
 					return;
-				if (next_vreg-- <= frg)
-					next_vreg = 10;
+				next_vreg--;
+				if (next_vreg < 0)
+					next_vreg = cpu.NumvTmpRegs;
 				number = vreg_in_use[ap->preg];
 				vreg_in_use[ap->preg] = -1;
 				break;
 			}
 			return;
 		case am_indx2:
-			if (ap->sreg >= frg && ap->sreg <= 10) {
+			if (ap->sreg >= frg && ap->sreg <= cpu.NumvTmpRegs) {
 				if (vreg_in_use[ap->sreg]==-1)
 					return;
-				if (next_vreg-- <= frg)
-					next_vreg = 10;
+				next_vreg--;
+				if (next_vreg < 0)
+					next_vreg = cpu.NumvTmpRegs;
 				number = vreg_in_use[ap->sreg];
 				vreg_in_use[ap->sreg] = -1;
 				//break;
@@ -785,11 +875,11 @@ void ReleaseTempRegister(Operand *ap)
 			return;
 		}
 		if (vreg_alloc_ptr-- == 0)
-			fatal("ReleaseTempRegister(): no registers are allocated");
+			fatal("ReleaseTempRegister(): no vector registers are allocated");
 	  //  if (reg_alloc_ptr != number)
 			//fatal("ReleaseTempRegister()/3");
 		if (vreg_alloc[number].f.isPushed=='T')
-			fatal("ReleaseTempRegister(): register on stack");
+			fatal("ReleaseTempRegister(): vector register on stack");
 		return;
 	}
 	else
@@ -883,7 +973,7 @@ void ReleaseTempVectorMaskRegister()
 {
 }
 
-void ReleaseTempVectorRegister()
+void ReleaseTempVectorRegister(Operand* ap)
 {
 }
 
@@ -906,9 +996,27 @@ int TempInvalidate(int *fsp, int* psp)
 	memcpy(save_reg_alloc, reg_alloc, sizeof(save_reg_alloc));
 	memcpy(save_reg_in_use, reg_in_use, sizeof(save_reg_in_use));
 	memcpy(save_rap, rap, sizeof(rap));
+	save_vreg_alloc_ptr = vreg_alloc_ptr;
+	memcpy(save_vreg_alloc, vreg_alloc, sizeof(save_vreg_alloc));
+	memcpy(save_vreg_in_use, vreg_in_use, sizeof(save_vreg_in_use));
 	for (sp = i = 0; i < reg_alloc_ptr; i++) {
-    	if (reg_alloc[i].f.isPushed == 'F') {
-			// ToDo: fix this line
+		if (reg_alloc[i].f.isPushed == 'V') {
+			mode = reg_alloc[i].Operand->mode;
+			reg_alloc[i].Operand->mode = am_vreg;
+			if (!(mask & (1LL << reg_alloc[i].Operand->preg))) {
+				SpillVectorRegister(reg_alloc[i].Operand, i);
+				mask = mask | (1LL << vreg_alloc[i].Operand->preg);
+			}
+			vreg_alloc[i].Operand->mode = mode;
+			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
+			stacked_vregs[sp].reg = vreg_alloc[i].reg;
+			stacked_vregs[sp].Operand = vreg_alloc[i].Operand;
+			stacked_vregs[sp].f.allocnum = i;
+			sp++;
+			// mark the register void
+			vreg_in_use[vreg_alloc[i].reg] = -1;
+		}
+		else if (reg_alloc[i].f.isPushed == 'F') {
 			mode = reg_alloc[i].Operand->mode;
 			reg_alloc[i].Operand->mode = am_reg;
 			if (!(mask & (1LL << reg_alloc[i].Operand->preg))) {
@@ -917,16 +1025,17 @@ int TempInvalidate(int *fsp, int* psp)
 			}
 			reg_alloc[i].Operand->mode = mode;
 			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
-    		stacked_regs[sp].reg = reg_alloc[i].reg;
-    		stacked_regs[sp].Operand = reg_alloc[i].Operand;
-    		stacked_regs[sp].f.allocnum = i;
-    		sp++;
-    		// mark the register void
-    		reg_in_use[reg_alloc[i].reg] = -1;
-    	}
+			stacked_regs[sp].reg = reg_alloc[i].reg;
+			stacked_regs[sp].Operand = reg_alloc[i].Operand;
+			stacked_regs[sp].f.allocnum = i;
+			sp++;
+			// mark the register void
+			reg_in_use[reg_alloc[i].reg] = -1;
+    }
 	}
 	memset(reg_in_use, -1, sizeof(reg_in_use));
 
+	memset(vreg_in_use, -1, sizeof(vreg_in_use));
 	/*
 	save_fpreg_alloc_ptr = fpreg_alloc_ptr;
 	memcpy(save_fpreg_alloc, fpreg_alloc, sizeof(save_fpreg_alloc));
@@ -971,11 +1080,16 @@ int TempInvalidate(int *fsp, int* psp)
 		}
 	}
 	*/
+	// Scalar regs
 	wrapno = 0;
 	reg_alloc_ptr = 0;
 	memset(reg_in_use, -1, sizeof(reg_in_use));
 	ZeroMemory(reg_alloc, sizeof(reg_alloc));
 	ZeroMemory(rap, sizeof(rap));
+	// Vector regs
+	vreg_alloc_ptr = 0;
+	memset(vreg_in_use, -1, sizeof(vreg_in_use));
+	ZeroMemory(vreg_alloc, sizeof(vreg_alloc));
 	return (sp);
 }
 
@@ -1016,6 +1130,10 @@ void TempRevalidate(int sp, int fsp, int psp)
 	memcpy(reg_alloc, save_reg_alloc, sizeof(reg_alloc));
 	memcpy(reg_in_use, save_reg_in_use, sizeof(reg_in_use));
 	memcpy(rap, save_rap, sizeof(rap));
+	// Vector
+	vreg_alloc_ptr = save_vreg_alloc_ptr;
+	memcpy(vreg_alloc, save_vreg_alloc, sizeof(vreg_alloc));
+	memcpy(vreg_in_use, save_vreg_in_use, sizeof(vreg_in_use));
 }
 
 /*
@@ -1074,8 +1192,8 @@ void ReleaseTempReg(Operand *ap)
 		return;
 	if (ap->typep==&stdvectormask)
 		ReleaseTempVectorMaskRegister();
-	else if (ap->typep==&stdvector)
-		ReleaseTempVectorRegister();
+//	else if (ap->typep==&stdvector)
+//		ReleaseTempVectorRegister(ap);
 	else if (ap->typep==&stddouble)
 		ReleaseTempFPRegister(ap);
 	else if (ap->typep == &stdposit)

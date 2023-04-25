@@ -34,7 +34,7 @@ enum e_bt {
 	bt_none,
 	bt_byte, bt_ubyte, bt_bit, bt_bool, bt_set,
 	bt_char, bt_short, bt_int, bt_long, 
-	bt_float, bt_double, bt_triple, bt_quad, bt_decimal, bt_posit, bt_pointer,
+	bt_half, bt_single, bt_float, bt_double, bt_triple, bt_quad, bt_decimal, bt_posit, bt_pointer,
 	bt_ichar, bt_iuchar, bt_i128,
 	bt_uchar, bt_ushort, bt_uint, bt_ulong,
   bt_unsigned, bt_vector, bt_vector_mask,
@@ -105,7 +105,7 @@ enum e_node {
 		en_ref, en_fieldref, en_ursh,
 		en_bchk, en_chk, en_bytendx, en_bitoffset,
 		en_abs, en_max, en_min, en_addrof, en_ptrdif, en_wydendx,
-		en_switch, en_case, en_default,
+		en_switch, en_case, en_default, en_save_context,
 		en_bmap,
 		// Vector
 		en_autovcon, en_autovmcon, en_vector_ref, en_vex, en_veins,
@@ -164,8 +164,9 @@ enum e_sym {
 	kw_compound, kw_expr, kw_label, kw_restrict,
 	kw_nullptr, kw_generic, kw_set, kw_single, kw_quad, kw_half, kw_real, kw_decimal,
 	kw_alignof, kw_declspec,
+	kw_vm0, kw_vm1, kw_vm2, kw_vm3, kw_vm4, kw_vm5, kw_vm6, kw_vm7,
 	// Intrinsics
-	kw_bmap, kw_wydendx,
+	kw_bmap, kw_wydendx, kw_save_context,
 	my_eof
 };
 
@@ -253,6 +254,7 @@ enum e_op {
 	op_lv, op_sv,
 	op_vadd, op_vsub, op_vmul, op_vdiv,
 	op_vadds, op_vsubs, op_vmuls, op_vdivs,
+	op_vfmul, op_vfmuls,
 	op_vseq, op_vsne,
 	op_vslt, op_vsge, op_vsle, op_vsgt,
 	op_vex, op_veins,
@@ -286,7 +288,8 @@ enum e_op {
 	op_mtlc, op_mflk, op_mtlk, op_sbx,
 	op_exi56, op_exim, op_ldhs, op_sths,
 	// Thor2023
-	op_orf, op_load, op_loadz, op_store,
+	op_orf, op_load, op_loadz, op_loadg, op_store, op_storeg, op_vmask, op_loadv, op_fload,
+	op_vfadd, op_vfadds, op_vfsub,
 	// Built in functions
 	op_abs, op_mulf, op_bytendx, op_zxw, op_zxt, op_bmap,
 	op_wydendx,
@@ -295,6 +298,12 @@ enum e_op {
     op_empty,
 		op_last,
 		op_dot = 32768
+};
+
+enum e_regtype {
+	rt_invert = 64,
+	rt_vector = 128,
+	rt_group = 256
 };
 
 enum e_am {
@@ -479,9 +488,12 @@ enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
 #define ERR_CLOSEPA			71
 #define ERR_EOF_REACHED	72
 #define ERR_BAD_PRECISION 73
+#define ERR_UNKNOWN_FN	74
+#define ERR_MISSING_PARM	75
 #define ERR_NULLPOINTER		1000
 #define ERR_CIRCULAR_LIST 1001
 #define ERR_MISSING_HIDDEN_STRUCTPTR	1002
+#define ERR_CODEGEN 1003
 
 /*      alignment sizes         */
 

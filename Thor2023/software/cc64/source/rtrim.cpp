@@ -11,7 +11,7 @@
 
 char *rtrim(char *str)
 {
-   int ii;
+   size_t ii;
 
    if (str == nullptr)
      return (char *)"";
@@ -23,5 +23,5 @@ char *rtrim(char *str)
       ii++;
       str[ii] = '\0';
    }
-   return str;
+   return (str);
 }
