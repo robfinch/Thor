@@ -1128,6 +1128,7 @@ static void opt0(ENODE **node)
               {
                 ep->nodetype = en_fcon;
                 ep->f = ep->p[0]->f;
+								ep->i = ep->p[0]->i;
 								Float128::Assign(&ep->f128,&ep->p[0]->f128);
 								ooptimized = true;
 							}

@@ -359,6 +359,7 @@ int IdentifyKeyword()
 
 	// __cdecl,__asm,__int64,__int32,__int16,__int8,__check,__exception,__task,__unordered,__leafs,__attribute__
 	// __no_temps __no_parms __floatmax __mulf __bmap __save_context
+	// __user __supervisor __hypervisor __machine
 	if (p[0]=='_' && p[1]=='_') {
 		if (p[2]=='a' && p[3]=='s' && p[4]=='m' && p[5]=='\0')
 			return lastst = kw_asm;
@@ -413,7 +414,15 @@ int IdentifyKeyword()
 		if (p[2] == 'd' && p[3] == 'e' && p[4] == 'c' && p[5] == 'l' && p[6] == 's' && p[7] == 'p' && p[8] == 'e' && p[9] == 'c' && p[10] == '\0')
 			return (lastst = kw_declspec);
 		if (strcmp(&p[2], "save_context") == 0)
-			return (lastst == kw_save_context);
+			return (lastst = kw_save_context);
+		if (strcmp(&p[2], "user") == 0)
+			return (lastst = kw_user);
+		if (strcmp(&p[2], "supervisor") == 0)
+			return (lastst = kw_supervisor);
+		if (strcmp(&p[2], "hypervisor") == 0)
+			return (lastst = kw_hypervisor);
+		if (strcmp(&p[2], "machine") == 0)
+			return (lastst = kw_machine);
 	}
 
 	if (p[0] == '_') {

@@ -77,7 +77,7 @@ Operand* ENODE::GenerateBitfieldDereference(int flags, int size, int opt)
 	ap3 = GetTempRegister();
 	ap3->tempflag = TRUE;
 	if (ap->mode == am_reg)
-		GenerateDiadic(cpu.mov_op, 0, ap3, ap);
+		cg.GenerateMove(ap3, ap);
 	else if (ap->mode == am_imm)
 		GenerateDiadic(cpu.ldi_op, 0, ap3, ap);
 	else	// memory
@@ -207,7 +207,7 @@ Operand* ENODE::GenerateBitfieldAssignLogic(int flags, int size, int op)
 		cg.GenerateLoad(ap3, ap1, size, size);
 		break;
 	case am_reg:
-		GenerateDiadic(cpu.mov_op, 0, ap3, ap1);
+		cg.GenerateMove(ap3, ap1);
 		break;
 	}
 	ap2 = cg.GenerateExpression(p[1], am_reg | am_imm, size, 1);

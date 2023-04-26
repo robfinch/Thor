@@ -175,7 +175,8 @@ void Declaration::ParseVoid()
 
 void Declaration::ParseInterrupt()
 {
-	isInterrupt = TRUE;
+	isInterrupt = true;
+	isPascal = false;
 	head = (TYP*)TYP::Make(bt_interrupt, 2);
 	tail = head;
 	sp_init = 0LL;
@@ -356,8 +357,8 @@ void Declaration::ParseInt(bool nt)
 	bit_max = head->precision;
 	if (lastst==kw_vector) {
 		TYP* btp = head;// ->GetIndex();
-		head = TYP::Make(bt_vector,512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector,64);
+		head->numele = 8;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -451,8 +452,8 @@ void Declaration::ParseFloat(int prec)
 	if (lastst==kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
-		head = TYP::Make(bt_vector,512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector,64);
+		head->numele = 16;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -471,8 +472,8 @@ void Declaration::ParseDouble()
 	if (lastst==kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
-		head = TYP::Make(bt_vector,512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector,64);
+		head->numele = 8;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -490,8 +491,8 @@ void Declaration::ParseDecimal()
 	if (lastst == kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
-		head = TYP::Make(bt_vector, 512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector, 64);
+		head->numele = 8;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -526,8 +527,8 @@ void Declaration::ParsePosit()
 	if (lastst == kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
-		head = TYP::Make(bt_vector, 512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector, 64);
+		head->numele = 8;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -545,8 +546,8 @@ void Declaration::ParseTriple()
 	NextToken();
 	if (lastst == kw_vector) {
 		TYP* btp = head;// ->GetIndex();
-		head = TYP::Make(bt_vector, 512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector, 64);
+		head->numele = 5;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -565,8 +566,8 @@ void Declaration::ParseFloat128()
 	if (lastst == kw_vector) {
 		//int btp = head->GetIndex();
 		TYP* btp = head;
-		head = TYP::Make(bt_vector, 512);
-		head->numele = maxVL;
+		head = TYP::Make(bt_vector, 64);
+		head->numele = 4;
 		head->btpp = btp;
 		tail = head;
 		NextToken();
@@ -605,7 +606,7 @@ void Declaration::ParseVectorMask()
 	tail = head;
 	head->isVolatile = isVolatile;
 	head->isIO = isIO;
-	head->numele = maxVL;
+	head->numele = 0;
 	NextToken();
 	bit_max = head->precision;
 }
@@ -866,6 +867,23 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 				head = tail = (TYP *)TYP::Make(bt_oscall,2);
 				NextToken();
 				goto lxit;
+				
+			case kw_user:
+				NextToken();
+				operating_mode = 0;
+				break;
+			case kw_supervisor:
+				NextToken();
+				operating_mode = 1;
+				break;
+			case kw_hypervisor:
+				NextToken();
+				operating_mode = 2;
+				break;
+			case kw_machine:
+				NextToken();
+				operating_mode = 3;
+				break;
 
 			case kw_interrupt:
 				ParseInterrupt();
@@ -2409,8 +2427,10 @@ int Declaration::declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int zty
 			if (sp->storage_class == sc_member)
 				table->insert(sp);
 			else {
-				if (sp && sp->fi)
+				if (sp && sp->fi) {
 					sp->fi->int_save_mask = int_save_mask;
+					sp->fi->operating_mode = operating_mode;
+				}
 				if (ParseFunction(table, sp, parent, al, local)) {
 					if (local) {
 						table->insert(sp);// ownerp->lsyms.insert(sp);
@@ -2591,6 +2611,22 @@ void GlobalDeclaration::Parse()
 			NextToken();
 			isFar = true;
 			break;
+		case kw_user:
+			NextToken();
+			operating_mode = 0;
+			break;
+		case kw_supervisor:
+			NextToken();
+			operating_mode = 1;
+			break;
+		case kw_hypervisor:
+			NextToken();
+			operating_mode = 2;
+			break;
+		case kw_machine:
+			NextToken();
+			operating_mode = 3;
+			break;
 
 		case kw_try:
 			NextToken();
@@ -2698,7 +2734,23 @@ j1:
 					isKernel = TRUE;
 					goto j1;
 				}
-				else if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst==kw_nocall || lastst==kw_naked)
+				if (lastst == kw_user) {
+					operating_mode = 0;
+					goto j1;
+				}
+				if (lastst == kw_supervisor) {
+					operating_mode = 1;
+					goto j1;
+				}
+				if (lastst == kw_hypervisor) {
+					operating_mode = 2;
+					goto j1;
+				}
+				if (lastst == kw_machine) {
+					operating_mode = 3;
+					goto j1;
+				}
+				if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst==kw_nocall || lastst==kw_naked)
 					NextToken();
           ++global_flag;
           declare(NULL,&gsyms[0],sc_external,0,bt_struct, &symo, false, 0);
@@ -2792,6 +2844,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 			break;
 		case kw_cdecl:
     case kw_kernel:
+		case kw_user: case kw_supervisor: case kw_hypervisor: case kw_machine:
 		case kw_interrupt:
 		case kw_coroutine:
 		case kw_naked:
@@ -2896,7 +2949,8 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms)
 					break;
         case kw_extern:
                 NextToken();
-				if (lastst==kw_oscall || lastst==kw_interrupt || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel)
+				if (lastst==kw_oscall || lastst==kw_interrupt || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel ||
+					lastst==kw_user || lastst == kw_supervisor || lastst == kw_hypervisor || lastst == kw_machine)
 					NextToken();
                 ++global_flag;
 								depth++;
@@ -2972,6 +3026,7 @@ j1:
 			goto j1;
 		case kw_cdecl:
     case kw_kernel:
+		case kw_user: case kw_supervisor: case kw_hypervisor: case kw_machine:
 		case kw_interrupt:
 		case kw_coroutine:
 		case kw_naked:
@@ -3036,7 +3091,8 @@ dfs.printf("C");
 dfs.printf("D");
                 NextToken();
                 error(ERR_ILLCLASS);
-				if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel)
+				if (lastst==kw_oscall || lastst==kw_interrupt || lastst==kw_coroutine || lastst == kw_nocall || lastst==kw_naked || lastst==kw_kernel ||
+					lastst == kw_user || lastst == kw_supervisor || lastst == kw_hypervisor || lastst == kw_machine)
 					NextToken();
                 ++global_flag;
                 declare(NULL, throw_away ? &scrap_table : &gsyms[0],sc_external,0,bt_struct,nullptr,false, currentFn->depth);

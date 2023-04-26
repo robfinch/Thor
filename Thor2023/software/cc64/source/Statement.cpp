@@ -1750,8 +1750,6 @@ void Statement::GenerateTry()
 	if (currentFn->IsFar)
 		GenerateMonadic(op_di, 0, MakeImmediate(2));
 	GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed(32, regFP));	// Set current handler
-	if (currentFn->IsFar)
-		GenerateDiadic(cpu.sto_op, 0, makereg(regCS), MakeIndexed((int64_t)40, regFP));	// Set current handler
 	if (compiler.ipoll)
 		GenerateZeradic(op_pfi);
 	ReleaseTempRegister(ap);
@@ -1817,8 +1815,6 @@ void Statement::GenerateCatch(int opt, int oldthrow, int olderthrow)
 	if (currentFn->IsFar)
 		GenerateMonadic(op_di, 0, MakeImmediate(2));
 	GenerateDiadic(cpu.sto_op, 0, ap, MakeIndexed((int64_t)32, regFP));	// Restore handler
-	if (currentFn->IsFar)
-		GenerateDiadic(cpu.sto_op, 0, makereg(regCS), MakeIndexed((int64_t)40, regFP));	// Restore handler
 	ReleaseTempRegister(ap);
 	// Branch around the catch handlers
 	if (opt == 0) {
@@ -1845,9 +1841,9 @@ void Statement::GenerateCatch(int opt, int oldthrow, int olderthrow)
 		if (node) {
 			ap2 = cg.GenerateExpression(node, am_reg | am_mem, node->GetNaturalSize(), 0);
 			if (ap2->mode == am_reg)
-				GenerateDiadic(cpu.mov_op, 0, ap2, makereg(regFirstArg));
+				GenerateDiadic(cpu.mov_op, 0, ap2, makereg(cpu.argregs[0]));
 			else
-				GenStore(makereg(regFirstArg), ap2, node->GetNaturalSize());
+				GenStore(makereg(cpu.argregs[0]), ap2, node->GetNaturalSize());
 			ReleaseTempRegister(ap2);
 		}
 		if (compiler.ipoll)
@@ -1936,11 +1932,12 @@ void Statement::GenerateYield()
 	int sp = 0;
 	int fsp = 0;
 	int psp = 0;
+	int vsp = 0;
 
 	sym = nullptr;
 	lab1 = nextlabel++;
 	ap1 = GetTempRegister();
-	GenerateDiadic(op_ldi, 0, ap1, MakeCodeLabel(lab1));
+	cg.GenerateLoadConst(MakeCodeLabel(lab1), ap1);
 	GenStore(ap1,MakeIndexedName(MakeConame(*currentFn->sym->mangledName,"target"), regGP),sizeOfWord);
 	ReleaseTempRegister(ap1);
 	if (node->p[0]->nodetype == en_nacon || node->p[0]->nodetype == en_cnacon) {
@@ -1949,7 +1946,7 @@ void Statement::GenerateYield()
 		s = sexp.gsearch2(*node->p[0]->sp,bt_int, nullptr, false);
 		sym = s->fi;
 		i = 0;
-		sym->SaveTemporaries(&sp, &fsp, &psp);
+		sym->SaveTemporaries(&sp, &fsp, &psp, &vsp);
 		if (currentFn->HasRegisterParameters())
 			sym->SaveRegisterArguments();
 		// If the symbol is unknown, assume a throw is present
@@ -1970,7 +1967,7 @@ void Statement::GenerateYield()
 			if (ap->offset->sym)
 				sym = ap->offset->sym->fi;
 		}
-		sym->SaveTemporaries(&sp, &fsp, &psp);
+		sym->SaveTemporaries(&sp, &fsp, &psp, &vsp);
 		if (currentFn->HasRegisterParameters())
 			sym->SaveRegisterArguments();
 		// If the symbol is unknown, assume a throw is present
@@ -1993,7 +1990,7 @@ void Statement::GenerateYield()
 		if (sym)
 			sym->RestoreRegisterArguments();
 	if (sym)
-		sym->RestoreTemporaries(sp, fsp, psp);
+		sym->RestoreTemporaries(sp, fsp, psp, vsp);
 }
 
 // The same as generating a compound statement but leaves out the generation of

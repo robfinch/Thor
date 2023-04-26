@@ -96,7 +96,7 @@ void Forest::SummarizeCost()
 
 bool IsRenumberable(int reg)
 {
-	if ((reg & 0x3ff) > regLastRegvar)
+	if ((reg & 0x3ff) >= cpu.nregs)
 		return (false);
 	if ((reg & 0x3ff) < 3)
 		return (false);
@@ -385,16 +385,14 @@ unsigned int Forest::ColorUncolorable(unsigned int rg)
 {
 	if (rg < 3)
 		return (rg);
-	if (rg == regXLR)
-		return (28);
 	if (rg == regLR)
 		return (29);
 	if (rg == regFP)
 		return (30);
 	if (rg == regSP)
 		return (31);
-	if (rg >= regFirstArg && rg <= regLastArg)
-		return (rg - regFirstArg + 18);
+	if (IsArgReg(rg))
+		return (rg - cpu.argregs[0] + 18);
 	if (rg == regAsm)
 		return (23);
 	if (rg == regXoffs)

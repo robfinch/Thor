@@ -441,7 +441,7 @@ void Compiler::AddBuiltinFunctions()
 	sp = Symbol::alloc();
 	sp->SetName("__new");
 	sp->fi = sp->MakeFunction(sp->id, true);
-	tanew.Add(bt_long, regFirstArg);
+	tanew.Add(bt_long, ::cpu.argregs[0]);
 	//tanew.Add(bt_pointer,19);
 	//tanew.Add(bt_long, 20);
 	sp->fi->AddProto(&tanew);
@@ -461,7 +461,7 @@ void Compiler::AddBuiltinFunctions()
 	sp = Symbol::alloc();
 	sp->SetName("__delete");
 	sp->fi = sp->MakeFunction(sp->id, true);
-	tadelete.Add(bt_pointer, regFirstArg);
+	tadelete.Add(bt_pointer, ::cpu.argregs[0]);
 	sp->fi->AddProto(&tadelete);
 	sp->tp = &stdvoid;
 	gsyms->insert(sp);

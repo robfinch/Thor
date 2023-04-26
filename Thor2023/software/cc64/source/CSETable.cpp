@@ -372,10 +372,10 @@ void CSETable::InitializeTempRegs()
 						}
 					}
 					else if (ap->mode == am_reg) {
-						GenerateDiadic(cpu.mov_op, 0, ap2, ap);
+						cg.GenerateMove(ap2, ap);
 					}
 					else if (ap->mode == am_vreg) {
-						GenerateDiadic(cpu.mov_op, 0, ap2, ap);
+						cg.GenerateMove(ap2, ap);
 					}
 					else {
 						size = exptr->GetNaturalSize();

@@ -1756,7 +1756,7 @@ j1:
 			case am_reg:
 				switch (ap2->mode) {
 				case am_reg:
-					GenerateDiadic(cpu.mov_op, 0, ap1, ap2);
+					cg.GenerateMove(ap1, ap2);
 					break;
 				case am_imm:
 					cg.GenerateLoadConst(ap2, ap1);
@@ -1771,12 +1771,12 @@ j1:
 			case am_fpreg:
 				switch (ap2->mode) {
 				case am_fpreg:
-					GenerateDiadic(cpu.mov_op, 0, ap1, ap2);
+					cg.GenerateMove(ap1, ap2);
 					break;
 				case am_imm:
 					ap4 = GetTempRegister();
 					GenerateDiadic(cpu.ldi_op, 0, ap4, ap2);
-					GenerateDiadic(cpu.mov_op, 0, ap1, ap4);
+					cg.GenerateMove(ap1, ap4);
 					if (ap2->isPtr)
 						ap1->isPtr = true;
 					break;
@@ -1810,7 +1810,7 @@ j1:
 		case am_reg:
 			switch (ap2->mode) {
 			case am_reg:
-				GenerateDiadic(cpu.mov_op, 0, ap1, ap2);
+				cg.GenerateMove(ap1, ap2);
 				break;
 			case am_imm:
 				cg.GenerateLoadConst(ap2, ap1);
@@ -1825,12 +1825,12 @@ j1:
 		case am_fpreg:
 			switch (ap2->mode) {
 			case am_fpreg:
-				GenerateDiadic(cpu.mov_op, 0, ap1, ap2);
+				cg.GenerateMove(ap1, ap2);
 				break;
 			case am_imm:
 				ap4 = GetTempRegister();
 				GenerateDiadic(cpu.ldi_op, 0, ap4, ap2);
-				GenerateDiadic(cpu.mov_op, 0, ap1, ap4);
+				cg.GenerateMove(ap1, ap4);
 				if (ap2->isPtr)
 					ap1->isPtr = true;
 				break;
@@ -2434,20 +2434,25 @@ void ENODE::PutConstant(txtoStream& ofs, unsigned int lowhigh, unsigned int rshi
 		ofs.write(buf);
 		break;
 	case en_fcon:
-		// Floats support immediate mode
-		if (false && !opt) {
+		// Thor: Floats support immediate mode
+#ifdef RISCV
+		if (!opt) {
 			sprintf_s(buf, sizeof(buf), "%s_%lld", (char*)currentFn->sym->GetFullName()->c_str(), i);
 			DataLabels[i]++;
 			ofs.write(buf);
 			break;
 		}
+#endif
+#ifdef THOR
 		// The following spits out a warning, but is okay.
 		if (true || this->tp->type == bt_quad)
  			sprintf_s(buf, sizeof(buf), "%.16s", f128.ToCompressedString());
 		else
 			sprintf_s(buf, sizeof(buf), "0x%llx", f);
 		ofs.write(buf);
+#endif
 		break;
+
 	case en_pcon:
 		//if (!opt)
 		//	goto j1;

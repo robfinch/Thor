@@ -337,7 +337,7 @@ void IGraph::InsertArgumentMoves()
 	Var *v;
 	Range *t;
 
-	for (nn = regFirstArg; nn <= regLastArg; nn++) {
+	for (nn = 0; IsArgReg(nn) && nn < 3072; nn++) {
 		mm = map.newnums[nn];
 		if (mm >= 0) {
 			if (v = Var::Find2(mm)) {				// find the forest

@@ -46,6 +46,8 @@ static unsigned short int next_vmreg;
 static short int next_breg;
 int max_reg_alloc_ptr;
 int max_stack_use;
+int max_freg_alloc_ptr;
+int max_fstack_use;
 int max_vreg_alloc_ptr;
 int max_vstack_use;
 #define MAX_REG 4			/* max. scratch data	register (D2) */
@@ -67,7 +69,7 @@ static int wrapno, save_wrapno;
 
 static struct {
 	Operand *Operand;
-    short int reg;
+  int reg;
 	struct {
 	char isPushed;	/* flags if pushed or corresponding reg_alloc * number */
 	char allocnum;
@@ -177,6 +179,16 @@ void CPU::InitRegs()
 	cpu.argregs[5] = 15;
 	cpu.argregs[6] = 16;
 	cpu.argregs[7] = 17;
+
+	cpu.NumFargRegs = 8;
+	cpu.fargregs[0] = 10 | rt_float;
+	cpu.fargregs[1] = 11 | rt_float;
+	cpu.fargregs[2] = 12 | rt_float;
+	cpu.fargregs[3] = 13 | rt_float;
+	cpu.fargregs[4] = 14 | rt_float;
+	cpu.fargregs[5] = 15 | rt_float;
+	cpu.fargregs[6] = 16 | rt_float;
+	cpu.fargregs[7] = 17 | rt_float;
 #endif
 
 #ifdef THOR
@@ -218,6 +230,20 @@ void CPU::InitRegs()
 	cpu.tmpregs[4] = 29;
 	cpu.tmpregs[5] = 30;
 	cpu.tmpregs[6] = 31;
+
+	cpu.NumFtmpRegs = 12;
+	cpu.ftmpregs[0] = 0 | rt_float;
+	cpu.ftmpregs[1] = 1 | rt_float;
+	cpu.ftmpregs[2] = 2 | rt_float;
+	cpu.ftmpregs[3] = 3 | rt_float;
+	cpu.ftmpregs[4] = 4 | rt_float;
+	cpu.ftmpregs[5] = 5 | rt_float;
+	cpu.ftmpregs[6] = 6 | rt_float;
+	cpu.ftmpregs[7] = 7 | rt_float;
+	cpu.ftmpregs[8] = 28 | rt_float;
+	cpu.ftmpregs[9] = 29 | rt_float;
+	cpu.ftmpregs[10] = 30 | rt_float;
+	cpu.ftmpregs[11] = 31 | rt_float;
 #endif
 #ifdef THOR
 	cpu.NumSavedRegs = 16;
@@ -258,7 +284,7 @@ void CPU::InitRegs()
 
 #endif
 #ifdef RISCV
-	cpu.NumSavedRegs = 11;
+	cpu.NumSavedRegs = 10;
 	cpu.saved_regs[0] = 9;
 	cpu.saved_regs[1] = 18;
 	cpu.saved_regs[2] = 19;
@@ -269,7 +295,20 @@ void CPU::InitRegs()
 	cpu.saved_regs[7] = 24;
 	cpu.saved_regs[8] = 25;
 	cpu.saved_regs[9] = 26;
-	cpu.saved_regs[10] = 27;
+//	cpu.saved_regs[10] = 27; used for GP1
+	cpu.NumFsavedRegs = 12;
+	cpu.fsaved_regs[0] = 8 | rt_float;
+	cpu.fsaved_regs[1] = 9 | rt_float;
+	cpu.fsaved_regs[2] = 18 | rt_float;
+	cpu.fsaved_regs[3] = 19 | rt_float;
+	cpu.fsaved_regs[4] = 20 | rt_float;
+	cpu.fsaved_regs[5] = 21 | rt_float;
+	cpu.fsaved_regs[6] = 22 | rt_float;
+	cpu.fsaved_regs[7] = 23 | rt_float;
+	cpu.fsaved_regs[8] = 24 | rt_float;
+	cpu.fsaved_regs[9] = 25 | rt_float;
+	cpu.fsaved_regs[10] = 26 | rt_float;
+	cpu.fsaved_regs[11] = 27 | rt_float;
 #endif
 }
 
@@ -336,8 +375,19 @@ int IsTempReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumTmpRegs; nn++) {
-		if (rg == cpu.tmpregs[nn] || rg==cpu.vtmpregs[nn])
+		if (rg == cpu.tmpregs[nn])// || rg==cpu.vtmpregs[nn])
 			return (nn+1);
+	}
+	return (0);
+}
+
+int IsFtmpReg(int rg)
+{
+	int nn;
+
+	for (nn = 0; nn < cpu.NumFtmpRegs; nn++) {
+		if (rg == cpu.ftmpregs[nn])// || rg==cpu.vtmpregs[nn])
+			return (nn + 1);
 	}
 	return (0);
 }
@@ -347,7 +397,18 @@ int IsArgReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumArgRegs; nn++) {
-		if (rg == cpu.argregs[nn] || rg == cpu.vargregs[nn])
+		if (rg == cpu.argregs[nn])// || rg == cpu.vargregs[nn])
+			return (nn + 1);
+	}
+	return (0);
+}
+
+int IsFargReg(int rg)
+{
+	int nn;
+
+	for (nn = 0; nn < cpu.NumFargRegs; nn++) {
+		if (rg == cpu.fargregs[nn])// || rg == cpu.vargregs[nn])
 			return (nn + 1);
 	}
 	return (0);
@@ -358,7 +419,18 @@ int IsSavedReg(int rg)
 	int nn;
 
 	for (nn = 0; nn < cpu.NumSavedRegs; nn++) {
-		if (rg == cpu.saved_regs[nn] || rg == cpu.vsaved_regs[nn])
+		if (rg == cpu.saved_regs[nn])// || rg == cpu.vsaved_regs[nn])
+			return (nn + 1);
+	}
+	return (0);
+}
+
+int IsFsavedReg(int rg)
+{
+	int nn;
+
+	for (nn = 0; nn < cpu.NumFsavedRegs; nn++) {
+		if (rg == cpu.fsaved_regs[nn])// || rg == cpu.vsaved_regs[nn])
 			return (nn + 1);
 	}
 	return (0);
@@ -368,7 +440,7 @@ int IsSavedReg(int rg)
 
 void SpillRegister(Operand *ap, int number)
 {
-	GenerateDiadic(op_store,0,ap,cg.MakeIndexed(currentFn->GetTempBot()+ap->deep*sizeOfWord,regFP));
+	cg.GenerateStore(ap,cg.MakeIndexed(currentFn->GetTempBot()+ap->deep*sizeOfWord,regFP), sizeOfWord);
 	if (pass==1)
 		max_stack_use = max(max_stack_use, (ap->deep+1) * sizeOfWord);
   //reg_stack[reg_stack_ptr].Operand = ap;
@@ -397,11 +469,11 @@ void SpillFPRegister(Operand *ap, int number)
 	GenerateDiadic(op_store,0,ap,cg.MakeIndexed(currentFn->GetTempBot()-ap->deep*sizeOfWord,regFP));
 	if (pass==1)
 		max_stack_use = max(max_stack_use, (ap->deep+1) * sizeOfWord);
-	fpreg_stack[fpreg_stack_ptr].Operand = ap;
-    fpreg_stack[fpreg_stack_ptr].f.allocnum = number;
-    if (fpreg_alloc[number].f.isPushed=='T')
+	fpreg_stack[fpreg_stack_ptr].Operand = ap; 
+	fpreg_stack[fpreg_stack_ptr].f.allocnum = number;
+   if (fpreg_alloc[number].f.isPushed=='T')
 		fatal("SpillRegister(): register already spilled");
-    reg_alloc[number].f.isPushed = 'T';
+  fpreg_alloc[number].f.isPushed = 'T';
 }
 
 void SpillPositRegister(Operand* ap, int number)
@@ -423,7 +495,7 @@ void LoadRegister(int regno, int number)
 	if (reg_in_use[regno] >= 0)
 		fatal("LoadRegister():register still in use");
 	reg_in_use[regno] = number;
-	GenerateDiadic(op_load,0,makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP));
+	cg.GenerateLoad(makereg(regno),cg.MakeIndexed(currentFn->GetTempBot()+number*sizeOfWord,regFP), sizeOfWord, sizeOfWord);
     reg_alloc[number].f.isPushed = 'F';
 }
 
@@ -440,10 +512,10 @@ void LoadVectorRegister(int regno, int number)
 
 void LoadFPRegister(int regno, int number)
 {
-	if (fpreg_in_use[regno] >= 0)
+	if (fpreg_in_use[regno & 0x3f] >= 0)
 		fatal("LoadRegister():register still in use");
-	fpreg_in_use[regno] = number;
-	GenerateDiadic(op_fldo,0,makefpreg(regno),cg.MakeIndexed(currentFn->GetTempBot()-number*sizeOfWord,regFP));
+	fpreg_in_use[regno & 0x3f] = number;
+	GenerateDiadic(op_fld,0,makefpreg(regno),cg.MakeIndexed(currentFn->GetTempBot()-number*sizeOfWord,regFP));
     fpreg_alloc[number].f.isPushed = 'F';
 }
 
@@ -627,10 +699,12 @@ Operand *GetTempVectorMaskRegister()
 Operand *GetTempFPRegister()
 {
 	Operand *ap;
-    Function *sym = currentFn;
+  Function *sym = currentFn;
 	int number;
- 
+
+#ifdef THOR
 	return (GetTempRegister());
+#endif
 	// Dead code follows
 	number = fpreg_in_use[next_fpreg];
 	if (number >= 0) {
@@ -643,14 +717,14 @@ Operand *GetTempFPRegister()
     fpreg_in_use[next_fpreg] = fpreg_alloc_ptr;
     ap = allocOperand();
     ap->mode = am_fpreg;
-    ap->preg = next_fpreg;
+    ap->preg = cpu.ftmpregs[next_fpreg] | rt_float;
     ap->deep = fpreg_alloc_ptr;
-	ap->typep = &stddouble;
-    fpreg_alloc[fpreg_alloc_ptr].reg = next_fpreg;
+		ap->typep = &stddouble;
+//    fpreg_alloc[fpreg_alloc_ptr].reg = regs[next_fpreg];
     fpreg_alloc[fpreg_alloc_ptr].Operand = ap;
     fpreg_alloc[fpreg_alloc_ptr].f.isPushed = 'F';
-    if (next_fpreg++ >= regLastTemp)
-    	next_fpreg = regFirstTemp;		/* wrap around */
+    if (next_fpreg++ >= cpu.NumFtmpRegs)
+    	next_fpreg = 0;		/* wrap around */
     if (fpreg_alloc_ptr++ == MAX_REG_STACK)
 		fatal("GetTempFPRegister(): register stack overflow");
 	return (ap);
@@ -682,8 +756,8 @@ Operand* GetTempPositRegister()
 	preg_alloc[preg_alloc_ptr].reg = next_preg;
 	preg_alloc[preg_alloc_ptr].Operand = ap;
 	preg_alloc[preg_alloc_ptr].f.isPushed = 'F';
-	if (next_preg++ >= (regLastTemp|0x40))
-		next_preg = (regFirstTemp|0x40);		/* wrap around */
+//	if (next_preg++ >= (regLastTemp|0x40))
+//		next_preg = (regFirstTemp|0x40);		/* wrap around */
 	if (preg_alloc_ptr++ == MAX_REG_STACK)
 		fatal("GetTempFPRegister(): register stack overflow");
 	return (ap);
@@ -727,10 +801,10 @@ void checkstack()
     int i;
     Function *sym = currentFn;
 
-    for (i=1; i<= regLastTemp; i++)
+    for (i=1; i<= cpu.NumTmpRegs; i++)
         if (reg_in_use[i] != -1)
             fatal("checkstack()/1");
-	if (next_reg != sym->IsLeaf ? 1 : regFirstTemp) {
+	if (next_reg != 0) {//sym->IsLeaf ? 1 : cpu.tmpregs[0]) {
 		//printf("Nextreg: %d\r\n", next_reg);
         fatal("checkstack()/3");
 	}
@@ -773,14 +847,16 @@ void validate(Operand *ap)
 		}
 		break;
 	case am_fpreg:
-		if ((ap->preg >= (frg|0x20) && ap->preg <= (unsigned)(regLastTemp|0x20)) && fpreg_alloc[ap->deep].f.isPushed == 'T' ) {
-			LoadFPRegister(ap->preg, (int) ap->deep);
+		if (IsFtmpReg(ap->preg) && fpreg_alloc[ap->pdeep].f.isPushed == 'T') {
+			LoadFPRegister(ap->preg, (int)ap->pdeep);
 		}
 		break;
 	case am_preg:
+		/*
 		if ((ap->preg >= (frg|0x40) && ap->preg <= (unsigned)(regLastTemp|0x40)) && preg_alloc[ap->deep].f.isPushed == 'T') {
 			LoadPositRegister(ap->preg, (int)ap->deep);
 		}
+		*/
 		break;
 	case am_indx2:
 		if (IsTempReg(ap->preg) && reg_alloc[ap->deep].f.isPushed == 'T') {
@@ -885,11 +961,12 @@ void ReleaseTempRegister(Operand *ap)
 	else
     switch (ap->mode) {
 	case am_fpreg:
-		if (ap->preg >= (frg|0x20) && ap->preg <= (unsigned)(regLastTemp|0x20)) {
+		if (IsFtmpReg(ap->preg)) {
 			if (fpreg_in_use[ap->preg]==-1)
 				return;
-			if (next_fpreg-- <= frg)
-				next_fpreg = regLastTemp;
+			next_fpreg--;
+			if (next_fpreg < 0)
+				next_fpreg = cpu.NumFtmpRegs-1;
 			number = fpreg_in_use[ap->preg];
 			fpreg_in_use[ap->preg] = -1;
 			if (fpreg_alloc_ptr-- == 0)
@@ -902,6 +979,7 @@ void ReleaseTempRegister(Operand *ap)
 		}
 		return;
 	case am_preg:
+		/*
 		if (ap->preg >= (frg|0x40) && ap->preg <= (unsigned)(regLastTemp|0x40)) {
 			if (preg_in_use[ap->preg] == -1)
 				return;
@@ -917,6 +995,7 @@ void ReleaseTempRegister(Operand *ap)
 				fatal("ReleaseTempRegister(): register on stack");
 			return;
 		}
+		*/
 		return;
 	case am_ind:
 	case am_indx:
@@ -982,46 +1061,39 @@ void ReleaseTempVectorRegister(Operand* ap)
 // Go through the allocated register list and generate a push instruction to
 // put the register on the stack if it isn't already on the stack.
 
-int TempInvalidate(int *fsp, int* psp)
+int TempInvalidate(int *fsp, int* psp, int* vsp)
 {
-    int i;
+  int i;
 	int sp;
 	int64_t mask = 0;
+	int64_t fpmask = 0;
+	int64_t vmask = 0;
 	int mode;
 
 	sp = 0;
 	TRACE(printf("TempInvalidate()\r\n");)
 	save_wrapno = wrapno;
+
 	save_reg_alloc_ptr = reg_alloc_ptr;
 	memcpy(save_reg_alloc, reg_alloc, sizeof(save_reg_alloc));
 	memcpy(save_reg_in_use, reg_in_use, sizeof(save_reg_in_use));
 	memcpy(save_rap, rap, sizeof(rap));
+
+	save_fpreg_alloc_ptr = fpreg_alloc_ptr;
+	memcpy(save_fpreg_alloc, fpreg_alloc, sizeof(save_fpreg_alloc));
+	memcpy(save_fpreg_in_use, fpreg_in_use, sizeof(save_fpreg_in_use));
+
 	save_vreg_alloc_ptr = vreg_alloc_ptr;
 	memcpy(save_vreg_alloc, vreg_alloc, sizeof(save_vreg_alloc));
 	memcpy(save_vreg_in_use, vreg_in_use, sizeof(save_vreg_in_use));
+
 	for (sp = i = 0; i < reg_alloc_ptr; i++) {
-		if (reg_alloc[i].f.isPushed == 'V') {
-			mode = reg_alloc[i].Operand->mode;
-			reg_alloc[i].Operand->mode = am_vreg;
-			if (!(mask & (1LL << reg_alloc[i].Operand->preg))) {
-				SpillVectorRegister(reg_alloc[i].Operand, i);
-				mask = mask | (1LL << vreg_alloc[i].Operand->preg);
-			}
-			vreg_alloc[i].Operand->mode = mode;
-			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
-			stacked_vregs[sp].reg = vreg_alloc[i].reg;
-			stacked_vregs[sp].Operand = vreg_alloc[i].Operand;
-			stacked_vregs[sp].f.allocnum = i;
-			sp++;
-			// mark the register void
-			vreg_in_use[vreg_alloc[i].reg] = -1;
-		}
-		else if (reg_alloc[i].f.isPushed == 'F') {
+		if (reg_alloc[i].f.isPushed == 'F') {
 			mode = reg_alloc[i].Operand->mode;
 			reg_alloc[i].Operand->mode = am_reg;
-			if (!(mask & (1LL << reg_alloc[i].Operand->preg))) {
+			if (!(mask & (1LL << (reg_alloc[i].Operand->preg & 0x3f)))) {
 				SpillRegister(reg_alloc[i].Operand, i);
-				mask = mask | (1LL << reg_alloc[i].Operand->preg);
+				mask = mask | (1LL << (reg_alloc[i].Operand->preg & 0x3f));
 			}
 			reg_alloc[i].Operand->mode = mode;
 			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
@@ -1033,7 +1105,44 @@ int TempInvalidate(int *fsp, int* psp)
 			reg_in_use[reg_alloc[i].reg] = -1;
     }
 	}
+	for (*fsp = i = 0; i < fpreg_alloc_ptr; i++) {
+		if (fpreg_alloc[i].f.isPushed == 'F') {
+			mode = fpreg_alloc[i].Operand->mode;
+			fpreg_alloc[i].Operand->mode = am_fpreg;
+			if (!(fpmask & (1LL << (fpreg_alloc[i].Operand->preg & 0x3f)))) {
+				SpillFPRegister(reg_alloc[i].Operand, i);
+				fpmask = fpmask | (1LL << (reg_alloc[i].Operand->preg & 0x3f));
+			}
+			fpreg_alloc[i].Operand->mode = mode;
+			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
+			stacked_fpregs[sp].reg = fpreg_alloc[i].reg;
+			stacked_fpregs[sp].Operand = fpreg_alloc[i].Operand;
+			stacked_fpregs[sp].f.allocnum = i;
+			(*fsp)++;
+			// mark the register void
+			fpreg_in_use[fpreg_alloc[i].reg] = -1;
+		}
+	}
+	for (*vsp = i = 0; i < vreg_alloc_ptr; i++) {
+		if (vreg_alloc[i].f.isPushed == 'F') {
+			mode = reg_alloc[i].Operand->mode;
+			reg_alloc[i].Operand->mode = am_vreg;
+			if (!(vmask & (1LL << reg_alloc[i].Operand->preg))) {
+				SpillVectorRegister(reg_alloc[i].Operand, i);
+				vmask = vmask | (1LL << vreg_alloc[i].Operand->preg);
+			}
+			vreg_alloc[i].Operand->mode = mode;
+			//GenerateTempRegPush(reg_alloc[i].reg, /*reg_alloc[i].Operand->mode*/am_reg, i, sp);
+			stacked_vregs[sp].reg = vreg_alloc[i].reg;
+			stacked_vregs[sp].Operand = vreg_alloc[i].Operand;
+			stacked_vregs[sp].f.allocnum = i;
+			(*vsp)++;
+			// mark the register void
+			vreg_in_use[vreg_alloc[i].reg] = -1;
+		}
+	}
 	memset(reg_in_use, -1, sizeof(reg_in_use));
+	memset(fpreg_in_use, -1, sizeof(fpreg_in_use));
 
 	memset(vreg_in_use, -1, sizeof(vreg_in_use));
 	/*
@@ -1086,6 +1195,10 @@ int TempInvalidate(int *fsp, int* psp)
 	memset(reg_in_use, -1, sizeof(reg_in_use));
 	ZeroMemory(reg_alloc, sizeof(reg_alloc));
 	ZeroMemory(rap, sizeof(rap));
+	// Float
+	fpreg_alloc_ptr = 0;
+	memset(fpreg_in_use, -1, sizeof(fpreg_in_use));
+	ZeroMemory(fpreg_alloc, sizeof(fpreg_alloc));
 	// Vector regs
 	vreg_alloc_ptr = 0;
 	memset(vreg_in_use, -1, sizeof(vreg_in_use));
@@ -1096,10 +1209,12 @@ int TempInvalidate(int *fsp, int* psp)
 // Pop back any temporary registers that were pushed before the function call.
 // Restore the allocated and in use register lists.
 
-void TempRevalidate(int sp, int fsp, int psp)
+void TempRevalidate(int sp, int fsp, int psp, int vsp)
 {
 	int nn;
 	int64_t mask;
+	int64_t fpmask;
+	int64_t vmask;
 
 	/*
 	for (nn = psp - 1; nn >= 0; nn--) {
@@ -1125,11 +1240,31 @@ void TempRevalidate(int sp, int fsp, int psp)
 		mask = mask | (1LL << stacked_regs[nn].Operand->preg);
 		//GenerateTempRegPop(stacked_regs[nn].reg, /*stacked_regs[nn].Operand->mode*/am_reg, stacked_regs[nn].f.allocnum,sp-nn-1);
 	}
+	fpmask = 0;
+	for (nn = fsp - 1; nn >= 0; nn--) {
+		if (stacked_fpregs[nn].Operand) {
+			if (!(fpmask & (1LL << (stacked_fpregs[nn].Operand->preg & 0x3f))))
+				LoadFPRegister(stacked_fpregs[nn].Operand->preg, stacked_fpregs[nn].f.allocnum);
+			fpmask = fpmask | (1LL << (stacked_regs[nn].Operand->preg & 0x3f));
+		}
+	}
+	vmask = 0;
+	for (nn = vsp - 1; nn >= 0; nn--) {
+		if (stacked_vregs[nn].Operand) {
+			if (!(vmask & (1LL << (stacked_vregs[nn].Operand->preg & 0x3f))))
+				LoadVectorRegister(stacked_vregs[nn].Operand->preg, stacked_vregs[nn].f.allocnum);
+			vmask = vmask | (1LL << (stacked_vregs[nn].Operand->preg & 0x3f));
+		}
+	}
 	wrapno = save_wrapno;
 	reg_alloc_ptr = save_reg_alloc_ptr;
 	memcpy(reg_alloc, save_reg_alloc, sizeof(reg_alloc));
 	memcpy(reg_in_use, save_reg_in_use, sizeof(reg_in_use));
 	memcpy(rap, save_rap, sizeof(rap));
+	// Float
+	fpreg_alloc_ptr = save_fpreg_alloc_ptr;
+	memcpy(fpreg_alloc, save_fpreg_alloc, sizeof(fpreg_alloc));
+	memcpy(fpreg_in_use, save_fpreg_in_use, sizeof(fpreg_in_use));
 	// Vector
 	vreg_alloc_ptr = save_vreg_alloc_ptr;
 	memcpy(vreg_alloc, save_vreg_alloc, sizeof(vreg_alloc));
@@ -1194,7 +1329,7 @@ void ReleaseTempReg(Operand *ap)
 		ReleaseTempVectorMaskRegister();
 //	else if (ap->typep==&stdvector)
 //		ReleaseTempVectorRegister(ap);
-	else if (ap->typep==&stddouble)
+	else if (ap->typep->IsFloatType())
 		ReleaseTempFPRegister(ap);
 	else if (ap->typep == &stdposit)
 		ReleaseTempPositRegister(ap);
@@ -1216,7 +1351,7 @@ bool IsArgumentReg(int regno)
 
 bool IsCalleeSave(int regno)
 {
-	if (regno >= regFirstTemp && regno <= regLastTemp)
+	if (IsTempReg(regno))
 		return (true);
 	if (regno==regSP || regno==regFP)
 		return (true);

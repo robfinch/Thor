@@ -1856,7 +1856,7 @@ void OCODE::store(txtoStream& ofs)
 		addi = true;
 #endif
 	if (bb != b) {
-		if (bb->num == 0) {
+		if (false && bb->num == 0) {
 			switch (syntax) {
 			case MOT:
 				ofs.printf(";====================================================\n");

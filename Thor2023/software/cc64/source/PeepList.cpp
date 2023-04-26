@@ -67,7 +67,7 @@ OCODE* PeepList::FindTarget(OCODE *ip, int reg, OCODE* eip)
 	for (; ip != eip; ip = ip->fwd) {
 		if (ip->HasTargetReg()) {
 			if (ip->opcode == op_call || ip->opcode == op_jal || ip->opcode==op_jsr) {
-				if (reg == regFirstArg || reg == regFirstArg+1)
+				if (reg == cpu.argregs[0] || reg == cpu.argregs[1])
 					return (ip);
 			}
 			if (ip->oper1)

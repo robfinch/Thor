@@ -93,12 +93,15 @@ extern Operand* GetTempVectorRegister();
 extern Operand* GetTempVectorMaskRegister();
 extern void ReleaseTempRegister(Operand* ap);
 extern void ReleaseTempReg(Operand* ap);
-extern int TempInvalidate(int*, int*);
-extern void TempRevalidate(int sp, int fsp, int psp);
+extern int TempInvalidate(int*, int*, int*);
+extern void TempRevalidate(int sp, int fsp, int psp, int vsp);
 extern int GetTempMemSpace();
 extern bool IsArgumentReg(int);
 extern int IsArgReg(int);
 extern int IsSavedReg(int);
+extern int IsFargReg(int);
+extern int IsFsavedReg(int);
+extern int IsFtmpReg(int);
 extern void initRegStack();
 extern Operand* GenerateFunctionCall(ENODE* node, int flags);
 
@@ -145,5 +148,6 @@ extern void tmpFreeAll();
 extern void tmpReset();
 extern int64_t tmpAlloc(int64_t);
 extern void tmpFree(int64_t);
+extern void GenerateLabel(int64_t);
 
 #endif

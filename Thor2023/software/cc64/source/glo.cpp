@@ -32,6 +32,7 @@ CPU cpu;
 int pass;
 int maxPn = 15;
 int gCpu = 7;
+#ifdef THOR
 int regTS = 52;
 int regPC = 53;
 int regSP = 63;
@@ -46,13 +47,7 @@ int regTP = 27;
 int regCLP = 25;                // class pointer
 int regPP = 56;					// program pointer
 int regZero = 0;
-int regFirstTemp = 5;
-int regLastTemp = 14;
 int regXoffs = 55;
-int regFirstRegvar = 15;
-int regLastRegvar = 24;
-int regFirstArg = 1;
-int regLastArg = 4;
 int regAsm = 2;
 int pregSP = 30;
 int pregFP = 29;
@@ -89,6 +84,39 @@ int sizeOfPtr = 16;
 int sizeOfInt = 16;
 int sizeOfDecimal = 16;
 int sizeOfPosit = 8;
+
+#endif
+#ifdef RISCV
+int regTS = 52;         // so the symbol is defined
+int regSP = 2;
+int regFP = 8;
+int regLR = 1;
+int regGP = 3;
+int regGP1 = 27;
+int regTP = 4;
+int regCLP = -1;                // class pointer
+int regPP = -1;					// program pointer
+int regZero = 0;
+int regXoffs = -1;
+int regAsm = -1;
+int wcharSupport = 1;
+int verbose = 0;
+int use_gp = 1;
+int address_bits = 32;
+int nregs = 32;
+
+int sizeOfWord = 8;
+int sizeOfFP = 8;
+int sizeOfFPS = 4;
+int sizeOfFPD = 8;
+int sizeOfFPT = 12;
+int sizeOfFPQ = 16;
+int sizeOfPtr = 8;
+int sizeOfInt = 8;
+int sizeOfDecimal = 8;
+int sizeOfPosit = 8;
+
+#endif
 
 std::ifstream *ifs;
 txtoStream ofs;

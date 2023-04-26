@@ -213,7 +213,7 @@ Operand* StatementGenerator::GenerateCase(ENODE* node, Operand* sw_ap)
 					cg.GenerateBne(sw_ap, cg.MakeImmediate(buf[kk], 0), lab);
 				apr = cg.GenerateExpression(ep->p[1], am_all, ep->p[1]->esize, 1);
 				if (apr->mode == am_reg)
-					GenerateDiadic(op_mov, 0, tmp, apr);
+					cg.GenerateMove(tmp, apr);
 				else if (apr->mode == am_imm)
 					cg.GenerateLoadConst(tmp, apr);
 				else
@@ -228,7 +228,7 @@ Operand* StatementGenerator::GenerateCase(ENODE* node, Operand* sw_ap)
 	if (def) {
 		apr = cg.GenerateExpression(def, am_all, def->esize, 1);
 		if (apr->mode == am_reg)
-			GenerateDiadic(op_mov, 0, tmp, apr);
+			cg.GenerateMove(tmp, apr);
 		else if (apr->mode == am_imm)
 			cg.GenerateLoadConst(tmp, apr);
 		else

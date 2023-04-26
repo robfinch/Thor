@@ -507,8 +507,7 @@ bool Var::Coalesce2()
 			reg1 = p->num;
 			reg2 = q->num;
 			// Registers used as register parameters cannot be coalesced.
-			if (((reg1 & 0x3ff) >= regFirstArg && (reg1 & 0x3ff) <= regLastArg)
-				|| ((reg2 & 0x3ff) >= regFirstArg && (reg2 & 0x3ff) <= regLastArg))
+			if ((IsArgReg(reg1 & 0x3ff)) || (IsArgReg(reg2 & 0x3ff)))
 				continue;
 			// Coalesce the live ranges of the two variables into a single
 			// range.

@@ -109,3 +109,4 @@ void CSE::AccUses(int val)
 	else
 		uses += val;
 }
+

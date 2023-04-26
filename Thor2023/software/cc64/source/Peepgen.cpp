@@ -161,7 +161,7 @@ void Generate4adic(int op, int len, Operand *ap1, Operand *ap2, Operand *ap3, Op
 /*
  *      add a compiler generated label to the peep list.
  */
-void GenerateLabel(int labno)
+void GenerateLabel(int64_t labno)
 {      
 	OCODE *newl;
 	newl = (OCODE *)allocx(sizeof(OCODE));
@@ -241,7 +241,6 @@ void MarkRemove2(OCODE *ip)
 //
 void Function::PeepOpt()
 {
-	OCODE *ip;
 	int rep;
 
 	pl.Dump((char *)"===== Before any peephole optmizations =====");
@@ -397,7 +396,7 @@ void RemoveCode()
 	for (v = currentFn->varlist; v; v = v->next) {
 		if (MachineReg::IsCalleeSave(v->num))
 			continue;
-		if (v->num < 5 || v->num==regLR || v->num==regXLR)
+		if (v->num < 5 || v->num==regLR)
 			continue;
 		for (mm = 0; mm < v->trees.treecount; mm++) {
 			t = v->trees.trees[mm];

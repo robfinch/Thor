@@ -558,17 +558,17 @@ void Function::SaveGPRegisterVars()
 	if (rmask) {
 		if (rmask->NumMember()) {
 			cnt = 0;
-			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
+			cg.GenerateSubtractFrom(makereg(regSP), cg.MakeImmediate(rmask->NumMember() * 8));
 			rmask->resetPtr();
 			if (rmask->NumMember() == 1)
-				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+				cg.GenerateStore(makereg(cpu.saved_regs[0]), MakeIndirect(regSP), sizeOfWord);
 			else if (rmask->NumMember() == 2) {
-				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
-				GenerateDiadic(op_store, 0, makereg(cpu.saved_regs[1]), MakeIndexed(16,regSP));
+				cg.GenerateStore(makereg(cpu.saved_regs[0]), MakeIndirect(regSP), sizeOfWord);
+				cg.GenerateStore(makereg(cpu.saved_regs[1]), MakeIndexed(16,regSP), sizeOfWord);
 			}
 			else {
 				sprintf_s(buf, sizeof(buf), "__store_s0s%d", rmask->NumMember());
-				GenerateMonadic(op_bsr, 0, MakeStringAsNameConst(buf, codeseg));
+				cg.GenerateLocalCall(MakeStringAsNameConst(buf, codeseg));
 			}
 			/*
 			for (nn = rmask->lastMember(); nn >= 0; nn = rmask->prevMember()) {
@@ -647,7 +647,7 @@ void Function::SaveRegisterArguments()
 					if (ta->types[nn] == bt_quad)
 						count++;
 				}
-			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), cg.MakeImmediate(count * sizeOfWord));
+			cg.GenerateSubtractFrom(makereg(regSP), makereg(regSP), count * sizeOfWord);
 			for (count = nn = 0; nn < ta->length; nn++) {
 				if (ta->preg[nn]) {
 					switch (ta->types[nn]) {
@@ -732,10 +732,10 @@ int Function::RestoreGPRegisterVars()
 			cnt = 0;
 			save_mask->resetPtr();
 			if (save_mask->NumMember() == 1)
-				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
+				cg.GenerateLoad(makereg(cpu.saved_regs[0]), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
 			else if (save_mask->NumMember() == 2) {
-				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[0]), MakeIndirect(regSP));
-				GenerateDiadic(op_load, 0, makereg(cpu.saved_regs[1]), MakeIndexed(sizeOfWord,regSP));
+				cg.GenerateLoad(makereg(cpu.saved_regs[0]), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
+				cg.GenerateLoad(makereg(cpu.saved_regs[1]), MakeIndexed(sizeOfWord,regSP), sizeOfWord, sizeOfWord);
 			}
 			else {
 				sprintf_s(buf, sizeof(buf), "__load_s0s%d", save_mask->NumMember() - 1);
@@ -802,31 +802,31 @@ void Function::RestoreRegisterVars()
 	}
 }
 
-void Function::SaveTemporaries(int *sp, int *fsp, int* psp)
+void Function::SaveTemporaries(int *sp, int *fsp, int* psp, int* vsp)
 {
 	if (this) {
 		if (UsesTemps) {
-			*sp = TempInvalidate(fsp, psp);
+			*sp = TempInvalidate(fsp, psp, vsp);
 			//*fsp = TempFPInvalidate();
 		}
 	}
 	else {
-		*sp = TempInvalidate(fsp, psp);
+		*sp = TempInvalidate(fsp, psp, vsp);
 		//*fsp = TempFPInvalidate();
 	}
 }
 
-void Function::RestoreTemporaries(int sp, int fsp, int psp)
+void Function::RestoreTemporaries(int sp, int fsp, int psp, int vsp)
 {
 	if (this) {
 		if (UsesTemps) {
 			//TempFPRevalidate(fsp);
-			TempRevalidate(sp, fsp, psp);
+			TempRevalidate(sp, fsp, psp, vsp);
 		}
 	}
 	else {
 		//TempFPRevalidate(fsp);
-		TempRevalidate(sp, fsp, psp);
+		TempRevalidate(sp, fsp, psp, vsp);
 	}
 }
 
@@ -857,7 +857,7 @@ void Function::UnlinkStack(int64_t amt)
 					GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3103));
 					ReleaseTempRegister(ap);
 				}
-				GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
+				cg.GenerateMove(makereg(regSP), makereg(regFP));
 				cg.GenerateLoad(makereg(regFP), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
 			}
 //		}
@@ -865,11 +865,12 @@ void Function::UnlinkStack(int64_t amt)
 	// Else leaf routine, reverse any stack allocation but do not pop link register
 	else {
 		if (alstk) {
-			GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
+			cg.GenerateMove(makereg(regSP), makereg(regFP));
 			cg.GenerateLoad(makereg(regFP), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
 		}
 	}
 	cg.GenerateUnlink(amt);
+	/*
 	if (cpu.SupportsLeave) {
 	}
 	else if (!IsLeaf && doesJAL) {
@@ -882,11 +883,12 @@ void Function::UnlinkStack(int64_t amt)
 				GenerateTriadic(op_csrrw, 0, makereg(regZero), ap, MakeImmediate(0x3103));
 				ReleaseTempRegister(ap);
 			}
-			GenerateDiadic(cpu.mov_op, 0, makereg(regSP), makereg(regFP));
+			cg.GenerateMove(makereg(regSP), makereg(regFP));
 			cg.GenerateLoad(makereg(regFP), MakeIndirect(regSP), sizeOfWord, sizeOfWord);
 		}
 	}
 	//	GenerateTriadic(op_add,0,makereg(regSP),makereg(regSP),MakeImmediate(3*sizeOfWord));
+	*/
 	if (!cpu.SupportsLeave)
 		GenerateMonadic(op_hint, 0, MakeImmediate(end_stack_unlink));
 }
@@ -939,10 +941,11 @@ void Function::SetupReturnBlock()
 	else {
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(Compiler::GetReturnBlockSize()));
 		cg.GenerateStore(makereg(regFP), MakeIndirect(regSP), sizeOfWord);
-		GenerateDiadic(cpu.mov_op, 0, makereg(regFP), makereg(regSP));
-		GenerateDiadic(cpu.mov_op, 0, makereg(regLR), MakeIndexed(sizeOfWord * 2, regFP));	// Store link register on stack
+		cg.GenerateMove(makereg(regFP), makereg(regSP));
+		cg.GenerateStore(makereg(regLR), MakeIndexed(sizeOfWord * 2, regFP), sizeOfWord);	// Store link register on stack
 		GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(stkspace));
 		alstk = true;
+		has_return_block = true;
 	}
 	// Put this marker here so that storing the link register relative to the
 	// frame pointer counts as a frame pointer reference.
@@ -964,7 +967,7 @@ void Function::SetupReturnBlock()
 			//ap = GetTempRegister();
 			//GenerateTriadic(op_csrrd, 0, ap, makereg(regZero), MakeImmediate(0x3102));
 			//GenerateDiadic(op_mflk, 0, makereg(regLR), ap);
-			cg.GenerateStore(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord);
+			//cg.GenerateStore(makereg(regLR), MakeIndexed(2 * sizeOfWord, regFP), sizeOfWord);
 			//ReleaseTempRegister(ap);
 			if (IsFar) {
 				ap = GetTempRegister();
@@ -1131,7 +1134,7 @@ void Function::Generate()
 	if (gp != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__data_base", dataseg), ap);
-		GenerateDiadic(op_lea, 0, makereg(regGP), MakeStringAsNameConst((char *)"_bss_start", dataseg));
+		cg.GenerateLoadAddress(makereg(regGP), MakeStringAsNameConst((char *)"_bss_start", dataseg));
 		//GenerateTriadic(op_base, 0, makereg(regGP), makereg(regGP), ap);
 		ReleaseTempRegister(ap);
 	}
@@ -1139,8 +1142,8 @@ void Function::Generate()
 	if (gp1 != 0) {
 		Operand* ap = GetTempRegister();
 		//cg.GenerateLoadConst(MakeStringAsNameConst("__rodata_base", dataseg), ap);
-		GenerateDiadic(op_ldi,0,makereg(regGP1),MakeStringAsNameConst((char*)currentFn->sym->name->c_str(), codeseg));
-		//GenerateDiadic(op_lea, 0, makereg(regGP1), MakeStringAsNameConst((char *)"_rodata_start", dataseg));
+		cg.GenerateLoadAddress(makereg(regGP1), MakeStringAsNameConst((char*)currentFn->sym->name->c_str(), codeseg));
+		//cg.GenerateLoadAddress(makereg(regGP1), MakeStringAsNameConst((char *)"_rodata_start", dataseg));
 		//if (!compiler.os_code)
 		//GenerateTriadic(op_base, 0, makereg(regGP1), makereg(regGP1), ap);
 		ReleaseTempRegister(ap);
@@ -1502,7 +1505,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	this->hasParameters = true;
 	if (opt_vreg)
 		cpu.SetVirtualRegisters();
-	poffset = compiler.GetReturnBlockSize();
+	poffset = 0;// compiler.GetReturnBlockSize();
 				//	sp->parms = (SYM *)NULL;
 	old_nparms = nparms;
 	for (np = 0; np < nparms; np++)
@@ -1510,8 +1513,8 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	onp = nparms;
 	nparms = 0;
 	reg = 0;
-	fpreg = regFirstArg;
-	preg = regFirstArg;
+	fpreg = 0;//regFirstArg;
+	preg = 0;// regFirstArg;
 	// Parameters will be inserted into the symbol's parameter list when
 	// declarations are processed.
 	//if (strcmp(sym->name->c_str(), "__Skip") == 0)

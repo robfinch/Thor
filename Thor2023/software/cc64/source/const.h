@@ -165,6 +165,7 @@ enum e_sym {
 	kw_nullptr, kw_generic, kw_set, kw_single, kw_quad, kw_half, kw_real, kw_decimal,
 	kw_alignof, kw_declspec,
 	kw_vm0, kw_vm1, kw_vm2, kw_vm3, kw_vm4, kw_vm5, kw_vm6, kw_vm7,
+	kw_user, kw_supervisor, kw_hypervisor, kw_machine,
 	// Intrinsics
 	kw_bmap, kw_wydendx, kw_save_context,
 	my_eof
@@ -261,7 +262,10 @@ enum e_op {
 	// RISCV
 	op_lb, op_lbu, op_lh, op_lhu, op_lw, op_lwu,
 	op_sb, op_sh, op_sw, op_sd,
-	op_l, op_la, op_mv,
+	op_l, op_la, op_mv, op_lui,
+	op_hret, op_mret, op_uret, op_sret,
+	op_fcvtqdd,
+	op_fld, op_flq, op_flw,
 	// DSD9
 	op_ldt, op_ldtu,
 	op_calltgt,
@@ -301,9 +305,10 @@ enum e_op {
 };
 
 enum e_regtype {
-	rt_invert = 64,
-	rt_vector = 128,
-	rt_group = 256
+	rt_invert = 4096,
+	rt_vector = 8192,
+	rt_group = 16384,
+	rt_float = 32768
 };
 
 enum e_am {

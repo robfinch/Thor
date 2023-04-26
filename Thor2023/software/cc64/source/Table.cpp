@@ -353,7 +353,7 @@ Symbol** TABLE::GetParameters()
 	Symbol* thead, * first;
 
 	params = new Symbol * [30];
-	ZeroMemory(&params[0], sizeof(params));
+	ZeroMemory(&params[0], sizeof(Symbol*) * 30);
 	thead = headp;
 	first = thead;
 	while (thead != nullptr) {

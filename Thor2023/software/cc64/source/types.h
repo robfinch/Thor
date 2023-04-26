@@ -327,6 +327,7 @@ public:
 	bool hasGPReferences;				// global pointer references
 	bool has_rodata;
 	bool has_data;
+	bool has_return_block;
 	bool didRemoveReturnBlock;
 	bool retGenerated;
 	bool alloced;
@@ -361,6 +362,7 @@ public:
 	Symbol *nextparm;
 	DerivedMethod *derivitives;	
 	int64_t int_save_mask;
+	int8_t operating_mode;
 	CSet *mask, *rmask;					// Register saved/restored masks
 	CSet *fpmask, *fprmask;
 	CSet* pmask, * prmask;
@@ -420,8 +422,8 @@ public:
 	int RestorePositRegisterVars();
 	void RestoreRegisterVars();
 	void RestoreRegisterArguments();
-	void SaveTemporaries(int *sp, int *fsp, int* psp);
-	void RestoreTemporaries(int sp, int fsp, int psp);
+	void SaveTemporaries(int *sp, int *fsp, int* psp, int* vsp);
+	void RestoreTemporaries(int sp, int fsp, int psp, int vsp);
 
 	void UnlinkStack(int64_t amt);
 
@@ -768,7 +770,10 @@ public:
 	bool IsPositType() {
 		return (nodetype == en_addrof || nodetype == en_autopcon) ? false : (etype == bt_posit);
 	};
-	bool IsVectorType() { return (etype == bt_vector) || vmask != nullptr; };
+	bool IsVectorType() {
+		if (etype==bt_vector)
+			printf("hi");
+		return (etype == bt_vector); };
 	bool IsAutocon() { return (nodetype == en_autocon || nodetype == en_autofcon || nodetype == en_autopcon || nodetype == en_autovcon || nodetype == en_classcon); };
 	bool IsUnsignedType() { return (etype == bt_ubyte || etype == bt_uchar || etype == bt_ushort || etype == bt_ulong || etype == bt_pointer || nodetype==en_addrof || nodetype==en_autofcon || nodetype==en_autocon); };
 	// ??? Use of this method is dubious
@@ -1258,6 +1263,8 @@ class CodeGenerator
 public:
 	Statement* stmt;
 public:
+	virtual Operand* GetTempRegister();
+	virtual Operand* GetTempFPRegister();
 	bool IsPascal(ENODE* ep);
 	Operand* MakeDataLabel(int lab, int ndxreg);
 	Operand* MakeCodeLabel(int lab);
@@ -1304,8 +1311,8 @@ public:
 		throw new C64PException(ERR_CODEGEN, 0);
 	};
 	virtual void GenerateLoad(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
-	void GenerateLoadAddress(Operand* ap3, Operand* ap1);
-	void GenerateStore(Operand* ap1, Operand* ap3, int size, Operand* mask = nullptr);
+	virtual void GenerateLoadAddress(Operand* ap3, Operand* ap1);
+	virtual void GenerateStore(Operand* ap1, Operand* ap3, int size, Operand* mask = nullptr);
 	Operand* GenerateHook(ENODE*, int flags, int size);
 	Operand* GenerateSafeLand(ENODE*, int flags, int op) { return (nullptr); };
 	virtual void GenerateBranchTrue(Operand* ap, int label) {};
@@ -1316,6 +1323,9 @@ public:
 	};
 	virtual void GenerateMove(Operand* dstreg, Operand* srcreg, Operand* mask=nullptr) {
 		GenerateTriadic(op_mov, 0, dstreg, srcreg, mask);
+	};
+	virtual void GenerateFcvtdq(Operand* dst, Operand* src) {
+		GenerateDiadic(op_fcvtdq, 0, dst, src);
 	};
 	virtual void SignExtendBitfield(Operand* ap3, uint64_t mask) {};
 	Operand* GenerateBitfieldAssign(ENODE* node, int flags, int size);
@@ -1386,9 +1396,9 @@ public:
 	virtual Operand* GenerateFge(ENODE* node) { return (nullptr); };
 	virtual Operand *GenExpr(ENODE *node) { return (nullptr); };
 	OCODE* GenerateLoadFloatConst(Operand* ap1, Operand* ap2);
-	void GenerateLoadConst(Operand *ap1, Operand *ap2);
-	void SaveTemporaries(Function *sym, int *sp, int *fsp, int* psp);
-	void RestoreTemporaries(Function *sym, int sp, int fsp, int psp);
+	virtual void GenerateLoadConst(Operand *ap1, Operand *ap2);
+	void SaveTemporaries(Function *sym, int *sp, int *fsp, int* psp, int* vsp);
+	void RestoreTemporaries(Function *sym, int sp, int fsp, int psp, int vsp);
 	virtual void GenerateInterruptSave(Function* func) {
 		throw new C64PException(ERR_CODEGEN, 0);
 	};
@@ -1403,13 +1413,13 @@ public:
 	virtual void GenerateDirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0) {};
 	virtual bool GenerateInlineCall(ENODE* node, Function* func);
 	virtual Operand *GenerateFunctionCall(ENODE *node, int flags, int lab=0);
-	virtual int GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp);
+	virtual int GeneratePrepareFunctionCall(ENODE* node, Function* sym, int* sp, int* fsp, int* psp, int* vsp);
 	void GenerateFunction(Function *fn) { fn->Generate(); };
 	virtual void GenerateCoroutineExit(Function* func);
 	virtual void GenerateReturn(Function* func, Statement* stmt);
 	Operand* GenerateTrinary(ENODE* node, int flags, int size, int op);
 	virtual void GenerateUnlink(int64_t amt) {};
-	virtual void RestoreRegisterVars() {};
+	virtual void RestoreRegisterVars(Function* func);
 	Operand* GenerateCase(ENODE* node, Operand* sw);
 //	Operand* GenerateSwitch(ENODE* node);
 	void GenerateTabularSwitch(int64_t minv, int64_t maxv, Operand* ap, bool HasDefcase, int deflbl, int tablabel);
@@ -1419,9 +1429,13 @@ public:
 	virtual void GenerateLocalCall(Operand* tgt) {
 		GenerateMonadic(op_call, 0, tgt);
 	};
+	virtual void GenerateMillicodeCall(Operand* tgt);
 	virtual void GenerateReturnAndDeallocate(int64_t amt);
 	virtual void GenerateReturnInsn() {
 		GenerateZeradic(op_ret);
+	};
+	virtual void GenerateInterruptReturn(Function* func) {
+		GenerateZeradic(op_rti);
 	};
 };
 
@@ -1489,14 +1503,20 @@ public:
 	void GenerateReturnInsn() {
 		GenerateZeradic(op_rts);
 	};
+	void GenerateInterruptReturn(Function* func) {
+		GenerateZeradic(op_rti);
+	};
 	void GenerateLoadFloat(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
 	void GenerateInterruptSave(Function* func);
 	void GenerateInterruptLoad(Function* func);
+	void GenerateLoadConst(Operand* ap1, Operand* ap2);
 };
 
 class RiscvCodeGenerator : public CodeGenerator
 {
 public:
+	Operand* GetTempFPRegister();
+	Operand* MakeBoolean(Operand* oper);
 	void GenerateBranchTrue(Operand* ap, int label);
 	void GenerateBranchFalse(Operand* ap, int label);
 	void GenerateTrueJump(ENODE* node, int label, unsigned int prediction);
@@ -1533,13 +1553,33 @@ public:
 	Operand* GenerateFgt(ENODE* node);
 	Operand* GenerateFge(ENODE* node);
 	Operand* GenExpr(ENODE* node);
+	void GenerateFcvtdq(Operand* dst, Operand* src) {
+		GenerateDiadic(op_fcvtqdd, 0, dst, src);
+	};
+	void GenerateLoadFloat(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
+	void GenerateLoad(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
+	void GenerateLoadAddress(Operand* ap3, Operand* ap1);
+	void GenerateStore(Operand* ap1, Operand* ap3, int size, Operand* mask = nullptr);
 	void GenerateLea(Operand* ap1, Operand* ap2) {
 		GenerateDiadic(op_la, 0, ap1, ap2);
 	};
+	void GenerateMove(Operand* dstreg, Operand* srcreg, Operand* mask = nullptr) {
+		GenerateTriadic(op_mv, 0, dstreg, srcreg, mask);
+	};
+	int PushArgument(ENODE* ep, int regno, int stkoffs, bool* isFloat, int* push_count, bool large_argcount = true);
+	int PushArguments(Function* func, ENODE* plist);
+	void PopArguments(Function* func, int howMany, bool isPascal = true);
+	void GenerateIndirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0);
+	void GenerateDirectJump(ENODE* node, Operand* oper, Function* func, int flags, int lab = 0);
+	void GenerateCall(Operand* tgt);
+	void GenerateLocalCall(Operand* tgt);
+	void GenerateMillicodeCall(Operand* tgt);
 	void GenerateReturnAndDeallocate(int64_t amt);
 	void GenerateReturnInsn();
+	void GenerateInterruptReturn(Function* func);
 	void GenerateInterruptSave(Function* func);
 	void GenerateInterruptLoad(Function* func);
+	void GenerateLoadConst(Operand* ap1, Operand* ap2);
 };
 
 // Control Flow Graph
@@ -2164,6 +2204,7 @@ public:
 	TABLE* itable;
 	short inline_threshold;
 	int64_t int_save_mask;
+	int8_t operating_mode;
 public:
 	Declaration();
 	Declaration *next;
@@ -2331,9 +2372,14 @@ class CPU
 public:
 	std::string fileExt;
 	int nregs;
+	int pagesize;
+	int code_align;
 	int NumArgRegs;
 	int NumTmpRegs;
 	int NumSavedRegs;
+	int NumFargRegs;
+	int NumFtmpRegs;
+	int NumFsavedRegs;
 	int NumvArgRegs;
 	int NumvTmpRegs;
 	int NumvSavedRegs;
@@ -2343,6 +2389,9 @@ public:
 	int argregs[64];
 	int tmpregs[64];
 	int saved_regs[64];
+	int fargregs[64];
+	int ftmpregs[64];
+	int fsaved_regs[64];
 	int vargregs[64];
 	int vtmpregs[64];
 	int vsaved_regs[64];

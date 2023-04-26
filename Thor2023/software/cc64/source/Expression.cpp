@@ -144,7 +144,9 @@ TYP* Expression::ParseRealConst(ENODE** node)
 	*/
 	//pnode->i = quadlit(&rval128);
 	//if (parsingAggregate == 0 && sizeof_flag == 0)
-	//pnode->i = NumericLiteral(pnode);
+#ifdef RISCV
+	pnode->i = NumericLiteral(pnode);
+#endif
 	pnode->segment = codeseg;
 	switch (float_precision) {
 	case 'Q': case 'q':

@@ -40,7 +40,7 @@ void MachineReg::MarkColorable()
 
 	for (nn = 0; nn < 3072; nn++) {
 		regs[nn].IsColorable = true;
-		if ((nn & 0x3ff) >= regFirstArg && (nn & 0x3ff) <= regLastArg)
+		if (IsArgReg(nn & 0x3ff))
 			regs[nn].IsColorable = false;
 	}
 	regs[0].IsColorable = false;
@@ -49,7 +49,6 @@ void MachineReg::MarkColorable()
 	regs[regXoffs].IsColorable = false;
 	regs[regAsm].IsColorable = false;
 	regs[regLR].IsColorable = false;
-	regs[regXLR].IsColorable = false;
 	regs[regGP1].IsColorable = false;
 	regs[regGP].IsColorable = false;
 	regs[regFP].IsColorable = false;

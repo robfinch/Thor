@@ -185,7 +185,7 @@ void Operand::MakeLegalReg(int flags, int64_t size)
 		cg.GenerateLoadConst(this, ap2);
 		break;
 	case am_reg:
-		GenerateDiadic(cpu.mov_op, 0, ap2, this);
+		cg.GenerateMove(ap2, this);
 		break;
 	case am_preg:
 		GenerateDiadic(op_ptoi, 0, ap2, this);
@@ -302,7 +302,7 @@ void Operand::MakeLegal(int flags, int64_t size)
 			}
 			break;
 		case am_fpreg:
-			if (flags & am_reg)
+			if (flags & am_fpreg)
 				return;
 			break;
 		case am_vreg:

@@ -136,7 +136,11 @@ int main(int argc, char **argv)
 	exceptions=1;
 	compiler.nogcskips = true;
 	compiler.os_code = false;
+#ifdef THOR
 	cpu.fileExt = ".t64";
+	cpu.lea_op = op_lea;
+	cpu.pagesize = 14;
+	cpu.code_align = 0;
 	cpu.SupportsBand = false;
 	cpu.SupportsBor = false;
 	cpu.SupportsBBC = true;
@@ -156,7 +160,6 @@ int main(int argc, char **argv)
 	cpu.ext_op = op_ext;
 	cpu.extu_op = op_extu;
 	cpu.mov_op = op_mov;
-	cpu.lea_op = op_lea;
 	cpu.ldi_op = op_ldi;
 	cpu.ldbu_op = op_ldbu;
 	cpu.ldb_op = op_ldb;
@@ -171,6 +174,48 @@ int main(int argc, char **argv)
 	cpu.stt_op = op_stt;
 	cpu.stw_op = op_stw;
 	cpu.std_op = op_std;
+#endif
+#ifdef RISCV
+	cpu.nregs = 32;
+	cpu.pagesize = 12;
+	cpu.code_align = 2;
+	cpu.fileExt = ".r5a";
+	sizeOfWord = 8;
+	cpu.lea_op = op_la;
+	cpu.SupportsBand = false;
+	cpu.SupportsBor = false;
+	cpu.SupportsBBC = true;
+	cpu.SupportsBBS = true;
+	cpu.SupportsPop = false;
+	cpu.SupportsPush = false;
+	cpu.SupportsLink = false;
+	cpu.SupportsUnlink = false;
+	cpu.SupportsBitfield = false;
+	cpu.SupportsLDM = false;
+	cpu.SupportsSTM = false;
+	cpu.SupportsPtrdif = false;
+	cpu.SupportsEnter = false;
+	cpu.SupportsLeave = false;
+	cpu.SupportsIndexed = true;
+	cpu.Addsi = false;
+	cpu.ext_op = op_ext;
+	cpu.extu_op = op_extu;
+	cpu.mov_op = op_mv;
+	cpu.ldi_op = op_ldi;
+	cpu.ldbu_op = op_ldbu;
+	cpu.ldb_op = op_ldb;
+	cpu.ldo_op = op_ldo;
+	cpu.ldtu_op = op_ldtu;
+	cpu.ldt_op = op_ldt;
+	cpu.ldwu_op = op_ldwu;
+	cpu.ldw_op = op_ldw;
+	cpu.ldd_op = op_ldd;
+	cpu.stb_op = op_stb;
+	cpu.sto_op = op_sto;
+	cpu.stt_op = op_stt;
+	cpu.stw_op = op_stw;
+	cpu.std_op = op_std;
+#endif
 	cpu.InitRegs();
 
 //	printf("c64 starting...\r\n");
@@ -230,8 +275,8 @@ int	options(char *s)
 	else if (s[1]=='f') {
 		if (strcmp(&s[2],"no-exceptions")==0)
 			exceptions = 0;
-		if (strcmp(&s[2],"farcode")==0)
-			farcode = 1;
+//		if (strcmp(&s[2],"farcode")==0)
+//			farcode = 1;
 		if (strncmp(&s[2], "poll",4) == 0) {
 			compiler.ipoll = true;
 			cnt = atoi(&s[6]);
@@ -255,26 +300,19 @@ int	options(char *s)
         if (strcmp(&s[2],"FISA64")==0) {
              gCpu = FISA64;
              regLR = 31;
-             regPC = 29;
              regSP = 30;
              regFP = 27;
              regGP = 26;
-             regXLR = 28;
              use_gp = TRUE;
         }
-				if (strcmp(&s[2], "riscv") == 0) {
+				if (strcmp(&s[2], "riscv64") == 0) {
+					sizeOfWord = 8;
 					gCpu = 5;
 					regLR = 1;
 					regSP = 2;
 					regFP = 8;
 					regGP = 3;
 					regZero = 0;
-					regFirstArg = 10;
-					regLastArg = 17;
-					regFirstTemp = 28;
-					regLastTemp = 31;
-					regFirstRegvar = 18;
-					regLastRegvar = 27;
 					compiler.nogcskips = true;
 					cpu.fileExt = ".r5a";
 					cpu.SupportsBand = false;
@@ -307,6 +345,9 @@ int	options(char *s)
 					cpu.sto_op = op_sd;
 					cpu.stt_op = op_sw;
 					cpu.stw_op = op_sh;
+				}
+				else if (strcmp(&s[2], "riscv32") == 0) {
+					sizeOfWord = 4;
 				}
 	}
 	else if (s[1]=='w')
