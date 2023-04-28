@@ -518,12 +518,18 @@ j2:
 	else {
 		dfs.printf("G");
 		if (sp) {
+			Statement* existing_stmt;
+
 			sp->Init();
 			// Parsing declarations sets the storage class to extern when it really
 			// should be global if there is a function body.
 			if (sp->sym->storage_class == sc_external)
 				sp->sym->storage_class = sc_global;
+			existing_stmt = sp->body;
 			sp->sym->stmt = sp->ParseBody();
+			if (existing_stmt)
+				existing_stmt->ssyms.AddTo(&sp->sym->stmt->ssyms);
+			sp->body = sp->sym->stmt;
 			Summary(sp->sym->stmt);
 		}
 	}
@@ -1817,14 +1823,20 @@ void Function::InsertMethod()
 
 	name = *sym->name;
 	dfs.printf((char *)"<InsertMethod>%s type %d ", (char *)sym->name->c_str(), sym->tp->type);
-	sym->parentp->tp->lst.insert(sym);
-	nn = sym->parentp->tp->lst.FindRising(*sym->name);
-	sy = sym->FindRisingMatch(true);
-	if (sy) {
-		dfs.puts("Found in a base class:");
-		if (sy->fi->IsVirtual) {
-			dfs.printf("Found virtual:");
-			sy->fi->AddDerived();
+	// If there is no parent, then it must be a global.
+	if (sym->parentp == nullptr) {
+		gsyms[0].insert(sym);
+	}
+	else {
+		sym->parentp->tp->lst.insert(sym);
+		nn = sym->parentp->tp->lst.FindRising(*sym->name);
+		sy = sym->FindRisingMatch(true);
+		if (sy) {
+			dfs.puts("Found in a base class:");
+			if (sy->fi->IsVirtual) {
+				dfs.printf("Found virtual:");
+				sy->fi->AddDerived();
+			}
 		}
 	}
 	dfs.printf("</InsertMethod>\n");
@@ -1953,6 +1965,8 @@ void Function::DumpBss(Statement* stmt)
 	seg(ofs, bssseg, 14);
 	for (stmt = body; stmt; stmt = stmt->next) {
 		for (sym = stmt->ssyms.headp; sym; sym = sym->nextp) {
+			if (sym->fi)
+				continue;
 			if (sym->data_string.length() > 0)
 				sym->bss_string = "";
 			if (sym->bss_string.length() > 0) {

@@ -409,6 +409,14 @@ void doinit(Symbol *sp)
 	  first = false;
   }
 
+	// Ignore request to output function to data segment. This is a to be fixed
+	// issue in the code generation. Somehow an extra symbol is being created
+	// that looks like a .bss var when really it is a function. It was showing
+	// up occasionally in the .bss output causing a duplicate symbol error
+	// in the linker.
+	if ((sp->tp->type == bt_func || sp->tp->type == bt_ifunc) || sp->fi)
+		return;
+
   oseg = noseg;
 	lbl[0] = 0;
 

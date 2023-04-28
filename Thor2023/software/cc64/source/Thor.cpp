@@ -1400,14 +1400,14 @@ void ThorCodeGenerator::PopArguments(Function *fnc, int howMany, bool isPascal)
 	if (howMany != 0) {
 		if (fnc) {
 			if (!fnc->IsPascal)
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(fnc->arg_space));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space));
 			else if (howMany - fnc->NumFixedAutoParms > 0)
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(fnc->arg_space - (fnc->NumFixedAutoParms * sizeOfWord)));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space - (fnc->NumFixedAutoParms * sizeOfWord)));
 		}
 		else {
-			error(ERR_UNKNOWN_FN);
+//			error(ERR_UNKNOWN_FN);
 			if (!isPascal)
-				GenerateTriadic(op_add, 0, makereg(regSP), makereg(regSP), MakeImmediate(howMany * sizeOfWord));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(howMany * sizeOfWord));
 		}
 	}
 }
@@ -1454,19 +1454,19 @@ void ThorCodeGenerator::GenerateDirectJump(ENODE* node, Operand* ap, Function* s
 
 void ThorCodeGenerator::GenerateIndirectJump(ENODE* node, Operand* ap, Function* sym, int flags, int lab)
 {
-	ap->MakeLegal(am_reg, sizeOfWord);
+	ap->MakeLegal(am_ind, sizeOfWord);
 	if (sym && sym->IsLeaf) {
 		if (flags & am_jmp)
-			GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+			GenerateMonadic(op_jmp, 0, ap);
 		else
-			GenerateMonadic(op_jsr, 0, MakeIndirect(ap->preg));
+			GenerateMonadic(op_jsr, 0, ap);
 		currentFn->doesJAL = true;
 	}
 	else {
 		if (flags & am_jmp)
-			GenerateMonadic(op_jmp, 0, MakeIndirect(ap->preg));
+			GenerateMonadic(op_jmp, 0, ap);
 		else
-			GenerateMonadic(op_jsr, 0, MakeIndirect(ap->preg));
+			GenerateMonadic(op_jsr, 0, ap);
 		currentFn->doesJAL = true;
 	}
 	GenerateMonadic(op_bex, 0, MakeDataLabel(throwlab, regZero));

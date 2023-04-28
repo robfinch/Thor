@@ -241,9 +241,13 @@ int64_t TYP::GetElementSize()
 char* TYP::ToString(int ndx)
 {
 	static char buf[1000];
+	if (this == nullptr) {
+		strcpy_s(&buf[ndx], sizeof(buf)-ndx, "<null ptr>");
+		return (buf);
+	}
 	switch (type) {
 	case bt_exception:
-		strcpy_s(&buf[ndx], sizeof(buf), "Exception");
+		strcpy_s(&buf[ndx], sizeof(buf)-ndx, "Exception");
 		return (buf);
 	case bt_byte:
 		strcpy_s(&buf[ndx], sizeof(buf), "Byte");

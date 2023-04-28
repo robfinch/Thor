@@ -974,7 +974,12 @@ int Declaration::ParseSpecifier(TABLE* table, Symbol** sym, e_sc sc)
 				bit_max = sizeOfWord/8;
 				goto lxit;
 
-			case id:	sp = ParseSpecifierId(); goto lxit;
+			case id:	
+				sp = ParseSpecifierId();
+				if (sym)
+					*sym = sp;
+				NextToken();
+				goto lxit;
 
 			case kw_half: ParseFloat(16); goto lxit;
 			case kw_single: ParseFloat(32); goto lxit;
@@ -1075,9 +1080,10 @@ void Declaration::ParseDoubleColon(Symbol *sp)
 	    NextToken();
 	//currentClass = sp->GetParentPtr();
 	currentClass = sp->parentp;
-	if (sp->parentp)
+	if (sp->parentp) {
 		dfs.printf("Setting parent:%s|\r\n",
-	(char *)sp->GetParentPtr()->name->c_str());
+			(char*)sp->parentp->name->c_str());
+	}
 }
 
 void Declaration::ParseBitfieldSpec(bool isUnion)
@@ -1132,7 +1138,7 @@ Symbol *Declaration::ParsePrefixId(Symbol* symi)
 	Symbol *sp;
 	Expression exp;
 
-	dfs.puts("<ParsePrefixId>");   
+	dfs.puts("<ParsePrefixId>");
 	if (declid) delete declid;
 	declid = new std::string(lastid);
 	dfs.printf("B|%s|",(char *)declid->c_str());
@@ -1318,12 +1324,13 @@ j1:
 		do {
 			Function* fn = currentFn;
 			TABLE* table;
-
 			NextToken();
+//			NextToken();
 			if (fn) {
 				if (fn->body == nullptr) {
 					Statement* bdy;
-					currentFn->body = bdy = cg.stmt->MakeStatement(st_compound, 0);
+					fn->body = bdy = cg.stmt->MakeStatement(st_compound, 0);
+					fn->sym->stmt = bdy;
 				}
 				table = &currentFn->body->ssyms;
 			}
@@ -1840,14 +1847,26 @@ Symbol *Declaration::ParseSuffix(Symbol *sp)
 			if (sp == nullptr) {
 				sp1 = Symbol::alloc();
 				sp1->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
-				sp1->SetName(*UnknownFuncName());
+//				sp1->SetName(*UnknownFuncName());
+				sp1->SetName(std::string(lastid));
+				sp1->tp = TYP::Copy(&stdfunc);
+				sp1->tp->type = bt_func;
+				sp1->tp->btpp = head;
+				sp1->storage_class = sc_global;
+				sp1->segment = codeseg;
 			}
 			else if (sp->fi == nullptr) {
-				sp1->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
-				if (sp == nullptr)
-					sp1->SetName(*UnknownFuncName());
-				else
-					sp1->SetName(*sp->name);
+				TYP* ty = sp->tp;
+				head = TYP::Copy(&stdfunc);
+				head->btpp = ty;
+				sp->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
+				sp->SetName(*sp->name);
+				sp->tp = head;
+				sp->tp->type = bt_func;
+				sp->tp->btpp = ty;
+				sp->storage_class = sp->parentp ? sc_member : sc_global;
+				sp->segment = codeseg;
+				sp1 = sp;
 			}
 			func = sp1->fi;
 			//else {
