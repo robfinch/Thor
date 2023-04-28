@@ -12,62 +12,62 @@ CFLAGS = -w -S -fno-exceptions
 #CXX = cc64 -w -S 
 AFLAGS = -Fvobj -Lbpl=5
 
-ASMS =     clearerr.t64 \
-           fclose.t64 \
-           feof.t64 \
-           fflush.t64 \
-           fgetc.t64 \
-           fgetpos.t64 \
-           fgets.t64 \
-           fopen.t64 \
-           fprintf.t64 \
-           fputc.t64 \
-           fputs.t64 \
-           fread.t64 \
-           freopen.t64 \
-           fscanf.t64 \
-           fseek.t64 \
-           fsetpos.t64 \
-           ftell.t64 \
-           fwrite.t64 \
-           getc.t64 \
-           getchar.t64 \
-           gets.t64 \
-           perror.t64 \
-           printf.t64 \
-           putc.t64 \
-           putchar.t64 \
-           puts.t64 \
-           rename.t64 \
-           remove.t64 \
-           rewind.t64 \
-           scanf.t64 \
-           setbuf.t64 \
-           setvbuf.t64 \
-           sprintf.t64 \
-           sscanf.t64 \
-           tmpfile.t64 \
-           tmpnam.t64 \
-           ungetc.t64 \
-           vfprintf.t64 \
-           vprintf.t64 \
-           vsprintf.t64 \
-           xfgpos.t64 \
-           xfiles.t64 \
-           xfopen.t64 \
-           xfoprep.t64 \
-           xfrprep.t64 \
-           xfspos.t64 \
-           xfwprep.t64 \
-           xgenld.t64 \
-           xgetfld.t64 \
-           xgetfloa.t64 \
-           xgetint.t64 \
-           xldtob.t64 \
-           xlitob.t64 \
-           xprintf.t64 \
-           xputfld.t64 \
-           xscanf.t64
+ASMS =     clearerr.asm \
+           fclose.asm \
+           feof.asm \
+           fflush.asm \
+           fgetc.asm \
+           fgetpos.asm \
+           fgets.asm \
+           fopen.asm \
+           fprintf.asm \
+           fputc.asm \
+           fputs.asm \
+           fread.asm \
+           freopen.asm \
+           fscanf.asm \
+           fseek.asm \
+           fsetpos.asm \
+           ftell.asm \
+           fwrite.asm \
+           getc.asm \
+           getchar.asm \
+           gets.asm \
+           perror.asm \
+           printf.asm \
+           putc.asm \
+           putchar.asm \
+           puts.asm \
+           rename.asm \
+           remove.asm \
+           rewind.asm \
+           scanf.asm \
+           setbuf.asm \
+           setvbuf.asm \
+           sprintf.asm \
+           sscanf.asm \
+           tmpfile.asm \
+           tmpnam.asm \
+           ungetc.asm \
+           vfprintf.asm \
+           vprintf.asm \
+           vsprintf.asm \
+           xfgpos.asm \
+           xfiles.asm \
+           xfopen.asm \
+           xfoprep.asm \
+           xfrprep.asm \
+           xfspos.asm \
+           xfwprep.asm \
+           xgenld.asm \
+           xgetfld.asm \
+           xgetfloa.asm \
+           xgetint.asm \
+           xldtob.asm \
+           xlitob.asm \
+           xprintf.asm \
+           xputfld.asm \
+           xscanf.asm
 
 OUT =     clearerr.o \
            fclose.o \
@@ -134,12 +134,12 @@ STDIO:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

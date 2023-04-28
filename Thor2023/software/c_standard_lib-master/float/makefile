@@ -12,7 +12,7 @@ CFLAGS = -w -S -fno-exceptions
 #CXX = cc64 -w -S 
 AFLAGS = -Fvobj -Lbpl=5
 
-ASMS =     xfloat.t64
+ASMS =     xfloat.asm
 
 OUT =     xfloat.o
 
@@ -24,12 +24,12 @@ FLOAT:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

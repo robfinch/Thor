@@ -49,42 +49,42 @@ OUT =     acos.o \
            xsin.o \
            xvalues.o
 
-ASMS =     acos.t64 \
-           asin.t64 \
-           atan.t64 \
-           atan2.t64 \
-           ceil.t64 \
-           cos.t64 \
-           cosh.t64 \
-           exp.t64 \
-           fabs.t64 \
-           floor.t64 \
-           fmod.t64 \
-           frexp.t64 \
-           ldexp.t64 \
-           log.t64 \
-           log10.t64 \
-           modf.t64 \
-           pow.t64 \
-           sin.t64 \
-           sinh.t64 \
-           sqrt.t64 \
-           tan.t64 \
-           tanh.t64 \
-           xasin.t64 \
-           xatan.t64 \
-           xdint.t64 \
-           xdnorm.t64 \
-           xdscale.t64 \
-           xdtento.t64 \
-           xdtest.t64 \
-           xdunscal.t64 \
-           xexp.t64 \
-           xldunsca.t64 \
-           xlog.t64 \
-           xpoly.t64 \
-           xsin.t64 \
-           xvalues.t64
+ASMS =     acos.asm \
+           asin.asm \
+           atan.asm \
+           atan2.asm \
+           ceil.asm \
+           cos.asm \
+           cosh.asm \
+           exp.asm \
+           fabs.asm \
+           floor.asm \
+           fmod.asm \
+           frexp.asm \
+           ldexp.asm \
+           log.asm \
+           log10.asm \
+           modf.asm \
+           pow.asm \
+           sin.asm \
+           sinh.asm \
+           sqrt.asm \
+           tan.asm \
+           tanh.asm \
+           xasin.asm \
+           xatan.asm \
+           xdint.asm \
+           xdnorm.asm \
+           xdscale.asm \
+           xdtento.asm \
+           xdtest.asm \
+           xdunscal.asm \
+           xexp.asm \
+           xldunsca.asm \
+           xlog.asm \
+           xpoly.asm \
+           xsin.asm \
+           xvalues.asm
 
 all:	$(OUT)
 	echo "made MATH"
@@ -94,12 +94,12 @@ MATH:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

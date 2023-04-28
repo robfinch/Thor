@@ -12,22 +12,22 @@ CFLAGS = -w -S -fno-exceptions
 #CXX = cc64 -w -S 
 AFLAGS = -Fvobj -Lbpl=5
 
-ASMS =     isalnum.t64 \
-           isalpha.t64 \
-           iscntrl.t64 \
-           isdigit.t64 \
-           isgraph.t64 \
-           islower.t64 \
-           isprint.t64 \
-           ispunct.t64 \
-           isspace.t64 \
-           isupper.t64 \
-           isxdigit.t64 \
-           tolower.t64 \
-           toupper.t64 \
-           xctype.t64 \
-           xtolower.t64 \
-           xtoupper.t64
+ASMS =     isalnum.asm \
+           isalpha.asm \
+           iscntrl.asm \
+           isdigit.asm \
+           isgraph.asm \
+           islower.asm \
+           isprint.asm \
+           ispunct.asm \
+           isspace.asm \
+           isupper.asm \
+           isxdigit.asm \
+           tolower.asm \
+           toupper.asm \
+           xctype.asm \
+           xtolower.asm \
+           xtoupper.asm
 
 OUT =     isalnum.o \
            isalpha.o \
@@ -54,12 +54,12 @@ CTYPE:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

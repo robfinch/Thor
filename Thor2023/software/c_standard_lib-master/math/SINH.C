@@ -14,9 +14,9 @@ static const double q[4] = {
 	-0.21108770058106271242e+7};
 
 double (sinh)(double x)
-	{	/* compute sinh(x) */
-	switch (_Dtest(&x))
-		{	/* test for special codes */
+begin	/* compute sinh(x) */
+	switch (_Dtest(&x)) begin
+		/* test for special codes */
 	case NAN:
 		errno = EDOM;
 		return (x);
@@ -26,7 +26,7 @@ double (sinh)(double x)
 	case 0:
 		return (0.0);
 	default:	/* finite */
-		 {	/* compute sinh(finite) */
+		begin	/* compute sinh(finite) */
 		short neg;
 
 		if (x < 0.0)
@@ -35,19 +35,19 @@ double (sinh)(double x)
 			neg = 0;
 		if (x < _Rteps._D)
 			;	/* x tiny */
-		else if (x < 1.0)
-			{	/* |x| < 1 */
+		else if (x < 1.0) begin
+			/* |x| < 1 */
 			const double y = x * x;
 
 			x += x * y
 				* (((p[0] * y + p[1]) * y + p[2]) * y + p[3])
 				/ (((q[0] * y + q[1]) * y + q[2]) * y + q[3]);
-			}
+		end
 		else if (0 <= _Exp(&x, -1))
 			errno = ERANGE;	/* x large */
 		else if (x < _Xbig._D)
 			x -= 0.25 / x;
 		return (neg ? -x : x);
-		 }
-		}
-	}
+		end
+	end
+end

@@ -13,18 +13,18 @@ CFLAGS = -w -S -fno-exceptions
 AFLAGS = -Fvobj -Lbpl=5
 
 ASMS = \
-	localeco.t64 \
-	setlocal.t64 \
-	xdefloc.t64 \
-	xfmtval.t64 \
-	xfreeloc.t64 \
-	xgetloc.t64 \
-	xloctab.t64 \
-	xlocterm.t64 \
-	xmakeloc.t64 \
-	xreadloc.t64 \
-	xsetloc.t64 \
-	xstate.t64
+	localeco.asm \
+	setlocal.asm \
+	xdefloc.asm \
+	xfmtval.asm \
+	xfreeloc.asm \
+	xgetloc.asm \
+	xloctab.asm \
+	xlocterm.asm \
+	xmakeloc.asm \
+	xreadloc.asm \
+	xsetloc.asm \
+	xstate.asm
 	
 OUT = \
 	localeco.o \
@@ -48,12 +48,12 @@ LOCALE:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

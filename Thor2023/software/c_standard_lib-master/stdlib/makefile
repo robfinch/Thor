@@ -13,38 +13,38 @@ CFLAGS = -w -S -fno-exceptions
 AFLAGS = -Fvobj -Lbpl=5
 
 ASMS = \
-	abort.t64 \
-	abs.t64 \
-	atexit.t64 \
-	atof.t64 \
-	atoi.t64 \
-	atol.t64 \
-	bsearch.t64 \
-	calloc.t64 \
-	div.t64 \
-	exit.t64 \
-	free.t64 \
-	getenv.t64 \
-	labs.t64 \
-	ldiv.t64 \
-	malloc.t64 \
-	mblen.t64 \
-	mbstowcs.t64 \
-	mbtowc.t64 \
-	qsort.t64 \
-	rand.t64 \
-	realloc.t64 \
-	srand.t64 \
-	strtod.t64 \
-	strtol.t64 \
-	strtoul.t64 \
-	system.t64 \
-	wcstombs.t64 \
-	wctomb.t64 \
-	xgetmem.t64 \
-	xmbtowc.t64 \
-	xstod.t64 \
-	xstoul.t64
+	abort.asm \
+	abs.asm \
+	atexit.asm \
+	atof.asm \
+	atoi.asm \
+	atol.asm \
+	bsearch.asm \
+	calloc.asm \
+	div.asm \
+	exit.asm \
+	free.asm \
+	getenv.asm \
+	labs.asm \
+	ldiv.asm \
+	malloc.asm \
+	mblen.asm \
+	mbstowcs.asm \
+	mbtowc.asm \
+	qsort.asm \
+	rand.asm \
+	realloc.asm \
+	srand.asm \
+	strtod.asm \
+	strtol.asm \
+	strtoul.asm \
+	system.asm \
+	wcstombs.asm \
+	wctomb.asm \
+	xgetmem.asm \
+	xmbtowc.asm \
+	xstod.asm \
+	xstoul.asm
            
 OUT = \
 	abort.o \
@@ -88,12 +88,12 @@ STDLIB:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

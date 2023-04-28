@@ -13,28 +13,28 @@ CFLAGS = -w -S -fno-exceptions
 AFLAGS = -Fvobj -Lbpl=5
 
 ASMS = \
-	memchr.t64 \
-	memcmp.t64 \
-	memcpy.t64 \
-	memmove.t64 \
-	memset.t64 \
-	strcat.t64 \
-	strchr.t64 \
-	strcmp.t64 \
-	strcoll.t64 \
-	strcpy.t64 \
-	strcspn.t64 \
-	strerror.t64 \
-	strlen.t64 \
-	strncat.t64 \
-	strncpy.t64 \
-	strpbrk.t64 \
-	strrchr.t64 \
-	strspn.t64 \
-	strstr.t64 \
-	strtok.t64 \
-	strxfrm.t64 \
-	xstrxfrm.t64
+	memchr.asm \
+	memcmp.asm \
+	memcpy.asm \
+	memmove.asm \
+	memset.asm \
+	strcat.asm \
+	strchr.asm \
+	strcmp.asm \
+	strcoll.asm \
+	strcpy.asm \
+	strcspn.asm \
+	strerror.asm \
+	strlen.asm \
+	strncat.asm \
+	strncpy.asm \
+	strpbrk.asm \
+	strrchr.asm \
+	strspn.asm \
+	strstr.asm \
+	strtok.asm \
+	strxfrm.asm \
+	xstrxfrm.asm
 
 OUT = \
 	memchr.o \
@@ -68,12 +68,12 @@ STRING:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp

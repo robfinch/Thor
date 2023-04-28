@@ -13,22 +13,22 @@ CFLAGS = -w -S -fno-exceptions
 AFLAGS = -Fvobj -Lbpl=5
 
 ASMS = \
-	asctime.t64 \
-	clock.t64 \
-	ctime.t64 \
-	difftime.t64 \
-	gmtime.t64 \
-	localtim.t64 \
-	mktime.t64 \
-	strftime.t64 \
-	time.t64 \
-	xgentime.t64 \
-	xgetdst.t64 \
-	xgettime.t64 \
-	xgetzone.t64 \
-	xisdst.t64 \
-	xstrftim.t64 \
-	xttotm.t64
+	asctime.asm \
+	clock.asm \
+	ctime.asm \
+	difftime.asm \
+	gmtime.asm \
+	localtim.asm \
+	mktime.asm \
+	strftime.asm \
+	time.asm \
+	xgentime.asm \
+	xgetdst.asm \
+	xgettime.asm \
+	xgetzone.asm \
+	xisdst.asm \
+	xstrftim.asm \
+	xttotm.asm
            
 OUT = \
 	asctime.o \
@@ -56,12 +56,12 @@ TIME:	$(OUT)
 
 .c.o:
 	cc64 $(CFLAGS) $<
-	vasmThor_std_win32 $(AFLAGS) $*.t64 -L $*.lst -o $*.o
+	vasmThor_std_win32 $(AFLAGS) $*.asm -L $*.lst -o $*.o
 	
 clean:
 	del *.o
 	del *.lst
-	del *.t64
+	del *.asm
 	del *.lis
 	del *.c.xml
 	del *.fpp
