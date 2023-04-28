@@ -83,7 +83,7 @@ void TABLE::CopySymbolTable(TABLE *dst, TABLE *src)
 
 //Generic table insert routine, used for all inserts.
 
-void TABLE::insert(Symbol *sp)
+Symbol* TABLE::insert(Symbol *sp)
 {
 	int nn;
 	TypeArray *ta = nullptr;
@@ -92,7 +92,7 @@ void TABLE::insert(Symbol *sp)
 	int s1;
 	TABLE* tab = this;
 	std::string nm;
-	Symbol *sp1;
+	Symbol *sp1 = nullptr;
 	Symbol* sp2;
 //  std::string sig;
 
@@ -103,9 +103,8 @@ void TABLE::insert(Symbol *sp)
 
   if (this==&tagtable) {
     dfs.printf("Insert into tagtable:%s|\n",(char *)sp->name->c_str());
+		tab = this;
   }
-  else
-    dfs.printf((char *)"Insert %s into %p", (char *)sp->name->c_str(), (char *)this);
 	sp2 = ownerp;
 	if (sp2 != nullptr)
 		if (sp2->name != nullptr)
@@ -116,6 +115,7 @@ void TABLE::insert(Symbol *sp)
 		s1 = hashadd((char *)sp->name->c_str());
 		tab = &gsyms[s1];
 	}
+	dfs.printf((char*)"Insert %s into %p", (char*)sp->name->c_str(), (char*)this);
 
 	nm = *sp->name;// name;
   // The symbol may not have a type if it's just a label. Find doens't
@@ -161,6 +161,7 @@ j1:
 //    printf("Xele:%p|%s|\r\n", p, p->name.c_str());
 //    p = p->GetNext();
 //  }
+	return (sp1);
 }
 
 // Parameters:

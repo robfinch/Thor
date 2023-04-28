@@ -301,7 +301,6 @@ int CSETable::AllocateVectorRegisters()
 								break;
 							}
 							if (alloc) {
-								printf("hi");
 								csp->reg = cpu.vsaved_regs[vreg++] | rt_vector;
 							}
 							else

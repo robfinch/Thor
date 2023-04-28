@@ -273,6 +273,7 @@ void Function::GenerateBody(bool force_inline)
 		//		}
 		if (!IsInline)
 			;
+		DumpBss(body);
 	}
 }
 
@@ -316,7 +317,7 @@ void Function::DoFuncptrAssign(Function *sp)
 
 	op = en_assign;
 	ep2 = nullptr;
-	tp2 = exp.ParseAssignOps(&ep2, asym);
+	tp2 = exp.ParseAssignOps(&ep2, sp->sym);
 	if (tp2 == nullptr || !IsLValue(ep1))
 		error(ERR_LVALUE);
 	else {
@@ -1085,6 +1086,8 @@ void Function::Generate()
 	bool o_retgen;
 	Operand* ap;
 	ENODE* node;
+	extern bool first_dataseg;
+	first_dataseg = true;
 
 	if (opt_vreg)
 		cpu.SetVirtualRegisters();
@@ -1248,7 +1251,7 @@ TypeArray *Function::GetParameterTypes()
 	sp = params.headp;
 	for (nn = 0; sp; nn++) {
 		i16->Add(sp->tp, (__int16)(sp->IsRegister ? sp->reg : 0));
-		sp = sp->GetNextPtr();
+		sp = sp->nextp;
 	}
 	//	printf("Leave GetParameterTypes()\r\n");
 	return i16;
@@ -1495,11 +1498,13 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	Stringx oldnames[MAX_PARMS];
 	int old_nparms;
 	ParameterDeclaration pd;
+	Symbol* sy;
 
 	dfs.printf("<BuildParameterList>");
 	if (this->hasParameters) {
 		dfs.printf("Function parameter list already processed.");
-		pd.Parse(1, true);
+//		params = 
+			*pd.Parse(1, true, this);
 		return;
 	}
 	this->hasParameters = true;
@@ -1519,7 +1524,9 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	// declarations are processed.
 	//if (strcmp(sym->name->c_str(), "__Skip") == 0)
 	//	printf("hello");
-	np = pd.ParameterDeclaration::Parse(1, false);
+	params = *pd.ParameterDeclaration::Parse(1, false, this);
+	for (np = 0, sy = params.headp; sy; sy = sy->nextp, np++)
+		;
 	*num += np;
 	*numa = 0;
 	*ellipos = -1;
@@ -1529,7 +1536,7 @@ void Function::BuildParameterList(int *num, int *numa, int* ellipos)
 	nparms = onp;
 	this->NumParms = *num;
 	for (i = 0; i < np && i < MAX_PARMS; ++i) {
-		if ((sp1 = currentFn->params.Find(names[i].str, false)) == NULL) {
+		if ((sp1 = params.Find(names[i].str, false)) == NULL) {
 			dfs.printf("C");
 			sp1 = makeint2(names[i].str);
 			//			lsyms.insert(sp1);
@@ -1739,11 +1746,13 @@ void Function::Summary(Statement *stmt)
 	lc_auto = 0;
 	lfs.printf("\n\n*** local symbol table ***\n\n");
 	ListTable(&sym->lsyms, 0);
-	if (sym->fi->body)
-		ListTable(&sym->fi->body->ssyms, 0);
+	if (sym->fi)
+		if (sym->fi->body)
+			ListTable(&sym->fi->body->ssyms, 0);
 	// Should recurse into all the compound statements
 	lfs.printf("\n\n*** symbols by compound statement ***\n\n");
-	ListCompound(sym->fi->body);
+	if (sym->fi)
+		ListCompound(sym->fi->body);
 
 	if (stmt == NULL)
 		dfs.printf("DIAG: null statement in Function::Summary.\r\n");
@@ -1937,5 +1946,27 @@ void Function::RemoveDuplicates()
 }
 
 
+void Function::DumpBss(Statement* stmt)
+{
+	Symbol* sym;
+
+	seg(ofs, bssseg, 14);
+	for (stmt = body; stmt; stmt = stmt->next) {
+		for (sym = stmt->ssyms.headp; sym; sym = sym->nextp) {
+			if (sym->data_string.length() > 0)
+				sym->bss_string = "";
+			if (sym->bss_string.length() > 0) {
+				ofs.write(sym->bss_string.c_str());
+				sym->bss_string = "";
+			}
+		}
+		if (stmt->s1 && stmt->s1->stype == st_compound) {
+			DumpBss(stmt->s1);
+		}
+		if (stmt->s2 && stmt->s2->stype == st_compound) {
+			DumpBss(stmt->s2);
+		}
+	}
+}
 
 

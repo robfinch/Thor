@@ -133,7 +133,7 @@ Statement *Statement::ParseSwitch()
 {
 	Statement *snp;
 	Statement *head, *tail, *os;
-	bool needEnd = true;
+	bool needEnd = false;
 
 	os = cg.stmt;
 	tail = nullptr;
@@ -155,31 +155,38 @@ Statement *Statement::ParseSwitch()
 		}
 	}
 	needpunc(closepa, 0);
-	needpunc(begin, 76);
-	stmtdepth++;
+	if (lastst == begin) {
+		needEnd = true;
+		NextToken();
+		stmtdepth++;
+	}
 	//snp->s1 = ParseCompound(false);
 	
 	head = 0;
-	while (lastst != end) {
-		if (head == nullptr) {
-			head = tail = snp->Parse(&snp->contains_label);
-			head->outer = snp;
-		}
-		else {
-			tail->next = snp->Parse(&snp->contains_label);
-			if (tail->next != nullptr) {
-				tail = tail->next;
+	if (!needEnd)
+		snp->s1 = snp->Parse(&snp->contains_label);
+	else {
+		while (lastst != end) {
+			if (head == nullptr) {
+				head = tail = snp->Parse(&snp->contains_label);
+				head->outer = snp;
 			}
-			tail->outer = snp;
+			else {
+				tail->next = snp->Parse(&snp->contains_label);
+				if (tail->next != nullptr) {
+					tail = tail->next;
+				}
+				tail->outer = snp;
+			}
+			if (tail == nullptr) break;	// end of file in switch
+			tail->next = nullptr;
+			if (!needEnd)
+				break;
 		}
-		if (tail == nullptr) break;	// end of file in switch
-		tail->next = nullptr;
-		if (!needEnd)
-			break;
+		snp->s1 = head;
+		needpunc(end, 77);
+		stmtdepth--;
 	}
-	snp->s1 = head;
-	needpunc(end, 77);
-	stmtdepth--;
 
 	if (snp->s1->CheckForDuplicateCases())
 		error(ERR_DUPCASE);

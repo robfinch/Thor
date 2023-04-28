@@ -250,8 +250,8 @@ ENODE* Expression::ParseInlineStringConst(ENODE** node)
 		tptr->size = strlen(str) + (int64_t)1;
 		tptr->btpp = TYP::Make(bt_ichar, 2);
 		tptr->btp = tptr->btpp->GetIndex();// stdchar.GetIndex();
-		tptr->val_flag = 1;
-		tptr->isUnsigned = TRUE;
+		tptr->val_flag = true;
+		tptr->isUnsigned = true;
 	}
 	else {
 		tptr = &stdistring;
@@ -296,8 +296,8 @@ ENODE* Expression::ParseStringConstWithSizePrefix(ENODE** node)
 			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		}
-		tptr->val_flag = 1;
-		tptr->isUnsigned = TRUE;
+		tptr->val_flag = true;
+		tptr->isUnsigned = true;
 	}
 	else {
 		tptr = &stdastring;
@@ -663,7 +663,7 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	// {0} is allowed to be specified as the value of an intrinsic type. It is not
 	// really an aggregate.
 
-	if (tp->IsIntrinsicType()) {
+	if (tp->IsIntrinsicType() && !tp->IsStructType()) {
 		tptr = ParseExpression(node, symi);
 		needpunc(e_sym::end, 80);
 		return (tptr);
@@ -1950,6 +1950,10 @@ ENODE* Expression::ParseOpenbr(TYP* tp1, ENODE* ep1)
 		else {
 			qnode = makeinode(en_icon, 0);
 			//ep1 = compiler.ef.Makenode(pnode->isUnsigned ? en_extu : en_ext, rnode, pnode->Clone(), qnode->Clone());
+			if (rnode == nullptr) {
+				error(ERR_NOPOINTER);
+				return (ep1);
+			}
 			rnode->nodetype = en_fieldref;
 			rnode->bit_offset = pnode;
 			rnode->bit_width = qnode;
@@ -2294,6 +2298,24 @@ TYP* Expression::ParseGeneric(ENODE** node, Symbol* symi)
 	tp = ParseGenericCase(node, symi, tp);
 	needpunc(closepa,70);
 	return (tp);
+}
+
+TYP* Expression::ParseMux(ENODE** node, Symbol* symi)
+{
+	ENODE* ep1, *ep2;
+	TYP* tp1;
+
+	ep1 = nullptr;
+	do {
+		tp1 = ParseExpression(&ep2, symi);
+		ep1 = makenode(en_void, ep1, ep2);
+		if (lastst == colon)
+			NextToken();
+		else
+			break;
+	} while (true);
+	*node = ep1;
+	return (tp1);
 }
 
 TYP* Expression::ParseSwitch(ENODE** node, Symbol* symi)

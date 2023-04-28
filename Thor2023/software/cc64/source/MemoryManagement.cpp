@@ -187,15 +187,16 @@ Symbol* Symbol::alloc()
   Symbol* sym = (Symbol*)&compiler.symbolTable[compiler.symnum];
   ZeroMemory(sym, sizeof(Symbol));
   sym->id = compiler.symnum;
-  sym->name = new std::string("");
-  sym->shortname = new std::string("");
+  sym->SetName(std::string(""));
   sym->lsyms.ownerp = sym;// SetOwner(compiler.symnum);
   compiler.symnum++;
   return (sym);
 }
 
 Symbol *allocSYM() {
-  return (Symbol::alloc());
+  Symbol* sy = Symbol::alloc();
+  sy->IsExternal = true;
+  return (sy);
 };
 
 void FreeFunction(Function *fn)
@@ -208,7 +209,7 @@ TYP *allocTYP()
 //  printf("allocTYP()\r\n");
 	TYP *tp = (TYP *)&compiler.typeTable[compiler.typenum];
 	ZeroMemory(tp,sizeof(TYP));
-	tp->sname = new std::string("");
+  tp->sname = nullptr;// new std::string("");
   tp->bit_width = nullptr;
 //	printf("Leave allocTYP():%p\r\n",tp);
   compiler.typenum++;

@@ -191,7 +191,7 @@ Operand* CodeGenerator::GenerateHook(ENODE* inode, int flags, int size)
 			break;
 		}
 	ReleaseTempRegister(ap1);
-	GenerateDiadic(op_bra, 0, MakeCodeLabel(end_label), 0);
+	GenerateBra(end_label);
 	GenerateLabel(false_label);
 	ap2 = cg.GenerateExpression(node->p[1], flags, size, 1);
 	if (!Operand::IsSameType(ap1, ap2) && !voidResult)
@@ -202,7 +202,7 @@ Operand* CodeGenerator::GenerateHook(ENODE* inode, int flags, int size)
 			GenerateMove(ap3, ap2);
 			break;
 		case am_imm:
-			GenerateLoadConst(ap3, ap2);
+			GenerateLoadConst(ap3, ap2);	// I think this is backwards, test
 			break;
 		default:
 			GenerateLoad(ap3, ap2, sizeOfWord, sizeOfWord);
@@ -211,6 +211,59 @@ Operand* CodeGenerator::GenerateHook(ENODE* inode, int flags, int size)
 	ReleaseTempRegister(ap2);
 	GenerateLabel(end_label);
 	ap3->MakeLegal(flags, size);
+	return (ap3);
+}
+
+Operand* CodeGenerator::GenerateMux(ENODE* inode, int flags, int size)
+{
+	List* lst, *hlst;
+	ENODE* pnode;
+	Operand* ap1, *ap2, *ap3;
+	int nn, kk;
+	int64_t lab, labxit;
+	bool void_result = false;
+
+	labxit = nextlabel++;
+	if (inode->nodetype != en_safe_cond)
+		throw new C64PException(ERR_MISSING_MUX, 0);
+
+	// Put the node list in the order we need.
+	nn = 0;
+	for (pnode = inode->p[1]; pnode; pnode = pnode->p[0])
+		nn++;
+	hlst = lst = new List[nn];
+	kk = nn;
+	for (pnode = inode->p[1]; pnode; pnode = pnode->p[0]) {
+		--kk;
+		lst[kk].node = pnode->p[1];
+	}
+
+	ap3 = GetTempRegister();
+	ap2 = cg.GenerateExpression(inode->p[0], flags, size, 0);
+	void_result = inode->etype == bt_void;
+	for (kk = 0; kk < nn; kk++) {
+		lab = nextlabel++;
+		if (kk < nn - 1)
+			GenerateBne(ap2, MakeImmediate(kk), lab);
+		ap1 = cg.GenerateExpression(lst[kk].node, flags, size, 0);
+		if (!void_result)
+			switch (ap1->mode) {
+			case am_reg:
+				GenerateMove(ap3, ap1);
+				break;
+			case am_imm:
+				GenerateLoadConst(ap1, ap3);
+				break;
+			default:
+				GenerateLoad(ap3, ap1, sizeOfWord, sizeOfWord);
+				break;
+			}
+		ReleaseTempRegister(ap1);
+		GenerateBra(labxit);
+		GenerateLabel(lab);
+	}
+	GenerateLabel(labxit);
+	ReleaseTempRegister(ap2);
 	return (ap3);
 }
 
@@ -2902,7 +2955,7 @@ Operand *CodeGenerator::GenerateExpression(ENODE *node, int flags, int64_t size,
 		ap1 = GenerateHook(node, flags, size);
 		goto retpt;
 	case en_safe_cond:
-		ap1 = (node->GenSafeHook(flags, size));
+		ap1 = GenerateMux(node, flags, size);
 		goto retpt;
 
 	case en_void:

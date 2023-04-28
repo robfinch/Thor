@@ -133,7 +133,7 @@ enum e_sym {
 	modop, eq, neq, lt, leq, gt,
 	geq, assign, asplus, asminus, astimes, asdivide, asmodop,
 	aslshift, asrshift, aslrot, asrrot,
-	asand, asor, asxor, autoinc, autodec, hook, safe_hook, cmpl,
+	asand, asor, asxor, autoinc, autodec, hook, mux_hook, cmpl,
 	comma, colon, semicolon, double_colon, uparrow, openbr, closebr, begin, end,
 	openpa, closepa, pointsto, dot, lor, land, nott, bitorr, bitandd, lor_safe, land_safe,
 	ellipsis,
@@ -404,6 +404,8 @@ enum e_hint {
 
 enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
 
+enum e_decltype { dt_global, dt_auto, dt_parameter };
+
 #define LR		1
 #define CLR		11
 
@@ -499,6 +501,7 @@ enum e_gt { nogen, bytegen, chargen, halfgen, wordgen, longgen, floatgen };
 #define ERR_CIRCULAR_LIST 1001
 #define ERR_MISSING_HIDDEN_STRUCTPTR	1002
 #define ERR_CODEGEN 1003
+#define ERR_MISSING_MUX 1004
 
 /*      alignment sizes         */
 

@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 	compiler.nogcskips = true;
 	compiler.os_code = false;
 #ifdef THOR
-	cpu.fileExt = ".t64";
+	cpu.fileExt = ".asm";
 	cpu.lea_op = op_lea;
 	cpu.pagesize = 14;
 	cpu.code_align = 0;

@@ -287,19 +287,14 @@ Statement *Statement::ParseIf()
 	snp->predreg = iflevel;
 	snp->kw = kw_if;
 	iflevel++;
-	if (lastst != openpa)
-		needpa = false;
-	NextToken();
+	needpunc(openpa, 83);
 	if (expression(&(snp->exp),nullptr) == 0)
 		error(ERR_EXPREXPECT);
 	if (lastst == semicolon) {
 		NextToken();
 		snp->prediction = (GetIntegerExpression(NULL,nullptr,0).low & 1) | 2;
 	}
-	if (needpa)
-		needpunc(closepa, 19);
-	else if (lastst != kw_then && lastst != begin)
-		error(ERR_SYNTAX);
+	needpunc(closepa, 19);
 	if (lastst == kw_then)
 		NextToken();
 	snp->s1 = snp->Parse();
@@ -313,7 +308,7 @@ Statement *Statement::ParseIf()
 		snp->s2->kw = kw_elsif;
 	}
 	else
-		snp->s2 = 0;
+		snp->s2 = nullptr;
 	iflevel--;
 	dfs.puts("</ParseIf>");
 	return (snp);
@@ -353,20 +348,20 @@ Statement *Statement::ParseCatch()
 		return snp;
 	}
 	catchdecl = TRUE;
-	compiler.ad.Parse(nullptr, &snp->ssyms);
+	compiler.ad.Parse(nullptr, &snp->ssyms, snp);
 	cseg(ofs);
 	catchdecl = FALSE;
 	needpunc(closepa, 34);
 
-	if ((sp = snp->ssyms.Find(*declid, false)) == NULL)
-		sp = makeint((char *)declid->c_str());
+	if ((sp = snp->ssyms.Find(*ad.declid, false)) == NULL)
+		sp = makeint((char *)ad.declid->c_str());
 	node = makenode(sp->storage_class == sc_static ? en_labcon : en_autocon, NULL, NULL);
 	node->bit_offset = sp->tp->bit_offset;
 	node->bit_width = sp->tp->bit_width;
 	// nameref looks up the symbol using lastid, so we need to back it up and
 	// restore it.
 	strncpy_s(buf, sizeof(buf), lastid, 199);
-	strncpy_s(lastid, sizeof(lastid), declid->c_str(), sizeof(lastid) - 1);
+	strncpy_s(lastid, sizeof(lastid), ad.declid->c_str(), sizeof(lastid) - 1);
 	exp.nameref(&node, FALSE, sp);
 	strcpy_s(lastid, sizeof(lastid), buf);
 	snp->s1 = Statement::Parse();
@@ -597,7 +592,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 		NextToken();
 	}
 	snp->ssyms.ownerp = currentFn->sym;
-	compiler.ad.Parse(currentFn->sym, &snp->ssyms);
+	compiler.ad.Parse(currentFn->sym, &snp->ssyms, snp);
 	//ad.Parse(nullptr, &snp->ssyms);
 	cseg(ofs);
 	// Add the first statement at the head of the list.
@@ -635,7 +630,7 @@ Statement *Statement::ParseCompound(bool assign_cf)
 		else
 		{
 			if (tail) {
-				tail->iexp = compiler.ad.Parse(currentFn->sym, &snp->ssyms);
+				tail->iexp = compiler.ad.Parse(currentFn->sym, &snp->ssyms, snp);
 				//tail->iexp = ad.Parse(nullptr, &snp->ssyms);
 				snp->ssyms.ownerp = currentFn->sym;
 			}

@@ -31,6 +31,7 @@ void align(txtoStream& tfs, int n);
 void roseg(txtoStream& tfs);
 bool renamed = false; 
 int64_t genst_cumulative;
+bool first_dataseg = true;
 
 /*      variable initialization         */
 
@@ -1623,8 +1624,12 @@ void seg(txtoStream& tfs, int sg, int algn)
 		}
 		curseg = sg;
     }
-	if (syntax == MOT)
+	if (syntax == MOT) {
 		tfs.printf("\talign\t%d\n", algn);
-	else
-	 	tfs.printf("\t.align\t%d\n", algn);
+	}
+	else {
+		if ((curseg==dataseg && first_dataseg) || curseg!=dataseg)
+			tfs.printf("\t.align\t%d\n", algn);
+		first_dataseg = false;
+	}
 }

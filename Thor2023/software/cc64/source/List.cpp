@@ -131,7 +131,11 @@ void put_ty(TYP *tp, int isco)
                         goto ucont;
                 case bt_struct:
                         lfs.printf("struct ");
-ucont:                  if(tp->sname->length() == 0)
+                      ucont:
+                        if (tp->sname == nullptr)
+                          lfs.printf("<nullptr> ");
+                        else
+                        if(tp->sname->length() == 0)
                                 lfs.printf("<no name> ");
                         else
                                 lfs.printf("%s ",(char *)tp->sname->c_str());
@@ -206,6 +210,7 @@ void list_var(Symbol *sp, int i)
         lfs.printf("\t\tParameters:\n\t\t\t");
         ta = fn->GetProtoTypes();
         ta->Print(&lfs);
+        ListTable(&(fn->params), i + 1);
         if (ta)
           delete ta;
         lfs.printf("Stack Space:\n\t\t");

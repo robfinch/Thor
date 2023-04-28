@@ -123,7 +123,10 @@ TYP *TYP::Copy(TYP *src)
 		// We want to keep any base type indicator so Clear() isn't called.
 		dst->lst.headp = nullptr;
 		dst->lst.tailp = nullptr;
-		dst->sname = new std::string(*src->sname);
+		if (src->sname)
+			dst->sname = new std::string(*(src->sname));
+		else
+			dst->sname = nullptr;
 		dfs.printf("D");
 		TABLE::CopySymbolTable(&dst->lst,&src->lst);
 	}
@@ -138,7 +141,7 @@ TYP *TYP::Make(int bt, int64_t siz)
 	tp = allocTYP();
 	if (tp == nullptr)
 		return (nullptr);
-	tp->val_flag = 0;
+	tp->val_flag = false;
 	tp->isArray = FALSE;
 	tp->size = siz;
 	tp->type = bt;
@@ -1718,7 +1721,7 @@ bool TYP::FindPointerInStruct()
 bool TYP::FindPointer()
 {
 	switch (type) {
-	case bt_pointer: return (val_flag == FALSE);	// array ?
+	case bt_pointer: return (val_flag == false);	// array ?
 	case bt_struct: return (FindPointerInStruct());
 	case bt_union: return (FindPointerInStruct());
 	case bt_class: return (FindPointerInStruct());

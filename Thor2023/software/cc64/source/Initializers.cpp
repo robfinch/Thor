@@ -30,6 +30,7 @@ extern void genstorageskip(int nbytes);
 
 void endinit();
 extern int curseg;
+extern char* lptr;
 static char glbl1[500];
 static char glbl2[500];
 bool hasPointer;
@@ -299,6 +300,7 @@ static void SetFuncPointerAlign(Symbol* sp, e_sg oseg)
 static void SetThreadAlign(Symbol* sp, e_sg oseg)
 {
 	int64_t algn;
+	e_sg os;
 
 	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
 		algn = imax(sp->tp->alignment, 8);
@@ -306,13 +308,19 @@ static void SetThreadAlign(Symbol* sp, e_sg oseg)
 		algn = imax(sp->tp->btpp->alignment, 8);
 	else
 		algn = 2;
-	seg(ofs, oseg == noseg ? tlsseg : oseg, algn);
-	nl(ofs);
+
+	os = oseg == noseg ? tlsseg : oseg;
+	curseg = os;
+	if (os != bssseg) {
+		seg(ofs, os, algn);
+		nl(ofs);
+	}
 }
 
 static void SetStaticAlign(Symbol* sp, e_sg oseg)
 {
 	int64_t algn;
+	e_sg os;
 
 	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
 		algn = imax(sp->tp->alignment, 8);
@@ -320,13 +328,18 @@ static void SetStaticAlign(Symbol* sp, e_sg oseg)
 		algn = imax(sp->tp->btpp->alignment, 8);
 	else
 		algn = 2;
-	seg(ofs, oseg == noseg ? dataseg : oseg, algn);          /* initialize into data segment */
-	nl(ofs);                   /* start a new line in object */
+	os = oseg == noseg ? dataseg : oseg;
+	curseg = os;
+	if (os != bssseg) {
+		seg(ofs, os, algn);          /* initialize into data segment */
+		nl(ofs);                   /* start a new line in object */
+	}
 }
 
 static void SetDefaultAlign(Symbol* sp, e_sg oseg)
 {
 	int64_t algn;
+	e_sg os;
 
 	if (sp->tp->type == bt_struct || sp->tp->type == bt_union)
 		algn = imax(sp->tp->alignment, 8);
@@ -334,8 +347,12 @@ static void SetDefaultAlign(Symbol* sp, e_sg oseg)
 		algn = imax(sp->tp->btpp->alignment, 8);
 	else
 		algn = 2;
-	seg(ofs, oseg == noseg ? (lastst == assign ? dataseg : bssseg) : oseg, algn);            /* initialize into data segment */
-	nl(ofs);                   /* start a new line in object */
+	os = oseg == noseg ? (lastst == assign ? dataseg : bssseg) : oseg;
+	curseg = os;
+	if (os != bssseg) {
+		seg(ofs, os, algn);            /* initialize into data segment */
+		nl(ofs);                   /* start a new line in object */
+	}
 }
 
 void doinit(Symbol *sp)
@@ -352,6 +369,8 @@ void doinit(Symbol *sp)
 	std::streampos patch_saw;
 	int64_t szpoint;
 	bool setsz = false;
+	bool parsed_something = false;
+	char* slptr;
 	TYP *tp;
 	int n;
 	ENODE* node;
@@ -398,6 +417,7 @@ void doinit(Symbol *sp)
 	if (sp->isConst)
     oseg = rodataseg;
 
+	slptr = lptr;
 	// Spit out an alignment pseudo-op
 	if (IsFuncptrAssign(sp))
 		SetFuncPointerAlign(sp, oseg);
@@ -408,11 +428,13 @@ void doinit(Symbol *sp)
 	else
 		SetDefaultAlign(sp, oseg);
 	
+	oseg = (e_sg)curseg;
+
 	if (sp->storage_class == sc_static || sp->storage_class == sc_thread) {
 		segdecl = "";
 		aligndecl = "";
 		objdecl = "";
-		skipfmtword = GetSkipFormatWord(sp);
+		skipfmtword = "";// GetSkipFormatWord(sp);
 		sp->realname = my_strdup(put_label(ofs,(int)sp->value.i, (char *)sp->name->c_str(), GetPrivateNamespace(), 'D', sp->tp->size));
 		output_name = sp->realname;
 	}
@@ -420,7 +442,7 @@ void doinit(Symbol *sp)
 		segdecl = GetSegmentDecl(sp);
 		aligndecl = GetAlignStatement();
 		objdecl = GetObjdecl(sp, sp->tp->size);
-		skipfmtword = GetSkipFormatWord(sp);
+		skipfmtword = "";// GetSkipFormatWord(sp);
 		output_name = sp->name->c_str();
 	}
 
@@ -429,12 +451,22 @@ void doinit(Symbol *sp)
 	init_str.append(aligndecl);
 	init_str.append(objdecl);
 	// Insert garbage collector command word to skip pointerless area.
-	if (sp->tp->IsSkippable()) {
-		init_str.append(skipfmtword);
-		patch_saw = ofs.tellp();
-		init_str.append(GetSkipAmountWord());
+	if (sp->tp->IsSkippable() && curseg != bssseg) {
+		//init_str.append(skipfmtword);
+		//init_str.append(GetSkipAmountWord());
 	}
-	ofs << init_str;
+	if (curseg == dataseg) {
+		sp->data_string = init_str;
+		ofs << init_str;
+		ofs.flush();
+	}
+	else if (oseg == bssseg)
+		sp->bss_string = init_str;
+	else {
+		patch_saw = ofs.tellp();
+		ofs << init_str;
+		ofs.flush();
+	}
 
 	if (lastst == kw_firstcall) {
     GenerateByte(ofs,1);
@@ -442,7 +474,8 @@ void doinit(Symbol *sp)
   }
 	else if( lastst != assign && !IsFuncptrAssign(sp)) {
 		hasPointer = sp->tp->FindPointer();
-		genstorage(ofs, sp->tp->size);
+		if (!sp->IsExternal && oseg != bssseg)
+			genstorage(ofs, sp->tp->size);
 	}
 	else {
 		ENODE* node;
@@ -483,7 +516,7 @@ void doinit(Symbol *sp)
 				default:
 					sprintf_s(buf, sizeof(buf), "%s:\n.8byte %s_func\n", lbl, sp->name->c_str());
 				}
-				ofs.seekp(lblpoint);
+				//ofs.seekp(lblpoint);
 				ofs << buf;
 			}
 		}
@@ -514,7 +547,8 @@ void doinit(Symbol *sp)
 			currentSym = s2;
 			ENODE::initializedSet.clear();
 			if (node != nullptr)
-				sz = sp->Initialize(ofs, node, sp->tp, 1);
+				if (!sp->IsExternal && oseg != bssseg)
+					sz = sp->Initialize(ofs, node, sp->tp, 1);
 			if (sp->tp->unknown_size) {
 				sp->tp->size = sz;
 				sp->tp->unknown_size = false;
@@ -548,17 +582,23 @@ void doinit(Symbol *sp)
 
 	// Go back and patch the skip amount with the cumulative number of bytes
 	// output.
-	endpoint = ofs.tellp();
-	ofs.seekp(patch_saw);
-	if (!hasPointer && sp->tp->IsSkippable())
-		saw = GetSkipAmountWord();
-	else if (sp->tp->IsSkippable())
-		saw = GetBlankSkipAmountWord();
-	ofs << saw;
-	ofs.seekp(endpoint);
+	//endpoint = ofs.tellp();
+	if (!sp->IsExternal && oseg != bssseg) {
+/*
+		ofs.seekp(patch_saw);
+		if (!hasPointer && sp->tp->IsSkippable())
+			saw = GetSkipAmountWord();
+		else if (sp->tp->IsSkippable())
+			saw = GetBlankSkipAmountWord();
+		ofs << saw;
+*/
+		ofs.flush();
+//		ofs.seekp(endpoint);
+	}
 	genst_cumulative = 0;
 
-	if (!IsFuncptrAssign(sp))
+	// Do not call endinit() if nothing was parsed.
+	if (!IsFuncptrAssign(sp) && slptr != lptr)
 		endinit();
 	if (sp->storage_class == sc_global)
 		ofs << "\n";
@@ -797,11 +837,13 @@ void endinit()
   else if( lastst != comma && lastst != semicolon && lastst != end && lastst != assign) {
 		if (lastst == openpa)
 			return;
-		if (lastst == closepa)
+		if (lastst == closepa) {
+			return;
 			NextToken();
+		}
 		else
 			error(ERR_PUNCT);
-	while( lastst != comma && lastst != semicolon && lastst != end && lastst != assign)
+	while( lastst != comma && lastst != semicolon && lastst != end && lastst != assign && lastst != my_eof)
     NextToken();
   }
 }

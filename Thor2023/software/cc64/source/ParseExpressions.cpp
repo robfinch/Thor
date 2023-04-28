@@ -3026,7 +3026,9 @@ TYP *safe_orop(ENODE **node)
 }
 */
 //
-//      this routine processes the hook operator.
+// This routine processes the hook or multiplex hook operator.
+//						s ? a : b;
+//						s ?? a : b : c : d : ...;
 //
 TYP *Expression::ParseConditionalOps(ENODE **node, Symbol* symi)
 {
@@ -3039,8 +3041,13 @@ TYP *Expression::ParseConditionalOps(ENODE **node, Symbol* symi)
   tp1 = ParseSafeOrOps(&ep1, symi);       // get condition
   if(tp1 == (TYP *)NULL )
     goto xit;
-	sh = lastst == safe_hook;
-  if( lastst == hook || lastst == safe_hook) {
+	sh = lastst == mux_hook;
+	if (lastst == mux_hook) {
+		NextToken();
+		tp1 = ParseMux(&ep2, symi);
+		ep1 = makenode(en_safe_cond, ep1, ep2);
+	}
+  else if(lastst == hook) {
 		ENODE *o_pfl = postfixList;
 
 		postfixList = nullptr;
@@ -3111,11 +3118,11 @@ ascomm:
 				NextToken();
 				tp2 = ParseAssignOps(&ep2, symi);
 ascomm2:
-				ep1->i_rhs = ep2->i;
-				ep2->i_lhs = ep1->i;
 		    if ( tp2 == 0 || !IsLValue(ep1) )
           error(ERR_LVALUE);
 				else {
+					ep1->i_rhs = ep2->i;
+					ep2->i_lhs = ep1->i;
 					if (ep1->sym) {
 						if (ep1->constflag) {
 							if (symi) {

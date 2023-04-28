@@ -39,6 +39,7 @@ class CSE;
 class CSETable;
 class Operand;
 class Symbol;
+class SymbolFactory;
 class Function;
 class OCODE;
 class PeepList;
@@ -218,7 +219,7 @@ public:
 	static int matchno;
 	TABLE();
 	static void CopySymbolTable(TABLE *dst, TABLE *src);
-	void insert(Symbol* sp);
+	Symbol* insert(Symbol* sp);
 	Symbol *Find(std::string na,bool opt);
 	Symbol* Find(std::string na, bool opt, e_bt bt);
 	int Find(std::string na);
@@ -454,6 +455,7 @@ public:
 	void GenerateBody(bool force_inline);
 	void Generate();
 	void GenerateDefaultCatch();
+	void DumpBss(Statement* stmt);
 
 	void CreateVars();
 	void ComputeLiveVars();
@@ -499,6 +501,7 @@ public:
 	bool IsKernel;
 	bool IsPrivate;
 	bool IsUndefined;					// undefined function
+	bool IsExternal;
 	bool ctor;
 	bool dtor;
 	ENODE *initexp;
@@ -519,6 +522,8 @@ public:
   Statement *stmt;
 	std::streampos storage_pos;
 	std::streampos storage_endpos;
+	std::string bss_string;
+	std::string data_string;
 
 	Function* MakeFunction(int symnum, bool isPascal);
 	bool IsTypedef();
@@ -535,6 +540,8 @@ public:
 	static Symbol *GetPtr(int n);
 	Symbol *GetParentPtr();
 	void SetName(std::string nm) {
+		if (name)
+			delete name;
     name = new std::string(nm);
 		if (mangledName == nullptr)
 			mangledName = new std::string(nm);
@@ -559,6 +566,12 @@ public:
 	int64_t InitializeUnion(txtoStream& tfs, ENODE*, TYP*);
 	int64_t GenerateT(txtoStream& tfs, ENODE* node, TYP* tp);
 	void storeHex(txtoStream& ofs);
+};
+
+class SymbolFactory : public CompilerType
+{
+public:
+	static Symbol* Make(std::string name, TYP* tp, Symbol* parent, int depth, e_sc storage_class);
 };
 
 // Class representing compiler types.
@@ -771,8 +784,6 @@ public:
 		return (nodetype == en_addrof || nodetype == en_autopcon) ? false : (etype == bt_posit);
 	};
 	bool IsVectorType() {
-		if (etype==bt_vector)
-			printf("hi");
 		return (etype == bt_vector); };
 	bool IsAutocon() { return (nodetype == en_autocon || nodetype == en_autofcon || nodetype == en_autopcon || nodetype == en_autovcon || nodetype == en_classcon); };
 	bool IsUnsignedType() { return (etype == bt_ubyte || etype == bt_uchar || etype == bt_ushort || etype == bt_ulong || etype == bt_pointer || nodetype==en_addrof || nodetype==en_autofcon || nodetype==en_autocon); };
@@ -948,6 +959,7 @@ public:
 	bool got_pa;
 	int parsingAggregate;
 	Statement* owning_stmt;
+	Function* owning_func;
 private:
 	void SetRefType(ENODE** node);
 	ENODE* SetIntConstSize(TYP* tptr, int64_t val);
@@ -1014,6 +1026,7 @@ private:
 	TYP *ParseSafeAndOps(ENODE **node, Symbol* symi);
 	TYP *ParseOrOps(ENODE **node, Symbol* symi);
 	TYP *ParseSafeOrOps(ENODE **node, Symbol* symi);
+	TYP* ParseMux(ENODE** node, Symbol* symi);
 	TYP *ParseConditionalOps(ENODE **node, Symbol* symi);
 	TYP *ParseCommaOp(ENODE **node, Symbol* symi);
 	ENODE* MakeNameNode(Symbol* sym);
@@ -1303,6 +1316,9 @@ public:
 	virtual void GenerateBltu(Operand* ap1, Operand* ap2, int lab) {
 		GenerateTriadic(op_bltu, 0, ap1, ap2, MakeCodeLabel(lab));
 	};
+	virtual void GenerateBra(int lab) {
+		GenerateMonadic(op_bra, 0, MakeCodeLabel(lab));
+	};
 	virtual Operand* MakeBoolean(Operand* oper) { return (oper); };
 	void GenerateHint(int num);
 	void GenerateComment(char* cm);
@@ -1313,6 +1329,7 @@ public:
 	virtual void GenerateLoad(Operand* ap3, Operand* ap1, int ssize, int size, Operand* mask = nullptr);
 	virtual void GenerateLoadAddress(Operand* ap3, Operand* ap1);
 	virtual void GenerateStore(Operand* ap1, Operand* ap3, int size, Operand* mask = nullptr);
+	Operand* GenerateMux(ENODE*, int flags, int size);
 	Operand* GenerateHook(ENODE*, int flags, int size);
 	Operand* GenerateSafeLand(ENODE*, int flags, int op) { return (nullptr); };
 	virtual void GenerateBranchTrue(Operand* ap, int label) {};
@@ -2191,6 +2208,7 @@ private:
 	Symbol* CreateNonameVar();
 	bool isTypedefs[100];
 public:
+	e_decltype dcltp;
 	bool isTypedef;
 	bool isFar;
 	TYP* head;
@@ -2205,8 +2223,14 @@ public:
 	short inline_threshold;
 	int64_t int_save_mask;
 	int8_t operating_mode;
+	Statement* stmt;
+	Function* func;
+	std::string* declid;
 public:
-	Declaration();
+	Declaration() {
+		stmt = nullptr;
+	};
+	Declaration(Statement* st);
 	Declaration *next;
 	void AssignParameterName();
 	int declare(Symbol* parent, TABLE* table, e_sc sc, int ilc, int ztype, Symbol** symo, bool local, short int depth=0);
@@ -2239,7 +2263,7 @@ public:
 	int ParseStruct(TABLE* table, e_bt typ, Symbol** sym);
 	void ParseVector(TABLE* table, Symbol** sym, e_sc sc);
 	void ParseVectorMask();
-	Symbol *ParseId();
+	Symbol *ParseSpecifierId();
 	void ParseDoubleColon(Symbol *sp);
 	void ParseBitfieldSpec(bool isUnion);
 	void ParsePrecisionSpec();
@@ -2275,7 +2299,7 @@ private:
 	int ParseTag(TABLE* table, e_bt ztype, Symbol** sym);
 	Symbol* CreateSymbol(char* nmbuf, TABLE* table, e_bt ztype, int* ret);
 public:
-	StructDeclaration() { Declaration(); };
+	StructDeclaration() { Declaration(nullptr); };
 	void GetType(TYP** hd, TYP** tl) {
 		*hd = head; *tl = tail;
 	};
@@ -2298,7 +2322,7 @@ public:
 class AutoDeclaration : public Declaration
 {
 public:
-	ENODE* Parse(Symbol *parent, TABLE *ssyms);
+	ENODE* Parse(Symbol *parent, TABLE *ssyms, Statement* st);
 };
 
 class ParameterDeclaration : public Declaration
@@ -2307,7 +2331,7 @@ public:
 	int number;
 	int ellip;	// parameter number of the ellipsis if present
 public:
-	int Parse(int, bool throw_away);
+	TABLE* Parse(int, bool throw_away, Function* st);
 };
 
 class GlobalDeclaration : public Declaration
@@ -2334,6 +2358,7 @@ public:
 	StatementFactory sf;
 	StatementGenerator* sg;
 	AutoDeclaration ad;
+	SymbolFactory syf;
 	e_cpu cpu;
 	short int pass;
 	bool ipoll;

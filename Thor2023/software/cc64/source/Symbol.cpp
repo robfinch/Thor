@@ -190,6 +190,8 @@ static void SearchStatements(Statement* stmt, std::string na, __int16 rettype, T
 	int n;
 	int nn;
 
+	if (st == nullptr)
+		return;
 	for (; st && gSearchCnt < 100; st = st->outer) {
 		dfs.puts("Looking in statement table: ");
 		dfs.puts((char *)st->name->c_str());
@@ -270,6 +272,18 @@ Symbol *Expression::gsearch2(std::string na, __int16 rettype, TypeArray *typearr
 	*/
 	// Look in progressively more outer statements for the symbol.
 	SearchStatements(owning_stmt, na, rettype, typearray, exact);
+
+	// If the statment is a function body
+	if (owning_func) {
+		dfs.printf("Looking at params %p\n", (char*)&owning_func->params);
+		if (owning_func->params.Find(na, rettype, typearray, exact)) {
+			sp = TABLE::match[TABLE::matchno - 1];
+			ADD_SYMS
+				dfs.printf("Found as parameter\n");
+		}
+		if (sp == nullptr)
+			SearchStatements(owning_func->body, na, rettype, typearray, exact);
+	}
 
 	/*
 	for (st = owning_stmt; st && gSearchCnt < 100; st = st->outer) {
@@ -752,6 +766,11 @@ std::string* Symbol::GetFullNameByFunc(std::string nm)
 
 void Symbol::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
 {
+	if (head == nullptr) {
+		head = this->tp;
+		if (head == nullptr)
+			head = TYP::Make(bt_int, sizeOfInt);
+	}
 	// Set the struct member storage offset.
 	if (al == sc_static || al == sc_thread) {
 		value.i = nextlabel++;
@@ -765,9 +784,9 @@ void Symbol::SetStorageOffset(TYP *head, int nbytes, int al, int ilc, int ztype)
 	else {
 		value.i = -(ilc + nbytes + head->roundSize());// + parentBytes);
 	}
-	if (head == nullptr) {
-		head = TYP::Make(bt_int, sizeOfInt);
-	}
+//	if (head == nullptr) {
+//		head = TYP::Make(bt_int, sizeOfInt);
+//	}
 	head->struct_offset = value.i;
 }
 

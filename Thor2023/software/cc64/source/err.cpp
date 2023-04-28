@@ -114,7 +114,8 @@ static const char *errtext1000[] =
 	"E Compiler: null pointer encountered",
 	"E Compiler: circular list",
 	"E Compiler: missing hidden structure pointer",
-	"E Compiler: code generation missing"
+	"E Compiler: code generation missing",
+	"E Compiler: missing mux node"
 };
 
 char *errtext(int errnum)

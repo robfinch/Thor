@@ -171,8 +171,9 @@ void TypeArray::Print(txtoStream *fs)
 
   fs->printf("Type array:\n   ");
   if (this) {
-    for (nn = 0; nn < length; nn++)
-        fs->printf((char *)"%03d ",types[nn]);
+    for (nn = 0; nn < length; nn++) {
+      fs->printf((char*)"%03d ", types[nn]);
+    }
   }
   fs->printf("\n");
 }

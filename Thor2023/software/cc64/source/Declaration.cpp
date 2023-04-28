@@ -2,7 +2,7 @@
 
 extern int defaultcc;
 
-Declaration::Declaration()
+Declaration::Declaration(Statement* st)
 {
 	head = (TYP*)nullptr;
 	tail = (TYP*)nullptr;
@@ -16,6 +16,7 @@ Declaration::Declaration()
 	pa_level = 0;
 	isTypedef = false;
 	inline_threshold = compiler.autoInline;
+	stmt = st;
 }
 
 Function* Declaration::MakeFunction(int symnum, Symbol* sym, bool isPascal, bool isInline) {
@@ -27,6 +28,7 @@ Function* Declaration::MakeFunction(int symnum, Symbol* sym, bool isPascal, bool
 void Declaration::MakeFunction(Symbol* sp, Symbol* sp1)
 {
 	dfs.printf("<MakeFunction>");
+	if (sp->tp->IsFunc())
 	sp1->SetType(sp->tp);
 	sp1->storage_class = sp->storage_class;
 	sp1->value.i = sp->value.i;
@@ -35,6 +37,7 @@ void Declaration::MakeFunction(Symbol* sp, Symbol* sp1)
 		//sp1->fi = newFunction(sp1->id);
 		sp1->fi->sym = sp1;
 	}
+	sp1->IsExternal = sp->IsExternal;
 	sp1->fi->IsPascal = sp->fi->IsPascal;
 	sp1->fi->IsPrototype = sp->fi->IsPrototype;
 	sp1->fi->IsVirtual = sp->fi->IsVirtual;

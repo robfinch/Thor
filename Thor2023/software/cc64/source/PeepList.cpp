@@ -363,7 +363,7 @@ int PeepList::CountSPReferences()
 			&& ip->opcode != op_rtd
 			) {
 			if (ip->insn) {
-				if (ip->insn->opcode == op_push || ip->insn->opcode == op_pop || ip->insn->opcode == op_leave || ip->insn->opcode == op_leave_far) {
+				if (ip->insn->opcode == op_push || ip->insn->opcode == op_pop || ip->insn->opcode == op_leave || ip->insn->opcode == op_leave_far || ip->insn->opcode == op_bsr) {
 					refSP++;
 				}
 				else if (ip->insn->opcode != op_add && ip->insn->opcode != op_sub && ip->insn->opcode != cpu.mov_op) {

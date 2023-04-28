@@ -367,6 +367,9 @@ void getbase(int64_t b)
           if (lastch != 'U' && lastch != 'u')
             int_precision = toupper(lastch);
           getch();
+          if (lastch == 'L' || lastch == 'U' || lastch == 'l' || lastch == 'u' || lastch == 'S' || lastch == 's') { // ignore a 'L'ong suffix and 'U'nsigned
+            getch();
+          }
         }
     ival128 = i128;
         ival = i;
@@ -669,7 +672,7 @@ restart:        /* we come back here after comments */
   else if(isidch(lastch)) {
 		getid();
 		if (lastch == '"' && lastid[0] == '_' && (lastid[1]=='B' || lastid[1]=='W' || lastid[1]=='T' || lastid[1]=='O'
-			|| lastid[1] == 'b' || lastid[1] == 'w' || lastid[1] == 't' || lastid[1] == 'o')) {
+			|| lastid[1] == 'b' || lastid[1] == 'w' || lastid[1] == 't' || lastid[1] == 'o' || lastid[1]=='L' || lastid[1]=='l')) {
 			getch();
 			laststr[0] = toupper(lastid[1]);
 			for (i = 1; i < MAX_STRLEN; ++i) {
@@ -1009,7 +1012,7 @@ restart:        /* we come back here after comments */
                         lastst = hook;
 												if (lastch == '?') {
 													getch();
-													lastst = safe_hook;
+													lastst = mux_hook;
 												}
                         break;
                 case '\\':

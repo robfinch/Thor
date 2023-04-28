@@ -167,6 +167,7 @@ Symbol* StructDeclaration::CreateSymbol(char *nmbuf, TABLE* table, e_bt ztype, i
   sp->storage_class = sc_type;
   sp->tp->sname = new std::string(*sp->name);
   sp->tp->alignment = 0;
+  sp->tp->val_flag = true;
 
   ParseAttributes(sp);
 
@@ -181,6 +182,7 @@ Symbol* StructDeclaration::CreateSymbol(char *nmbuf, TABLE* table, e_bt ztype, i
   }
   // Defining a pointer to an unknown struct ?
   if (lastst == star) {
+    sp->tp->val_flag = false;
     table->insert(sp);
     goto xit;
   }
@@ -292,6 +294,7 @@ for (;;) {
 }
 isStructDecl = psd;
   *sym = sp;
+  tagtable.insert(sp);
 	return (ret);
 }
 
@@ -304,7 +307,7 @@ void StructDeclaration::ParseMembers(Symbol *sym, int ztype)
   static int nmx = 0;
 
 	slc = 0;
-	sym->tp->val_flag = 1;
+	sym->tp->val_flag = true;
 	//	tp->val_flag = FALSE;
 	while( lastst != end) {
 		priv = isPrivate;

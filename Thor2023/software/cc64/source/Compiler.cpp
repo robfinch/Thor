@@ -107,16 +107,6 @@ void Compiler::compile()
 	fsp->tp = &stdint;
 	programFn = currentFn = ff.MakeFunction(fsp->id, fsp, false);
 
-	// Create built-in variables.
-	for (nn = 0; nn < 8; nn++) {
-		fsp = allocSYM();
-		sprintf_s(buf, sizeof(buf), "_vm%d", nn);
-		fsp->name = new std::string(buf);
-		fsp->storage_class = sc_global;
-		fsp->tp = &stdint;
-		gsyms[0].insert(fsp);
-	}
-
 	RTFClasses::Random::srand((RANDOM_TYPE)time(NULL));
 	decls = GlobalDeclaration::Make();
 	gd = decls;

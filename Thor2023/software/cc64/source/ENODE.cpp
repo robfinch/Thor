@@ -1662,7 +1662,8 @@ Operand* ENODE::GenerateScaledIndexing(int flags, int size, int rhs)
 	return (ap1);
 }
 
-//
+// Changed ?? to mux operator
+// Making this dead code for now.
 // Generate code to evaluate a condition operator node (??:)
 //
 Operand *ENODE::GenSafeHook(int flags, int size)
