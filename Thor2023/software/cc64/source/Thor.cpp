@@ -1298,10 +1298,13 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 
 	// Allocate stack space for arguments.
 	if (sym) {
-		if (sym->arg_space > 0)
-			GenerateTriadic(op_sub, 0, makereg(regSP), makereg(regSP), MakeImmediate(sym->arg_space));
+//		if (sym->arg_space > 0)
+			GenerateSubtractFrom(makereg(regSP), MakeImmediate(sym->arg_space));
 		sy = sym->params.GetParameters();
 	}
+	else
+		GenerateSubtractFrom(makereg(regSP), MakeImmediate(0));
+
 
 	// Capture the parameter list. It is needed in the reverse order.
 	for (nn = 0, p = plist; p != NULL; p = p->p[1], nn++) {
@@ -1341,12 +1344,17 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 			if (sy != nullptr) {
 				if (sy[nn]) {
 					regno = ta ? (i < ta->length ? ta->preg[i] : 0) : 0;
-					stkoffs = sy[nn] ? sy[nn]->value.i : sum * sizeOfWord;
+//					stkoffs = sy[nn] ? sy[nn]->value.i : sum * sizeOfWord;
+					stkoffs = sum * sizeOfWord;
 					sum += PushArgument(pl[nn], regno, stkoffs, &isFloat, &pc, large_argcount);
 					push_count += pc;
 				}
 				else {
-					error(ERR_MISSING_PARM);
+					//error(ERR_MISSING_PARM);
+					regno = ta ? (i < ta->length ? ta->preg[i] : 0) : 0;
+					stkoffs = sum * sizeOfWord;
+					sum += PushArgument(pl[nn], regno, stkoffs, &isFloat, &pc, large_argcount);
+					push_count += pc;
 				}
 			}
 			else {
@@ -1357,7 +1365,12 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 		sumFloat |= isFloat;
 //		plist = plist->p[1];
   }
-	/*
+	if (sum == 0)
+		ip->fwd->MarkRemove();
+	else
+		ip->fwd->oper3 = MakeImmediate(sum * sizeOfWord);
+
+		/*
 	if (sum == 0 || !large_argcount)
 		ip->fwd->MarkRemove();
 	else
@@ -1397,17 +1410,20 @@ int ThorCodeGenerator::PushArguments(Function *sym, ENODE *plist)
 
 void ThorCodeGenerator::PopArguments(Function *fnc, int howMany, bool isPascal)
 {
+	howMany *= sizeOfWord;
 	if (howMany != 0) {
 		if (fnc) {
 			if (!fnc->IsPascal)
-				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space));
+//				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(howMany));
 			else if (howMany - fnc->NumFixedAutoParms > 0)
-				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space - (fnc->NumFixedAutoParms * sizeOfWord)));
+//				GenerateAddOnto(makereg(regSP), MakeImmediate(fnc->arg_space - (fnc->NumFixedAutoParms * sizeOfWord)));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(howMany - (fnc->NumFixedAutoParms * sizeOfWord)));
 		}
 		else {
 //			error(ERR_UNKNOWN_FN);
 			if (!isPascal)
-				GenerateAddOnto(makereg(regSP), MakeImmediate(howMany * sizeOfWord));
+				GenerateAddOnto(makereg(regSP), MakeImmediate(howMany));
 		}
 	}
 }

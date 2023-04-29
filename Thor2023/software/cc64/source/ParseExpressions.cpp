@@ -823,7 +823,6 @@ TYP *Expression::CondDeref(ENODE **node, TYP *tp)
 		tp->isArray = true;
 		tp->dimen = dimen;
 		tp->numele = numele;
-		tp->btp = tp1->GetIndex();
 		tp->btpp = tp1;
 		tp->isUnsigned = TRUE;
 		if ((*node)->nodetype == en_nacon)
@@ -1153,7 +1152,6 @@ Symbol *makeStructPtr(std::string name)
 	sp = Symbol::alloc();
 	tp = TYP::Make(bt_pointer,sizeOfPtr);
 	tp2 = TYP::Make(bt_struct,sizeOfPtr);
-	tp->btp = tp2->GetIndex();
 	tp->btpp = tp2;
 	tp->sname = new std::string("");
 	tp->isUnsigned = TRUE;
@@ -1702,7 +1700,7 @@ ENODE* Expression::AdjustForBitArray(int pop, TYP*tp1, ENODE* ep1)
 
 TYP *Expression::ParsePostfixExpression(ENODE **node, int got_pa, Symbol* symi)
 {
-	TYP *tp1, *firstType = nullptr;
+	TYP *tp1, *firstType = nullptr, *tp2;
 	ENODE *ep1, *ep2;
 	bool classdet = false;
 	bool wasBr = false;

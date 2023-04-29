@@ -48,11 +48,13 @@ void Declaration::ParseEnum(TABLE *table)
   TYP *tp;
 	Float128 amt = Float128::One();
   bool power = false;
+  Expression exp;
 
   if(lastst == id) {
-    if((sp = search(std::string(lastid),&tagtable)) == NULL) {
-      sp = Symbol::alloc();
-      sp->tp = TYP::Make(bt_enum,1);
+//    if((sp = search(std::string(lastid),&tagtable)) == NULL) {
+    if ((sp = exp.gsearch2(std::string(lastid), bt_int, nullptr, false)) == nullptr) {
+        sp = Symbol::alloc();
+      sp->tp = TYP::Make(bt_enum,2);
       sp->storage_class = sc_type;
       sp->SetName(*(new std::string(lastid)));
       sp->tp->sname = new std::string(*sp->name);

@@ -517,7 +517,7 @@ static void AssignTypeToArray(ENODE* node, TYP* btp)
 		if (!ep->constflag)
 			isConst = false;
 		if (btp->isArray) {
-			ep->tp->btp = btp->btp;
+			ep->tp->btpp = btp->btpp;
 			if (!ep->AssignTypeToList(btp))
 				isConst = false;
 		}
@@ -639,7 +639,7 @@ bool ENODE::AssignTypeToList(TYP *ptp)
 		if (ep) {
 			if (thead) {
 				ep->tp = thead->tp;
-				ep->tp->btp = thead->tp->btp;
+				ep->tp->btpp = thead->tp->btpp;
 				ep->esize = thead->tp->size;
 			}
 			else {

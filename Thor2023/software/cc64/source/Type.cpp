@@ -90,13 +90,6 @@ bool TYP::IsScalar(e_sym type)
 }
 
 
-TYP *TYP::GetBtp() {
-	if (this == nullptr)
-		return (nullptr);
-    if (btp==0)
-      return nullptr;
-    return &compiler.typeTable[btp];
-};
 TYP *TYP::GetPtr(int n) {
   if (n==0)
     return nullptr;
@@ -115,7 +108,7 @@ TYP *TYP::Copy(TYP *src)
 //			throw gcnew C64::C64Exception();
 		memcpy(dst,src,sizeof(TYP));
 		dfs.printf("A");
-		if (src->btp && src->btpp) {
+		if (src->btpp) {
   		dfs.printf("B");
 			dst->btpp = Copy(src->btpp);
 		}

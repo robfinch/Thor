@@ -472,6 +472,8 @@ class Symbol : public CompilerType {
 public:
 	static int acnt;
 	static Symbol* alloc();
+	static Symbol* initsym;		// symbol being initialized.
+	static int initlvl;
 public:
 	int number;
 	short depth;
@@ -563,7 +565,9 @@ public:
 	int64_t Initialize(txtoStream& tfs, ENODE* pnode, TYP* tp2, int opt);
 	int64_t InitializeArray(txtoStream& tfs, ENODE*, TYP*);
 	int64_t InitializeStruct(txtoStream& tfs, ENODE*, TYP*);
+	int64_t InitializePointerToStruct(txtoStream& tfs, ENODE*, TYP*);
 	int64_t InitializeUnion(txtoStream& tfs, ENODE*, TYP*);
+	int64_t InitializePointerToUnion(txtoStream& tfs, ENODE*, TYP*);
 	int64_t GenerateT(txtoStream& tfs, ENODE* node, TYP* tp);
 	void storeHex(txtoStream& ofs);
 };
@@ -599,10 +603,8 @@ public:
 	int8_t dimen;
 	int numele;					// number of elements in array / vector length
 	TABLE lst;
-	int btp;
 	TYP* btpp;
 
-	TYP *GetBtp();
 	static TYP *GetPtr(int n);
 	int64_t GetIndex();
 	int GetHash();

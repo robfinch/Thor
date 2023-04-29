@@ -30,6 +30,7 @@ void Declaration::MakeFunction(Symbol* sp, Symbol* sp1)
 	dfs.printf("<MakeFunction>");
 	if (sp->tp->IsFunc())
 	sp1->SetType(sp->tp);
+	sp1->tp->btpp = sp->tp->btpp;
 	sp1->storage_class = sp->storage_class;
 	sp1->value.i = sp->value.i;
 	if (!sp1->fi) {

@@ -31,6 +31,8 @@ for (nn = TABLE::matchno; gSearchCnt < 100 && nn > 0; nn--) \
 	gSearchSyms[gSearchCnt++] = TABLE::match[n++];
 
 int Symbol::acnt = 0;
+Symbol * Symbol::initsym = nullptr;
+int Symbol::initlvl = 0;
 char *prefix;
 extern int nparms;
 extern bool isRegister;
@@ -257,6 +259,7 @@ Symbol *Expression::gsearch2(std::string na, __int16 rettype, TypeArray *typearr
 			return (sp);
 		}
 		dfs.puts("</gsearch2>\n");
+		goto j2;
 		return (nullptr);
 	}
 
@@ -272,7 +275,7 @@ Symbol *Expression::gsearch2(std::string na, __int16 rettype, TypeArray *typearr
 	*/
 	// Look in progressively more outer statements for the symbol.
 	SearchStatements(owning_stmt, na, rettype, typearray, exact);
-
+j2:
 	// If the statment is a function body
 	if (owning_func) {
 		dfs.printf("Looking at params %p\n", (char*)&owning_func->params);
@@ -428,7 +431,7 @@ j1:
 			sp = &compiler.symTables[n >> 15][n & 0x7fff];
 			if (sp->name) {
 				if (sp->name->compare(na) == 0) {
-					if (sp->tp == &stdconst) {
+					if (sp->tp == &stdconst || sp->tp->type == bt_enum) {
 						if (gSearchCnt < 100) {
 							gSearchSyms[gSearchCnt] = sp;
 							gSearchCnt++;
@@ -1149,6 +1152,71 @@ int64_t Symbol::InitializeUnion(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 	return (tp->size);
 }
 
+int64_t Symbol::InitializePointerToUnion(txtoStream& tfs, ENODE* rootnode, TYP* tp)
+{
+	int64_t nbytes;
+	Symbol* sp;
+	std::string lbl;
+
+	nbytes = sizeOfPtr;
+	switch (sizeOfPtr) {
+	case 4: rootnode->GenerateShort(tfs); break;
+	case 8: rootnode->GenerateInt(tfs); break;
+	case 16: rootnode->GenerateLong(tfs); break;
+	}
+	sp = Symbol::initsym;
+	if (sp) {
+		lbl = *sp->name;
+		lbl.append("_data");
+		put_label(tfs, (int)sp->value.i, (char*)lbl.c_str(), GetPrivateNamespace(), 'D', tp->size);
+	}
+	return (nbytes);
+}
+
+int64_t Symbol::InitializePointerToStruct(txtoStream& tfs, ENODE* rootnode, TYP* tp)
+{
+	int64_t nbytes;
+	Symbol* sp;
+
+	if (initlvl == 1) {
+		nbytes = sizeOfPtr;
+		switch (syntax) {
+		case MOT:
+			switch (sizeOfPtr) {
+			case 4: tfs.puts("\n\tdc.l\t"); nbytes = 4; break;
+			case 8: tfs.puts("\n\tdc.q\t"); nbytes = 8; break;
+			case 16: tfs.puts("\n????\t"); nbytes = 16; break;
+			}
+			break;
+		default:
+			switch (sizeOfPtr) {
+			case 4: tfs.puts("\n\t.4byte\t"); nbytes = 4; break;
+			case 8: tfs.puts("\n\t.8byte\t"); nbytes = 8; break;
+			case 16: tfs.puts("\n\t.16byte\t"); nbytes = 16; break;
+			}
+		}
+		sp = Symbol::initsym;
+		if (sp) {
+			//lbl = GetPrivateNamespace();
+			tfs.puts(sp->name->c_str());
+			tfs.puts("_data\n");
+			tfs.puts(sp->name->c_str());
+			tfs.puts("_data:\n");
+			tfs.flush();
+			//		put_label(tfs, (int)sp->value.i, (char*)lbl.c_str(), GetPrivateNamespace(), 'D', tp->size);
+		}
+	}
+	else {
+		nbytes = sizeOfPtr;
+		switch (sizeOfPtr) {
+		case 4: rootnode->GenerateShort(tfs); nbytes = 4;  break;
+		case 8: rootnode->GenerateInt(tfs); nbytes = 8;  break;
+		case 16: rootnode->GenerateLong(tfs); nbytes = 16; break;
+		}
+	}
+	return (nbytes);
+}
+
 int64_t Symbol::GenerateT(txtoStream& tfs, ENODE* node, TYP* ptp)
 {
 	int64_t nbytes;
@@ -1165,6 +1233,7 @@ int64_t Symbol::GenerateT(txtoStream& tfs, ENODE* node, TYP* ptp)
 		return (0);
 	if (ptp == nullptr)
 		ptp = this->tp;
+	initlvl++;
 	switch (ptp->type) {
 	case bt_byte:
 		val = node->i;
@@ -1221,10 +1290,14 @@ int64_t Symbol::GenerateT(txtoStream& tfs, ENODE* node, TYP* ptp)
 			nbytes = InitializeArray(tfs, node, ptp);
 		else {
 			if (ptp->btpp->IsAggregateType()) {
-				if (ptp->btpp->type == bt_union)
-					nbytes = InitializeUnion(tfs, node, ptp->btpp);
-				else if (ptp->btpp->type == bt_struct)
-					nbytes = InitializeStruct(tfs, node, ptp->btpp);
+				if (ptp->btpp->type == bt_union) {
+					nbytes = InitializePointerToUnion(tfs, node, ptp->btpp);
+					nbytes += InitializeUnion(tfs, node, ptp->btpp);
+				}
+				else if (ptp->btpp->type == bt_struct) {
+					nbytes = InitializePointerToStruct(tfs, node, ptp->btpp);
+					nbytes += InitializeStruct(tfs, node, ptp->btpp);
+				}
 			}
 			else {
 				if (node->nodetype == en_labcon) {
@@ -1249,6 +1322,7 @@ int64_t Symbol::GenerateT(txtoStream& tfs, ENODE* node, TYP* ptp)
 		;
 	}
 //	ENODE::initializedSet.add(node->number);
+	initlvl--;
 	return (nbytes);
 }
 

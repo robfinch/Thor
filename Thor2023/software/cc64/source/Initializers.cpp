@@ -555,8 +555,11 @@ void doinit(Symbol *sp)
 			currentSym = s2;
 			ENODE::initializedSet.clear();
 			if (node != nullptr)
-				if (!sp->IsExternal && oseg != bssseg)
+				if (!sp->IsExternal && oseg != bssseg) {
+					Symbol::initsym = sp;
+					Symbol::initlvl = 0;
 					sz = sp->Initialize(ofs, node, sp->tp, 1);
+				}
 			if (sp->tp->unknown_size) {
 				sp->tp->size = sz;
 				sp->tp->unknown_size = false;

@@ -249,7 +249,6 @@ ENODE* Expression::ParseInlineStringConst(ENODE** node)
 		tptr = (TYP*)TYP::Make(bt_pointer, 0);
 		tptr->size = strlen(str) + (int64_t)1;
 		tptr->btpp = TYP::Make(bt_ichar, 2);
-		tptr->btp = tptr->btpp->GetIndex();// stdchar.GetIndex();
 		tptr->val_flag = true;
 		tptr->isUnsigned = true;
 	}
@@ -281,19 +280,15 @@ ENODE* Expression::ParseStringConstWithSizePrefix(ENODE** node)
 		switch (str[0]) {
 		case 'B':
 			tptr->btpp = TYP::Make(bt_byte, 1);
-			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		case 'W':
 			tptr->btpp = TYP::Make(bt_char, 2);
-			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		case 'T':
 			tptr->btpp = TYP::Make(bt_short, 4);
-			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		case 'O':
 			tptr->btpp = TYP::Make(bt_int, 8);
-			tptr->btp = tptr->btpp->GetIndex();
 			break;
 		}
 		tptr->val_flag = true;
@@ -337,7 +332,6 @@ ENODE* Expression::ParseThis(ENODE** node)
 	}
 	NextToken();
 	tptr = TYP::Make(bt_pointer, sizeOfPtr);
-	tptr->btp = tptr2->GetIndex();
 	tptr->btpp = tptr2;
 	tptr->isUnsigned = TRUE;
 	dfs.puts((char*)tptr->btpp->sname->c_str());
@@ -676,8 +670,8 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 	tptr = tptr2 = nullptr;
 	cnode = nullptr;
 	if (tp->type != bt_struct && tp->type != bt_union &&
-		tp->type != bt_array &&
-		!(tp->type == bt_pointer && tp->val_flag))
+		tp->type != bt_array && tp->type != bt_pointer)
+//		!(tp->type == bt_pointer && tp->val_flag))
 		error(ERR_MISMATCH);
 	is_struct = tp->IsStructType();
 	is_array = tp->isArray;
@@ -1246,7 +1240,6 @@ ENODE* Expression::ParseAddressOf(Symbol* symi)
 		}
 		ep1->esize = sizeOfPtr;		// converted to a pointer so size is now 8
 		tp1 = TYP::Make(bt_pointer, sizeOfPtr);
-		tp1->btp = tp->GetIndex();
 		tp1->btpp = tp;
 		tp1->val_flag = FALSE;
 		tp1->isUnsigned = TRUE;
@@ -1728,8 +1721,10 @@ xit:
 
 ENODE* Expression::ParsePointsTo(TYP* tp1, ENODE* ep1)
 {
-	TYP* tp2;
+	TYP* tp2, *tp3;
+	ENODE* ep2;
 
+	ep2 = ep1;
 	tp2 = tp1;
 	if (tp1 == NULL) {
 		error(ERR_UNDEFINED);
@@ -1740,18 +1735,28 @@ ENODE* Expression::ParsePointsTo(TYP* tp1, ENODE* ep1)
 		//ep1 = makenode(reftype, ep1, (ENODE *)NULL);
 	}
 	else
-		if (tp1->type != bt_pointer) {
-			error(ERR_NOPOINTER);
-		}
-		else {
+j1:
+	if (tp1->type != bt_pointer) {
+		if (tp1->type == bt_func || 
+			tp1->type == bt_ifunc ||
+			tp1->type == bt_struct ||
+			tp1->type == bt_union ||
+			tp1->type == bt_class) {
+			tp2 = tp1;
 			tp1 = tp1->btpp;
-			if (tp1->val_flag == FALSE && FALSE) {
-				ep1 = makenode(en_ref, ep1, (ENODE*)NULL);
-				ep1->isPascal = ep1->p[0]->isPascal;
-			}
-			ep1->tp = tp2;
-			//if (ep1->tp == nullptr)
-			//	printf("hi");
+			goto j1;
+		}
+		error(ERR_NOPOINTER);
+	}
+	else {
+		tp1 = tp1->btpp;
+		if (tp1->val_flag == false && false) {
+			ep1 = makenode(en_ref, ep1, (ENODE*)NULL);
+			ep1->isPascal = ep1->p[0]->isPascal;
+		}
+		ep1->tp = tp2->btpp;
+		//if (ep1->tp == nullptr)
+		//	printf("hi");
 	}
 xit:
 	//	if (ep1) ep1->tp = tp1;
@@ -1826,7 +1831,6 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi)
 		sp->SetName(name);
 		sp->tp = TYP::Make(bt_func, 0);
 		sp->tp->btpp = TYP::Make(bt_int, sizeOfInt);
-		sp->tp->btp = sp->tp->btpp->GetIndex();
 		sp->fi->AddProto(&typearray);
 		sp->mangledName = sp->fi->BuildSignature();
 		gsyms[0].insert(sp);
@@ -1834,7 +1838,6 @@ ENODE* Expression::ParseOpenpa(TYP* tp1, ENODE* ep1, Symbol* symi)
 	else if (sp->IsUndefined) {
 		sp->tp = TYP::Make(bt_func, 0);
 		sp->tp->btpp = TYP::Make(bt_int, sizeOfInt);
-		sp->tp->btp = sp->tp->btpp->GetIndex();
 		if (!sp->fi) {
 			sp->fi = MakeFunction(sp->id, sp, defaultcc == 1);
 		}
@@ -2650,8 +2653,8 @@ ENODE* Expression::MakeUnknownFunctionNameNode(std::string nm, TYP** tp, TypeArr
 
 	sp = Symbol::alloc();
 	sp->fi = compiler.ff.MakeFunction(sp->id, sp, defaultcc == 1);
-	sp->tp = &stdfunc;
-	sp->tp->btp = bt_int;
+	sp->tp = TYP::Copy(&stdfunc);
+	sp->tp->btpp = TYP::Copy(&stdint);
 	sp->SetName(*(new std::string(nm)));
 	sp->storage_class = sc_external;
 	sp->IsUndefined = TRUE;

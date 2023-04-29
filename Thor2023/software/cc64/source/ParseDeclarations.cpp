@@ -1857,13 +1857,14 @@ Symbol *Declaration::ParseSuffix(Symbol *sp)
 			}
 			else if (sp->fi == nullptr) {
 				TYP* ty = sp->tp;
+				ty = head;
 				head = TYP::Copy(&stdfunc);
 				head->btpp = ty;
 				sp->fi = MakeFunction(sp1->number, sp1, defaultcc == 1, isInline);
 				sp->SetName(*sp->name);
 				sp->tp = head;
 				sp->tp->type = bt_func;
-				sp->tp->btpp = ty;
+				sp->tp->btpp = head->btpp;
 				sp->storage_class = sp->parentp ? sc_member : sc_global;
 				sp->segment = codeseg;
 				sp1 = sp;
@@ -2204,11 +2205,15 @@ int Declaration::ParseFunction(TABLE* table, Symbol* sp, Symbol* parent, e_sc al
 	if (needParseFunction==2) {
 		needParseFunction = 0;
 		if (sp->fi == nullptr) {
+			TYP* t;
 			sp->fi = MakeFunction(sp->number, sp, isPascal, isInline);
 			sp->fi->IsFar = isFar;
 			sp->fi->IsCoroutine = isCoroutine;
 			sp->lsyms.ownerp = parent;
 			sp->fi->depth = sp->depth;
+			t = sp->tp;
+			sp->tp = TYP::Copy(&stdfunc);
+			sp->tp->btpp = t;
 		}
 		ofn = currentFn;
 		if (sp->fi)
@@ -2967,7 +2972,7 @@ ENODE *AutoDeclaration::Parse(Symbol *parent, TABLE *ssyms, Statement* st)
 		case kw_oscall:
 		case kw_pascal:
 		case kw_typedef:
-      error(ERR_ILLCLASS);
+//      error(ERR_ILLCLASS);
 			depth++;
 	    lc_auto += declare(parent,ssyms,sc_auto,lc_auto,bt_struct,&symo,isLocal,depth);
 			depth--;

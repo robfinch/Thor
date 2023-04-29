@@ -310,7 +310,6 @@ void Function::DoFuncptrAssign(Function *sp)
 	ep1 = nullptr;
 	tp1 = TYP::Make(bt_pointer, sizeOfPtr);
 	tp1->btpp = TYP::Make(bt_func, sizeOfWord);
-	tp1->btp = tp1->btpp->GetIndex();
 	asym = nullptr;
 	exp.nameref2(sp->sym->name->c_str(), &ep1, en_ref, FALSE, nullptr, nullptr, sp->sym);
 	exp.CondDeref(&ep1, sp->sym->tp);
@@ -439,6 +438,8 @@ int Function::Parse(bool local)
 			int np, na;
 			Symbol* sp = (Symbol*)Symbol::alloc();
 			Function* fn = compiler.ff.MakeFunction(sym->number, sp, false);
+			fn->sym->tp = TYP::Copy(&stdfunc);
+			fn->sym->tp->btpp = TYP::Copy(&stdint);
 			fn->BuildParameterList(&np, &na, &ellipos);
 			if (ellipos >= 0)
 				fn->NumFixedAutoParms = ellipos + 1;

@@ -36,7 +36,6 @@ extern int funcdecl;
 extern int isStructDecl;
 
 extern int16_t typeno;
-extern int isTypedef;
 extern std::string *classname;
 extern bool isPrivate;
 extern Symbol *currentClass;
@@ -73,7 +72,7 @@ int ClassDeclaration::Parse(int ztype)
   cls = currentClass;
 	dfs.puts("<ParseClassDeclaration>\n");
 	alignment = 0;
-	isTypedef = TRUE;
+	isTypedef = true;
 	NextToken();
 	if (lastst != id) {
 		error(ERR_SYNTAX);

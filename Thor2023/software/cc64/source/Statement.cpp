@@ -273,10 +273,16 @@ Statement *Statement::ParseFirstcall()
 	return snp;
 }
 
+// Brackets must always be used around expressions for "if"
+// 
+// if (<expr>) [then] ...
+// elsif (<expr>) [then] ...
+// else ...
+//
+
 Statement *Statement::ParseIf()
 {
 	Statement *snp;
-	bool needpa = true;
 
 	dfs.puts("<ParseIf>");
 	NextToken();
@@ -287,7 +293,7 @@ Statement *Statement::ParseIf()
 	snp->predreg = iflevel;
 	snp->kw = kw_if;
 	iflevel++;
-	needpunc(openpa, 83);
+	needpunc(openpa, 18);
 	if (expression(&(snp->exp),nullptr) == 0)
 		error(ERR_EXPREXPECT);
 	if (lastst == semicolon) {
@@ -372,6 +378,11 @@ Statement *Statement::ParseCatch()
 	return snp;
 }
 
+// semi-colon may be omitted if the return is the last statement in a block
+// statement.
+// 
+// return <expr>;
+
 Statement *Statement::ParseReturn()
 {
 	Statement *snp;
@@ -425,20 +436,31 @@ Statement *Statement::ParseBreak()
 	return (snp);
 }
 
+// if "continue" is the last statement in a block a semicolon is not required.
+// 
+// continue;
+
 Statement *Statement::ParseContinue()
 {
 	Statement *snp;
 
 	snp = MakeStatement(st_continue, TRUE);
+	if (lastst == id) {
+		snp->label = (int64_t*)stringlit(lastid);
+		NextToken();
+	}
 	if (lastst != end)
 		needpunc(semicolon, 40);
-	else if (lastst == id) {
-		snp->label = (int64_t*)stringlit(lastid);
-		needpunc(semicolon, 39);
-	}
+	else if (lastst == semicolon)
+		NextToken();
 	return (snp);
 }
 
+// "stop" activates the low power stop mode of the processor. It accepts an
+// integer to be passed to the stop instruction.
+// 
+// stop <integer expr>;
+//
 Statement *Statement::ParseStop()
 {
 	Statement *snp;
@@ -560,7 +582,14 @@ Statement *Statement::ParseExpression()
 	return (ParseExpression(&node, nullptr));
 }
 
-// Parse a compound statement.
+// Parse a compound statement. Compound statements begin with either the
+// keyword "begin" or a starting parenthesis '{' and end with the keyword
+// "end" or a closing parentheis '}'. Variables may be declared at the top
+// of the compound statment and they will be local to the statement.
+//
+// {
+//	 integer a, b, c;
+// ...
 
 Statement *Statement::ParseCompound(bool assign_cf)
 {
@@ -649,6 +678,11 @@ Statement *Statement::ParseCompound(bool assign_cf)
 	return (snp);
 }
 
+// parse a label. Labels are identifiers that end with a colon and may be the
+// target of a goto statement.
+//
+// this_label:
+
 Statement *Statement::ParseLabel(bool pt)
 {
 	Statement *snp;
@@ -680,6 +714,8 @@ Statement *Statement::ParseLabel(bool pt)
 	}
 	return (0);
 }
+
+// "goto" transfers the processing to a specific location.
 
 Statement *Statement::ParseGoto()
 {
