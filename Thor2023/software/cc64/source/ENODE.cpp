@@ -667,7 +667,7 @@ void ENODE::DumpAggregate()
 	for (lst = hlst; lst; lst = lst->nxt) {
 		node = lst->node;
 		if (node != nullptr) {
-			if (node->nodetype == en_end_aggregate && lst != hlst) {
+			if (node->nodetype == en_end_aggregate){// && lst != hlst) {
 				level++;
 				node->DumpAggregate();
 				level--;
@@ -3002,7 +3002,7 @@ int ENODE::load(char *buf)
 int ENODE::PutStructConst(txtoStream& ofs)
 {
 	int64_t n, k;
-	ENODE *ep1;
+	ENODE *ep1, *ep2;
 	ENODE *ep = this;
 	bool isStruct;
 	bool isArray;
@@ -3016,10 +3016,13 @@ int ENODE::PutStructConst(txtoStream& ofs)
 	isStruct = ep->tp->IsStructType();
 	isArray = ep->tp->type == bt_array;
 	if (isArray)
-		ofs.printf("\talign %ld\n", (int)ep->p[0]->p[2]->tp->walignment());
-	lst = (List*)p[1];
-	for (n = 0; lst; lst = lst->nxt) {
-		ep1 = lst->node;
+		ofs.printf("\talign %ld\n", (int)ep->p[0]->p[1]->tp->walignment());
+	//lst = (List*)p[1];
+	ep2 = p[1];
+//	for (n = 0; lst; lst = lst->nxt) {
+	for (n = 0; ep2; ep2 = ep2->p[0]) {
+//			ep1 = lst->node;
+		ep1 = ep2->p[1];
 		if (ep1->nodetype == en_end_aggregate) {
 			k = ep1->PutStructConst(ofs);
 		}

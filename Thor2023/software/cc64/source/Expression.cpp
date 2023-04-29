@@ -578,7 +578,7 @@ xit:
 //	pnode = makenode(en_void, nullptr, nullptr);
 	// Create linked list of node in reverse order. The output routine requires
 	// them in the order they were encountered during parse.
-	for (count = maxcount-1; count >= 0; count--)
+	for (count = 0; count < maxcount; count++)
 		pnode = makenode(en_void, pnode, node_array[count]);
 	pnode = makenode(en_end_aggregate, pnode, nullptr);
 
@@ -630,7 +630,7 @@ void Expression::ParseAggregateHelper(ENODE** node, ENODE* cnode)
 TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 {
 	ENODE* pnode;
-	TYP* tptr;
+	TYP* tptr, *btpp;
 	int64_t sz = 0;
 	ENODE* cnode, *hnode, *qnode;
 	bool cnst = true;
@@ -679,15 +679,15 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		tp->type != bt_array &&
 		!(tp->type == bt_pointer && tp->val_flag))
 		error(ERR_MISMATCH);
-	is_struct = symi->tp->IsStructType();
-	is_array = symi->tp->isArray;
-	if (symi->tp->type == bt_pointer) {
-		is_array = symi->tp->val_flag == true;
-		lst = symi->tp->lst.headp;
-		is_struct = symi->tp->btpp->IsStructType();
+	is_struct = tp->IsStructType();
+	is_array = tp->isArray;
+	if (tp->type == bt_pointer) {
+		is_array = tp->val_flag == true;
+		lst = tp->lst.headp;
+		is_struct = tp->btpp->IsStructType();
 	}
 	else
-		lst = symi->tp->lst.headp;
+		lst = tp->lst.headp;
 	// Handle an array
 	if (is_array) {
 		ParseAggregateArray(&pnode, cnode, symi, tp);
@@ -726,15 +726,21 @@ TYP* Expression::ParseAggregate(ENODE** node, Symbol* symi, TYP* tp)
 		hnode->SetType(tp);
 		pnode->SetType(tp);
 		tptr = tp;
+		// union will pick up types from the symbol table
+		btpp = nullptr;
 	}
 	else
 	{
 		hnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
 		pnode->SetType(tptr = TYP::Make(consistentType ? bt_array : bt_struct, sz));
+		if (consistentType)
+			btpp = tp;
+		else
+			btpp = nullptr;
 	}
 	if (consistentType) {
-		hnode->tp->btpp = tptr;
-		pnode->tp->btpp = tptr;
+		hnode->tp->btpp = btpp;
+		pnode->tp->btpp = btpp;
 		hnode->tp->isArray = true;
 		pnode->tp->isArray = true;
 		count = 0;

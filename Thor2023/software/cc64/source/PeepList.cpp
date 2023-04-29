@@ -297,7 +297,7 @@ void PeepList::SetLabelReference()
 				}
 			}
 			// Now search case tables for label
-			for (ct = casetab; ct; ct = ct->next) {
+			for (ct = compiler.casetab; ct; ct = ct->next) {
 				for (nn = 0; nn < ct->num; nn++)
 					if (p = PeepList::FindLabel(ct->cases[nn].label))
 						p->isReferenced = true;

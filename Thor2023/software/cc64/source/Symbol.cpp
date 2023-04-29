@@ -1027,8 +1027,8 @@ int64_t Symbol::InitializeStruct(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 			continue;
 		if (node != nullptr && node != rootnode) {
 			if (!ENODE::initializedSet.isMember(node->number)) {
-				t = node->tp;
-				if (t == nullptr)
+				//t = node->tp;
+				//if (t == nullptr)
 					t = sp->tp;
 				if (node->nodetype == en_unknown) {
 					node = makeinode(en_icon, 0);
@@ -1077,7 +1077,8 @@ int64_t Symbol::InitializeUnion(txtoStream& tfs, ENODE* rootnode, TYP* tp)
 	hlst = lst = node->ReverseList(node);
 	count = 0;
 	// An array of values matching a union?
-	if (pnode->nodetype == en_end_aggregate) {
+	// pnode might be null as there may just be a single value coming in.
+	if (pnode && pnode->nodetype == en_end_aggregate) {
 		ntp = pnode->tp;
 		node = pnode->p[0];
 	}

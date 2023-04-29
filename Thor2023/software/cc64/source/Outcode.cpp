@@ -1067,7 +1067,7 @@ int caselit(struct scase *cases, int64_t num)
 	struct clit *lp;
 	std::string str;
 
-	lp = casetab;
+	lp = compiler.casetab;
 	while (lp) {
 		if (memcmp(lp->cases, cases, num * sizeof(struct scase)) == 0)
 			return (lp->label);
@@ -1082,8 +1082,9 @@ int caselit(struct scase *cases, int64_t num)
 	lp->num = (int)num;
 	lp->pass = pass;
 	memcpy(lp->cases, cases, (int)num * sizeof(struct scase));
-	lp->next = casetab;
-	casetab = lp;
+	lp->next = compiler.casetab;
+	compiler.casetab = lp;
+	compiler.casetab->next = nullptr;
 	return lp->label;
 }
 
@@ -1242,29 +1243,31 @@ void dumplits(txtoStream& tfs)
 	int ln;
 	struct nlit* lp;
 	lp = numeric_tab;
+	struct clit* ct;
+	Float128* qt;
 
 	dfs.printf("<Dumplits>\n");
 	roseg(tfs);
-	if (casetab) {
+	if (compiler.casetab) {
 		nl(tfs);
 		align(tfs,8);
 		nl(tfs);
 	}
-	while (casetab != nullptr) {
+	for (ct = compiler.casetab; ct; ct = ct->next) {
 		nl(tfs);
-		if (casetab->pass == 2) {
+		if (ct->pass == 2) {
 #ifdef LOCAL_LABELS
 			put_label(tfs, casetab->label, "", ""/*casetab->nmspace*/, 'R', casetab->num * 4);// 'D');
 #else
-			put_label(tfs, casetab->label, "", casetab->nmspace, 'R', casetab->num * 4);// 'D');
+			put_label(tfs, ct->label, "", ct->nmspace, 'R', ct->num * 4);// 'D');
 #endif
 		}
-		for (nn = 0; nn < casetab->num; nn++) {
-			if (casetab->cases[nn].pass==2)
-				GenerateLabelReference(tfs, casetab->cases[nn].label, 0, casetab->nmspace);
+		for (nn = 0; nn < ct->num; nn++) {
+			if (ct->cases[nn].pass==2)
+				GenerateLabelReference(tfs, ct->cases[nn].label, 0, ct->nmspace);
 		}
-		casetab = casetab->next;
 	}
+
 	if (numeric_tab) {
 		nl(tfs);
 		align(tfs,8);
@@ -1364,7 +1367,7 @@ void dumplits(txtoStream& tfs)
 		lp = lp->next;
 	}
 
-	if (quadtab) {
+	if (compiler.quadtab) {
 		nl(tfs);
 		align(tfs,8);
 		nl(tfs);
@@ -1378,21 +1381,21 @@ void dumplits(txtoStream& tfs)
 		ofs.printf("%s", buf);
 	}
 	*/
-	while(quadtab != nullptr) {
+	for (qt = compiler.quadtab; qt; qt = qt->next) {
 		nl(tfs);
-		if (DataLabels[quadtab->label]) {
+		if (DataLabels[qt->label]) {
 #ifdef LOCAL_LABELS
 			put_label(tfs, quadtab->label, "", ""/*quadtab->nmspace*/, 'D', sizeOfFPQ);
 #else
-			put_label(tfs, quadtab->label, "", quadtab->nmspace, 'D', sizeOfFPQ);
+			put_label(tfs, qt->label, "", qt->nmspace, 'D', sizeOfFPQ);
 #endif
 			tfs.printf("\tdh\t");
-			quadtab->Pack(64);
-			tfs.printf("%s", quadtab->ToString(64));
+			qt->Pack(64);
+			tfs.printf("%s", qt->ToString(64));
 			outcol += 35;
 		}
-		quadtab = quadtab->next;
 	}
+
 	if (strtab) {
 		nl(tfs);
 		align(tfs,8);

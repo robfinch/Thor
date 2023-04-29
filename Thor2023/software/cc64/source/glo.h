@@ -158,7 +158,6 @@ extern TABLE            gsyms[257],
 extern TABLE            tagtable;
 extern Symbol              *lasthead;
 extern struct slit      *strtab;
-extern struct clit		*casetab;
 extern Float128		    *quadtab;
 extern int              lc_static;
 extern int              lc_auto;

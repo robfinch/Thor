@@ -1963,7 +1963,7 @@ void Function::DumpBss(Statement* stmt)
 	Symbol* sym;
 
 	seg(ofs, bssseg, 14);
-	for (stmt = body; stmt; stmt = stmt->next) {
+	for (; stmt; stmt = stmt->next) {
 		for (sym = stmt->ssyms.headp; sym; sym = sym->nextp) {
 			if (sym->fi)
 				continue;

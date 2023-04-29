@@ -2359,6 +2359,8 @@ public:
 	StatementGenerator* sg;
 	AutoDeclaration ad;
 	SymbolFactory syf;
+	struct clit* casetab;
+	Float128* quadtab;
 	e_cpu cpu;
 	short int pass;
 	bool ipoll;
@@ -2378,6 +2380,8 @@ public:
 		autoInline = 5;
 		table_density = 33;
 		sg = new ThorStatementGenerator;
+		casetab = nullptr;
+		quadtab = nullptr;
 	};
 	GlobalDeclaration *decls;
 	void compile();
