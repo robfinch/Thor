@@ -2,7 +2,7 @@ struct S { int a; int b; };
 struct S *s = &(struct S) { 1, 2 };
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(s->a != 1)
 		return 1;

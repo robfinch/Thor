@@ -6,7 +6,7 @@ struct fred
    int natasha;
 };
 
-int main()
+int main##__BASEFILE__()
 {
    struct fred bloggs;
 

@@ -5,7 +5,7 @@ f(int f)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	return f(0);
 }

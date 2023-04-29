@@ -7,7 +7,7 @@ vecresize(Vec *v, int cap)
 	return;
 }
 
-int main()
+int main##__BASEFILE__()
 {
 	return 0;
 }

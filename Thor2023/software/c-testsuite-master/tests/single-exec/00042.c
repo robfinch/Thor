@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	union { int a; int b; } u;
 	u.a = 1;

@@ -17,7 +17,7 @@ PT cases[] = {
  (I)67108864L, ((I)1048576L +(I)524288L +(I)262144L +(((I)1L +(I)256L +(I)4L +(I)8L +(I)16L +(I)64L +(I)128L +(I)268435456L +(I)536870912L +(I)1024L +(I)4096L +(I)8192L +(I)16384L)+((I)2L +(I)131072L +(I)2048L)+(I)32L +(I)32768L +(I)65536L)), (I)134217728L, -1L, 0,2,0,
 };
 
-int main() {
+int main##__BASEFILE__() {
     int i, j;
 
     for(j=0; j < sizeof(cases)/sizeof(cases[0]); j++) {

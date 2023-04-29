@@ -28,7 +28,7 @@ void foovm(int x[const *])
   x[2] = 1;
 }
 #endif
-int main()
+int main##__BASEFILE__()
 {
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 int
-main()
+main##__BASEFILE__()
 {
 #if defined(__LLP64__)
 	if (sizeof(short) == 2

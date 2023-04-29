@@ -2,7 +2,7 @@ extern int x;
 int x;
 
 int
-main()
+main##__BASEFILE__()
 {
 	return x;
 }

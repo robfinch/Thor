@@ -3,7 +3,7 @@ long y = 6;
 int *p = &x;
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (x != 5) 
 		return 1;

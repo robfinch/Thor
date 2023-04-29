@@ -11,7 +11,7 @@ typedef struct {
 } s;
 
 int
-main()
+main##__BASEFILE__()
 {
 	s v;
 	

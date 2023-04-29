@@ -1,0 +1,61 @@
+    
+	.text
+	.align	2
+
+#{++ _main
+
+	.align 5
+
+	.sdreg	3
+	.sd2reg	27
+#====================================================
+# Basic Block 0
+#====================================================
+_main:
+  sub sp,sp,32
+  sd fp,[sp]
+  mv fp,sp
+  sd lr1,16[fp]
+  sub sp,sp,40
+  la gp1,_main
+  sd s0,[sp]
+# for (n = 0; n < 10; n++)
+  mv s0,r0
+  add t1,r0,10
+  bge s0,t1,.00016
+.00015:
+# puts("Hello World!");
+  sub sp,sp,8
+  la t0,_main.00001[gp1]
+  sd t0,0[sp]
+  jal lr1,_puts
+.00017:
+  add s0,s0,1
+  add t1,r0,10
+  blt s0,t1,.00015
+.00016:
+.00014:
+  ld lr1,16[fp]
+  mv sp,fp
+  ld fp,[sp]
+  add sp,sp,32
+  jal r0,lr1
+	.type	_main,@function
+	.size	_main,$-_main
+
+
+#--}
+
+	.rodata
+	.align	12
+
+	.align	8
+
+
+	.type	_main.00001,@object
+	.size	_main.00001,26
+_main.00001: # Hello World!
+
+	.2byte	72,101,108,108,111,32,87,111
+	.2byte	114,108,100,33,0
+	.extern	_puts

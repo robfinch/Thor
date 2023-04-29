@@ -1,5 +1,5 @@
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	long long i;
 	unsigned long long u;

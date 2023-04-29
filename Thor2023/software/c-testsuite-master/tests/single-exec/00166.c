@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main()
+int main##__BASEFILE__()
 {
    int a = 24680;
    int b = 01234567;

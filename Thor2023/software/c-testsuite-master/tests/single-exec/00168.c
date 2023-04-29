@@ -8,7 +8,7 @@ int factorial(int i)
       return i * factorial(i - 1);
 }
 
-int main()
+int main##__BASEFILE__()
 {
    int Count;
 

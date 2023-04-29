@@ -44,7 +44,7 @@ void quicksort(int left, int right)
    quicksort(index + 1, right);
 }
 
-int main()
+int main##__BASEFILE__()
 {
    int i;
 

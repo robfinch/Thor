@@ -24,7 +24,7 @@ go()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	return go()()->zerofunc();
 }

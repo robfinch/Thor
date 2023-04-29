@@ -34,7 +34,7 @@ three(int a, int b, int c)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (CALL(one, 1))
 		return 2;

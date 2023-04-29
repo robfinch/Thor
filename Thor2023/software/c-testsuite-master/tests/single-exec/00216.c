@@ -251,7 +251,7 @@ test_zero_init (void)
   return 0;
 }
 
-int main()
+int main##__BASEFILE__()
 {
   print(ce);
   print(gs);

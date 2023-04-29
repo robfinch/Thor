@@ -5,7 +5,7 @@
 #define ZERO_1_VAR(A, ...) 0
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (ZERO_0())
 		return 1;

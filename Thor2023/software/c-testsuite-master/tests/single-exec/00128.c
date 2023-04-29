@@ -12,7 +12,7 @@ short j;
 unsigned short k;
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	a = b;
 	a = c;

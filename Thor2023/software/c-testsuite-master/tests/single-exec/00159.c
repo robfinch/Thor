@@ -20,7 +20,7 @@ void zfunc()
    ((void (*)(void))0) ();
 }
 
-int main()
+int main##__BASEFILE__()
 {
    printf("%d\n", myfunc(3));
    printf("%d\n", myfunc(4));

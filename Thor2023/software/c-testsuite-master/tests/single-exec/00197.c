@@ -11,7 +11,7 @@ void henry()
    fred++;
 }
 
-int main()
+int main##__BASEFILE__()
 {
    printf("%d\n", fred);
    henry();

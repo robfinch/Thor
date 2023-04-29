@@ -5,7 +5,7 @@ extern int printf(const char *format, ...);
 int array[NUM_NS_TYPES];
 
 #define n 0xe
-int main()
+int main##__BASEFILE__()
 {
     printf("n+1 = %d\n", n+1);
 //    printf("n+1 = %d\n", 0xe+1);

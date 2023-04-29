@@ -11,7 +11,7 @@ one()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	int x;
 	int y;

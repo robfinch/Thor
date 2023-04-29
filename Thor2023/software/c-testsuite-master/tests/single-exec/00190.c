@@ -5,7 +5,7 @@ void fred(void)
    printf("yo\n");
 }
 
-int main()
+int main##__BASEFILE__()
 {
    fred();
 

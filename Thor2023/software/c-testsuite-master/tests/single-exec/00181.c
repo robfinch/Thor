@@ -97,7 +97,7 @@ void Hanoi(int n,int *source, int *dest, int *spare)
    return;
 }
 
-int main()
+int main##__BASEFILE__()
 {
    int i;
 

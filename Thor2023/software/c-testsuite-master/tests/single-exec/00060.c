@@ -1,7 +1,7 @@
 // line comment
 
 int
-main()
+main##__BASEFILE__()
 {
 	/*
 		multiline

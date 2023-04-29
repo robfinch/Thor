@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int main()
+int main##__BASEFILE__()
 {
    char a[10];
 

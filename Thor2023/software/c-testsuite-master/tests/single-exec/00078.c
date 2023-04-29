@@ -5,7 +5,7 @@ f1(char *p)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	char s = 1;
 	int v[1000];

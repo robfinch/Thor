@@ -5,7 +5,7 @@ foo(void)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	return foo();
 }

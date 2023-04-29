@@ -1,7 +1,7 @@
-int main(void);
+int main##__BASEFILE__(void);
 
 int
-main()
+main##__BASEFILE__()
 {
 	return 0;
 }

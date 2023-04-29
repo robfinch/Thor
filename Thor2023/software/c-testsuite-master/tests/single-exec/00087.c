@@ -10,7 +10,7 @@ foo()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	struct S v;
 	

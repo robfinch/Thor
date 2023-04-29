@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main() 
+int main##__BASEFILE__() 
 {
    printf("Hello\n");
    printf("Hello\n"); /* this is a comment */ printf("Hello\n");

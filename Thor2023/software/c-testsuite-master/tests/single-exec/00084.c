@@ -40,7 +40,7 @@ three(int a, int b, int c)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (none(ARGS()))
 		return 1;

@@ -3,7 +3,7 @@ int foo(void);
 #define FOO 0
 
 int
-main()
+main##__BASEFILE__()
 {
 	return FOO;
 }

@@ -24,7 +24,7 @@ int ATTR actual_function() {
 }
 
 extern int printf (const char *, ...);
-int main()
+int main##__BASEFILE__()
 {
     void *function_pointer = &actual_function;
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main()
+int main##__BASEFILE__()
 {
    char a;
    short b;

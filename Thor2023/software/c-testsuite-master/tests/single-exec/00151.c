@@ -10,7 +10,7 @@ int arr[][3][5] = {
 };
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	return !(arr[0][1][4] == arr[1][1][4]);
 }

@@ -5,7 +5,7 @@ voidfn()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
     voidfn();
     return 0;

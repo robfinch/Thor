@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 int
-main()
+main##__BASEFILE__()
 {
 	int32_t x;
 	int64_t l;

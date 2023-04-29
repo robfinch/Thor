@@ -1,7 +1,7 @@
 struct { int a; int b; int c; } s = {1, 2, 3};
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (s.a != 1)
 		return 1;

@@ -12,7 +12,7 @@ struct s {
 #define s s
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 #undef s
 	goto s;

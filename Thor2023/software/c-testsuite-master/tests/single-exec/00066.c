@@ -3,7 +3,7 @@
 #define SEMI ;
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(FOO(1, 2, A) != 6)
 		return 1 SEMI

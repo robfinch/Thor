@@ -15,7 +15,7 @@ void floatfunc(float a)
    printf("float: %f\n", a);
 }
 
-int main()
+int main##__BASEFILE__()
 {
    charfunc('a');
    charfunc(98);

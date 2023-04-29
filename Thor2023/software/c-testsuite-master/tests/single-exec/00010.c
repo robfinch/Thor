@@ -1,6 +1,6 @@
-int
-main()
-{
+integer
+main##__BASEFILE__()
+begin
 	start:
 		goto next;
 		return 1;
@@ -10,4 +10,4 @@ main()
 	foo:
 		goto success;
 		return 1;
-}
+end

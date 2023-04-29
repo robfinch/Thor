@@ -3,7 +3,7 @@
 char s[] = "a" B "c";
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (s[0] != 'a')
 		return 1;

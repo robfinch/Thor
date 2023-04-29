@@ -2,7 +2,7 @@
 
 enum fred { a, b, c };
 
-int main()
+int main##__BASEFILE__()
 {
    printf("a=%d\n", a);
    printf("b=%d\n", b);

@@ -1,0 +1,183 @@
+    
+	.bss
+	.align	2
+
+	.bss
+	.align 4
+.lcomm _tick,8
+	.type	_tick,@object
+	.size	_tick,8
+
+ 
+	.text
+	.align	2
+
+#{++ _foo
+
+	.align 5
+
+	.sdreg	3
+	.sd2reg	27
+_foo:
+  sub sp,sp,240
+  sd lr1,0[sp]
+  sd gp,8[sp]
+  sd r4,16[sp]
+  sd t0,24[sp]
+  sd t1,32[sp]
+  sd t2,40[sp]
+  sd fp,48[sp]
+  sd s0,56[sp]
+  sd a0,64[sp]
+  sd a1,72[sp]
+  sd a2,80[sp]
+  sd a3,88[sp]
+  sd a4,96[sp]
+  sd a5,104[sp]
+  sd a6,112[sp]
+  sd a7,120[sp]
+  sd s1,128[sp]
+  sd s2,136[sp]
+  sd s3,144[sp]
+  sd s4,152[sp]
+  sd s5,160[sp]
+  sd s6,168[sp]
+  sd s7,176[sp]
+  sd s8,184[sp]
+  sd s9,192[sp]
+  sd gp1,200[sp]
+  sd t3,208[sp]
+  sd t4,216[sp]
+  sd t5,224[sp]
+  sd t6,232[sp]
+  sub sp,sp,32
+  sd fp,[sp]
+  mv fp,sp
+  sd lr1,16[fp]
+  sub sp,sp,88
+  la gp,_bss_start
+  ld t1,_tick[gp]
+  add t0,t1,1
+  sd t0,_tick[gp]
+.00010:
+  mv sp,fp
+  ld fp,[sp]
+  ld lr1,0[sp]
+  ld gp,8[sp]
+  ld r4,16[sp]
+  ld t0,24[sp]
+  ld t1,32[sp]
+  ld t2,40[sp]
+  ld fp,48[sp]
+  ld s0,56[sp]
+  ld a0,64[sp]
+  ld a1,72[sp]
+  ld a2,80[sp]
+  ld a3,88[sp]
+  ld a4,96[sp]
+  ld a5,104[sp]
+  ld a6,112[sp]
+  ld a7,120[sp]
+  ld s1,128[sp]
+  ld s2,136[sp]
+  ld s3,144[sp]
+  ld s4,152[sp]
+  ld s5,160[sp]
+  ld s6,168[sp]
+  ld s7,176[sp]
+  ld s8,184[sp]
+  ld s9,192[sp]
+  ld gp1,200[sp]
+  ld t3,208[sp]
+  ld t4,216[sp]
+  ld t5,224[sp]
+  ld t6,232[sp]
+  add sp,sp,240
+  mret 
+	.type	_foo,@function
+	.size	_foo,$-_foo
+
+
+#--}
+    
+#{++ _main00307
+
+	.align 5
+
+	.sdreg	3
+	.sd2reg	27
+_main00307:
+  sub sp,sp,32
+  sd fp,[sp]
+  mv fp,sp
+  sd lr1,16[fp]
+  sub sp,sp,40
+  la gp1,_main00307
+  sd s0,[sp]
+# i = 47;
+  add s0,r0,47
+# qf = (long double)_Generic(15.3,
+  ld t0,-16[fp]
+  fcvt.q.d r0,t0
+  ftoi.q t0,r0
+  sd t0,-40[fp]
+  store t0,-40[fp]
+  sub sp,sp,16
+  la t1,_main00307.00015[gp1]
+  sd t1,0[sp]
+  jal lr1,_printf
+  add sp,sp,16
+  mv t0,a0
+# return (i);
+  mv a0,s0
+.00027:
+  ld lr1,16[fp]
+  mv sp,fp
+  ld fp,[sp]
+  add sp,sp,32
+  jal r0,lr1
+  bra .00027
+	.type	_main00307,@function
+	.size	_main00307,$-_main00307
+
+
+#--}
+
+	.rodata
+	.align	12
+
+	.align	8
+
+
+
+
+	.align	8
+
+
+	.type	_main00307.00012,@object
+	.size	_main00307.00012,24
+_main00307.00012: # hello world
+
+	.2byte	104,101,108,108,111,32,119,111
+	.2byte	114,108,100,0
+	.type	_main00307.00013,@object
+	.size	_main00307.00013,10
+_main00307.00013: # long
+
+	.2byte	108,111,110,103,0
+	.type	_main00307.00014,@object
+	.size	_main00307.00014,12
+_main00307.00014: # float
+
+	.2byte	102,108,111,97,116,0
+	.type	_main00307.00015,@object
+	.size	_main00307.00015,14
+_main00307.00015: # double
+
+	.2byte	100,111,117,98,108,101,0
+	.type	_main00307.00017,@object
+	.size	_main00307.00017,16
+_main00307.00017: # default
+
+	.2byte	100,101,102,97,117,108,116,0
+	.extern	_printf

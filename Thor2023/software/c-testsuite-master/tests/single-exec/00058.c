@@ -1,4 +1,4 @@
-int main()
+int main##__BASEFILE__()
 {
 	char * s;
 	

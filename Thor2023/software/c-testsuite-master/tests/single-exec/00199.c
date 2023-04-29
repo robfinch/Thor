@@ -44,7 +44,7 @@ inner:
    printf("done\n");
 }
 
-int main()
+int main##__BASEFILE__()
 {
    fred();
    joe();

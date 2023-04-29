@@ -4,7 +4,7 @@
 typedef struct { int f; } S;
 
 int
-main()
+main##__BASEFILE__()
 {
 	S s;
 

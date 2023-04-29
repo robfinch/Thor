@@ -2,7 +2,7 @@
 
 
 int
-main()
+main##__BASEFILE__()
 {
 	return ADD(1, 2) - 3;
 }

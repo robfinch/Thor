@@ -5,7 +5,7 @@ struct T {
 };
 
 int
-main()
+main##__BASEFILE__()
 {
 	struct T v;
 	{ struct T { int z; }; }

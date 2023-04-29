@@ -7,7 +7,7 @@ struct ziggy
    int c;
 } bolshevic;
 
-int main()
+int main##__BASEFILE__()
 {
    int a;
    int *b;

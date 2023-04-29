@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	int x = 0;
 	int y = 1;

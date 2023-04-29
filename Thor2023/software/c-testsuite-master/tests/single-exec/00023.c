@@ -1,9 +1,9 @@
-int x;
+integer x;
 
-int
-main()
-{
+integer
+main##__BASEFILE__()
+begin
 	x = 0;
 	return x;
-}
+end
 

@@ -1,7 +1,7 @@
 int strlen(char *);
 
 int
-main()
+main##__BASEFILE__()
 {
 	char *p;
 	

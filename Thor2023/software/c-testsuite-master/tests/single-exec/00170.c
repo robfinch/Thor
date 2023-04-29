@@ -51,7 +51,7 @@ enum Epositive {
     epos_one, epos_two
 };
 
-int main()
+int main##__BASEFILE__()
 {
    enum fred frod;
    enum Epositive epos = epos_two;

@@ -25,7 +25,7 @@ int x = 0;
 
 #if X
 int
-main()
+main##__BASEFILE__()
 {
 	return 0;
 }

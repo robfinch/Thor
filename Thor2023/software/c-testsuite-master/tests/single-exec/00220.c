@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <wchar.h>
 
-int main()
+int main##__BASEFILE__()
 {
     wchar_t s[] = L"hello$$你好¢¢世界€€world";
     wchar_t *p;

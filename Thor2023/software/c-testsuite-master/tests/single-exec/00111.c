@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	short s = 1;
 	long l = 1;

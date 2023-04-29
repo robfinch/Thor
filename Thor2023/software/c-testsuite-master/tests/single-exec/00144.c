@@ -1,5 +1,5 @@
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	int i, *q;
 	void *p;

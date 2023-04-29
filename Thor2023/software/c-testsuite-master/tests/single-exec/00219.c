@@ -30,7 +30,7 @@ typedef int int_type1;
 
 #define gen_sw(a) _Generic(a, const char *: 1, default: 8, int: 123);
 
-int main()
+int main##__BASEFILE__()
 {
 	int i = 0;
 	signed long int l = 2;

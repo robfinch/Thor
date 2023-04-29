@@ -12,7 +12,7 @@ void fred(int x)
    printf("out\n");
 }
 
-int main()
+int main##__BASEFILE__()
 {
    fred(1);
    fred(2);

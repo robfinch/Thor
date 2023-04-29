@@ -1,6 +1,6 @@
 extern int x;
 
-int main()
+int main##__BASEFILE__()
 {
 	return 0;
 }

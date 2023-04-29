@@ -47,7 +47,7 @@ int convert_like_real (tree convs)
    printf("unsigned enum bit-fields broken\n");
 }
 
-int main()
+int main##__BASEFILE__()
 {
   union tree_node convs;
 

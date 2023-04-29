@@ -12,7 +12,7 @@ int joe()
    return 1;
 }
 
-int main()
+int main##__BASEFILE__()
 {
    printf("%d\n", fred() && joe());
    printf("%d\n", fred() || joe());

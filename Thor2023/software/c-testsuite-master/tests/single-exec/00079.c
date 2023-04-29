@@ -1,7 +1,7 @@
 #define x(y) ((y) + 1)
 
 int
-main()
+main##__BASEFILE__()
 {
 	int x;
 	int y;

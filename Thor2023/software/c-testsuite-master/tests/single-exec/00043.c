@@ -7,7 +7,7 @@ struct s {
 };
 
 int
-main() {
+main##__BASEFILE__() {
     struct s v;
     v.x = 1;
     v.nest.y = 2;

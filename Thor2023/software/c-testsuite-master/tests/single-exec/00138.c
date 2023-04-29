@@ -2,7 +2,7 @@
 #define A(a,b) a(b)
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	char *a = A(M,"hi");
 

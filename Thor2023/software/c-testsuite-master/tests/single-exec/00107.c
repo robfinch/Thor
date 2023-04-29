@@ -2,7 +2,7 @@ typedef int myint;
 myint x = (myint)1;
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	return x-1;
 }

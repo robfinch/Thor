@@ -2,7 +2,7 @@ int (*fptr)() = 0;
 
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (fptr)
 		return 1;

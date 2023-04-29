@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
-int main()
+int main##__BASEFILE__()
 {
    // variables
    float a = 12.34 + 56.78;

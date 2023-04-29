@@ -1,7 +1,7 @@
 double x = 100.0;
 
 int
-main()
+main##__BASEFILE__()
 {
 	return x < 1;
 }

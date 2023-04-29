@@ -39,7 +39,7 @@ foo(int x[100])
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	int x[100];
 	x[0] = 1000;

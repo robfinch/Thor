@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	int arr[2];
 	int *p;

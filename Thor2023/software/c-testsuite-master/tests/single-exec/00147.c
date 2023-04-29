@@ -1,7 +1,7 @@
 int arr[3] = {[2] = 2, [0] = 0, [1] = 1};
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(arr[0] != 0)
 		return 1;

@@ -8,7 +8,7 @@ struct point
 
 struct point point_array[100];
 
-int main()
+int main##__BASEFILE__()
 {
    int my_point = 10;
 

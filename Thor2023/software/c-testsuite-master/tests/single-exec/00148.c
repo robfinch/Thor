@@ -2,7 +2,7 @@ struct S {int a; int b;};
 struct S arr[2] = {[1] = {3, 4}, [0] = {1, 2}};
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(arr[0].a != 1)
 		return 1;

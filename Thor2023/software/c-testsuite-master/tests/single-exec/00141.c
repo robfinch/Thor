@@ -4,7 +4,7 @@
 #define BAR bar
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	int foo, bar, foobar;
 

@@ -15,7 +15,7 @@ int x = 0;
 #endif
 
 int
-main()
+main##__BASEFILE__()
 {
 	return x;
 }

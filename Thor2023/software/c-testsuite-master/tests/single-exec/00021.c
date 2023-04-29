@@ -1,12 +1,13 @@
-int
-foo(int a, int b)
-{
+integer
+foo(integer a, integer b)
+begin
 	return 2 + a - b;
-}
+end
 
-int
-main()
-{
+integer
+main##__BASEFILE__()
+begin
 	return foo(1, 3);
-}
+end
+
 

@@ -8,7 +8,7 @@
 #define BAR(X, Y, ...) (X + Y + Z)
 
 int
-main()
+main##__BASEFILE__()
 {
 	return 0;
 }

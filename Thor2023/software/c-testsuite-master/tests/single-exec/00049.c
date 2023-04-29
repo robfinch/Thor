@@ -4,7 +4,7 @@ struct S {int a; int *p;};
 struct S s = { .p = &x, .a = 1};
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(s.a != 1)
 		return 1;

@@ -56,7 +56,7 @@ static void dowhile(void)
   } while (check());
 }
 
-int main (void)
+int main##__BASEFILE__ (void)
 {
   int i = 1;
   kb_wait_1();

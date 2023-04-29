@@ -15,7 +15,7 @@ struct S2 *s = &(struct S2) {
 };
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(s->s1.a != 1)
 		return 1;

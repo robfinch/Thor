@@ -9,7 +9,7 @@ int d;
 #endif
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	return c;
 }

@@ -92,7 +92,7 @@ static void kb_wait_4(void)
         timeout--;
     } while (timeout);
 }
-int main()
+int main##__BASEFILE__()
 {
     printf("begin\n");
     kb_wait_1();

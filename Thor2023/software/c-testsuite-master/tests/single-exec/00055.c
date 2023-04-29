@@ -5,7 +5,7 @@ enum E {
 };
 
 int
-main()
+main##__BASEFILE__()
 {
 	enum E e;
 

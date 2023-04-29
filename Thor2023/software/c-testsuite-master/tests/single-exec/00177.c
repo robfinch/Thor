@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main()
+int main##__BASEFILE__()
 {
    printf("%d\n", '\1');
    printf("%d\n", '\10');

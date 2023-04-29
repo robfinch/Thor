@@ -7,7 +7,7 @@
 #define g f
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
         int f = 0;
 

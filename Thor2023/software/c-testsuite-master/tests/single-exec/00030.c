@@ -5,7 +5,7 @@ f()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	if (f() > 1000)
 		return 1;

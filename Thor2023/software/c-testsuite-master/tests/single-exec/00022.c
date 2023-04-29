@@ -1,10 +1,10 @@
-typedef int x;
+typedef integer x;
 
-int
-main()
-{
+integer
+main##__BASEFILE__()
+begin
 	x v;
 	v = 0;
 	return v;
-}
+end
 

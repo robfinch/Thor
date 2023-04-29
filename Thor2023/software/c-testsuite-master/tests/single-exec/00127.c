@@ -1,7 +1,7 @@
 int c;
 
 int
-main()
+main##__BASEFILE__()
 {
 	if(0) {
 		return 1;

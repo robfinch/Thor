@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main()
+int main##__BASEFILE__()
 {
    FILE *f = fopen("fred.txt", "w");
    fwrite("hello\nhello\n", 1, 12, f);

@@ -13,7 +13,7 @@ f1(int a, int b))(int c, int b)
 }
 
 int
-main()
+main##__BASEFILE__()
 {
 	int (* (*p)(int a, int b))(int c, int d) = f1;
 

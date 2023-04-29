@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	if(0 ? 1 : 0)
 		return 1;

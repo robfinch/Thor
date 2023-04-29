@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	char arr[2][4], (*p)[4], *q;
 	int v[4];

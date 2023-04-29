@@ -8,7 +8,7 @@ effect()
 }
 
 int
-main()
+main##__BASEFILE__()
 {
     int x;
     

@@ -5,7 +5,7 @@
    little corners that I haven't explored fully.
    - Tom Duff */
 
-int main()
+int main##__BASEFILE__()
 {
     int  count, n;
     short *from, *to;

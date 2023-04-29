@@ -7,7 +7,7 @@
 #endif
 
 int
-main()
+main##__BASEFILE__()
 {
 	return 0;
 }

@@ -1,13 +1,13 @@
 typedef struct {
-	int v;
-	int sub[2];
+	integer v;
+	integer sub[2];
 } S;
 
 S a[1] = {{1, {2, 3}}};
 
-int
-main()
-{
+integer
+main##__BASEFILE__()
+begin
 	if (a[0].v != 1)
 		return 1;
 	if (a[0].sub[0] != 2)
@@ -16,4 +16,5 @@ main()
 		return 3;
 	
 	return 0;
-}
+end
+

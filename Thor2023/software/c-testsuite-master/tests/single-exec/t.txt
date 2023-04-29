@@ -1,220 +1,797 @@
-00001.c
-00002.c
-00003.c
-00004.c
-00005.c
-00006.c
-00007.c
-00008.c
-00009.c
-00010.c
-00011.c
-00012.c
-00013.c
-00014.c
-00015.c
-00016.c
-00017.c
-00018.c
-00019.c
-00020.c
-00021.c
-00022.c
-00023.c
-00024.c
-00025.c
-00026.c
-00027.c
-00028.c
-00029.c
-00030.c
-00031.c
-00032.c
-00033.c
-00034.c
-00035.c
-00036.c
-00037.c
-00038.c
-00039.c
-00040.c
-00041.c
-00042.c
-00043.c
-00044.c
-00045.c
-00046.c
-00047.c
-00048.c
-00049.c
-00050.c
-00051.c
-00052.c
-00053.c
-00054.c
-00055.c
-00056.c
-00057.c
-00058.c
-00059.c
-00060.c
-00061.c
-00062.c
-00063.c
-00064.c
-00065.c
-00066.c
-00067.c
-00068.c
-00069.c
-00070.c
-00071.c
-00072.c
-00073.c
-00074.c
-00075.c
-00076.c
-00077.c
-00078.c
-00079.c
-00080.c
-00081.c
-00082.c
-00083.c
-00084.c
-00085.c
-00086.c
-00087.c
-00088.c
-00089.c
-00090.c
-00091.c
-00092.c
-00093.c
-00094.c
-00095.c
-00096.c
-00097.c
-00098.c
-00099.c
-00100.c
-00101.c
-00102.c
-00103.c
-00104.c
-00105.c
-00106.c
-00107.c
-00108.c
-00109.c
-00110.c
-00111.c
-00112.c
-00113.c
-00114.c
-00115.c
-00116.c
-00117.c
-00118.c
-00119.c
-00120.c
-00121.c
-00122.c
-00123.c
-00124.c
-00125.c
-00126.c
-00127.c
-00128.c
-00129.c
-00130.c
-00131.c
-00132.c
-00133.c
-00134.c
-00135.c
-00136.c
-00137.c
-00138.c
-00139.c
-00140.c
-00141.c
-00142.c
-00143.c
-00144.c
-00145.c
-00146.c
-00147.c
-00148.c
-00149.c
-00150.c
-00151.c
-00152.c
-00153.c
-00154.c
-00155.c
-00156.c
-00157.c
-00158.c
-00159.c
-00160.c
-00161.c
-00162.c
-00163.c
-00164.c
-00165.c
-00166.c
-00167.c
-00168.c
-00169.c
-00170.c
-00171.c
-00172.c
-00173.c
-00174.c
-00175.c
-00176.c
-00177.c
-00178.c
-00179.c
-00180.c
-00181.c
-00182.c
-00183.c
-00184.c
-00185.c
-00186.c
-00187.c
-00188.c
-00189.c
-00190.c
-00191.c
-00192.c
-00193.c
-00194.c
-00195.c
-00196.c
-00197.c
-00198.c
-00199.c
-00200.c
-00201.c
-00202.c
-00203.c
-00204.c
-00205.c
-00206.c
-00207.c
-00208.c
-00209.c
-00210.c
-00211.c
-00212.c
-00213.c
-00214.c
-00215.c
-00216.c
-00217.c
-00218.c
-00219.c
-00220.c
+	cc64 -w -S -fno-exceptions 00001.c
+
+ -- 0 errors found.
+	type 00001.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00002.c
+
+ -- 0 errors found.
+	type 00002.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00003.c
+
+ -- 0 errors found.
+	type 00003.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00004.c
+
+ -- 0 errors found.
+	type 00004.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00005.c
+
+ -- 0 errors found.
+	type 00005.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00006.c
+
+ -- 0 errors found.
+	type 00006.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00007.c
+
+ -- 0 errors found.
+	type 00007.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00008.c
+
+ -- 0 errors found.
+	type 00008.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00009.c
+
+ -- 0 errors found.
+	type 00009.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00010.c
+
+ -- 0 errors found.
+	type 00010.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00011.c
+
+ -- 0 errors found.
+	type 00011.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00012.c
+
+ -- 0 errors found.
+	type 00012.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00013.c
+
+ -- 0 errors found.
+	type 00013.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00014.c
+
+ -- 0 errors found.
+	type 00014.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00015.c
+
+ -- 0 errors found.
+	type 00015.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00016.c
+
+ -- 0 errors found.
+	type 00016.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00017.c
+
+ -- 0 errors found.
+	type 00017.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00018.c
+
+ -- 0 errors found.
+	type 00018.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00019.c
+
+ -- 0 errors found.
+	type 00019.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00020.c
+
+ -- 0 errors found.
+	type 00020.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00021.c
+
+ -- 0 errors found.
+	type 00021.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00022.c
+
+ -- 0 errors found.
+	type 00022.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00023.c
+
+ -- 0 errors found.
+	type 00023.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00024.c
+
+ -- 0 errors found.
+	type 00024.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00025.c
+
+ -- 0 errors found.
+	type 00025.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00026.c
+
+ -- 0 errors found.
+	type 00026.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00027.c
+
+ -- 0 errors found.
+	type 00027.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00028.c
+
+ -- 0 errors found.
+	type 00028.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00029.c
+
+ -- 0 errors found.
+	type 00029.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00030.c
+
+ -- 0 errors found.
+	type 00030.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00031.c
+
+ -- 0 errors found.
+	type 00031.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00032.c
+
+ -- 0 errors found.
+	type 00032.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00033.c
+
+ -- 0 errors found.
+	type 00033.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00034.c
+
+ -- 0 errors found.
+	type 00034.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00035.c
+
+ -- 0 errors found.
+	type 00035.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00036.c
+
+ -- 0 errors found.
+	type 00036.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00037.c
+
+ -- 0 errors found.
+	type 00037.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00038.c
+
+ -- 0 errors found.
+	type 00038.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00039.c
+
+ -- 0 errors found.
+	type 00039.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00041.c
+
+ -- 0 errors found.
+	type 00041.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00042.c
+
+ -- 0 errors found.
+	type 00042.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00043.c
+
+ -- 0 errors found.
+	type 00043.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00044.c
+
+ -- 0 errors found.
+	type 00044.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00045.c
+
+ -- 0 errors found.
+	type 00045.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00046.c
+
+ -- 0 errors found.
+	type 00046.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00047.c
+
+ -- 0 errors found.
+	type 00047.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00050.c
+
+ -- 0 errors found.
+	type 00050.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00051.c
+
+ -- 0 errors found.
+	type 00051.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00052.c
+
+ -- 0 errors found.
+	type 00052.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00053.c
+
+ -- 0 errors found.
+	type 00053.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00054.c
+
+ -- 0 errors found.
+	type 00054.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00055.c
+
+ -- 0 errors found.
+	type 00055.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00057.c
+
+ -- 0 errors found.
+	type 00057.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00058.c
+
+ -- 0 errors found.
+	type 00058.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00059.c
+
+ -- 0 errors found.
+	type 00059.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00060.c
+
+ -- 0 errors found.
+	type 00060.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00061.c
+
+ -- 0 errors found.
+	type 00061.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00062.c
+
+ -- 0 errors found.
+	type 00062.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00063.c
+
+ -- 0 errors found.
+	type 00063.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00064.c
+
+ -- 0 errors found.
+	type 00064.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00065.c
+
+ -- 0 errors found.
+	type 00065.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00066.c
+
+ -- 0 errors found.
+	type 00066.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00067.c
+
+ -- 0 errors found.
+	type 00067.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00068.c
+
+ -- 0 errors found.
+	type 00068.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00069.c
+
+ -- 0 errors found.
+	type 00069.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00070.c
+
+ -- 0 errors found.
+	type 00070.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00071.c
+
+ -- 0 errors found.
+	type 00071.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00072.c
+
+ -- 0 errors found.
+	type 00072.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00073.c
+
+ -- 0 errors found.
+	type 00073.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00074.c
+
+ -- 0 errors found.
+	type 00074.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00075.c
+
+ -- 0 errors found.
+	type 00075.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00076.c
+
+ -- 0 errors found.
+	type 00076.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00077.c
+
+ -- 0 errors found.
+	type 00077.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00078.c
+
+ -- 0 errors found.
+	type 00078.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00079.c
+
+ -- 0 errors found.
+	type 00079.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00080.c
+
+ -- 0 errors found.
+	type 00080.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00081.c
+
+ -- 0 errors found.
+	type 00081.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00082.c
+
+ -- 0 errors found.
+	type 00082.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00086.c
+
+ -- 0 errors found.
+	type 00086.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00087.c
+
+ -- 0 errors found.
+	type 00087.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00088.c
+
+ -- 0 errors found.
+	type 00088.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00089.c
+
+ -- 0 errors found.
+	type 00089.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00090.c
+
+ -- 0 errors found.
+	type 00090.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00091.c
+
+ -- 0 errors found.
+	type 00091.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00093.c
+
+ -- 0 errors found.
+	type 00093.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00094.c
+
+ -- 0 errors found.
+	type 00094.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00095.c
+
+ -- 0 errors found.
+	type 00095.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00096.c
+
+ -- 0 errors found.
+	type 00096.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00097.c
+
+ -- 0 errors found.
+	type 00097.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00098.c
+
+ -- 0 errors found.
+	type 00098.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00099.c
+
+ -- 0 errors found.
+	type 00099.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00100.c
+
+ -- 0 errors found.
+	type 00100.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00101.c
+
+ -- 0 errors found.
+	type 00101.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00102.c
+
+ -- 0 errors found.
+	type 00102.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00103.c
+
+ -- 0 errors found.
+	type 00103.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00105.c
+
+ -- 0 errors found.
+	type 00105.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00106.c
+
+ -- 0 errors found.
+	type 00106.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00107.c
+
+ -- 0 errors found.
+	type 00107.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00108.c
+
+ -- 0 errors found.
+	type 00108.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00109.c
+
+ -- 0 errors found.
+	type 00109.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00110.c
+
+ -- 0 errors found.
+	type 00110.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00111.c
+
+ -- 0 errors found.
+	type 00111.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00112.c
+
+ -- 0 errors found.
+	type 00112.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00113.c
+
+ -- 0 errors found.
+	type 00113.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00114.c
+
+ -- 0 errors found.
+	type 00114.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00115.c
+
+ -- 0 errors found.
+	type 00115.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00116.c
+
+ -- 0 errors found.
+	type 00116.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00117.c
+
+ -- 0 errors found.
+	type 00117.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00118.c
+
+ -- 0 errors found.
+	type 00118.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00119.c
+
+ -- 0 errors found.
+	type 00119.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00120.c
+
+ -- 0 errors found.
+	type 00120.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00121.c
+
+ -- 0 errors found.
+	type 00121.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00122.c
+
+ -- 0 errors found.
+	type 00122.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00123.c
+
+ -- 0 errors found.
+	type 00123.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00125.c
+
+ -- 0 errors found.
+	type 00125.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00126.c
+
+ -- 0 errors found.
+	type 00126.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00127.c
+
+ -- 0 errors found.
+	type 00127.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00128.c
+
+ -- 0 errors found.
+	type 00128.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00130.c
+
+ -- 0 errors found.
+	type 00130.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00131.c
+
+ -- 0 errors found.
+	type 00131.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00132.c
+
+ -- 0 errors found.
+	type 00132.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00133.c
+
+ -- 0 errors found.
+	type 00133.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00134.c
+
+ -- 0 errors found.
+	type 00134.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00135.c
+
+ -- 0 errors found.
+	type 00135.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00136.c
+
+ -- 0 errors found.
+	type 00136.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00137.c
+
+ -- 0 errors found.
+	type 00137.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00138.c
+
+ -- 0 errors found.
+	type 00138.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00139.c
+
+ -- 0 errors found.
+	type 00139.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00141.c
+
+ -- 0 errors found.
+	type 00141.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00142.c
+
+ -- 0 errors found.
+	type 00142.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00143.c
+
+ -- 0 errors found.
+	type 00143.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00144.c
+
+ -- 0 errors found.
+	type 00144.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00145.c
+
+ -- 0 errors found.
+	type 00145.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00146.c
+
+ -- 0 errors found.
+	type 00146.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00147.c
+
+ -- 0 errors found.
+	type 00147.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00148.c
+
+ -- 0 errors found.
+	type 00148.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00149.c
+
+ -- 0 errors found.
+	type 00149.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00150.c
+
+ -- 0 errors found.
+	type 00150.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00151.c
+
+ -- 0 errors found.
+	type 00151.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00152.c
+
+ -- 0 errors found.
+	type 00152.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00153.c
+
+ -- 0 errors found.
+	type 00153.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00154.c
+
+ -- 0 errors found.
+	type 00154.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00155.c
+
+ -- 0 errors found.
+	type 00155.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00156.c
+
+ -- 0 errors found.
+	type 00156.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00157.c
+
+ -- 0 errors found.
+	type 00157.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00158.c
+
+ -- 0 errors found.
+	type 00158.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00159.c
+
+ -- 0 errors found.
+	type 00159.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00160.c
+
+ -- 0 errors found.
+	type 00160.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00161.c
+
+ -- 0 errors found.
+	type 00161.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00163.c
+
+ -- 0 errors found.
+	type 00163.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00164.c
+
+ -- 0 errors found.
+	type 00164.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00165.c
+
+ -- 0 errors found.
+	type 00165.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00166.c
+
+ -- 0 errors found.
+	type 00166.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00167.c
+
+ -- 0 errors found.
+	type 00167.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00168.c
+
+ -- 0 errors found.
+	type 00168.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00169.c
+
+ -- 0 errors found.
+	type 00169.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00170.c
+
+ -- 0 errors found.
+	type 00170.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00171.c
+
+ -- 0 errors found.
+	type 00171.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00172.c
+
+ -- 0 errors found.
+	type 00172.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00173.c
+
+ -- 0 errors found.
+	type 00173.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00174.c
+
+ -- 0 errors found.
+	type 00174.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00175.c
+
+ -- 0 errors found.
+	type 00175.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00176.c
+
+ -- 0 errors found.
+	type 00176.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00177.c
+
+ -- 0 errors found.
+	type 00177.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00178.c
+
+ -- 0 errors found.
+	type 00178.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00179.c
+
+ -- 0 errors found.
+	type 00179.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00180.c
+
+ -- 0 errors found.
+	type 00180.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00183.c
+
+ -- 0 errors found.
+	type 00183.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00184.c
+
+ -- 0 errors found.
+	type 00184.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00185.c
+
+ -- 0 errors found.
+	type 00185.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00186.c
+
+ -- 0 errors found.
+	type 00186.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00187.c
+
+ -- 0 errors found.
+	type 00187.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00188.c
+
+ -- 0 errors found.
+	type 00188.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00190.c
+
+ -- 0 errors found.
+	type 00190.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00191.c
+
+ -- 0 errors found.
+	type 00191.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00192.c
+
+ -- 0 errors found.
+	type 00192.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00193.c
+
+ -- 0 errors found.
+	type 00193.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00194.c
+
+ -- 0 errors found.
+	type 00194.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00195.c
+
+ -- 0 errors found.
+	type 00195.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00196.c
+
+ -- 0 errors found.
+	type 00196.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00197.c
+
+ -- 0 errors found.
+	type 00197.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00198.c
+
+ -- 0 errors found.
+	type 00198.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00199.c
+
+ -- 0 errors found.
+	type 00199.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00201.c
+*************clue:44************
+*************clue:44************
+
+ -- 6 errors found.
+	type 00201.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00202.c
+*************clue:44************
+
+ -- 2 errors found.
+	type 00202.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00203.c
+
+ -- 0 errors found.
+	type 00203.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00205.c
+
+ -- 0 errors found.
+	type 00205.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00206.c
+
+ -- 0 errors found.
+	type 00206.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00207.c
+
+ -- 1 errors found.
+	type 00207.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00208.c
+
+ -- 0 errors found.
+	type 00208.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00209.c
+
+ -- 0 errors found.
+	type 00209.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00211.c
+
+ -- 0 errors found.
+	type 00211.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00212.c
+
+ -- 0 errors found.
+	type 00212.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00215.c
+
+ -- 0 errors found.
+	type 00215.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00217.c
+
+ -- 0 errors found.
+	type 00217.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00300.c
+
+ -- 0 errors found.
+	type 00300.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00309.c
+
+ -- 0 errors found.
+	type 00309.asm >> cc64.asm
+	cc64 -w -S -fno-exceptions 00310.c
+
+ -- 0 errors found.
+	type 00310.asm >> cc64.asm
+	echo "made Test Suite"
+"made Test Suite"

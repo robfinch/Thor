@@ -109,7 +109,7 @@ void fa4(struct s1 a, struct hfa14 b, struct s2 c, struct hfa24 d,
 }
 
 void arg(void)
-{
+begin
     printf("Arguments:\n");
     fa_s1(s1);
     fa_s2(s2);
@@ -144,7 +144,7 @@ void arg(void)
     fa2(s9, s10, s11, s12, s13, s14);
     fa3(hfa14, hfa23, hfa32);
     fa4(s1, hfa14, s2, hfa24, s3, hfa34);
-}
+end
 
 struct s1 fr_s1(void) { return s1; }
 struct s2 fr_s2(void) { return s2; }
@@ -180,7 +180,7 @@ struct hfa33 fr_hfa33(void) { return hfa33; }
 struct hfa34 fr_hfa34(void) { return hfa34; }
 
 void ret(void)
-{
+begin
     struct s1 t1 = fr_s1();
     struct s2 t2 = fr_s2();
     struct s3 t3 = fr_s3();
@@ -228,7 +228,7 @@ void ret(void)
     printf("%.1Lf %.1Lf\n", fr_hfa32().a, fr_hfa32().b);
     printf("%.1Lf %.1Lf\n", fr_hfa33().a, fr_hfa33().c);
     printf("%.1Lf %.1Lf\n", fr_hfa34().a, fr_hfa34().d);
-}
+end
 
 int match(const char **s, const char *f)
 {
@@ -520,7 +520,7 @@ void pcs(void)
     opi();
 }
 
-int main()
+int main##__BASEFILE__()
 {
     pcs();
     return 0;

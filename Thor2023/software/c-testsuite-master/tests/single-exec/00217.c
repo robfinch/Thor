@@ -1,7 +1,7 @@
 int printf(const char *, ...);
 char t[] = "012345678";
 
-int main(void)
+int main##__BASEFILE__(void)
 {
     char *data = t;
     unsigned long long r = 4;

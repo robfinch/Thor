@@ -2,7 +2,7 @@ int f(int a), g(int a), a;
 
 
 int
-main()
+main##__BASEFILE__()
 {
 	return f(1) - g(1);
 }

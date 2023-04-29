@@ -1,7 +1,7 @@
 #define x(y) #y
 
 int
-main(void)
+main##__BASEFILE__(void)
 {
 	char *p;
 	p = x(hello)  " is better than bye";

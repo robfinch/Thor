@@ -2,8 +2,8 @@ typedef struct { int x; int y; } s;
 
 s v;
 
-int
-main()
+integer
+main##__BASEFILE__()
 {
 	v.x = 1;
 	v.y = 2;

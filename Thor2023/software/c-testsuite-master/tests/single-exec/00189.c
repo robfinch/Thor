@@ -12,7 +12,7 @@ int (*f)(int) = &fred;
    (fprint here) must not be called directly anywhere in the test.  */
 int (*fprintfptr)(FILE *, const char *, ...) = &fprintf;
 
-int main()
+int main##__BASEFILE__()
 {
    fprintfptr(stdout, "%d\n", (*f)(24));
 

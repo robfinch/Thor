@@ -3,7 +3,7 @@
 #define P(A,B) A ## B ; bob
 #define Q(A,B) A ## B+
 
-int main(void)
+int main##__BASEFILE__(void)
 {
     int bob, jim = 21;
     bob = P(jim,) *= 2;

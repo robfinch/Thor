@@ -1,6 +1,6 @@
 #define F(a, b) a
 int
-main()
+main##__BASEFILE__()
 {
 	return F(, 1) 0;
 }

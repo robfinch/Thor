@@ -221,7 +221,7 @@ void print_led(unsigned long x, char *buf)
    *buf='\0';
 }
 
-int main()
+int main##__BASEFILE__()
 {
    char buf[5*MAX_DIGITS];
    print_led(1234567, buf);
@@ -231,7 +231,7 @@ int main()
 }
 
 #ifndef NO_MAIN
-int main(int argc, char **argv)
+int main##__BASEFILE__(int argc, char **argv)
 {
 
    int i=0,n;

@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	struct T { int x; } s1;
 	s1.x = 1;

@@ -42,7 +42,7 @@ static void check (const char *s, int arg1, int shift)
   nfailed += failed;
 }
 
-int main (int argc, char **argv)
+int main##__BASEFILE__ (int argc, char **argv)
 {
   debug = argc > 1;
   TEST4(1);

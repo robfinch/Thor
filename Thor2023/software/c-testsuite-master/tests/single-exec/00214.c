@@ -53,7 +53,7 @@ _Bool chk(unsigned long addr, unsigned long limit, unsigned long size)
     ret = 0 != (!!(addr > limit - size));
 }
 
-int main()
+int main##__BASEFILE__()
 {
   void *r;
   _brk_start = 1024;

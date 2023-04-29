@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	unsigned long long x;
 	

@@ -1,5 +1,5 @@
 int
-main()
+main##__BASEFILE__()
 {
 	char a[16], b[16];
 	
