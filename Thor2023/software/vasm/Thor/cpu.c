@@ -2240,7 +2240,9 @@ static encode_direct(uint64_t *insn, thuge val, uint64_t *postfix1, uint64_t *po
 	}
 }
 
-static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* postfix3, uint64_t *insn, mnemonic* mnemo,
+static size_t encode_immed(
+	uint64_t* postfix1, uint64_t* postfix2, uint64_t* postfix3, uint64_t* postfix4,
+	uint64_t *insn, mnemonic* mnemo,
 	operand *op, thuge hval, int constexpr, int i, char vector)
 {
 	size_t isize = 5;
@@ -2254,6 +2256,7 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 	if (postfix1) *postfix1 = 0;
 	if (postfix2) *postfix2 = 0;
 	if (postfix3) *postfix3 = 0;
+	if (postfix4) *postfix4 = 0;
 		
 	if (hval.hi & 0x80000000LL)
 		hval.hi |= 0xFFFFFFFF00000000LL;
@@ -2358,6 +2361,10 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 				if (postfix3)
 					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
+			if (!is_nbit(hval,96LL)) {
+				if (postfix4)
+					*postfix4 = (5LL << 48LL) | ((val2.hi & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
 		}
 		else if (mnemo->ext.format==RTDI) {
 			if (postfix1)
@@ -2369,6 +2376,10 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			if (!is_nbit(hval,64LL)) {
 				if (postfix3)
 					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+			if (!is_nbit(hval,96LL)) {
+				if (postfix4)
+					*postfix4 = (5LL << 48LL) | ((val2.hi & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
 		}
 		else {
@@ -2403,6 +2414,10 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			if (!is_nbit(hval,64LL)) {
 				if (postfix3)
 					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+			if (!is_nbit(hval,96LL)) {
+				if (postfix4)
+					*postfix4 = (5LL << 48LL) | ((val2.hi & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
 		}
 	}
@@ -2471,6 +2486,10 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 				if (postfix3)
 					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
+			if (!is_nbit(hval,96LL)) {
+				if (postfix4)
+					*postfix4 = (5LL << 48LL) | ((val2.hi & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
 		}
 		else if (mnemo->ext.format==RIL) {
 			if (postfix1)
@@ -2482,6 +2501,10 @@ static size_t encode_immed(uint64_t* postfix1, uint64_t* postfix2, uint64_t* pos
 			if (!is_nbit(hval,64LL)) {
 				if (postfix3)
 					*postfix3 = (5LL << 48LL) | (((val2.lo >> 32LL) & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
+			}
+			if (!is_nbit(hval,96LL)) {
+				if (postfix4)
+					*postfix4 = (5LL << 48LL) | ((val2.hi & 0xffffffffLL) << 8LL) | OPC(31) | SZ(2);
 			}
 		}
 		else if (mnemo->ext.format==RII) {
@@ -3188,7 +3211,7 @@ size_t encode_thor_instruction(instruction *ip,section *sec,taddr pc,
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
 			TRACE("Etho3:");
-			encode_immed(postfix1, postfix2, postfix3, insn, mnemo, &op, val, constexpr, i, vector_insn);
+			encode_immed(postfix1, postfix2, postfix3, postfix4, insn, mnemo, &op, val, constexpr, i, vector_insn);
     }
     else if (encode_branch(insn, mnemo, &op, val.lo, &isize, i, postfix1, postfix2)) {
 			TRACE("Etho4:");
@@ -3208,7 +3231,7 @@ size_t encode_thor_instruction(instruction *ip,section *sec,taddr pc,
 	}
 	
 	if (vector_insn)
-		isize = 6;	// othersie 5
+		isize = 6;	// otherwise 5
 	TRACE("G");
 	return (isize);
 }
@@ -3237,7 +3260,8 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 	);
 	sz = sz +
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
-		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
+		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL) +
+		(postfix4 >> 48LL)
 		;
 	if (ip->ext.size != 0) {
 //		if (ip->ext.size != sz)
@@ -3251,6 +3275,7 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 		printf("pfx1: %d\n", postfix1 >> 48LL);
 		printf("pfx2: %d\n", postfix2 >> 48LL);
 		printf("pfx3: %d\n", postfix3 >> 48LL);
+		printf("pfx4: %d\n", postfix4 >> 48LL);
 		exit(21);
 	}
 	insn_sizes1[sz1ndx++] = sz;
