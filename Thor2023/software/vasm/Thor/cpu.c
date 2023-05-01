@@ -2,6 +2,7 @@
 
 #define TRACE(x)		/*printf(x)*/
 #define TRACE2(x,y)	/*printf((x),(y))*/
+//#define BRANCH_PGREL 1
 
 const char *cpu_copyright="vasm Thor cpu backend (c) in 2021-2023 Robert Finch";
 
@@ -24,6 +25,20 @@ static int sz2ndx = 0;
 static short int argregs[11] = {1,2,3,40,41,42,43,44,45,46,47};
 static short int tmpregs[12] = {4,5,6,7,8,9,10,11,12,13,14,15};
 static short int saved_regs[16] = {16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+
+static char *qualifiers[] =
+{
+	"b", "w", "t", "o", "h",
+	"s", "d", "q",
+	"none", "rd", "rda", "wt", "wta", "wb", "wba"
+};
+
+static int qualifiers_code[] =
+{
+	0, 1, 2, 3, 4,
+	2, 3, 4,
+	0x80, 0x81, 0x82, 0x80, 0x81, 0x82, 0x83
+};
 
 static char *regnames[64] = {
 	"r0", "a0", "a1", "a2", "t0", "t1", "t2", "t3",
@@ -394,7 +409,7 @@ mnemonic mnemonics[]={
 	"neg", {OP_REG,OP_NEXTREG,OP_REG,0,0}, {R2,CPU_ALL,0,0x0000000DLL,4},	
 //	"neg",	{OP_REG,OP_REG,0,0,0}, {R3,CPU_ALL,0,0x0A000001LL,4},
 
-	"nop",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,SZ(4)|OPC(31),5, SZ_UNSIZED, 0},
+	"nop",	{0,0,0,0,0}, {BITS16,CPU_ALL,0,SZ(7)|OPC(31),5, SZ_UNSIZED, 0},
 
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,0}, {R3,CPU_ALL,0,0x020000000102LL,6},	
 	"nor", {OP_VREG,OP_VREG,OP_VREG|OP_REG|OP_IMM7,OP_VREG|OP_REG|OP_IMM7,OP_VMREG}, {R3,CPU_ALL,0,0x020000000102LL,6},	
@@ -714,7 +729,7 @@ char *parse_instruction(char *s,int *inst_len,char **ext,int *ext_len,
   while (*s && *s!='.' && !isspace((unsigned char)*s))
     s++;
   *inst_len = s - inst;
-  if (*s =='.') {
+  while (*s =='.') {
     /* extension present */
     ext[*ext_cnt] = ++s;
     while (*s && *s!='.' && !isspace((unsigned char)*s))
@@ -1322,6 +1337,7 @@ static int get_reloc_type(operand *op)
 	          cpu_error(11);
 	          break;
 	      }
+ 			rtype = REL_PC;
       break;
 
 		/* BEQZ r2,.target */
@@ -1346,6 +1362,7 @@ static int get_reloc_type(operand *op)
 	          cpu_error(11);
 	          break;
 	      }
+ 			rtype = REL_PC;
       break;
 
 		/* BRA target */		
@@ -1367,6 +1384,7 @@ static int get_reloc_type(operand *op)
           cpu_error(11);
           break;
       }
+ 			rtype = REL_PC;
       break;
   		
   	/* JEQ r1,r2,target */
@@ -1529,12 +1547,14 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
       if (reloctype == REL_PC && !is_pc_reloc(base,sec)) {
         /* a relative branch - reloc is only needed for external reference */
 				TRACE("m");
+#ifdef BRANCH_PGREL				
 				/* Should be relative branch, let's make sure. */
 		 		if (op->format==B || op->format==B2 || op->format==BL2 || op->format==BZ) {
  					val.lo &= 0xffffffffffffc000LL;
  					hsub(val,huge_from_int(pc & 0xffffffffffffc000LL));
         	return (val);
       	}
+#endif      	
 				hsub(val,huge_from_int(pc));
 	    	return (val);
       }
@@ -1899,7 +1919,7 @@ illreloc:
   else {
   	val.lo = val.hi = 0;
 		eval_expr_huge(op->value,&val);
- 		
+#ifdef BRANCH_PGREL 		
  		if (op->format==B || op->format==B2 || op->format==BL2 || op->format==BZ) {
  			if (reloctype == REL_PC) {
  				val.lo &= 0xffffffffffffc000LL;
@@ -1911,7 +1931,7 @@ illreloc:
  			}
  		} 	
 		else
-		
+#endif		
 		if (reloctype == REL_PC) {
 			/* a relative reference to an absolute label */
 			TRACE("n");
@@ -2216,7 +2236,7 @@ static encode_direct(uint64_t *insn, thuge val, uint64_t *postfix1, uint64_t *po
 	}
 	if (insn) {
 		*insn = *insn | ((val.lo & 0x7fLL) << 9LL);
-		*insn = *insn | (((val.lo >> 7LL) & 0xffLL) << 31LL);
+		*insn = *insn | (((val.lo >> 7LL) & 0x3fLL) << 31LL);
 	}
 }
 
@@ -2539,6 +2559,7 @@ static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, uin
 				if (!is_nbit(huge_from_int(val), 32LL))
 					*postfix2 = (((val >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | OPC(31) | (5LL << 48LL);
 			break;
+#ifdef BRANCH_PGREL			
 		case 2:
 			if (insn) {
   			tgt = (((val >> 14LL) & 0x3LL) << 38LL);
@@ -2553,6 +2574,16 @@ static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, uin
   			*insn |= tgt;
   		}
 	  	break;
+#else	  	
+		case 2:
+	  	if (insn) {
+  			tgt = ((val & 0xffffLL) << 24LL);
+  			*insn |= tgt;
+  			tgt = (((val >> 16LL) & 0x7LL) << 21LL);
+  			*insn |= tgt;
+  		}
+			break;
+#endif	  	
 		}
 	}
 }
@@ -2566,6 +2597,7 @@ static void encode_branch_BL2(uint64_t* insn, operand* op, int64_t val, int i)
 	if (op->type == OP_IMM) {
 		if (insn) {
 			switch(i) {
+#ifdef BRANCH_PGREL				
 			case 1:
 	  		tgt = (((val >> 14LL) & 0x3LL) << 38LL);
 	  		*insn |= tgt;
@@ -2576,7 +2608,14 @@ static void encode_branch_BL2(uint64_t* insn, operand* op, int64_t val, int i)
 	  		tgt = ((val & 0x3fffLL) << 24LL);
 	  		*insn |= tgt;
 		  	break;
-		  
+#else
+			case 2:
+	  		tgt = ((val & 0xffffLL) << 24LL);
+	  		*insn |= tgt;
+	  		tgt = (((val >> 16LL) & 0x1fffLL) << 11LL);
+	  		*insn |= tgt;
+		  	break;
+#endif		  
 			}
 		}
 	}
@@ -2839,13 +2878,13 @@ static void encode_regind(
 		else if (i==1) {
 			*insn |= (RB(op->basereg));
 			*insn |= (val.lo & 0x7fLL) << 9LL;
-			*insn |= ((val.lo >> 7LL) & 0xffLL) << 31LL;
+			*insn |= ((val.lo >> 7LL) & 0x3fLL) << 31LL;
 		}
 	}
 	if (pass==1)
 		ip->ext.const_expr = constexpr;
 	if ((constexpr && pass==1) || ip->ext.const_expr) {
-		if (!is_nbit(val,15LL))
+		if (!is_nbit(val,13LL))
  			*postfix1 = ((val.lo & 0xffffffffLL) << 8LL) | 0x1fLL | (5LL << 48LL);
   	if (!is_nbit(val,32) && abits > 32)
   		*postfix2 = (((val.lo >> 32LL) & 0xffffffffLL) << 8LL) | SZ(1) | 0x1fLL | (5LL << 48LL);
@@ -2900,6 +2939,45 @@ static void create_split_target_operands(instruction* ip, mnemonic* mnemo)
 	}
 }
 
+// Encode any instruction qualifiers.
+// These include: operation size code and cache-ability specifiers.
+
+static void encode_qualifiers(instruction* ip, uint64_t* insn)
+{
+	int i;
+	int setsz = 0;
+  mnemonic *mnemo = &mnemonics[ip->code];
+
+	for (i = 0; ip->qualifiers[i]; i++) {
+		if (strcmp(ip->qualifiers[i],qualifiers[i])==0) {
+			if (qualifiers_code[i] & 0x80) {
+				switch(mnemo->ext.format) {
+				case SCNDX:
+					if (insn)
+						*insn |= (uint64_t)(qualifiers_code[i] & 3) << 12LL;
+					break;
+				case REGIND:
+				case DIRECT:
+					if (insn)
+						*insn |= (uint64_t)(qualifiers_code[i] & 3) << 37LL;
+					break;
+				}
+			}
+			// else size code
+			else {
+				if (mnemo->ext.size != SZ_UNSIZED) {
+					setsz = 1;
+					if (insn)
+						*insn |= (uint64_t)qualifiers_code[i] << 5LL;
+				}
+			}
+		}
+	}
+	if (mnemo->ext.size != SZ_UNSIZED && !setsz)
+		if (insn)
+			*insn |= (uint64_t)mnemo->ext.defsize;
+}
+
 /* evaluate expressions and try to optimize instruction,
    return size of instruction 
 
@@ -2909,9 +2987,9 @@ static void create_split_target_operands(instruction* ip, mnemonic* mnemo)
    modifier is in byte 1. The total size may be calculated using a simple
    shift and sum.
 */
-size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
+size_t encode_thor_instruction(instruction *ip,section *sec,taddr pc,
   uint64_t *modifier1, uint64_t *modifier2, uint64_t* postfix1,
-  uint64_t* postfix2, uint64_t* postfix3,
+  uint64_t* postfix2, uint64_t* postfix3, uint64_t* postfix4,
   uint64_t *insn, dblock *db)
 {
   mnemonic *mnemo = &mnemonics[ip->code];
@@ -2921,9 +2999,10 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 	int constexpr;
 	int reg = 0;
 	char vector_insn = 0;
-	thuge op1val;
+	thuge op1val, wval;
 	char ext;
 	uint64_t szcode;
+	int setsz = 0;
 
 	TRACE("Eto:");
 	if (modifier1)
@@ -2936,24 +3015,33 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 		*postfix2 = 0;
 	if (postfix3)
 		*postfix3 = 0;
+	if (postfix4)
+		*postfix4 = 0;
 
-  ext = ip->qualifiers[0] ?
-             tolower((unsigned char)ip->qualifiers[0][0]) : '\0';
-  szcode = 
-	  ((mnemo->ext.size) == SZ_UNSIZED) ?
-    0 : lc_ext_to_size(ext) < 0 ? mnemo->ext.defsize : lc_ext_to_size(ext);
+//  ext = ip->qualifiers[0] ?
+//             tolower((unsigned char)ip->qualifiers[0][0]) : '\0';
+//  szcode = 
+//	  ((mnemo->ext.size) == SZ_UNSIZED) ?
+//    0 : lc_ext_to_size(ext) < 0 ? mnemo->ext.defsize : lc_ext_to_size(ext);
 
-	isize = mnemo->ext.len;
+	//isize = mnemo->ext.len;
+	/*
   if (insn != NULL) {
     *insn = mnemo->ext.opcode;
     *insn |= SZ(szcode);
    }
+	*/
+
+	encode_qualifiers(ip, insn);
+
 
 	if (modifier1)
 		*modifier1 = 0;
 
+#ifdef BRANCH_PGREL
 	/* Create additional operand for split target branches */
 	create_split_target_operands(ip, mnemo);
+#endif
 
 	// Detect a vector instruction
   for (i=0; i<MAX_OPERANDS && ip->op[i]!=NULL; i++) {
@@ -2992,6 +3080,8 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
       else {
       	val.lo = val.hi = 0;
         if (!eval_expr_huge(op.value,&val)){//,sec,pc)) {
+        	wval = val;
+#ifdef BRANCH_PGREL        	
         	if (is_branch(mnemo)) {
 	          if (reloctype == REL_PC) {
 	//          	hval = hsub(huge_zero(),pc);
@@ -3004,7 +3094,9 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 			 				val.lo &= 0x3fffLL;
 			 			}
 		 			}
-		 			else {
+		 			else
+#endif		 				
+		 			{
 	          if (reloctype == REL_PC) {
 							val = hsub(val,huge_from_int(pc));
 						}		 			
@@ -3014,12 +3106,16 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
     }
     else {
 //      if (!eval_expr(op.value,&val,sec,pc))
-      if (!eval_expr_huge(op.value,&val))
+      if (!eval_expr_huge(op.value,&val)) {
+      	wval = val;
         if (insn != NULL) {
 /*	    	printf("***A4 val:%lld****", val);
           cpu_error(2);  */ /* constant integer expression required */
         }
+      }
     }
+  	if (is_branch(mnemo))
+			val = hsub(wval,huge_from_int(pc));
 
 		if (i==1) {
 			op1val = val;
@@ -3092,17 +3188,17 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
     */
     else if (((mnemo->operand_type[i])&OP_IMM) && (op.type==OP_IMM) && !is_branch(mnemo)) {
 			TRACE("Etho3:");
-			isize = encode_immed(postfix1, postfix2, postfix3, insn, mnemo, &op, val, constexpr, i, vector_insn);
+			encode_immed(postfix1, postfix2, postfix3, insn, mnemo, &op, val, constexpr, i, vector_insn);
     }
     else if (encode_branch(insn, mnemo, &op, val.lo, &isize, i, postfix1, postfix2)) {
 			TRACE("Etho4:");
     	;
     }
     else if (mnemo->operand_type[i]==OP_PREDSTR) {
-    	isize = encode_pred(insn, mnemo, &op, val.lo, &isize, i);
+    	encode_pred(insn, mnemo, &op, val.lo, &isize, i);
     }
     else if (mnemo->operand_type[i]==OP_VMSTR) {
-    	isize = encode_vmask(insn, mnemo, &op, val.lo, &isize, i);
+    	encode_vmask(insn, mnemo, &op, val.lo, &isize, i);
     }
     else if ((mnemo->operand_type[i]&OP_REGIND)==OP_REGIND && op.type==OP_REGIND)
 			encode_regind(ip, insn, &op, val, constexpr, postfix1, postfix2, postfix3, i, db==NULL);
@@ -3111,7 +3207,8 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 			encode_scndx(ip, insn, &op, val, constexpr, postfix1, postfix2, postfix3, i, db==NULL);
 	}
 	
-
+	if (vector_insn)
+		isize = 6;	// othersie 5
 	TRACE("G");
 	return (isize);
 }
@@ -3121,7 +3218,7 @@ size_t encode_thor_operands(instruction *ip,section *sec,taddr pc,
 size_t instruction_size(instruction *ip,section *sec,taddr pc)
 {
   uint64_t modifier1, modifier2;
-  uint64_t postfix1, postfix2, postfix3;
+  uint64_t postfix1, postfix2, postfix3, postfix4;
   instruction* lip = NULL;
   section* lsec = NULL;
   taddr lpc = -1;
@@ -3131,13 +3228,14 @@ size_t instruction_size(instruction *ip,section *sec,taddr pc)
 	postfix1 = 0;
 	postfix2 = 0;
 	postfix3 = 0;
+	postfix4 = 0;
 	size_t sz = 0;
 
-	encode_thor_operands(ip,sec,pc,
-		&modifier1,&modifier2,&postfix1,&postfix2,&postfix3,
+	sz = encode_thor_instruction(ip,sec,pc,
+		&modifier1,&modifier2,&postfix1,&postfix2,&postfix3,&postfix4,
 		NULL,NULL
 	);
-	sz = 5LL +
+	sz = sz +
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
 		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
 		;
@@ -3167,7 +3265,7 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 {
   dblock *db = new_dblock();
   uint64_t modifier1, modifier2;
-  uint64_t postfix1, postfix2, postfix3;
+  uint64_t postfix1, postfix2, postfix3, postfix4;
   uint64_t insn;
   size_t sz;
 
@@ -3176,12 +3274,14 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 	postfix1 = 0;
 	postfix2 = 0;
 	postfix3 = 0;
-	encode_thor_operands(ip,sec,pc,&modifier1,&modifier2,
-		&postfix1, &postfix2, &postfix3, &insn, db);
+	postfix4 = 0;
+	sz = encode_thor_instruction(ip,sec,pc,&modifier1,&modifier2,
+		&postfix1, &postfix2, &postfix3, &postfix4, &insn, db);
 	sz = 
-		5LL + 
+		sz + 
 		(modifier1 >> 48LL) + (modifier2 >> 48LL) +
-		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL)
+		(postfix1 >> 48LL) + (postfix2 >> 48LL) + (postfix3 >> 48LL) +
+		(postfix4 >> 48LL)
 		;
 //	if (sz != ip->ext.size)
 //		printf("sizediff2\n");
@@ -3212,6 +3312,10 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 	  }
 		if (postfix3 >> 48LL) {
 	    d = setval(0,d,5,postfix3 & 0xffffffffffLL);
+	    insn_count++;
+	  }
+		if (postfix4 >> 48LL) {
+	    d = setval(0,d,5,postfix4 & 0xffffffffffLL);
 	    insn_count++;
 	  }
 	  /*
