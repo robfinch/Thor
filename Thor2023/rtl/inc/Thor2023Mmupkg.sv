@@ -52,28 +52,8 @@ localparam ICacheTagLoBit = $clog2((ICacheLineWidth/8))-1;
 
 `define TAG_ASID $bits(Thor2023Pkg::asid_t) + $bits(Thor2023Pkg::address_t)-ITAG_BIT-1:$bits(Thor2023Pkg::address_t)-ITAG_BIT
 
-typedef logic [$bits(Thor2023Pkg::asid_t) + $bits(Thor2023Pkg::address_t)-ITAG_BIT-1:0] cache_tag_t;
-typedef logic [$bits(Thor2023Pkg::address_t)-ITAG_BIT-1:0] cache_tag_ex_t;
 typedef logic [5:0] tlb_count_t;
 typedef logic [2:0] rwx_t;
-
-typedef struct packed
-{
-	logic v;		// valid indicator
-	logic m;		// modified indicator
-	Thor2023Pkg::asid_t asid;
-	logic [$bits(Thor2023Pkg::address_t)-1:DCacheTagLoBit] vtag;	// virtual tag
-	logic [$bits(Thor2023Pkg::address_t)-1:DCacheTagLoBit] ptag;	// physical tag
-	logic [DCacheLineWidth-1:0] data;
-} DCacheLine;
-
-typedef struct packed
-{
-	logic [ICacheLineWidth/128-1:0] v;	// 1 valid bit per 128 bits data
-	logic [$bits(Thor2023Pkg::address_t)-1:ICacheTagLoBit] vtag;	// virtual tag
-	logic [$bits(Thor2023Pkg::address_t)-1:ICacheTagLoBit] ptag;	// physical tag
-	logic [ICacheLineWidth-1:0] data;
-} ICacheLine;
 
 typedef struct packed
 {
@@ -160,7 +140,7 @@ typedef struct packed
 	logic [3:0] resv4;
 	Thor2023Pkg::asid_t asid;
 	logic [1:0] resv2;
-	logic [45:0] vpn;
+	logic [69:24] vpn;
 } SVPN;	// 64 bits
 
 typedef struct packed
