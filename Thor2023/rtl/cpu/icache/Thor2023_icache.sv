@@ -5,7 +5,7 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_icach_ex.sv
+//	Thor2023_icache.sv
 //	- instruction cache 32kB, 8kB 4 way
 //
 // BSD 3-Clause License
@@ -45,8 +45,8 @@ import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 
-module Thor2023_icache_ex(rst,clk,invce,snoop_adr,snoop_v,snoop_cid,invall,invline,
-	ip,ip_o,ihit_o,ihit,ic_line_hi_o,ic_line_lo_o,ic_valid,miss_adr,
+module Thor2023_icache(rst,clk,invce,snoop_adr,snoop_v,snoop_cid,invall,invline,
+	ip_asid,ip,ip_o,ihit_o,ihit,ic_line_hi_o,ic_line_lo_o,ic_valid,miss_adr,miss_asid,
 	ic_line_i,wway,wr_ic
 	);
 parameter CID = 4'd2;
@@ -67,6 +67,7 @@ input snoop_v;
 input [3:0] snoop_cid;
 input invall;
 input invline;
+input Thor2023Pkg::asid_t ip_asid;
 input Thor2023Pkg::code_address_t ip;
 output Thor2023Pkg::code_address_t ip_o;
 output reg ihit_o;
@@ -74,6 +75,7 @@ output reg ihit;
 output ICacheLine ic_line_hi_o;
 output ICacheLine ic_line_lo_o;
 output reg ic_valid;
+output Thor2023Pkg::asid_t miss_asid;
 output Thor2023Pkg::code_address_t miss_adr;
 input ICacheLine ic_line_i;
 input [LOG_WAYS:0] wway;
@@ -166,7 +168,7 @@ sram_512x256_1rw1r uicmo
 	.clk(clk),
 	.wr(icache_wro),
 	.wadr({wway,ic_line_i.vadr[HIBIT:LOBIT]}),
-	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
+	.radr({ic_rwayo,ip[HIBIT:LOBIT]+~ip[LOBIT-1]}),
 	.i(ic_line_i.data),
 	.o(ic_oline.data),
 	.wo(victim_oline.data)
@@ -200,7 +202,7 @@ uicmo
 	.clk(clk),
 	.wr(icache_wro),
 	.wadr({wway,ic_line_i.vtag[HIBIT:LOBIT]}),
-	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
+	.radr({ic_rwayo,ip[HIBIT:LOBIT]+~ip[LOBIT-1]}),
 	.i(ic_line_i.data),
 	.o(ic_oline.data)
 );
@@ -349,7 +351,7 @@ uictago
 	.padr_i(ic_line_i.ptag),
 	.way(wway),
 	.rclk(clk),
-	.ndx(ip[TAGBIT-1:LOBIT]),		// virtual index (same bits as physical address)
+	.ndx(ip[TAGBIT-1:LOBIT]+~ip[LOBIT-1]),		// virtual index (same bits as physical address)
 	.tag(victago),
 	.ptags0(ptags0o),
 	.ptags1(ptags1o),
@@ -385,7 +387,7 @@ uichito
 (
 	.clk(clk),
 	.adr(ip),
-	.ndx(ip[TAGBIT-1:LOBIT]),
+	.ndx(ip[TAGBIT-1:LOBIT]+~ip[LOBIT-1]),
 	.tag(victago),
 	.valid(valido),
 	.hit(ihit1o),
@@ -464,6 +466,16 @@ else begin
 		end
 	end
 end
+
+// Set miss address
+
+always_comb
+	if (!ihit1e)
+		miss_asid = ip_asid;
+	else if (!ihit1o)
+		miss_asid = ip_asid;
+	else
+		miss_asid = 'd0;
 
 always_comb
 	if (!ihit1e)
