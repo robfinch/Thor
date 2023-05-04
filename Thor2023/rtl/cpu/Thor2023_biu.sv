@@ -40,9 +40,10 @@
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
-	ip,ip_o,ihit_o,ifStall,ic_line_hi,ic_line_lo,ic_valid,
+	ip_asid,ip,ip_o,ihit_o,ifStall,ic_line_hi,ic_line_lo,ic_valid,
 	fifoToCtrl_wack, fifoToCtrl_i,fifoToCtrl_full_o,
 	fifoFromCtrl_o,fifoFromCtrl_rd,fifoFromCtrl_empty,fifoFromCtrl_v,
 	bte_o, blen_o, tid_o, cti_o, seg_o, cyc_o, stb_o, we_o, sel_o, adr_o, dat_o, csr_o,
@@ -61,6 +62,7 @@ input MAppMode;
 input [1:0] omode;
 input bounds_chk;
 input pe;									// protected mode enable
+input Thor2023Pkg::asid_t ip_asid;
 input code_address_t ip;
 output code_address_t ip_o;
 output ihit_o;
@@ -236,13 +238,13 @@ reg [1:0] strips;
 reg [127:0] sel;
 reg [127:0] nsel;
 reg [1023:0] dat, dati;
-wire [127:0] datis;
+wire [511:0] datis;
 
 biu_dati_align uda1
 (
-	.dati(cpu_resp1.dat),
+	.dati(response_from_cache.dat),
 	.datis(datis), 
-	.amt({cpu_resp1.adr[6:0],3'b0})
+	.amt({response_from_cache.adr[6:0],3'b0})
 );
 
 // Build an insert mask for data cache store operations.
@@ -331,6 +333,7 @@ wire itlbrdy;
 reg itlben, itlbwr;
 wire ihit;
 TLBE itlbdato;
+Thor2023Pkg::asid_t imiss_asid;
 code_address_t phys_ip, imiss_adr;
 code_address_t original_ip;
 wb_address_t upd_adr = 'd0;
@@ -342,7 +345,7 @@ reg [LOG_IWAYS:0] ic_wway;
 reg [2:0] vcn;
 reg ic_invline,ic_invall;
 
-Thor2023_icache_ex
+Thor2023_icache
 #(
 	.CID({CID,1'b0}),
 	.WAYS(IWAYS)
@@ -355,6 +358,7 @@ uic1
 	.snoop_adr(snoop_adr),
 	.snoop_v(snoop_v),
 	.snoop_cid(snoop_cid),
+	.ip_asid(ip_asid),
 	.ip(ip),
 	.ip_o(ip_o),
 	.ihit_o(ihit_o),
@@ -362,6 +366,7 @@ uic1
 	.ic_line_hi_o(ic_line_hi),
 	.ic_line_lo_o(ic_line_lo),
 	.ic_valid(ic_valid),
+	.miss_asid(imiss_asid),
 	.miss_adr(imiss_adr),
 	.ic_line_i(ic_input),
 	.wway(ic_wway),
@@ -380,6 +385,7 @@ uictrl
 	.wbm_req(iwbm_req),
 	.wbm_resp(iwbm_resp),
 	.hit(ihit),
+	.miss_asid(imiss_asid),
 	.miss_adr(imiss_adr),
 	.wr_ic(wr_ic2),
 	.way(ic_wway),
@@ -409,21 +415,27 @@ reg dc_invline,dc_invall;
 wire dcache_load;
 wire [1:0] dc_uway, dc_way;
 wb_cmd_request512_t cpu_req;
-wb_cmd_response512_t cpu_resp1, cpu_resp2;
+wb_cmd_response512_t response_from_cache, data_to_cache;
 wire dc_dump, dc_dump_ack;
 DCacheLine dc_dump_o;
 
 always_comb
 begin
-	memresp.tid = cpu_resp1.tid;
-	memresp.cmt = 1'b1;
-	memresp.wr = cpu_resp1.ack;
 	memresp.sel = cpu_req.sel;
 	memresp.cause = imemreq.cause;
-	tDataAlign(cpu_req,imemreq.bytcnt,memresp);
+//	tDataAlign(response_from_cache,imemreq.bytcnt,memresp);
+	memresp.res = response_from_cache.dat;
+	memresp.tgt = imemreq.tgt;
+	memresp.wr_tgt = imemreq.wr_tgt;
+	memresp.tid = response_from_cache.tid;
+	memresp.wr = response_from_cache.ack;
+	memresp.load = imemreq.load;
+	memresp.store = imemreq.store;
+	memresp.group = imemreq.group;
+	memresp.v = response_from_cache.ack;
 end
 
-Thor2023_dcache_ex3
+Thor2023_dcache
 #(
 	.CID({CID,1'b1}),
 	.WAYS(DWAYS)
@@ -440,8 +452,8 @@ udc1
 	.hit(dhit),
 	.uway(dc_uway),
 	.cpu_req_i(cpu_req),
-	.cpu_resp_o(cpu_resp1),
-	.cpu_resp_i(cpu_resp2),
+	.cpu_resp_o(response_from_cache),
+	.update_data_i(data_to_cache),
 	.dump(dc_dump),
 	.dump_o(dc_dump_o),
 	.dump_ack_i(dc_dump_ack),
@@ -468,8 +480,8 @@ udcctrl
 	.hit(dhit),
 	.cache_load(dcache_load),
 	.cpu_request_i(cpu_req),
-	.cpu_response_o(cpu_resp2),
-	.cpu_response_i(cpu_resp1),
+	.data_to_cache_o(data_to_cache),
+	.response_from_cache_i(response_from_cache),
 	.wr(dc_wr),
 	.uway(dc_uway),
 	.way(dc_way),
@@ -934,8 +946,8 @@ if (rst) begin
 	cpu_req.cid <= {CID,1'b1};
 end
 else begin
-	if (1'b1 || memreq_rd) begin
-		if (1'b1 || imemreq.tid != last_tid) begin
+	if (memreq_rd) begin
+		if (imemreq.tid != last_tid) begin
 			case(imemreq.func)
 			MR_LOAD:	cpu_req.cmd <= CMD_LOAD;
 			MR_LOADZ:	cpu_req.cmd <= CMD_LOADZ;
@@ -943,10 +955,10 @@ else begin
 			default:	cpu_req.cmd <= CMD_LOAD;
 			endcase
 			cpu_req.tid <= imemreq.tid;
+			cpu_req.om <= wb_operating_mode_t'(imemreq.omode);
 			cpu_req.seg <= wishbone_pkg::DATA;
 			cpu_req.bte <= wishbone_pkg::LINEAR;
 			cpu_req.cti <= wishbone_pkg::CLASSIC;
-			cpu_req.dat <= imemreq.res[255:0];
 			cpu_req.cyc <= 1'b1;
 			cpu_req.stb <= 1'b1;
 			cpu_req.we <= imemreq.store;
@@ -957,6 +969,7 @@ else begin
 			cpu_req.sz <= wb_size_t'(imemreq.sz);
 			cpu_req.cache <= wb_cache_t'(imemreq.cache_type);
 		end
+//		else if (response_from_cache.ack || response_from_cache.err || response_from_cache.rty) begin
 		else begin
 			cpu_req.cmd <= CMD_NONE;
 			cpu_req.cyc <= 1'b0;
@@ -2311,59 +2324,56 @@ endtask
 
 task tDataAlign;
 input wb_cmd_request512_t req;
-input [4:0] bytcnt;
+input [7:0] bytcnt;
 output memory_arg_t resp;
 begin
-//	tAlignFaultDetect(req,resp.cause);
-//	resp.step <= req.step;
-  resp.cmt <= TRUE;
-	resp.tid <= req.tid;
-	resp.wr <= TRUE;
   case(req.cmd)
   CMD_LOAD:
   	begin
 			case(bytcnt)
-			5'd0:	resp.res <= 'h0;
-			5'd1:	begin resp.res <= {{120{datis[7]}},datis[7:0]}; end
-			5'd2:	begin resp.res <= {{112{datis[15]}},datis[15:0]}; end
-			5'd3:	begin resp.res <= {{104{datis[23]}},datis[23:0]}; end
-			5'd4:	begin resp.res <= {{96{datis[31]}},datis[31:0]}; end
-			5'd5:	begin resp.res <= {{88{datis[39]}},datis[39:0]}; end
-			5'd6:	begin resp.res <= {{80{datis[47]}},datis[47:0]}; end
-			5'd7:	begin resp.res <= {{72{datis[55]}},datis[55:0]}; end
-			5'd8:	begin resp.res <= {{64{datis[63]}},datis[63:0]}; end
-			5'd9:	begin resp.res <= {{56{datis[71]}},datis[71:0]}; end
-			5'd10:	begin resp.res <= {{48{datis[79]}},datis[79:0]}; end
-			5'd11:	begin resp.res <= {{40{datis[87]}},datis[87:0]}; end
-			5'd12:	begin resp.res <= {{32{datis[95]}},datis[95:0]}; end
-			5'd13:	begin resp.res <= {{24{datis[103]}},datis[103:0]}; end
-			5'd14:	begin resp.res <= {{16{datis[111]}},datis[111:0]}; end
-			5'd15:	begin resp.res <= {{ 8{datis[119]}},datis[119:0]}; end
-			5'd16:	begin resp.res <= datis[127:0]; end
-			default:	resp.res <= req.dat;
+			8'd0:	resp.res <= 'h0;
+			8'd1:	begin resp.res <= {{120{datis[7]}},datis[7:0]}; end
+			8'd2:	begin resp.res <= {{112{datis[15]}},datis[15:0]}; end
+			8'd3:	begin resp.res <= {{104{datis[23]}},datis[23:0]}; end
+			8'd4:	begin resp.res <= {{96{datis[31]}},datis[31:0]}; end
+			8'd5:	begin resp.res <= {{88{datis[39]}},datis[39:0]}; end
+			8'd6:	begin resp.res <= {{80{datis[47]}},datis[47:0]}; end
+			8'd7:	begin resp.res <= {{72{datis[55]}},datis[55:0]}; end
+			8'd8:	begin resp.res <= {{64{datis[63]}},datis[63:0]}; end
+			8'd9:	begin resp.res <= {{56{datis[71]}},datis[71:0]}; end
+			8'd10:	begin resp.res <= {{48{datis[79]}},datis[79:0]}; end
+			8'd11:	begin resp.res <= {{40{datis[87]}},datis[87:0]}; end
+			8'd12:	begin resp.res <= {{32{datis[95]}},datis[95:0]}; end
+			8'd13:	begin resp.res <= {{24{datis[103]}},datis[103:0]}; end
+			8'd14:	begin resp.res <= {{16{datis[111]}},datis[111:0]}; end
+			8'd15:	begin resp.res <= {{ 8{datis[119]}},datis[119:0]}; end
+			8'd16:	begin resp.res <= datis[127:0]; end
+			8'd64:	begin resp.res <= datis[511:0]; end
+			default:	resp.res <= datis[511:0];
 			endcase
 		end
   CMD_LOADZ:
   	begin
 			case(bytcnt)
-			5'd0:	resp.res <= 'h0;
-			5'd1:	begin resp.res <= {{120{1'b0}},datis[7:0]}; end
-			5'd2:	begin resp.res <= {{112{1'b0}},datis[15:0]}; end
-			5'd3:	begin resp.res <= {{104{1'b0}},datis[23:0]}; end
-			5'd4:	begin resp.res <= {{96{1'b0}},datis[31:0]}; end
-			5'd5:	begin resp.res <= {{88{1'b0}},datis[39:0]}; end
-			5'd6:	begin resp.res <= {{80{1'b0}},datis[47:0]}; end
-			5'd7:	begin resp.res <= {{72{1'b0}},datis[55:0]}; end
-			5'd8:	begin resp.res <= {{64{1'b0}},datis[63:0]}; end
-			5'd9:	begin resp.res <= {{56{1'b0}},datis[71:0]}; end
-			5'd10:	begin resp.res <= {{48{1'b0}},datis[79:0]}; end
-			5'd11:	begin resp.res <= {{40{1'b0}},datis[87:0]}; end
-			5'd12:	begin resp.res <= {{32{1'b0}},datis[95:0]}; end
-			5'd13:	begin resp.res <= {{24{1'b0}},datis[103:0]}; end
-			5'd14:	begin resp.res <= {{16{1'b0}},datis[111:0]}; end
-			5'd15:	begin resp.res <= {{ 8{1'b0}},datis[119:0]}; end
-			5'd16:	begin resp.res <= datis[127:0]; end
-			default:	resp.res <= req.dat;
+			8'd0:	resp.res <= 'h0;
+			8'd1:	begin resp.res <= {{120{1'b0}},datis[7:0]}; end
+			8'd2:	begin resp.res <= {{112{1'b0}},datis[15:0]}; end
+			8'd3:	begin resp.res <= {{104{1'b0}},datis[23:0]}; end
+			8'd4:	begin resp.res <= {{96{1'b0}},datis[31:0]}; end
+			8'd5:	begin resp.res <= {{88{1'b0}},datis[39:0]}; end
+			8'd6:	begin resp.res <= {{80{1'b0}},datis[47:0]}; end
+			8'd7:	begin resp.res <= {{72{1'b0}},datis[55:0]}; end
+			8'd8:	begin resp.res <= {{64{1'b0}},datis[63:0]}; end
+			8'd9:	begin resp.res <= {{56{1'b0}},datis[71:0]}; end
+			8'd10:	begin resp.res <= {{48{1'b0}},datis[79:0]}; end
+			8'd11:	begin resp.res <= {{40{1'b0}},datis[87:0]}; end
+			8'd12:	begin resp.res <= {{32{1'b0}},datis[95:0]}; end
+			8'd13:	begin resp.res <= {{24{1'b0}},datis[103:0]}; end
+			8'd14:	begin resp.res <= {{16{1'b0}},datis[111:0]}; end
+			8'd15:	begin resp.res <= {{ 8{1'b0}},datis[119:0]}; end
+			8'd16:	begin resp.res <= datis[127:0]; end
+			8'd64:	begin resp.res <= datis[511:0]; end
+			default:	resp.res <= datis[511:0];
 			endcase
 		end
   default:  ;
@@ -2577,7 +2587,7 @@ endmodule
 
 module biu_dati_align(dati, datis, amt);
 input [1023:0] dati;
-output reg [127:0] datis;
+output reg [511:0] datis;
 input [9:0] amt;
 
 reg [1023:0] shift0;

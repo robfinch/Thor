@@ -1,11 +1,12 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_eval_branch.sv
+//	Thor2023_vec_regfile.sv
+//
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -35,52 +36,59 @@
 //                                                                          
 // ============================================================================
 
-import Thor2023Pkg::*;
+module Thor2023_vec_regfile(clk, wr, sel, wa, i, ra0, ra1, ra2, o0, o1, o2);
+parameter WID=128;
+localparam SELWID = WID/8;
+input clk;
+input wr;
+input [SELWID-1:0] sel;
+input [5:0] wa;
+input [WID-1:0] i;
+input [5:0] ra0;
+input [5:0] ra1;
+input [5:0] ra2;
+output reg [WID-1:0] o0;
+output reg [WID-1:0] o1;
+output reg [WID-1:0] o2;
 
-module Thor2023_eval_branch(inst, fdm, a, b, takb);
-input instruction_t inst;
-input fdm;
-input value_t a;
-input value_t b;
-output reg takb;
+genvar g;
 
-wire [15:0] fco, dfco, fpco;
-wire nan;
-fpCompare96 u1 (.a(a), .b(b), .o(fpco), .nan(nan), .snan());
-DFPCompare96 u2 (.a(a), .b(b), .o(dfco));
-assign fco = fdm ? dfco : fpco;
+(* ram_style="distributed" *)
+reg [WID-1:0] regs [0:63];
+reg [WID-1:0] o01, o11, o21;
 
-always_comb
-if (inst[0])
-	case(inst.br.cnd)
-	EQ:	takb = a==b;
-	NE:	takb = a != b;
-	LT: takb = $signed(a) < $signed(b);
-	LE:	takb = $signed(a) <= $signed(b);
-	GE:	takb = $signed(a) >= $signed(b);
-	GT:	takb = $signed(a) >  $signed(b);
-	BC:	takb = ~a[b];
-	BS:	takb =  a[b];
-	BCI:	takb = ~a[b];
-	BSI:	takb =  a[b];
-	LO:	takb = a < b;
-	LS:	takb = a <= b;
-	HS:	takb = a >= b;
-	HI:	takb = a >  b;
-	RA:	takb = 1'b1;
-	SR:	takb = 1'b1;
-	endcase
-else
-	case(inst.br.cnd)
-	FEQ:	takb = fco[0];
-	FNE:	takb = fco[5];
-	FLT:	takb = fco[1];
-	FGE:	takb = fco[6];
-	FLE:	takb = fco[2];
-	FGT:	takb = fco[7];
-	FORD:	takb = fco[9];
-	FUN:	takb = fco[4];
-	default:	takb = 1'b1;
-	endcase
+generate begin : gRegsUpdate
+	for (g = 0; g < SELWID; g = g + 1) begin : gFor
+		always_ff @(posedge clk)
+			if (wr) 
+				regs[wa][g*8+7:g*8] <= i[g*8+7:g*8];
+	end
+end
+endgenerate
+
+generate begin : gRegsRead1
+	for (g = 0; g < SELWID; g = g + 1) begin : gFor
+		always_comb
+			o01[g*8+7:g*8] <= regs[ra0][g*8+7:g*8];
+		always_comb
+			o11[g*8+7:g*8] <= regs[ra1][g*8+7:g*8];
+		always_comb
+			o21[g*8+7:g*8] <= regs[ra2][g*8+7:g*8];
+	end
+end
+endgenerate
+
+generate begin : gRegsRead
+	for (g = 0; g < SELWID; g = g + 1) begin : gFor
+		always_comb
+			o0[g*8+7:g*8] <= wa == ra0 && sel[g] ? i[g*8+7:g*8] : o01[g*8+7:g*8];
+		always_comb
+			o1[g*8+7:g*8] <= wa == ra1 && sel[g] ? i[g*8+7:g*8] : o11[g*8+7:g*8];
+		always_comb
+			o2[g*8+7:g*8] <= wa == ra2 && sel[g] ? i[g*8+7:g*8] : o21[g*8+7:g*8];
+	end
+end
+endgenerate
 
 endmodule
+

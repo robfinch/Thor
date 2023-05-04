@@ -34,12 +34,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// 5638 LUTs / 2506 FFs / 18.5 BRAMs                                                                          
+// 3595 LUTs / 3106 FFs / 15 BRAMs   
 // ============================================================================
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_dcache(rst, clk, dce, snoop_adr, snoop_v, update_adr,
 	hit, hit_d1, hite, hito, hite_d1, hito_d1,

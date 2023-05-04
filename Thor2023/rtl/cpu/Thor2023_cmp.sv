@@ -35,23 +35,52 @@
 //                                                                          
 // ============================================================================
 
+import Thor2023Pkg::*;
+
 module Thor2023_cmp(a, b, o);
-input [95:0] a;
-input [95:0] b;
+parameter WID=96;
+input [WID-1:0] a;
+input [WID-1:0] b;
 output reg [31:0] o;
 
 wire [15:0] fcmpo;
 wire nan;
 
-fpCompare96 ufpc1
-(
-	.a(a),
-	.b(b),
-	.o(fcmpo),
-	.inf(),
-	.nan(nan),
-	.snan()
-);
+generate begin : gFPCmp
+	case(WID)
+	PRC32:
+		fpCompare32 ufpc1
+		(
+			.a(a),
+			.b(b),
+			.o(fcmpo),
+			.inf(),
+			.nan(nan),
+			.snan()
+		);
+	PRC64:
+		fpCompare64 ufpc1
+		(
+			.a(a),
+			.b(b),
+			.o(fcmpo),
+			.inf(),
+			.nan(nan),
+			.snan()
+		);
+	default:
+		fpCompare96 ufpc1
+		(
+			.a(a),
+			.b(b),
+			.o(fcmpo),
+			.inf(),
+			.nan(nan),
+			.snan()
+		);
+	endcase
+end
+endgenerate
 
 always_comb
 begin

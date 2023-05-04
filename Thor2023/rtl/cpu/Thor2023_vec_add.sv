@@ -1,11 +1,11 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_eval_branch.sv
+//	Thor2023_vec_add.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -37,50 +37,60 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_eval_branch(inst, fdm, a, b, takb);
-input instruction_t inst;
-input fdm;
-input value_t a;
-input value_t b;
-output reg takb;
+module Thor2023_vec_add(ir, Rt, a, b, o);
+parameter WID=512;
+input instruction_t ir;
+input regspec_t Rt;
+input [WID-1:0] a;
+input [WID-1:0] b;
+output reg [WID-1:0] o;
 
-wire [15:0] fco, dfco, fpco;
-wire nan;
-fpCompare96 u1 (.a(a), .b(b), .o(fpco), .nan(nan), .snan());
-DFPCompare96 u2 (.a(a), .b(b), .o(dfco));
-assign fco = fdm ? dfco : fpco;
+genvar g;
+
+reg [WID-1:0] s8, s16, s32, s64, s128;
+
+generate begin : gVecAdd8
+	for (g = 0; g < WID/8; g = g + 1)
+		always_comb
+			s8[g*8+7:g*8] <= Rt.sign ? -(a[g*8+7:g*8] + b[g*8+7:g*8]) : a[g*8+7:g*8] + b[g*8+7:g*8];
+end
+endgenerate
+
+generate begin : gVecAdd16
+	for (g = 0; g < WID/16; g = g + 1)
+		always_comb
+			s16[g*16+15:g*16] <= Rt.sign ? -(a[g*16+15:g*16] + b[g*16+15:g*16]) : a[g*16+15:g*16] + b[g*16+15:g*16];
+end
+endgenerate
+
+generate begin : gVecAdd32
+	for (g = 0; g < WID/32; g = g + 1)
+		always_comb
+			s32[g*32+31:g*32] <= Rt.sign ? -(a[g*32+31:g*32] + b[g*32+31:g*32]) : a[g*32+31:g*32] + b[g*32+31:g*32];
+end
+endgenerate
+
+generate begin : gVecAdd64
+	for (g = 0; g < WID/64; g = g + 1)
+		always_comb
+			s64[g*64+63:g*64] <= Rt.sign ? -(a[g*64+63:g*64] + b[g*64+63:g*64]) : a[g*64+63:g*64] + b[g*64+63:g*64];
+end
+endgenerate
+
+generate begin : gVecAdd128
+	for (g = 0; g < WID/128; g = g + 1)
+		always_comb
+			s128[g*128+127:g*128] <= Rt.sign ? -(a[g*128+127:g*128] + b[g*128+127:g*128]) : a[g*128+127:g*128] + b[g*128+127:g*128];
+end
+endgenerate
 
 always_comb
-if (inst[0])
-	case(inst.br.cnd)
-	EQ:	takb = a==b;
-	NE:	takb = a != b;
-	LT: takb = $signed(a) < $signed(b);
-	LE:	takb = $signed(a) <= $signed(b);
-	GE:	takb = $signed(a) >= $signed(b);
-	GT:	takb = $signed(a) >  $signed(b);
-	BC:	takb = ~a[b];
-	BS:	takb =  a[b];
-	BCI:	takb = ~a[b];
-	BSI:	takb =  a[b];
-	LO:	takb = a < b;
-	LS:	takb = a <= b;
-	HS:	takb = a >= b;
-	HI:	takb = a >  b;
-	RA:	takb = 1'b1;
-	SR:	takb = 1'b1;
-	endcase
-else
-	case(inst.br.cnd)
-	FEQ:	takb = fco[0];
-	FNE:	takb = fco[5];
-	FLT:	takb = fco[1];
-	FGE:	takb = fco[6];
-	FLE:	takb = fco[2];
-	FGT:	takb = fco[7];
-	FORD:	takb = fco[9];
-	FUN:	takb = fco[4];
-	default:	takb = 1'b1;
+	case(ir.any.sz)
+	PRC8:	o = s8;
+	PRC16:	o = s16;
+	PRC32:	o = s32;
+	PRC64:	o = s64;
+	default:	o = s128;
 	endcase
 
 endmodule

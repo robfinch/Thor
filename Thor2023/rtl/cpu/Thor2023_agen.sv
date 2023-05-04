@@ -67,8 +67,18 @@ always_comb
 	endcase
 
 always_comb
-	adr = b + (ir.ls.Sc ? c * sc : c) + imm;
-always_comb
-	nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
+case(ir.any.opcode)
+case OP_R2:	// JSR Rt,Ra,Rb
+	adr = a + (b * Sc);
+case OP_JSR:
+	adr = (a * Sc) + imm;
+default:
+	if (ir.ls.sz==PRCNDX)
+		adr = b + (ir.lsn.Sc ? c * sc : c) + imm;
+	else
+		adr = b + imm;
+	always_comb
+		nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
+endcase
 
 endmodule

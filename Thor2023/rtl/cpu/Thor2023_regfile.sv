@@ -33,172 +33,110 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
+// 4800 LUTs                                                                          
 // ============================================================================
 
+import Thor2023Pkg::*;
+
 module Thor2023_regfile(clk, wg, gwa, gi, wr, wa, i, gra, go, ra0, ra1, ra2, ra3,
-	o0, o1, o2, o3, asp, ssp, hsp, msp, pc, om);
+	o0, o1, o2, o3, asp, ssp, hsp, msp, sc, om);
+parameter SCREG = 53;
 input clk;
 input wg;
 input [3:0] gwa;
-input [511:0] gi;
+input quad_value_t gi;
 input wr;
 input [5:0] wa;
-input [95:0] i;
+input value_t i;
 input [3:0] gra;
-output reg [511:0] go;
+output quad_value_t go;
 input [5:0] ra0;
 input [5:0] ra1;
 input [5:0] ra2;
 input [5:0] ra3;
-output reg [95:0] o0;
-output reg [95:0] o1;
-output reg [95:0] o2;
-output reg [95:0] o3;
-input [95:0] asp;
-input [95:0] ssp;
-input [95:0] hsp;
-input [95:0] msp;
-input [95:0] pc;
+output value_t o0;
+output value_t o1;
+output value_t o2;
+output value_t o3;
+input value_t asp;
+input value_t ssp;
+input value_t hsp;
+input value_t msp;
+output value_t sc;
 input [1:0] om;
 
 parameter PCREG = 6'd53;
 parameter SPREG = 6'd63;
 
-typedef struct packed
-{
-	logic [2:0] column;
-	logic [3:0] group;
-} regadr_t;
+(* ram_style="distributed" *)
+value_t c0_regs [0:31];
+(* ram_style="distributed" *)
+value_t c1_regs [0:31];
+(* ram_style="distributed" *)
+value_t c2_regs [0:31];
+(* ram_style="distributed" *)
+value_t c3_regs [0:31];
 
-regadr_t [63:0] rga;
+reg [4:0] gwa1;
+integer nn;
+
 initial begin
-	rga[0] = { 3'd0, 4'd0};
-	rga[1] = { 3'd1, 4'd0};
-	rga[2] = { 3'd2, 4'd0};
-	rga[3] = { 3'd3, 4'd0};
-	rga[4] = { 3'd4, 4'd0};
-	rga[5] = { 3'd0, 4'd1};
-	rga[6] = { 3'd1, 4'd1};
-	rga[7] = { 3'd2, 4'd1};
-	rga[8] = { 3'd3, 4'd1};
-	rga[9] = { 3'd4, 4'd1};
-	rga[10] = { 3'd0, 4'd2};
-	rga[11] = { 3'd1, 4'd2};
-	rga[12] = { 3'd2, 4'd2};
-	rga[13] = { 3'd3, 4'd2};
-	rga[14] = { 3'd4, 4'd2};
-	rga[15] = { 3'd0, 4'd3};
-	rga[16] = { 3'd1, 4'd3};
-	rga[17] = { 3'd2, 4'd3};
-	rga[18] = { 3'd3, 4'd3};
-	rga[19] = { 3'd4, 4'd3};
-	rga[20] = { 3'd0, 4'd4};
-	rga[21] = { 3'd1, 4'd4};
-	rga[22] = { 3'd2, 4'd4};
-	rga[23] = { 3'd3, 4'd4};
-	rga[24] = { 3'd4, 4'd4};
-	rga[25] = { 3'd0, 4'd5};
-	rga[26] = { 3'd1, 4'd5};
-	rga[27] = { 3'd2, 4'd5};
-	rga[28] = { 3'd3, 4'd5};
-	rga[29] = { 3'd4, 4'd5};
-	rga[30] = { 3'd0, 4'd6};
-	rga[31] = { 3'd1, 4'd6};
-	rga[32] = { 3'd2, 4'd6};
-	rga[33] = { 3'd3, 4'd6};
-	rga[34] = { 3'd4, 4'd6};
-	rga[35] = { 3'd0, 4'd7};
-	rga[36] = { 3'd1, 4'd7};
-	rga[37] = { 3'd2, 4'd7};
-	rga[38] = { 3'd3, 4'd7};
-	rga[39] = { 3'd4, 4'd7};
-	rga[40] = { 3'd0, 4'd8};
-	rga[41] = { 3'd1, 4'd8};
-	rga[42] = { 3'd2, 4'd8};
-	rga[43] = { 3'd3, 4'd8};
-	rga[44] = { 3'd4, 4'd8};
-	rga[45] = { 3'd0, 4'd9};
-	rga[46] = { 3'd1, 4'd9};
-	rga[47] = { 3'd2, 4'd9};
-	rga[48] = { 3'd3, 4'd9};
-	rga[49] = { 3'd4, 4'd9};
-	rga[50] = { 3'd0, 4'd10};
-	rga[51] = { 3'd1, 4'd10};
-	rga[52] = { 3'd2, 4'd10};
-	rga[53] = { 3'd3, 4'd10};
-	rga[54] = { 3'd4, 4'd10};
-	rga[55] = { 3'd0, 4'd11};
-	rga[56] = { 3'd1, 4'd11};
-	rga[57] = { 3'd2, 4'd11};
-	rga[58] = { 3'd3, 4'd11};
-	rga[59] = { 3'd4, 4'd11};
-	rga[60] = { 3'd0, 4'd12};
-	rga[61] = { 3'd1, 4'd12};
-	rga[62] = { 3'd2, 4'd12};
-	rga[63] = { 3'd3, 4'd12};
+	for (nn = 0; nn < 32; nn = nn + 1) begin
+		c0_regs[nn] = 'd0;
+		c1_regs[nn] = 'd0;
+		c2_regs[nn] = 'd0;
+		c3_regs[nn] = 'd0;
+	end
 end
-
-(* ram_style="distributed" *)
-reg [95:0] c0_regs [0:15];
-(* ram_style="distributed" *)
-reg [95:0] c1_regs [0:15];
-(* ram_style="distributed" *)
-reg [95:0] c2_regs [0:15];
-(* ram_style="distributed" *)
-reg [95:0] c3_regs [0:15];
-(* ram_style="distributed" *)
-reg [95:0] c4_regs [0:15];
-
-reg [3:0] gwa1;
 
 always_comb
 	if (wg)
-		gwa1 <= gwa;
+		gwa1 <= {1'b0,gwa};
 	else if (wr) 
-		gwa1 <= rga[wa].group;
+		gwa1 <= {1'b0,wa[5:2]};
 	else
-		gwa1 <= 4'd15;
+		gwa1 <= 5'd15;
 
 always_ff @(posedge clk)
 begin
 	if (wg)	begin
-		c0_regs[gwa1] <= gi[ 95:  0];
-		c1_regs[gwa1] <= gi[191: 96];
-		c2_regs[gwa1] <= gi[287:192];
-		c3_regs[gwa1] <= gi[383:288];
-		c4_regs[gwa1] <= gi[479:384];
+		c0_regs[gwa1] <= gi[$bits(value_t)*1-1:  0];
+		c1_regs[gwa1] <= gi[$bits(value_t)*2-1:$bits(value_t)*1];
+		c2_regs[gwa1] <= gi[$bits(value_t)*3-1:$bits(value_t)*2];
+		c3_regs[gwa1] <= gi[$bits(value_t)*4-1:$bits(value_t)*3];
 	end	
 
 	if (wr) 
-		case(rga[wa].column)
-		3'd0:	c0_regs[gwa1] <= i;
-		3'd1:	c1_regs[gwa1] <= i;
-		3'd2:	c2_regs[gwa1] <= i;
-		3'd3:	c3_regs[gwa1] <= i;
-		3'd4:	c4_regs[gwa1] <= i;
+		case(wa[1:0])
+		2'd0:	c0_regs[gwa1] <= i;
+		2'd1:	c1_regs[gwa1] <= i;
+		2'd2:	c2_regs[gwa1] <= i;
+		2'd3:	c3_regs[gwa1] <= i;
 		default:	;
 		endcase
+		
+	if (wr && wa==SCREG)
+		sc <= i;
 end
 
 always_comb
-	go <= {32'h0,c4_regs[gra],c3_regs[gra],c2_regs[gra],c1_regs[gra],c0_regs[gra]};
+	go <= {c3_regs[gra],c2_regs[gra],c1_regs[gra],c0_regs[gra]};
 
 always_comb
 begin
-	tGetReg(ra0,o0);
-	tGetReg(ra1,o1);
-	tGetReg(ra2,o2);
-	tGetReg(ra3,o3);
+	tGetReg({1'b0,ra0},o0);
+	tGetReg({1'b0,ra1},o1);
+	tGetReg({1'b0,ra2},o2);
+	tGetReg({1'b0,ra3},o3);
 end
 
 task tGetReg;
-input [5:0] ra;
-output [95:0] o;
+input [6:0] ra;
+output value_t o;
 begin
-	case(ra)
+	case(ra[5:0])
 	6'd0:		o <= 'd0;
-	PCREG: 	o <= pc;
 	wa:			o <= i;
 	SPREG:
 		case(om)
@@ -208,12 +146,11 @@ begin
 		2'd3:	o <= msp;
 		endcase
 	default:
-		case(rga[ra].column)
-		3'd0:	o <= c0_regs[rga[ra].group];
-		3'd1:	o <= c1_regs[rga[ra].group];
-		3'd2:	o <= c2_regs[rga[ra].group];
-		3'd3:	o <= c3_regs[rga[ra].group];
-		3'd4:	o <= c4_regs[rga[ra].group];
+		case(ra[1:0])
+		3'd0:	o <= c0_regs[ra[6:2]];
+		3'd1:	o <= c1_regs[ra[6:2]];
+		3'd2:	o <= c2_regs[ra[6:2]];
+		3'd3:	o <= c3_regs[ra[6:2]];
 		default:	;
 		endcase
 	endcase

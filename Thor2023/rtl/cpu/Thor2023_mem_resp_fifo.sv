@@ -56,6 +56,8 @@ output reg [127:0] rollback_bitmaps [0:NTHREADS-1];
 
 integer n,n2;
 
+wire rd_busy, wr_busy;
+
    // xpm_fifo_sync: Synchronous FIFO
    // Xilinx Parameterized Macro, version 2020.2
 
@@ -120,7 +122,7 @@ integer n,n2;
       .rd_data_count(), // RD_DATA_COUNT_WIDTH-bit output: Read Data Count: This bus indicates the
                                      // number of words read from the FIFO.
 
-      .rd_rst_busy(),     // 1-bit output: Read Reset Busy: Active-High indicator that the FIFO read
+      .rd_rst_busy(rd_busy),     // 1-bit output: Read Reset Busy: Active-High indicator that the FIFO read
                                      // domain is currently in a reset state.
 
       .sbiterr(),             // 1-bit output: Single Bit Error: Indicates that the ECC decoder detected
@@ -136,7 +138,7 @@ integer n,n2;
       .wr_data_count(cnt), 					// WR_DATA_COUNT_WIDTH-bit output: Write Data Count: This bus indicates
                                      // the number of words written into the FIFO.
 
-      .wr_rst_busy(),     					// 1-bit output: Write Reset Busy: Active-High indicator that the FIFO
+      .wr_rst_busy(wr_busy),     					// 1-bit output: Write Reset Busy: Active-High indicator that the FIFO
                                      // write domain is currently in a reset state.
 
       .din(di),           // WRITE_DATA_WIDTH-bit input: Write Data: The input data bus used when
@@ -148,7 +150,7 @@ integer n,n2;
       .injectsbiterr(1'b0), // 1-bit input: Single Bit Error Injection: Injects a single bit error if
                                      // the ECC feature is used on block RAMs or UltraRAM macros.
 
-      .rd_en(rd),                    // 1-bit input: Read Enable: If the FIFO is not empty, asserting this
+      .rd_en(rd & ~rd_busy),                    // 1-bit input: Read Enable: If the FIFO is not empty, asserting this
                                      // signal causes data (on dout) to be read from the FIFO. Must be held
                                      // active-low when rd_rst_busy is active high.
 
@@ -162,7 +164,7 @@ integer n,n2;
       .wr_clk(clk),               	 // 1-bit input: Write clock: Used for write operation. wr_clk must be a
                                      // free running clock.
 
-      .wr_en(wr)                  	 // 1-bit input: Write Enable: If the FIFO is not full, asserting this
+      .wr_en(wr & ~wr_busy)                  	 // 1-bit input: Write Enable: If the FIFO is not full, asserting this
                                      // signal causes data (on din) to be written to the FIFO Must be held
                                      // active-low when rst or wr_rst_busy or rd_rst_busy is active high
 

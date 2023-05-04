@@ -38,6 +38,7 @@
 
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_cache_hit(clk, adr, ndx, tag, valid, hit, rway, cv);
 parameter LINES=256;
@@ -47,7 +48,7 @@ parameter TAGBIT=14;
 input clk;
 input Thor2023Pkg::address_t adr;
 input [$clog2(LINES)-1:0] ndx;
-input cache_tag_ex_t [3:0] tag;
+input cache_tag_t [3:0] tag;
 input [LINES-1:0] valid [0:WAYS-1];
 output reg hit;
 output [1:0] rway;

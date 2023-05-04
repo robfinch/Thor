@@ -45,8 +45,9 @@ module Thor2023_stlb(rst_i, clk_i, rdy_o,	rwx_o, tlbmiss_irq_o,
 	wbn_req_i, wbn_resp_o, wb_req_o, wb_resp_i, snoop_v, snoop_adr, snoop_cid);
 parameter ASSOC = 6;	// MAX assoc = 15
 parameter LVL1_ASSOC = 1;
-parameter CHANNELS = 5;
+parameter CHANNELS = 4;
 parameter RSTIP = 32'hFFFD0000;
+parameter PAGE_SIZE = 16384;
 localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 localparam LOG_ENTRIES = $clog2(ENTRIES);
 
@@ -90,23 +91,13 @@ output reg [3:0] snoop_cid;
 parameter TRUE = 1'b1;
 parameter FALSE = 1'b0;
 
-typedef enum logic [3:0] {
-	ST_RST = 4'd0,
-	ST_RUN = 4'd1,
-	ST_INVALL1 = 4'd7,
-	ST_INVALL2 = 4'd8,
-	ST_INVALL3 = 4'd9,
-	ST_INVALL4 = 4'd10,
-	ST_UPD1 = 4'd11,
-	ST_UPD2 = 4'd12,
-	ST_UPD3 = 4'd13
-} tlb_state_t;
 tlb_state_t state = ST_RST;
 
 integer n;
 integer n1,j1;
 integer n2;
-integer n3, n4, n5, n6, n7;
+integer n3, n4, n5, n6, n7, n8, n9, n10;
+genvar g;
 
 reg tlbmiss_irq;
 wire irq_en;
@@ -125,9 +116,9 @@ reg wr_tlb;
 STLBE tlbdat_i;
 reg [31:0] ctrl_reg;
 
-address_t last_ladr, last_iadr;
-address_t adrd;
-address_t tlbmiss_adr;
+Thor2023Pkg::address_t last_ladr, last_iadr;
+Thor2023Pkg::address_t adrd;
+Thor2023Pkg::address_t tlbmiss_adr;
 reg invall;
 reg [LOG_ENTRIES-1:0] inv_count;
 
@@ -149,9 +140,9 @@ STLBE tentryo2 [0:ASSOC-1];
 reg xlaten_i;
 reg xlatend;
 reg we_i;
-address_t adr_i;
+Thor2023Pkg::address_t adr_i;
 reg [LOG_ENTRIES-1:0] adr_i_slice [0:ASSOC-1];
-address_t iadrd;
+Thor2023Pkg::address_t iadrd;
 reg next_i;
 STLBE [ASSOC-1:0] tlbdato;
 wire clk_g = clk_i;
@@ -169,6 +160,8 @@ reg [LOG_ENTRIES-1:0] rcount;
 SPTE pte_reg;
 SVPN vpn_reg;
 reg [31:0] ctrl_req;
+reg [3:0] selected_channel;
+reg [CHANNELS-1:0] ch_active;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -362,6 +355,7 @@ reg [CHANNELS-1:0] rr_active;
 reg [CHANNELS-1:0] rr_req;
 wire [CHANNELS-1:0] rr_sel;
 wire ne_ack;
+wire [CHANNELS-1:0] ne_cyc;
 
 edge_det uedack
 (
@@ -374,24 +368,52 @@ edge_det uedack
 	.ee()
 );
 
+generate begin : gNeCyc
+	for (g = 0; g < CHANNELS; g = g + 1)
+		edge_det uedcyc (
+			.rst(rst_i),
+			.clk(clk_i),
+			.ce(1'b1),
+			.i(wbn_req_i[g].cyc),
+			.pe(),
+			.ne(ne_cyc[g]),
+			.ee()
+		);
+end
+endgenerate
+
+reg [5:0] arbit_ctr;
+always_ff @(posedge clk_i)
+if (rst_i)
+	arbit_ctr <= 'd0;
+else
+	arbit_ctr <= arbit_ctr + 2'd1;
+
 // Arbit when there is no request pending or at the end of a request.
+//always_comb
+//	rr_ce = ne_ack| |(rr_req & ~rr_active);
 always_comb
-	rr_ce = ne_ack| ~|(rr_req & ~rr_active);
-always_comb
-	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1)
+	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1) begin
 //		if (n5==CHANNELS-1)
 //			rr_req[n5] = wbm_req.cyc;
 //		else
 			rr_req[n5] = wbn_req_i[n5].cyc;
-always_comb
+		rr_ce = arbit_ctr;//ne_ack | ne_cyc[n5] | (~|rr_req & arbit_ctr[0] | ~req.cyc);
+	end
+always_comb// @(posedge clk_i)
 begin
 	req = 'd0;
-	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1)
-		if (rr_sel[n5])	begin // should be one hot
-//			if (n5==CHANNELS-1)
+	selected_channel = 'd0;
+	for (n8 = 0; n8 < CHANNELS; n8 = n8 + 1)
+		if (rr_sel[n8])	begin // should be one hot
+//			if (n8==CHANNELS-1)
 //				req = wbm_req;
-//			else
-				req = wbn_req_i[n5];
+//			els
+				if (arbit_ctr[3:0] < 4'd12)
+					req = wbn_req_i[arbit_ctr[5:4]];
+				else
+					req = 'd0;
+				selected_channel = arbit_ctr[5:4];
 		end
 end
 
@@ -410,12 +432,36 @@ begin
 	wbm_resp.adr = wb_req_o.padr;
 end
 
+reg [3:0] used_tid [0:CHANNELS-1];
+reg [3:0] resp_ch;
+
+always_ff @(posedge clk_i)
+	for (n10 = 0; n10 < CHANNELS; n10 = n10 + 1)
+		if (wbn_req_i[n10].cyc)
+			used_tid[n10] <= wbn_req_i[n10].tid[7:4];
+
+function [3:0] fnRespch;
+input [7:0] tid;
+integer n;
+begin
+	fnRespch = CHANNELS;
+	for (n = 0; n < CHANNELS; n = n + 1)
+		if (tid[7:4]==used_tid[n])
+			fnRespch = n;
+end
+endfunction
+
+// Send a retry back as the response for non-selected channels.
 always_comb
 begin
 	wbn_resp_o = 'd0;
-	wbn_resp_o[wb_resp_i.tid[7:4]] = wb_resp_i;
+	for (n9 = 0; n9 < CHANNELS; n9 = n9 + 1) begin
+		wbn_resp_o[n9].rty = (n9!=selected_channel);
+		ch_active[n9] = wbn_req_i[n9].cyc;
+	end
+	wbn_resp_o[fnRespch(wb_resp_i.tid)] = wb_resp_i;
 	if (wbm_resp.ack)
-		wbn_resp_o[wbm_resp.tid[7:4]] = wbm_resp;
+		wbn_resp_o[fnRespch(wbm_resp.tid)] = wbm_resp;
 //	wbn_resp_o[wb_resp_i.tid[7:4]].adr = wb_req_o.padr;
 end
 
@@ -436,7 +482,7 @@ always_ff @(posedge clk_i)
 if (rst_i)
 	rr_active <= 'd0;
 else begin
-	rr_active <= rr_active | rr_sel;
+	rr_active <= (rr_active | rr_sel);
 	if (wb_resp_i.ack|wb_resp_i.rty|wb_resp_i.err)
 		rr_active[wb_resp_i.tid[7:4]] <= 1'b0;
 	if (wbm_resp.ack)
@@ -449,7 +495,8 @@ wire non_cacheable =
 	cache_type==NON_CACHEABLE
 	;
 always_comb
-	snoop_v = (wb_req_o.we|non_cacheable) & wb_req_o.cyc;
+//	snoop_v = (wb_req_o.we|non_cacheable) & wb_req_o.cyc; // Why non-cacheable????
+	snoop_v = wb_req_o.we & wb_req_o.cyc;
 always_comb
 	snoop_adr = wb_req_o.padr;
 always_comb
@@ -463,7 +510,7 @@ urr1
 (
 	.rst(rst_i),
 	.clk(clk_i),
-	.ce(rr_ce),
+	.ce(1'b1),
 	.req(rr_req),
 	.lock('d0),
 	.sel(rr_sel),
@@ -555,7 +602,7 @@ change_det #(.WID($bits(Thor2023Pkg::address_t)-LOG_PAGE_SIZE)) ucd1 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.ce(1'b1),
-	.i(adr_i[$bits(address_t)-1:LOG_PAGE_SIZE]),
+	.i(adr_i[$bits(Thor2023Pkg::address_t)-1:LOG_PAGE_SIZE]),
 	.cd(cd_adr)
 );
 
@@ -618,6 +665,7 @@ ST_RST:
 				tlbdat_rst <= 'd0;
 				tlbdat_rst.count <= 6'd1;
 				//tlbdat_rst.pte.g <= 1'b1;
+				tlbdat_rst.pte.v <= 1'b1;
 				tlbdat_rst.pte.m <= 1'b1;
 				tlbdat_rst.pte.g <= 1'b1;
 				tlbdat_rst.pte.rwx <= 3'd7;
@@ -760,12 +808,11 @@ end
 
 always_comb
 for (n7 = 0; n7 < ASSOC; n7 = n7 + 1)
-	if (n < ASSOC-LVL1_ASSOC-1 || n==ASSOC-1)
+	if (n7 < ASSOC-LVL1_ASSOC-1 || n7==ASSOC-1)
 		adr_i_slice[n7] = adr_i[LOG_PAGE_SIZE+LOG_ENTRIES-1:LOG_PAGE_SIZE];
 	else
-		adr_i_slice[n7] = adr_i[$bits(address_t)-1:LOG_ENTRIES+LOG_PAGE_SIZE];
+		adr_i_slice[n7] = adr_i[$bits(Thor2023Pkg::address_t)-1:LOG_ENTRIES+LOG_PAGE_SIZE];
 	
-genvar g;
 generate begin : gTlbRAM
 for (g = 0; g < ASSOC; g = g + 1) begin : gLvls
 	Thor2023_TLBRam
@@ -835,6 +882,26 @@ for (nn = 0; nn < $bits(Thor2023Pkg::address_t); nn = nn + 1)
 end
 endfunction
 
+// Compute shift for low order bits that do not need to be compared.
+// Applied to incoming virtual address.
+function [7:0] fnShamt1;
+input [4:0] L;
+integer nn;
+begin
+	fnShamt1 = LOG_PAGE_SIZE + LOG_ENTRIES*(L+1);
+end
+endfunction
+
+// Compute shift for low order bits that do not need to be compared.
+// Applied to the virtual page number.
+function [7:0] fnShamt2;
+input [4:0] L;
+integer nn;
+begin
+	fnShamt2 = LOG_ENTRIES*L;
+end
+endfunction
+
 // Mask for virtual page number that must match incoming address's page number.
 function Thor2023Pkg::address_t fnVmask2;
 input [4:0] L;
@@ -845,6 +912,18 @@ begin
 			fnVmask2 = 1'b0;
 		else
 			fnVmask2 = 1'b1;
+end
+endfunction
+
+function fnCompareVPN2Address;
+input [77:0] vpn;
+input [$bits(Thor2023Pkg::address_t)-1:0] address;
+input [4:0] L;
+begin
+	fnCompareVPN2Address = 
+		(vpn >> fnShamt2(L)) ==
+		(address >> fnShamt1(L))
+		;
 end
 endfunction
 
@@ -868,7 +947,7 @@ if (rst_i) begin
 	wb_req.asid <= 'd0;
 	wb_req.vadr <= rstip;
  	wb_req.padr[LOG_PAGE_SIZE-1:0] <= rstip[LOG_PAGE_SIZE-1:0];
-  wb_req.padr[$bits(address_t)-1:LOG_PAGE_SIZE] <= rstip[$bits(address_t)-1:LOG_PAGE_SIZE];
+  wb_req.padr[$bits(Thor2023Pkg::address_t)-1:LOG_PAGE_SIZE] <= rstip[$bits(Thor2023Pkg::address_t)-1:LOG_PAGE_SIZE];
   wb_req.data1 <= 'd0;
   wb_req.data2 <= 'd0;
   wb_req.csr <= 'd0;
@@ -891,7 +970,7 @@ else begin
 	wb_req.tid <= req1.tid;
 	wb_req.seg <= req1.seg;
 	wb_req.cti <= req1.cti;
-	wb_req.cyc <= req1.cyc;
+	wb_req.cyc <= 1'b0;
 	wb_req.stb <= req1.stb;
 	wb_req.we <= req1.we;
 	wb_req.sel <= req1.sel;
@@ -916,7 +995,8 @@ else begin
   else begin
 		if (!xlatend) begin
 	    tlbmiss_irq <= FALSE;
-	  	wb_req.padr <= {16'h0000,iadrd[$bits(address_t)-1:0]};
+			wb_req.cyc <= req1.cyc;
+	  	wb_req.padr <= {16'h0000,iadrd[$bits(Thor2023Pkg::address_t)-1:0]};
 	    rwx <= 4'hF;
 		end
 		else begin
@@ -932,13 +1012,17 @@ else begin
 				if (tentryo[n].count==master_count) begin
 					if (tentryo[n].vpn.asid[11:0]==asidd[11:0] || tentryo[n].pte.g) begin
 						if (tentryo[n].pte.v) begin
-							if (tentryo[n].vpn.vpn & fnVmask2(tentryo[n].pte.lvl) ==
-								{{2{&iadrd[$bits(address_t)-1:$bits(address_t)-4]}},iadrd} & fnVmask1(tentryo[n].pte.lvl)) begin
+							if (fnCompareVPN2Address(
+								tentryo[n].vpn.vpn,
+								{{2{&iadrd[$bits(Thor2023Pkg::address_t)-1:$bits(Thor2023Pkg::address_t)-4]}},iadrd},
+								tentryo[n].pte.lvl
+								)) begin
 								rwx <= tentryo[n].pte.rwx[omd];
 								cache <= tentryo[n].pte.cache;
 								tlbmiss_irq <= FALSE;
 							  rgn <= tentryo[n].pte.rgn;
 								hit <= n;
+								wb_req.cyc <= req1.cyc;
 								wb_req.padr <= (iadrd & fnAmask(tentryo[n].pte.lvl)) |
 											  				({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.lvl));
 							end

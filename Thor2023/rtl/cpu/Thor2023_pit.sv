@@ -137,7 +137,7 @@ localparam CFG_HEADER_TYPE = 8'h00;			// 00 = a general device
 
 parameter MSIX = 1'b0;
 
-integer n;
+integer n,n1;
 wire irq;
 wire cs_pit;
 wire [63:0] cfg_out;
@@ -264,46 +264,46 @@ end
 always_ff @(posedge clk_i)
 if (rst_i) begin
 	ie <= 'd0;
-	for (n = 0; n < NTIMER; n = n + 1) begin
-		maxcount[n] <= 'd0;
-		maxcounth[n] <= 'd0;
-		count[n] <= 'd0;
-		ont[n] <= 'd0;
-		onth[n] <= 'd0;
-		igate[n] <= 1'b0;
-		ld[n] <= 1'b0;
-		ce[n] <= 1'b0;
-		ar[n] <= 1'b1;
-		ge[n] <= 1'b0;
-		ldh[n] <= 1'b0;
-		ceh[n] <= 1'b0;
-		arh[n] <= 1'b1;
-		geh[n] <= 1'b0;
-		out[n] <= 1'b0;
-		irqf[n] <= 1'b0;
+	for (n1 = 0; n1 < NTIMER; n1 = n1 + 1) begin
+		maxcount[n1] <= 'd0;
+		maxcounth[n1] <= 'd0;
+		count[n1] <= 'd0;
+		ont[n1] <= 'd0;
+		onth[n1] <= 'd0;
+		igate[n1] <= 1'b0;
+		ld[n1] <= 1'b0;
+		ce[n1] <= 1'b0;
+		ar[n1] <= 1'b1;
+		ge[n1] <= 1'b0;
+		ldh[n1] <= 1'b0;
+		ceh[n1] <= 1'b0;
+		arh[n1] <= 1'b1;
+		geh[n1] <= 1'b0;
+		out[n1] <= 1'b0;
+		irqf[n1] <= 1'b0;
 	end	
 end
 else begin
-	for (n = 0; n < NTIMER; n = n + 1) begin
-		ld[n] <= 1'b0;
-		if (cs_io && we_i && adr_i[11:5]==n)
+	for (n1 = 0; n1 < NTIMER; n1 = n1 + 1) begin
+		ld[n1] <= 1'b0;
+		if (cs_io && we_i && adr_i[11:5]==n1)
 		case(adr_i[4:3])
-		2'd1:	maxcounth[n] <= dat_i;
-		2'd2:	onth[n] <= dat_i;
+		2'd1:	maxcounth[n1] <= dat_i;
+		2'd2:	onth[n1] <= dat_i;
 		2'd3:	begin
-						ldh[n] <= dat_i[0];
-						ceh[n] <= dat_i[1];
-						arh[n] <= dat_i[2];
-						xch[n] <= dat_i[3];
-						geh[n] <= dat_i[4];
+						ldh[n1] <= dat_i[0];
+						ceh[n1] <= dat_i[1];
+						arh[n1] <= dat_i[2];
+						xch[n1] <= dat_i[3];
+						geh[n1] <= dat_i[4];
 						if (dat_i[7]) begin
-							ld[n] <= dat_i[0];
-							ce[n] <= dat_i[1];
-							ar[n] <= dat_i[2];
-							xc[n] <= dat_i[3];
-							ge[n] <= dat_i[4];
-							maxcount[n] <= maxcounth[n];
-							ont[n] <= onth[n];
+							ld[n1] <= dat_i[0];
+							ce[n1] <= dat_i[1];
+							ar[n1] <= dat_i[2];
+							xc[n1] <= dat_i[3];
+							ge[n1] <= dat_i[4];
+							maxcount[n1] <= maxcounth[n1];
+							ont[n1] <= onth[n1];
 						end
 					end
 		default:	;
@@ -314,24 +314,24 @@ else begin
 		// which timers underflowed, then write back the value to the underflow
 		// register.
 		if (cs_io && we_i && adr_i[11:3]==9'h100) begin
-			if (dat_i[n]) begin
-				ie[n] <= 1'b0;
-				underflow[n] <= 1'b0;
-				irqf[n] <= 1'b0;
+			if (dat_i[n1]) begin
+				ie[n1] <= 1'b0;
+				underflow[n1] <= 1'b0;
+				irqf[n1] <= 1'b0;
 			end
 		end
 		// The timer synchronization register indicates which timer's registers to
 		// update. All timers may have their registers updated synchronously.
 		if (cs_io && we_i && adr_i[11:3]==9'h101)
-			if (dat_i[n]) begin
-				ld[n] <= ldh[n];
-				ce[n] <= ceh[n];
-				ar[n] <= arh[n];
-				xc[n] <= xch[n];
-				ge[n] <= geh[n];
-				ldh[n] <= 1'b0;
-				maxcount[n] <= maxcounth[n];
-				ont[n] <= onth[n];
+			if (dat_i[n1]) begin
+				ld[n1] <= ldh[n1];
+				ce[n1] <= ceh[n1];
+				ar[n1] <= arh[n1];
+				xc[n1] <= xch[n1];
+				ge[n1] <= geh[n1];
+				ldh[n1] <= 1'b0;
+				maxcount[n1] <= maxcounth[n1];
+				ont[n1] <= onth[n1];
 			end
 		if (cs_io & we_i)
 			case(adr_i[11:3])
@@ -355,12 +355,12 @@ else begin
 			9'h106:	dat_o <= 'd0;
 			9'h107:	dat_o <= 'd0;
 			default:
-				if (adr_i[11:5]==n)
+				if (adr_i[11:5]==n1)
 					case(adr_i[4:3])
-					2'd0:	dat_o <= count[n];
-					2'd1:	dat_o <= maxcount[n];
-					2'd2:	dat_o <= ont[n];
-					2'd3:	dat_o <= {56'd0,3'b0,ge[n],xc[n],ar[n],ce[n],1'b0};
+					2'd0:	dat_o <= count[n1];
+					2'd1:	dat_o <= maxcount[n1];
+					2'd2:	dat_o <= ont[n1];
+					2'd3:	dat_o <= {56'd0,3'b0,ge[n1],xc[n1],ar[n1],ce[n1],1'b0};
 					endcase
 				else
 					dat_o <= 'd0;
@@ -369,24 +369,24 @@ else begin
 		else
 			dat_o <= 'd0;
 		
-		if (ld[n]) begin
-			count[n] <= maxcount[n];
+		if (ld[n1]) begin
+			count[n1] <= maxcount[n1];
 		end
-		else if ((xc[n] ? pulse[n] & ce[n] : ce[n]) & (ge[n] ? igate[n] & gate[n] : 1'b1)) begin
-			count[n] <= count[n] - 2'd1;
-			if (count[n]==ont[n]) begin
-				out[n] <= 1'b1;
+		else if ((xc[n1] ? pulse[n1] & ce[n1] : ce[n1]) & (ge[n1] ? igate[n1] & gate[n1] : 1'b1)) begin
+			count[n1] <= count[n1] - 2'd1;
+			if (count[n1]==ont[n1]) begin
+				out[n1] <= 1'b1;
 			end
-			else if (count[n]=='d0) begin
-				underflow[n] <= 1'b1;
-				if (ie[n])
-					irqf[n] <= 1'b1;
-				out[n] <= 1'b0;
-				if (ar[n]) begin
-					count[n] <= maxcount[n];
+			else if (count[n1]=='d0) begin
+				underflow[n1] <= 1'b1;
+				if (ie[n1])
+					irqf[n1] <= 1'b1;
+				out[n1] <= 1'b0;
+				if (ar[n1]) begin
+					count[n1] <= maxcount[n1];
 				end
 				else begin
-					ce[n] <= 1'b0;
+					ce[n1] <= 1'b0;
 				end
 			end
 		end

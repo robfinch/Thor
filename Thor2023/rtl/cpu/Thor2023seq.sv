@@ -38,12 +38,16 @@
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
 import wishbone_pkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023seq(coreno_i, rst_i, clk_i, bok_i, wbm_req, wbm_resp, rb_i,
 	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp,
 	snoop_v, snoop_adr, snoop_cid);
+parameter CID = 6'd1;
 parameter VWID=128;
-input [95:0] coreno_i;
+parameter PCREG = 53;
+parameter SCREG = 53;
+input value_t coreno_i;
 input rst_i;
 input clk_i;
 input bok_i;
@@ -77,16 +81,18 @@ typedef enum logic [3:0] {
 } state_t;
 state_t state;
 
+Thor2023Pkg::asid_t pc_asid;
+Thor2023Pkg::asid_t data_asid;
 address_t pc, opc, pc_o;
-address_t asp, ssp, hsp, msp;		// stack pointers
+value_t asp, ssp, hsp, msp;		// stack pointers
 wire ihit;
 wire ic_valid;
-ICacheLine ic_line_lo, ic_line_hi;
-reg [ICacheLineWidth*2-1:0] ic_data;
+Thor2023_cache_pkg::ICacheLine ic_line_lo, ic_line_hi;
+reg [Thor2023_cache_pkg::ICacheLineWidth*2-1:0] ic_data;
 
-status_reg_t [7:0] sr_stack;
 status_reg_t sr;
-operating_mode_t omode = sr.om;
+status_reg_t [15:0] sr_stack;
+operating_mode_t omode;
 wire mprv = sr.mprv;
 wire AppMode = omode==OM_APP;
 wire MAppMode = mprv ? sr_stack[0].om==OM_APP : sr.om==OM_APP;
@@ -102,31 +108,46 @@ wire vda_o;
 wire sr_o;
 wire cr_o;
 instruction_t ir;
+vector_instruction_t vir;
 postfix_t postfix1;
 postfix_t postfix2;
 postfix_t postfix3;
+postfix_t postfix4;
+postfix_t vpostfix1;
+postfix_t vpostfix2;
+postfix_t vpostfix3;
+postfix_t vpostfix4;
 wire [31:0] cmpo;
 wire [VWID-1:0] vcmpo;
 address_t ea, nea;
 reg [7:0] tid;
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // CSRs
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 reg pe = 1'b0;
-reg [7:0] asid;
+Thor2023Pkg::asid_t asid;
 reg dce;
-reg [95:0] keys2 [0:1];
+value_t keys2 [0:1];
 reg [23:0] keys [0:7];
 always_comb
 begin
-	keys[0] = keys2[0][23:0];
-	keys[1] = keys2[0][47:24];
-	keys[2] = keys2[0][71:48];
-	keys[3] = keys2[0][95:72];
-	keys[4] = keys2[1][23:0];
-	keys[5] = keys2[1][47:24];
-	keys[6] = keys2[1][71:48];
-	keys[7] = keys2[1][95:72];
+	keys[0] = keys2[0][ 31: 0];
+	keys[1] = keys2[0][ 63:32];
+	keys[2] = keys2[0][ 95:64];
+	keys[3] = keys2[0][127:96];
+	keys[4] = keys2[1][ 31: 0];
+	keys[5] = keys2[1][ 63:32];
+	keys[6] = keys2[1][ 95:64];
+	keys[7] = keys2[1][127:96];
 end
+value_t tick;
+value_t canary;
+reg [7:0] cause_code;					// exception cause
+Thor2023Pkg::address_t [3:0] tvec;
+Thor2023Pkg::address_t [7:0] epc;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 wire memreq_full;
 wire memreq_wack;
@@ -136,34 +157,46 @@ reg memresp_fifo_rd;
 wire memresp_fifo_empty;
 wire memresp_fifo_v;
 reg rollback = 1'b0;
+reg is_jsr;
 
 regspec_t Ra,Rb,Rc,Rt;
 reg rfwr,rfwrg,rfwrv;
-reg [95:0] res;
+value_t res;
 reg [VWID-1:0] vres;
 reg [VWID/8-1:0] vsel;
-wire [95:0] rfoa, rfob, rfoc, rfop;
+value_t rfoa, rfob, rfoc, rfop;
 wire [VWID-1:0] rfoav, rfobv, rfocv;
 reg [VWID-1:0] shlv;
-reg [95:0] a, b, c;
+value_t a, b, c;
 reg [VWID-1:0] va, vb, vc;
 reg [VWID-1:0] va1, vb1, vc1;
 wire [VWID-1:0] vaddo, vcmpo;
-wire [95:0] imm2;
-reg [95:0] imm;
+value_t imm2;
+value_t imm;
+value_t vimm2;
+value_t vimm;
 wire [4:0] imm_inc;
+wire [4:0] vimm_inc;
 reg predact;
 reg [15:0] predbuf;
 reg [4:0] predcond;
 reg [5:0] predreg;
 reg predt;
 wire takb;
-wire [511:0] group_out;
-reg [511:0] group_in;
+quad_value_t group_out;
+quad_value_t group_in;
 reg is_vec;
 reg [4:0] bytcnt2;
 reg [63:0] sel2;
-reg [127:0] data2;
+value_t data2;
+
+always_comb
+	omode = sr.om;
+
+always_comb
+	pc_asid = asid;
+always_comb
+	data_asid = asid;
 
 function fnAlignFaultDetect;
 input wb_cmd_request512_t req;
@@ -203,7 +236,50 @@ begin
 	PRC32:	if (adr[5:0] >6'h3C) fnSpan = 1;
 	PRC64:	if (adr[5:0] >6'h38) fnSpan = 1;
 	PRC128:	if (adr[5:0] >6'h30) fnSpan = 1;
+	PRCNDX: if (adr[5:0]!=  'd0) fnSpan = 1;
 	default:	if (adr[5:0]!=5'h00) fnSpan = 1;
+	endcase
+end
+endfunction
+
+// Decode if the instruction is a vector instruction. One of the vector
+// specification bits in the instruction must be set.
+
+function fnIsVector;
+input instruction_t ir;
+begin
+	case(ir.any.opcode)
+	OP_R2:	fnIsVector = ir.any.vec|ir.r2.Vb|ir.r2.Vc;
+	OP_FLT2:	fnIsVector = ir.any.vec|ir.f2.Vb|ir.f2.Vc;
+	OP_BITFLD:	fnIsVector = ir.any.vec|ir.bf.Vb|ir.bf.Vc;
+	OP_CSR:	fnIsVector = ir.any.vec|ir.csr.Vc;
+	OP_Bcc:	fnIsVector = 1'b0;
+	OP_FBcc:	fnIsVector = 1'b0;
+	OP_DBcc:	fnIsVector = 1'b0;
+	OP_PFX:	fnIsVector = 1'b0;
+	OP_ADDI:	fnIsVector = (ir.any.vec|ir.ri.Vc) & ~ir[31];
+	OP_LOAD,OP_LOADZ,OP_STORE:
+		if (ir.ls.sz==3'd7)
+			fnIsVector = ir.lsn.vec|ir.lsn.Vb|ir.lsn.Vc;
+		else
+			fnIsVector = ir.ls.vec|ir.ls.Vb;
+	default:	fnIsVector = ir.any.vec|ir.r2.Vc;
+	endcase
+end
+endfunction
+
+// Decode if the instruction has a vector mask register. This is used to
+// increment the PC by an extra byte so the decode must be simple and fast.
+
+function fnHasMask;
+input instruction_t ir;
+begin
+	case(ir.any.opcode)
+	OP_Bcc:	fnHasMask = 1'b0;
+	OP_FBcc:	fnHasMask = 1'b0;
+	OP_DBcc:	fnHasMask = 1'b0;
+	OP_PFX:	fnHasMask = 1'b0;
+	default:	fnHasMask = ir.any.vec;
 	endcase
 end
 endfunction
@@ -231,7 +307,7 @@ Thor2023_regfile urf1
 	.ssp(ssp),
 	.hsp(hsp),
 	.msp(msp), 
-	.pc(pc),
+	.sc(canary),
 	.om(omode)
 );
 
@@ -268,7 +344,11 @@ always_comb
 	else
 		wbm_req.csr <= 1'b0;
 
-Thor2023_biu ubiu
+Thor2023_biu 
+#(
+	.CID(CID)
+)
+ubiu
 (
 	.rst(rst_i),
 	.clk(clk_g),
@@ -277,9 +357,10 @@ Thor2023_biu ubiu
 	.AppMode(AppMode),
 	.MAppMode(MAppMode),
 	.omode(omode),
-//	.ASID(asid),
 	.bounds_chk(),
 	.pe(pe),
+	
+	.ip_asid(pc_asid),
 	.ip(pc),
 	.ip_o(pc_o),
 	.ihit_o(ihit),
@@ -287,6 +368,7 @@ Thor2023_biu ubiu
 	.ic_line_hi(ic_line_hi),
 	.ic_line_lo(ic_line_lo),
 	.ic_valid(ic_valid),
+
 	.fifoToCtrl_i(memreq),
 	.fifoToCtrl_full_o(memreq_full),
 	.fifoToCtrl_wack(memreq_wack),
@@ -339,8 +421,10 @@ always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
 	{postfix3,postfix2,postfix1,ir} <= {4{NOP_INSN}};
 else begin
-	if (state==IFETCH && ihit)
-		{postfix3,postfix2,postfix1,ir} <= ic_data >> {pc_o[4:0],3'b0};
+	if (state==IFETCH && ihit) begin
+		{postfix4,postfix3,postfix2,postfix1,ir} <= ic_data >> {pc_o[4:0],3'b0};
+		{vpostfix4,vpostfix3,vpostfix2,vpostfix1,vir} <= ic_data >> {pc_o[4:0],3'b0};
+	end
 end
 
 always_comb
@@ -352,8 +436,20 @@ Thor2023_decode_imm udci1
 	.ir2(postfix1),
 	.ir3(postfix2),
 	.ir4(postfix3),
+	.ir5(postfix4),
 	.imm(imm2),
 	.inc(imm_inc)
+);
+
+Thor2023_decode_imm udci2
+(
+	.ir(vir),
+	.ir2(vpostfix1),
+	.ir3(vpostfix2),
+	.ir4(vpostfix3),
+	.ir5(vpostfix4),
+	.imm(vimm2),
+	.inc(vimm_inc)
 );
 
 Thor2023_cmp
@@ -411,16 +507,16 @@ uvcmp1
 );
 */
 
-wire [95:0] shl = a << b[6:0];
-wire [95:0] shli = a << ir.r2.Rb[6:0];
-wire [95:0] shr = a >> b[6:0];
-wire [95:0] shri = a >> ir.r2.Rb[6:0];
-wire [95:0] asr = {{95{a[95]}},a} >> b[6:0];
-wire [95:0] asri = {{95{a[95]}},a} >> ir.r2.Rb[6:0];
-wire [191:0] rol = {a,a} << b[6:0];
-wire [191:0] roli = {a,a} << ir.r2.Rb[6:0];
-wire [191:0] ror = {a,a} >> b[6:0];
-wire [191:0] rori = {a,a} >> ir.r2.Rb[6:0];
+value_t shl = a << b[6:0];
+value_t shli = a << ir.r2.Rb[6:0];
+value_t shr = a >> b[6:0];
+value_t shri = a >> ir.r2.Rb[6:0];
+value_t asr = {{128{a[127]}},a} >> b[6:0];
+value_t asri = {{128{a[127]}},a} >> ir.r2.Rb[6:0];
+double_value_t rol = {a,a} << b[6:0];
+double_value_t roli = {a,a} << ir.r2.Rb[6:0];
+double_value_t ror = {a,a} >> b[6:0];
+double_value_t rori = {a,a} >> ir.r2.Rb[6:0];
 
 generate begin : gShl
 	for (g = 0; g < VWID/8; g = g + 1) begin : gFor
@@ -476,158 +572,8 @@ else begin
 	IFETCH:	tIFetch();
 	DECODE:	tDecode();
 	OFETCH:	tOFetch();
-	EXECUTE:
-		begin
-			case(ir.any.opcode)
-			OP_R2:
-				begin
-					case(ir.r2.func)
-					OP_ADD:	begin res <= Rt.sign ? -(a + b) : a + b; rfwr <= !is_vec; goto (IFETCH); end
-					OP_CMP:	begin res <= {64'd0,cmpo}; rfwr <= !is_vec; goto (IFETCH); end
-					OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec; goto (IFETCH); end
-					OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec; goto (IFETCH); end
-					OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec; goto (IFETCH); end
-					default:	;
-					endcase
-					case(ir.r2.func)
-					OP_ADD:	begin vres <= vaddo; rfwrv <= is_vec; goto (IFETCH); end
-					OP_CMP:	begin vres <= {64'd0,vcmpo}; rfwrv <= is_vec; goto (IFETCH); end
-					OP_AND:	begin vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec; goto (IFETCH); end
-					OP_OR:	begin vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec; goto (IFETCH); end
-					OP_EOR:	begin vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec; goto (IFETCH); end
-					default:	;
-					endcase
-				end
-			OP_SHIFT:
-				case(ir.r2.func)
-				OP_ASL,OP_LSL:
-					begin
-						res <= Rt.sign ? ~shl : shl;
-						vres <= Rt.sign ? ~shlv : shlv;
-						rfwr <= !is_vec;
-						rfwrv <= is_vec;
-						goto (IFETCH);
-					end
-				OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; goto (IFETCH); end
-				OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; goto (IFETCH); end
-				OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; goto (IFETCH); end
-				OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; goto (IFETCH); end
-				default:				begin res <= 'd0; goto (IFETCH); end	 //tUnimp();
-				endcase
-			OP_ADDI:	
-				begin
-					res <= Rt.sign ? -(a + b) : a + b; rfwr <= !is_vec;
-					vres <= vaddo; rfwrv <= is_vec;
-					goto (IFETCH);
-				end
-			OP_CMPI:	begin res <= {64'd0,cmpo}; rfwr <= 1'b1; goto (IFETCH); end
-			OP_ANDI:
-				begin
-					res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec;
-					vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec;
-					goto (IFETCH);
-				end
-			OP_ORI:		
-				begin
-					res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec;
-					vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec;
-					goto (IFETCH);
-				end
-			OP_EORI:
-				begin
-					res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec;
-					vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec;
-					goto (IFETCH);
-				end
-			OP_CSR:
-				if (omode >= b[13:12]) begin
-					goto (IFETCH);
-					case(b[11:0])
-					12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; rfwr <= 1'b1; goto (IFETCH); end
-					default:	res <= 'd0;
-					endcase
-				end
-				else begin
-					res <= 'd0;
-					// tPrivilege();
-					goto (IFETCH);
-				end
-			OP_Bcc, OP_DBcc:	tExBranch();
-			OP_LOAD:	begin tExLoad(fnSpan(ir.any.sz,ea) ? OP_LOADZ : OP_LOAD); goto (MEMORY); end
-			OP_LOADZ:	begin tExLoad(OP_LOADZ); goto (MEMORY); end
-			OP_STORE:	begin tExStore(); goto (MEMORY); end
-			default:	;
-			endcase
-		end
-	MEMORY:
-		begin
-			if (fnAlignFaultDetect(memreq)) begin
-				memresp.cause = FLT_ALN;
-			end
-			else begin
-				memreq.wr <= 1'b1;
-				goto (MEMORY1);
-			end
-		end
-	MEMORY1:
-		begin
-			if (!memresp_fifo_empty) begin
-				memresp_fifo_rd <= 1'b1;
-				goto (MEMORY2);
-			end
-		end
-	MEMORY2:
-		begin
-			if (memresp.load) begin
-				if (memresp.group)
-					rfwrg <= 1'b1;
-				else
-					rfwr <= ~|sel2;
-				Rt <= memresp.tgt;
-				res <= memresp.res;
-				group_in <= memresp.res;
-				if (|sel2) begin
-					tExLoad2(ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD);
-					goto (MEMORY3);
-				end
-				else
-					goto (IFETCH);
-			end
-			else begin
-				if (|sel2) begin
-					tExStore2();
-					goto (MEMORY3);
-				end
-				else
-					goto (IFETCH);
-			end
-		end
-	MEMORY3:
-		begin
-			memreq.wr <= 1'b1;
-			goto (MEMORY4);
-		end
-	MEMORY4:
-		begin
-			if (!memresp_fifo_empty) begin
-				memresp_fifo_rd <= 1'b1;
-				goto (MEMORY5);
-			end
-		end
-	MEMORY5:
-		begin
-			if (memresp.load) begin
-				rfwr <= 1'b1;
-				Rt <= memresp.tgt;
-				res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
-			end
-			goto (IFETCH);
-		end
+	EXECUTE: tExecute();
+	MEMORY: tMemory(state);
 	endcase
 	$display("===================================================================");
 	$display("%d", $time);
@@ -637,10 +583,21 @@ else begin
 end
 
 task tReset;
+integer nn;
 begin
+	for (nn = 0; nn < 16; nn = nn + 1) begin
+		sr_stack[nn] <= 'd0;
+		sr_stack[nn].om <= OM_MACHINE;
+	end
+	sr <= 'd0;
 	sr.om <= OM_MACHINE;
 	pc <= RSTPC;
 	opc <= RSTPC;
+	asp <= 128'hFFFCFE70;
+	ssp <= 128'hFFFCFEF0;
+	hsp <= 128'hFFFCFF70;
+	msp <= 128'hFFFCFFF0;
+	asid <= 'd0;
 	tid <= 'd1;
 	predbuf <= 16'hFFFF;
 	predreg <= 'd0;
@@ -688,11 +645,20 @@ endtask
 
 task tDecode;
 begin
-	pc <= pc + imm_inc;
+	goto (OFETCH);
+	// Vector instructions may increment the PC by an additional byte.
+	pc <= pc + imm_inc + (fnHasMask(ir) ? 2'd1 : 2'd0);
 	case(ir.any.opcode)
 	OP_R2:
 		case(ir.r2.func)
-		OP_ADD,OP_CMP,OP_AND,OP_OR,OP_EOR,OP_MUL,OP_DIV:
+		OP_ADD:
+			begin
+				Ra <= ir.r2.Ra;
+				Rb <= ir.r2.Rb;
+				Rc <= 6'd56 + ir.lsn.Rc[1:0];
+				Rt <= ir.r2.Rt;
+			end
+		OP_CMP,OP_AND,OP_OR,OP_EOR,OP_MUL,OP_DIV:
 			begin
 				Ra <= ir.r2.Ra;
 				Rb <= ir.r2.Rb;
@@ -716,7 +682,13 @@ begin
 			end
 		default:	;
 		endcase
-	OP_ADDI,OP_CMPI,OP_ANDI,OP_ORI,OP_EORI,OP_MULI,OP_DIVI,
+	OP_ADDI:
+		begin
+			Ra = ir.r2.Ra;
+			Rc = 6'd56 + ir.r2.Rb[1:0];
+			Rt <= ir.r2.Rt;
+		end
+	OP_CMPI,OP_ANDI,OP_ORI,OP_EORI,OP_MULI,OP_DIVI,
 	OP_CSR:
 		begin
 			Ra <= ir.r2.Ra;
@@ -727,14 +699,14 @@ begin
 		begin
 			Ra <= 'd0;
 			Rb <= ir.ls.Rb;
-			Rc <= ir.ls.Rc;
+			Rc <= ir.lsn.Rc;
 			Rt <= ir.ls.Rn;
 		end
 	OP_STORE:
 		begin
 			Ra <= ir.ls.Rn;
 			Rb <= ir.ls.Rb;
-			Rc <= ir.ls.Rc;
+			Rc <= ir.lsn.Rc;
 			Rt <= 'd0;
 		end
 	OP_Bcc, OP_DBcc:
@@ -745,7 +717,6 @@ begin
 	default:	;
 	endcase
 	imm <= imm2;
-	goto (OFETCH);
 end
 endtask
 
@@ -753,26 +724,59 @@ task tOFetch;
 begin
 	goto (EXECUTE);
 	predbuf <= {predbuf,2'b11};
-	a <= Ra.sign ? -rfoa : rfoa;
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? -rfoa : rfoa;
+	if (Rb.num==PCREG)
+		b <= opc;
 	va <= va1;
 	case(ir.any.opcode)
 	OP_R2:
-		case(ir.r2.func)
-		OP_PRED:
-			begin
-				predbuf <= {ir[33:29],ir[26:16]};
-				predreg <= ir[15:10];
-				predcond <= ir[9:5];
-				goto (IFETCH);
-			end
-		default:	;
-		endcase
-	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_ANDI,OP_ORI,OP_EORI:
+		begin
+			case(ir.r2.func)
+			OP_PRED:
+				begin
+					predbuf <= {ir[33:29],ir[26:16]};
+					predreg <= ir[15:10];
+					predcond <= ir[9:5];
+					goto (IFETCH);
+				end
+			default:	;
+			endcase
+		end
+	OP_ADDI:
+		begin
+			if (ir[31])	// RTS / RTD
+				b <= {imm[$bits(value_t)-1:4],4'd0};
+			else
+				b <= imm;
+		end
+	OP_MULI,OP_ANDI,OP_ORI,OP_EORI:
 		begin
 			b <= imm;
 		end
+	OP_CMPI,OP_DIVI,OP_FCMPI,OP_FDIVI:
+		begin
+			if (ir[31]) begin
+				a <= imm;
+				b <= Ra.sign ? -rfoa : rfoa;
+			end
+			else begin
+				a <= Ra.sign ? -rfoa : rfoa;
+				b <= imm;
+			end
+			if (Ra.num==PCREG) begin
+				if (ir[31])
+					b <= opc;
+				else
+					a <= opc;
+			end
+		end
 	OP_CSR:
-		b <= {ir[37:32],ir[30:23]};
+		begin
+			b <= {ir[37:32],ir[30:23]};
+		end
 	OP_Bcc,OP_DBcc:
 		begin
 			if (postfix1.opcode==OP_PFX)
@@ -780,12 +784,17 @@ begin
 			else
 				case(ir.br.cnd)
 				BCI,BSI:	b <= Rb.num;
-				default:	b <= rfob;
+				default:
+					if (Rb.num==PCREG)
+						b <= opc;
+					else
+						b <= rfob;
 				endcase
 		end
 	default:
 		begin
-			b <= Rb.sign ? -rfob : rfob;
+			if (Rb.num!=PCREG)
+				b <= Rb.sign ? -rfob : rfob;
 			vb <= vb1;
 		end
 	endcase
@@ -811,6 +820,9 @@ begin
 			vc <= rfocv;
 		end
 	endcase
+	if (ir.any.opcode==OP_STORE && Ra.num==SCREG && !ir.any.vec)
+		a <= canary;
+
 	// If predicate is false, ignore instruction
 	if (!((predbuf[15:14]==2'b01 &&  rfop[predcond]) || 
 			(predbuf[15:14]==2'b10 && ~rfop[predcond]) ||
@@ -820,6 +832,264 @@ begin
 end
 endtask
 
+task tExecute;
+begin
+	// Default action is to go back to IFETCH.
+	goto (IFETCH);
+	case(ir.any.opcode)
+	OP_R2:
+		begin
+			case(ir.r2.func)
+			OP_ADD:	
+				begin
+					res <= Rt.sign ? -(a + b) : a + b;
+					rfwr <= !is_vec;
+					if (ir[31])
+						pc <= c;
+				end
+			OP_CMP:	
+				begin
+					case(ir[33:32])
+					2'b00:	res <= {64'd0,cmpo};
+					2'b01:	res <= {64'd0,Rt.sign ^ cmpo[0]};
+					2'b10:	res <= {64'd0,Rt.sign ^ cmpo[3]};
+					2'b11:	res <= {64'd0,Rt.sign ^ cmpo[2]};
+					endcase
+					rfwr <= !is_vec;
+				end
+			OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec; end
+			OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec; end
+			OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec; end
+			default:	;
+			endcase
+			case(ir.r2.func)
+			OP_ADD:	begin vres <= vaddo; rfwrv <= is_vec; end
+			OP_CMP:	begin vres <= {64'd0,vcmpo}; rfwrv <= is_vec; end
+			OP_AND:	begin vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec; end
+			OP_OR:	begin vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec; end
+			OP_EOR:	begin vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec; end
+			OP_JSR:
+				begin
+					is_jsr <= 1'b1;
+					if (ir[31]) begin
+						tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
+						goto (MEMORY);
+					end
+					else
+						pc <= ea;
+				end
+			default:	;
+			endcase
+		end
+	OP_SHIFT:
+		case(ir.r2.func)
+		OP_ASL,OP_LSL:
+			begin
+				res <= Rt.sign ? ~shl : shl;
+				vres <= Rt.sign ? ~shlv : shlv;
+				rfwr <= !is_vec;
+				rfwrv <= is_vec;
+				goto (IFETCH);
+			end
+		OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; end
+		OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; end
+		OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; end
+		OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; end
+		OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; end
+		OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; end
+		OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; end
+		OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; end
+		OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; end
+		default:				begin res <= 'd0; end	 //tUnimp();
+		endcase
+	OP_ADDI:	
+		begin
+			res <= Rt.sign ? -(a + b) : a + b; rfwr <= !is_vec;
+			vres <= vaddo; rfwrv <= is_vec;
+			if (ir[31]) begin
+				if (ir[26:25]==2'b00)
+					pc <= c;
+				else
+					tRte();
+			end
+		end
+	OP_CMPI:	begin res <= {64'd0,cmpo}; rfwr <= 1'b1; end
+	OP_ANDI:
+		begin
+			res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec;
+			vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec;
+		end
+	OP_ORI:		
+		begin
+			res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec;
+			vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec;
+		end
+	OP_EORI:
+		begin
+			res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec;
+			vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec;
+		end
+	OP_CSR:
+		if (omode >= b[13:12]) begin
+			case(b[11:0])
+			12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; rfwr <= 1'b1; end
+			default:	res <= 'd0;
+			endcase
+		end
+		else begin
+			res <= 'd0;
+			// tPrivilege();
+		end
+	OP_JSR:
+		begin
+			is_jsr <= 1'b1;
+			if (ir[31]) begin
+				tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
+				goto (MEMORY);
+			end
+			else
+				pc <= ea;
+		end
+	OP_Bcc, OP_DBcc:	tExBranch();
+	OP_LOAD:	begin tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD); goto (MEMORY); end
+	OP_LOADZ:	begin tExLoad(MR_LOADZ); goto (MEMORY); end
+	OP_STORE:	begin tExStore(); goto (MEMORY); end
+	default:	;
+	endcase
+end
+endtask
+
+task tMemory;
+input state_t state;
+begin
+	case(state)
+	MEMORY:
+		begin
+			/*
+			if (fnAlignFaultDetect(memreq)) begin
+				memresp.cause = FLT_ALN;
+			end
+			else
+			*/
+			begin
+				memreq.wr <= 1'b1;
+				if (memreq_wack)
+					goto (MEMORY1);
+			end
+		end
+	MEMORY1:
+		begin
+			if (!memresp_fifo_empty) begin
+				memresp_fifo_rd <= 1'b1;
+				goto (MEMORY2);
+			end
+		end
+	MEMORY2:	tMemory2();
+	MEMORY3:
+		begin
+			memreq.wr <= 1'b1;
+			if (memreq_wack)
+				goto (MEMORY4);
+		end
+	MEMORY4:
+		begin
+			if (!memresp_fifo_empty) begin
+				memresp_fifo_rd <= 1'b1;
+				goto (MEMORY5);
+			end
+		end
+	MEMORY5:	tMemory5();
+	default:
+		begin
+			$display("Illegal memory state (%d)", state);
+			$finish;
+		end
+	endcase
+end
+endtask
+
+task tMemory2;
+begin
+	if (memresp.load) begin
+		if (is_jsr) begin
+			if (|sel2) begin
+				tExLoad2(MR_LOAD);
+				goto (MEMORY3);
+			end
+			else begin
+				if (ir[15])
+					pc <= opc + memresp.res;
+				else begin
+					case(ir.any.sz)
+					byt:	pc[7:0] <= memresp.res[7:0];
+					wyde: pc[15:0] <= memresp.res[15:0];
+					tetra: pc[31:0] <= memresp.res[31:0];
+					octa: pc[63:0] <= memresp.res[63:0];
+					default:	pc <= memresp.res;
+					endcase
+				end
+				goto (IFETCH);
+			end
+		end
+		else begin
+			if (memresp.group)
+				rfwrg <= ~|sel2;
+			else
+				rfwr <= ~|sel2;
+			Rt <= memresp.tgt;
+			res <= memresp.res;
+			group_in <= memresp.res;
+			if (memresp.tgt==SCREG && memresp.res[127:0] != canary) begin
+				tException(FLT_CANARY);
+			end
+			if (|sel2) begin
+				tExLoad2(ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD);
+				goto (MEMORY3);
+			end
+			else
+				goto (IFETCH);
+		end
+	end
+	else begin
+		if (|sel2) begin
+			tExStore2();
+			goto (MEMORY3);
+		end
+		else
+			goto (IFETCH);
+	end
+end
+endtask
+
+task tMemory5;
+begin
+	goto (IFETCH);
+	if (memresp.load) begin
+		if (is_jsr) begin
+			if (ir[15])
+				pc <= opc + memresp.res;
+			else begin
+				case(ir.any.sz)
+				byt:	pc[7:0] <= memresp.res[7:0];
+				wyde: pc[15:0] <= memresp.res[15:0];
+				tetra: pc[31:0] <= memresp.res[31:0];
+				octa: pc[63:0] <= memresp.res[63:0];
+				default:	pc <= memresp.res;
+				endcase
+			end
+		end
+		else begin
+			if (memresp.group)
+				rfwrg <= 1'b1;
+			else
+				rfwr <= 1'b1;
+			Rt <= memresp.tgt;
+			res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
+			group_in <= group_in | (memresp.res << {7'd64-ea[5:0],3'b0});
+		end
+	end
+end
+endtask
 
 task tExBranch;
 begin
@@ -830,26 +1100,39 @@ begin
 			Rt <= 'd0;
 			res <= opc;
 //			pc[27:0] <= {ir[23:12],ir[39:24]};
+`ifdef PGREL
 			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{67{ir[23]}},ir[23:11],ir[39:38]};
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:38]};
+`else
+			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[23:11],ir[39:24]};
+`endif
 		end
 	SR:
 		begin
 			rfwr <= 1'b1;
 			Rt <= 6'd56+ir.br.Rn[1:0];
-			res <= opc;
+			res <= opc + 4'd5;
+`ifdef PGREL			
 			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{67{ir[23]}},ir[23:11],ir[39:38]};
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:38]};
+`else
+			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[23:11],ir[39:24]};
+`endif
 		end
 	default:
 		if (takb) begin
+`ifdef PGREL			
 			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{77{ir[23]}},ir[23:21],ir[39:38]};
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{109{ir[23]}},ir[23:21],ir[39:38]};
+`else
+			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{109{ir[23]}},ir[23:21],ir[39:24]};
+`endif			
 		end
 	endcase
 	goto (IFETCH);
 end				
 endtask
+
 
 task tMemsz;
 input st;
@@ -861,7 +1144,7 @@ begin
 			2'd0:	memreq.sz <= Thor2023Pkg::tetra;
 			2'd1: memreq.sz <= Thor2023Pkg::octa;
 			2'd2:	memreq.sz <= Thor2023Pkg::hexi;
-			default:	memreq.sz <= Thor2023Pkg::octa;
+			default:	memreq.sz <= Thor2023Pkg::hexi;
 			endcase
 		end
 		else
@@ -877,10 +1160,11 @@ begin
 		PRC32:	memreq.sz <= Thor2023Pkg::tetra;
 		PRC64:	memreq.sz <= Thor2023Pkg::octa;
 		PRC128:	memreq.sz <= Thor2023Pkg::hexi;
-		default:	memreq.sz <= Thor2023Pkg::octa;
+		PRCNDX:	memreq.sz <= Thor2023Pkg::vect;
+		default:	memreq.sz <= Thor2023Pkg::hexi;
 		endcase
 	default:	
-		memreq.sz <= Thor2023Pkg::octa;
+		memreq.sz <= Thor2023Pkg::hexi;
 	endcase
 end
 endtask
@@ -912,17 +1196,17 @@ begin
 		PRC32:	tPRC32();
 		PRC64:	tPRC64();
 		PRC128:	tPRC128();
-		PRCNDX:	memreq.sel <= 64'hFFFFFFFFFFFFFFFF;
-		default:	memreq.sel <= 64'h00FF;
+		PRCNDX:	tPRC512();
+		default:	tPRC128();
 		endcase
 	default:
-		memreq.sel <= 64'h00FF;
+		tPRC128();
 	endcase
 end
 endtask
 
 task tExLoad;
-input [3:0] fn;
+input memop_t fn;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -943,12 +1227,13 @@ begin
 	tMemsel(0);
 	if (ir.ls.sz==3'd7 && ir[11:9]==3'd7)
 		memreq.group <= 1'b1;
-	memreq.asid <= asid;
+	memreq.asid <= data_asid;
 	if (ir.ls.sz==PRCNDX)
 		memreq.adr <= ir[14]==1'b1 ? nea : ea;
 	else
 		memreq.adr <= ir[38]==1'b1 ? nea : ea;
 	memreq.vcadr <= 'd0;
+	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
@@ -968,7 +1253,7 @@ end
 endtask
 
 task tExLoad2;
-input [3:0] fn;
+input memop_t fn;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -989,11 +1274,12 @@ begin
 	memreq.sel <= sel2;
 	memreq.asid <= asid;
 	memreq.vcadr <= 'd0;
+	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
 	tMemsz(0);
-	memreq.bycnt <= bytcnt2;
+//	memreq.bycnt <= bytcnt2;
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
 	memreq.acr <= 4'hF;
@@ -1022,7 +1308,7 @@ begin
 
 	case(ir.ls.sz)
 	PRC8:		
-		if (ir[39:38]==2'b01) begin
+		if (ir[39:38]==2'b01)
 			memreq.func <= MR_STOREPTR;
 	default:	;
 	endcase
@@ -1034,7 +1320,7 @@ begin
 	memreq.empty <= 1'b0;
 	memreq.cause <= FLT_NONE;
 	tMemsel(1);
-	memreq.asid <= asid;
+	memreq.asid <= data_asid;
 
 	if (ir.ls.sz==PRCNDX)
 		memreq.adr <= ir[14]==1'b1 ? nea : ea;
@@ -1048,6 +1334,7 @@ begin
 	end
 	else
 		memreq.res <= {416'd0,a};
+	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
 	tMemsz(1);
@@ -1094,6 +1381,7 @@ begin
 	memreq.adr <= nea;
 	memreq.vcadr <= 'd0;
 	memreq.res <= {416'd0,data2};
+	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
 
@@ -1113,65 +1401,98 @@ begin
 end
 endtask
 
-task tPRC16();
+task tPRC16;
 begin
-	memreq.bytcnt <= 5'd2;
-	case(ea[3:0])
-	4'hF: begin memreq.sel <= 64'h0001; sel2 <= 64'h0001; data2 <= a >> 4'd8; bytcnt2 <= 5'd1; end
-	default: begin memreq.sel <= 64'h0003; sel2 <= 64'h0000; end
-	endcase
+	memreq.bytcnt <= 8'd2;
+	data2 <= a >> (10'd512 - {ea[0],3'b0});
+	bytcnt2 <= {7'h0,ea[0]};
+	memreq.sel <= 64'h0000000000000003 >> ea[0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[0]);
 end
 endtask
 
 task tPRC32;
 begin
-	memreq.bytcnt <= 5'd4;
-	case(ea[3:0])
-	4'hD:	begin memreq.sel <= 64'h0007; sel2 <= 64'h0001; data2 <= a >> 4'd24; bytcnt2 <= 5'd1; end
-	4'hE:	begin memreq.sel <= 64'h0003; sel2 <= 64'h0003; data2 <= a >> 4'd16; bytcnt2 <= 5'd2; end
-	4'hF:	begin memreq.sel <= 64'h0001; sel2 <= 64'h0007; data2 <= a >> 4'd8; bytcnt2 <= 5'd3; end
-	default:	begin memreq.sel <= 64'h000F; sel2 <= 64'h0000; end
-	endcase
+	memreq.bytcnt <= 8'd4;
+	data2 <= a >> (10'd512 - {ea[1:0],3'b0});
+	bytcnt2 <= {6'h0,ea[1:0]};
+	memreq.sel <= 64'h000000000000000F >> ea[1:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[1:0]);
 end
 endtask
 
 task tPRC64;
 begin
-	memreq.bytcnt <= 5'd8;
-	case(ea[3:0])
-	4'h9:	begin memreq.sel <= 64'h007F; sel2 <= 64'h0001; data2 <= a >> 4'd56; bytcnt2 <= 5'd1; end
-	4'hA:	begin memreq.sel <= 64'h003F; sel2 <= 64'h0003; data2 <= a >> 4'd48; bytcnt2 <= 5'd2; end
-	4'hB:	begin memreq.sel <= 64'h001F; sel2 <= 64'h0007; data2 <= a >> 4'd40; bytcnt2 <= 5'd3; end
-	4'hC:	begin memreq.sel <= 64'h000F;	sel2 <= 64'h000F; data2 <= a >> 4'd32; bytcnt2 <= 5'd4; end
-	4'hD:	begin memreq.sel <= 64'h0007; sel2 <= 64'h001F; data2 <= a >> 4'd24; bytcnt2 <= 5'd5; end
-	4'hE:	begin memreq.sel <= 64'h0003; sel2 <= 64'h003F; data2 <= a >> 4'd16; bytcnt2 <= 5'd6; end
-	4'hF: begin memreq.sel <= 64'h0001; sel2 <= 64'h007F; data2 <= a >> 4'd8; bytcnt2 <= 5'd7; end
-	default:	memreq.sel <= 64'h00FF;
-	endcase
+	memreq.bytcnt <= 8'd8;
+	data2 <= a >> (10'd512 - {ea[2:0],3'b0});
+	bytcnt2 <= {5'h0,ea[2:0]};
+	memreq.sel <= 64'h00000000000000FF >> ea[2:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[2:0]);
 end
 endtask
 
 task tPRC128;
 begin
-	memreq.bytcnt <= 5'd16;
-	case(ea[3:0])
-	4'h0:	begin memreq.sel <= 64'hFFFF; sel2 <= 64'h0000; end
-	4'h1:	begin memreq.sel <= 64'h7FFF; sel2 <= 64'h0001; data2 <= a >> 4'd120; bytcnt2 <= 5'd1; end
-	4'h2:	begin memreq.sel <= 64'h3FFF; sel2 <= 64'h0003; data2 <= a >> 4'd112; bytcnt2 <= 5'd2; end
-	4'h3:	begin memreq.sel <= 64'h1FFF; sel2 <= 64'h0007; data2 <= a >> 4'd104; bytcnt2 <= 5'd3; end
-	4'h4:	begin memreq.sel <= 64'h0FFF; sel2 <= 64'h000F; data2 <= a >> 4'd96; bytcnt2 <= 5'd4; end
-	4'h5:	begin memreq.sel <= 64'h07FF; sel2 <= 64'h001F; data2 <= a >> 4'd88; bytcnt2 <= 5'd5; end
-	4'h6:	begin memreq.sel <= 64'h03FF; sel2 <= 64'h003F; data2 <= a >> 4'd80; bytcnt2 <= 5'd6; end
-	4'h7:	begin memreq.sel <= 64'h01FF; sel2 <= 64'h007F; data2 <= a >> 4'd72; bytcnt2 <= 5'd7; end
-	4'h8:	begin memreq.sel <= 64'h00FF; sel2 <= 64'h00FF; data2 <= a >> 4'd64; bytcnt2 <= 5'd8; end
-	4'h9:	begin memreq.sel <= 64'h007F; sel2 <= 64'h01FF; data2 <= a >> 4'd56; bytcnt2 <= 5'd9; end
-	4'hA:	begin memreq.sel <= 64'h003F; sel2 <= 64'h03FF; data2 <= a >> 4'd48; bytcnt2 <= 5'd10; end
-	4'hB:	begin memreq.sel <= 64'h001F; sel2 <= 64'h07FF; data2 <= a >> 4'd40; bytcnt2 <= 5'd11; end
-	4'hC:	begin memreq.sel <= 64'h000F;	sel2 <= 64'h0FFF; data2 <= a >> 4'd32; bytcnt2 <= 5'd12; end
-	4'hD:	begin memreq.sel <= 64'h0007; sel2 <= 64'h1FFF; data2 <= a >> 4'd24; bytcnt2 <= 5'd13; end
-	4'hE:	begin memreq.sel <= 64'h0003; sel2 <= 64'h3FFF; data2 <= a >> 4'd16; bytcnt2 <= 5'd14; end
-	4'hF: begin memreq.sel <= 64'h0001; sel2 <= 64'h7FFF; data2 <= a >> 4'd8; bytcnt2 <= 5'd15; end
-	endcase
+	memreq.bytcnt <= 8'd16;
+	data2 <= a >> (10'd512 - {ea[3:0],3'b0});
+	bytcnt2 <= {4'h0,ea[3:0]};
+	memreq.sel <= 64'h000000000000FFFF >> ea[3:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[3:0]);
+end
+endtask
+
+task tPRC512;
+begin
+	memreq.bytcnt <= 8'd64;
+	data2 <= a >> (10'd512 - {ea[5:0],3'b0});
+	bytcnt2 <= {2'h0,ea[5:0]};
+	memreq.sel <= 64'hFFFFFFFFFFFFFFFF >> ea[5:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[5:0]);
+end
+endtask
+
+task tException;
+input [7:0] c;
+integer j;
+begin
+	cause_code <= c;
+	for (j = 1; j < 8; j = j + 1)
+		sr_stack[j] <= sr_stack[j-1];
+	sr_stack[0] <= sr;
+	for (j = 1; j < 8; j = j + 1)
+		epc[j] <= epc[j-1];
+	epc[0] <= pc;
+	pc <= {tvec[3][$bits(Thor2023Pkg::address_t)-1:8],omode,6'h0};
+	goto (IFETCH);
+end
+endtask
+
+task tRte;
+integer j;
+begin
+	if (ir[6:5]==2'd1) begin
+		sr <= sr_stack[0];
+		for (j = 0; j < 7; j = j + 1)
+			sr_stack[j] <= sr_stack[j+1];
+		pc <= epc[0] + ir[38:32];
+		for (j = 0; j < 7; j = j + 1)
+			epc[j] <= epc[j+1];
+		epc[7] <= RSTPC;
+	end
+	// Two up level return
+	else if (ir[6:5]==2'd2) begin
+		sr <= sr_stack[1];
+		for (j = 0; j < 6; j = j + 1)
+			sr_stack[j] <= sr_stack[j+2];
+		pc <= epc[1] + ir[38:32];
+		for (j = 0; j < 6; j = j + 1)
+			epc[j] <= epc[j+2];
+		epc[6] <= RSTPC;
+		epc[7] <= RSTPC;
+	end
+	rfwr <= 1'b1;
+	res <= a + {ir[30:27],4'h0};
+	goto (IFETCH);
 end
 endtask
 

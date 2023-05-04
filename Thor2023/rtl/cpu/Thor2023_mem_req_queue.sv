@@ -40,6 +40,7 @@
 
 import Thor2023Pkg::*;
 import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_mem_req_queue(rst, clk, wr0, wr_ack0, i0, wr1, wr_ack1, i1,
 	rd, o, valid, empty, ldo0, found0, ldo1, found1, full,
@@ -79,8 +80,8 @@ reg [QDEP-1:0] valid_bits = 'd0;
 reg [NSEL-1:0] isel0, isel1;
 reg [NSEL-1:0] msel0 [0:QDEP-1];
 reg [NSEL-1:0] msel1 [0:QDEP-1];
-reg [DCacheLineWidth-1:0] imask0, imask1;
-reg [DCacheLineWidth-1:0] dat10, dat11;
+reg [Thor2023_cache_pkg::DCacheLineWidth-1:0] imask0, imask1;
+reg [Thor2023_cache_pkg::DCacheLineWidth-1:0] dat10, dat11;
 memory_arg_t datm0 [0:QDEP-1];
 memory_arg_t datm1 [0:QDEP-1];
 memory_arg_t i0_, i1_;
@@ -104,6 +105,7 @@ Thor2023Pkg::wyde:	fnSel = 64'h00000003;
 Thor2023Pkg::tetra:	fnSel = 64'h0000000F;
 Thor2023Pkg::octa:	fnSel = 64'h000000FF;
 Thor2023Pkg::hexi:	fnSel = 64'h0000FFFF;
+Thor2023Pkg::vect:	fnSel = 64'hFFFFFFFFFFFFFFFF;
 //hexi:	fnSel = 32'h0000FFFF;
 //hexipair:	fnSel = 32'hFFFFFFFF;
 default:	fnSel = 64'h000000FF;
@@ -124,10 +126,6 @@ begin
 	i1_.sel = i1_sel << i1.adr[3:0];
 	i0_.res = i0.res << {i0.adr[3:0],3'b0};
 	i1_.res = i1.res << {i1.adr[3:0],3'b0};
-	if (|i0_.sel[79:64])
-		i0_.cause = FLT_ALN;
-	if (|i1_.sel[79:64])
-		i1_.cause = FLT_ALN;
 end
 
 // Generate a mask for the load data.
@@ -180,11 +178,11 @@ input [3:0] func2;
 input memory_arg_t i;
 input [NSEL-1:0] isel;
 input [31:0] sx;
-input [DCacheLineWidth-1:0] imask;
+input [Thor2023_cache_pkg::DCacheLineWidth-1:0] imask;
 output memory_arg_t ldo;
 output found;
 integer n2;
-reg [DCacheLineWidth-1:0] dat1;
+reg [Thor2023_cache_pkg::DCacheLineWidth-1:0] dat1;
 begin
 	ldo = i;
 	found = 1'b0;
@@ -195,7 +193,7 @@ begin
 		if (i.func!=MR_STORE || i.res == que[n2].res) begin
 			if (i.func==func1 || i.func==func2) begin
 				for (n2 = 0; n2 < QDEP; n2 = n2 + 1) begin
-					if (i.adr[AWID-1:DCacheTagLoBit]==que[n2].adr[AWID-1:DCacheTagLoBit] && valid_bits[n2]) begin
+					if (i.adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit]==que[n2].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit] && valid_bits[n2]) begin
 						if ((isel & que[n2].sel)==isel) begin
 							found = 1'b1;
 							// Align the data with the load address
@@ -253,14 +251,14 @@ begin
 	if (MERGE_STORES) begin
 		for (n6 = 0; n6 < QDEP; n6 = n6 + 1) begin
 			if (i0.cache_type != wishbone_pkg::NC_NB && i0.cache_type != wishbone_pkg::NON_CACHEABLE) begin
-				if (wr0 && que[n6].adr[AWID-1:DCacheTagLoBit]==i0.adr[AWID-1:DCacheTagLoBit] &&
+				if (wr0 && que[n6].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit]==i0.adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit] &&
 					i0.func==MR_STORE && que[n6].func==MR_STORE)
 					overlapping_store0[n6] = 1'b1;
 				// Search que for overlapping address, read or write, already present in the
 				// queue. If there  are any, then do not merge the stores.
 				for (m1 = 0; m1 < QDEP; m1 = m1 + 1) begin
 					if (m1 > n6) begin
-						if (que[n6].adr[AWID-1:DCacheTagLoBit]==que[m1].adr[AWID-1:DCacheTagLoBit])
+						if (que[n6].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit]==que[m1].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit])
 							overlapping_store0[n6] = 1'b0;
 					end
 				end
@@ -268,14 +266,14 @@ begin
 		end
 		for (n6 = 0; n6 < QDEP; n6 = n6 + 1) begin
 			if (i1.cache_type != wishbone_pkg::NC_NB && i1.cache_type != wishbone_pkg::NON_CACHEABLE) begin
-				if (wr1 && que[n6].adr[AWID-1:DCacheTagLoBit]==i1.adr[AWID-1:DCacheTagLoBit] &&
+				if (wr1 && que[n6].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit]==i1.adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit] &&
 					i1.func==MR_STORE && que[n6].func==MR_STORE)
 					overlapping_store1[n6] = 1'b1;
 				// Search que for overlapping address, read or write, already present in the
 				// queue. If there  are any, then do not merge the stores.
 				for (m1 = 0; m1 < QDEP; m1 = m1 + 1) begin
 					if (m1 > n6) begin
-						if (que[n6].adr[AWID-1:DCacheTagLoBit]==que[m1].adr[AWID-1:DCacheTagLoBit])
+						if (que[n6].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit]==que[m1].adr[AWID-1:Thor2023_cache_pkg::DCacheTagLoBit])
 							overlapping_store1[n6] = 1'b0;
 					end
 				end
@@ -440,7 +438,7 @@ input memory_arg_t i1;
 output memory_arg_t o;
 parameter NSEL = 32;
 
-reg [DCacheLineWidth-1:0] dat0, dat1, dat;
+reg [Thor2023_cache_pkg::DCacheLineWidth-1:0] dat0, dat1, dat;
 reg [NSEL-1:0] sel0, sel1;
 
 always_comb

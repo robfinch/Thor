@@ -249,9 +249,13 @@ begin
 	pic_resp.pri = wbm32_req.pri;
 end
 
-Thor2023seq ucpu1
+Thor2023seq
+#(
+	.CID(6'd1)
+)
+ucpu1
 (
-	.coreno_i(6'd1),
+	.coreno_i(128'd1),
 	.rst_i(rst_i),
 	.clk_i(clk_i),
 	.bok_i(1'b0),
@@ -265,9 +269,13 @@ Thor2023seq ucpu1
 	.snoop_cid(snoop_cid)
 );
 
-Thor2023seq ucpu2
+Thor2023seq
+#(
+	.CID(6'd2)
+)
+ucpu2
 (
-	.coreno_i(6'd2),
+	.coreno_i(128'd2),
 	.rst_i(rst_i),
 	.clk_i(clk_i),
 	.bok_i(1'b0),

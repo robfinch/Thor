@@ -39,10 +39,10 @@
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_dcache_ex3(rst, clk, dce, snoop_adr, snoop_v, snoop_cid,
-	cache_load, hit, uway, cpu_req_i, cpu_resp_o, cpu_resp_i, dump, dump_o,
+	cache_load, hit, uway, cpu_req_i, cpu_resp_o, update_data_i, dump, dump_o,
 	dump_ack_i, wr, way,
 	invce, dc_invline, dc_invall);
 parameter CID = 4'd3;
@@ -64,7 +64,7 @@ output reg hit;
 output reg [LOG_WAYS:0] uway;	// way to use on a cache hit
 input wb_cmd_request512_t cpu_req_i;
 output wb_cmd_response512_t cpu_resp_o;
-input wb_cmd_response512_t cpu_resp_i;
+input wb_cmd_response512_t update_data_i;
 
 output reg dump;
 output DCacheLine dump_o;
@@ -171,12 +171,8 @@ begin
 	cline_in.m <= ~cache_load;	// It is not modified if it is a fresh load.
 	cline_in.asid <= cpu_req_i.asid;
 	cline_in.tag <= cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:TAGBIT];
-end
-
-always_comb
-begin
 	if (cache_load)
-		cline_in.data <= cpu_resp_i.dat;
+		cline_in.data <= update_data_i.dat;
 	else
 		cline_in.data <= cpu_req_i.dat;
 end
@@ -214,7 +210,7 @@ for (g = 0; g < WAYS; g = g + 1) begin : gFor
 		.wr(wr && way==g && cache_load),
 		.wadr(vndx),
 		.radr(snoop_adr[HIBIT:LOBIT]),
-		.i(cpu_resp_i.adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT]),
+		.i(update_data_i.adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT]),
 		.o(ptags[g])
 	);
 
@@ -239,7 +235,7 @@ wire read_allocate =
 // If a cache hit, the update way is the hit way.
 always_comb
 	if (non_cacheable|~read_allocate|~dce) begin
-		cpu_resp_o = cpu_resp_i;
+		cpu_resp_o = update_data_i;
 		uway = 'd0;
 	end
 	else
