@@ -251,6 +251,7 @@ end
 
 Thor2023seq
 #(
+	.CORENO(6'd1),
 	.CID(6'd1)
 )
 ucpu1
@@ -271,6 +272,7 @@ ucpu1
 
 Thor2023seq
 #(
+	.CORENO(6'd2),
 	.CID(6'd2)
 )
 ucpu2

@@ -38,13 +38,17 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_agen (ir, b, c, imm, adr, nxt_adr);
+module Thor2023_agen (ir, a, b, c, imm, pc, adr, nxt_adr, cause);
+parameter PCREG = 6'd53;
 input instruction_t ir;
+input value_t a;
 input value_t b;
 input value_t c;
 input value_t imm;
+input address_t pc;
 output address_t adr;
 output address_t nxt_adr;
+output cause_code_t cause;
 
 reg [4:0] sc;
 
@@ -67,18 +71,33 @@ always_comb
 	endcase
 
 always_comb
+begin
+cause = FLT_NONE;
 case(ir.any.opcode)
-case OP_R2:	// JSR Rt,Ra,Rb
-	adr = a + (b * Sc);
-case OP_JSR:
-	adr = (a * Sc) + imm;
+OP_R2:	// JSR Rt,Ra,Rb
+	begin
+		if (ir.jsr.Ra.num==PCREG)
+			adr = a + (b * sc) + 4'd5;
+		else
+			adr = a + (b * sc);
+	end
+OP_JSR:
+	if (ir.jsr.Ra.sign) begin
+		adr = pc + (a * sc);
+		if (a * sc > imm)
+			cause = FLT_TBL;
+	end
+	else
+		adr = (a * sc) + imm;
 default:
 	if (ir.ls.sz==PRCNDX)
 		adr = b + (ir.lsn.Sc ? c * sc : c) + imm;
 	else
 		adr = b + imm;
-	always_comb
-		nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
 endcase
+end
+
+always_comb
+	nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
 
 endmodule

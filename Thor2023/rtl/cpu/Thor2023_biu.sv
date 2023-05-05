@@ -51,6 +51,7 @@ module Thor2023_biu(rst,clk,tlbclk,clock,AppMode,MAppMode,omode,bounds_chk,pe,
 	dce, keys, arange, ptbr, ipage_fault, clr_ipage_fault,
 	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp, tlbacr,
 	rollback, rollback_bitmaps, snoop_adr, snoop_v, snoop_cid);
+parameter CORENO = 6'd1;
 parameter AWID=32;
 parameter CID = 4'd1;
 input rst;
@@ -437,6 +438,7 @@ end
 
 Thor2023_dcache
 #(
+	.CORENO(CORENO),
 	.CID({CID,1'b1}),
 	.WAYS(DWAYS)
 )
@@ -466,6 +468,7 @@ udc1
 
 Thor2023_dcache_ctrl
 #(
+	.CORENO(CORENO),
 	.CID({CID,1'b1}),
 	.WAYS(DWAYS)
 )

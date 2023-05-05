@@ -43,6 +43,7 @@ import Thor2023_cache_pkg::*;
 module Thor2023seq(coreno_i, rst_i, clk_i, bok_i, wbm_req, wbm_resp, rb_i,
 	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp,
 	snoop_v, snoop_adr, snoop_cid);
+parameter CORENO = 6'd1;
 parameter CID = 6'd1;
 parameter VWID=128;
 parameter PCREG = 53;
@@ -108,6 +109,8 @@ wire vda_o;
 wire sr_o;
 wire cr_o;
 instruction_t ir;
+reg [255:0] jir;						// jump table ir
+reg [31:0] jira;
 vector_instruction_t vir;
 postfix_t postfix1;
 postfix_t postfix2;
@@ -143,12 +146,13 @@ begin
 end
 value_t tick;
 value_t canary;
-reg [7:0] cause_code;					// exception cause
+cause_code_t cause_code;					// exception cause
 Thor2023Pkg::address_t [3:0] tvec;
 Thor2023Pkg::address_t [7:0] epc;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+cause_code_t agen_cause;
 wire memreq_full;
 wire memreq_wack;
 memory_arg_t memreq;
@@ -346,6 +350,7 @@ always_comb
 
 Thor2023_biu 
 #(
+	.CORENO(CORENO),
 	.CID(CID)
 )
 ubiu
@@ -419,13 +424,16 @@ always_comb
 	
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
-	{postfix3,postfix2,postfix1,ir} <= {4{NOP_INSN}};
+	{postfix4,postfix3,postfix2,postfix1,ir} <= {5{NOP_INSN}};
 else begin
 	if (state==IFETCH && ihit) begin
 		{postfix4,postfix3,postfix2,postfix1,ir} <= ic_data >> {pc_o[4:0],3'b0};
 		{vpostfix4,vpostfix3,vpostfix2,vpostfix1,vir} <= ic_data >> {pc_o[4:0],3'b0};
 	end
 end
+
+always_comb
+	jira = jir >> {ea[4:0],3'b0};
 
 always_comb
 	is_vec = ir.any.vec;
@@ -463,13 +471,20 @@ ucmp1
 	.o(cmpo)
 );
 
-Thor2023_agen uagen1 (
+Thor2023_agen
+#(
+	.PCREG(PCREG)
+)
+uagen1 (
 	.ir(ir),
+	.a(a),
 	.b(b),
 	.c(c),
 	.imm(imm),
+	.pc(opc),
 	.adr(ea),
-	.nxt_adr(nea)
+	.nxt_adr(nea),
+	.cause(agen_cause)
 );
 
 Thor2023_eval_branch ube1
@@ -573,7 +588,12 @@ else begin
 	DECODE:	tDecode();
 	OFETCH:	tOFetch();
 	EXECUTE: tExecute();
-	MEMORY: tMemory(state);
+	MEMORY: tMemory();
+	MEMORY1: tMemory1();
+	MEMORY2: tMemory2();
+	MEMORY3: tMemory3();
+	MEMORY4: tMemory4();
+	MEMORY5: tMemory5();
 	endcase
 	$display("===================================================================");
 	$display("%d", $time);
@@ -635,6 +655,10 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Instruction Fetch Stage (IF)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 task tIFetch;
 begin
 	opc <= pc;
@@ -642,6 +666,10 @@ begin
 		goto (DECODE);
 end
 endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Instruction Decode Stage (ID)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tDecode;
 begin
@@ -720,77 +748,62 @@ begin
 end
 endtask
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Operand Fetch Stage (OF)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Handling operand fetch. Usually moves onto the execute stage. However, if the
+// instruction is predicated and the predicate is false, then the instruction is
+// ignored and control transfers back to the instruction fetch stage.
 task tOFetch;
 begin
 	goto (EXECUTE);
 	predbuf <= {predbuf,2'b11};
-	if (Ra.num==PCREG)
-		a <= opc;
-	else
-		a <= Ra.sign ? -rfoa : rfoa;
-	if (Rb.num==PCREG)
-		b <= opc;
 	va <= va1;
 	case(ir.any.opcode)
 	OP_R2:
 		begin
 			case(ir.r2.func)
+			OP_ADD,OP_CMP,OP_MUL,OP_DIV:
+				tOFArith();
+			OP_AND,OP_OR,OP_EOR:
+				tOFLogic();
 			OP_PRED:
-				begin
-					predbuf <= {ir[33:29],ir[26:16]};
-					predreg <= ir[15:10];
-					predcond <= ir[9:5];
-					goto (IFETCH);
-				end
+				tOFPred();
 			default:	;
 			endcase
 		end
+	OP_FLT2:
+		case(ir.f2.func)
+		OP_FADD,OP_FCMP,OP_FMUL,OP_FDIV:
+			tOFFArith();
+		default:	;
+		endcase
 	OP_ADDI:
+		tOFAddi();
+	OP_MULI:
 		begin
-			if (ir[31])	// RTS / RTD
-				b <= {imm[$bits(value_t)-1:4],4'd0};
-			else
-				b <= imm;
-		end
-	OP_MULI,OP_ANDI,OP_ORI,OP_EORI:
-		begin
+			tOFArith();
 			b <= imm;
 		end
-	OP_CMPI,OP_DIVI,OP_FCMPI,OP_FDIVI:
+	OP_ANDI,OP_ORI,OP_EORI:
 		begin
-			if (ir[31]) begin
-				a <= imm;
-				b <= Ra.sign ? -rfoa : rfoa;
-			end
-			else begin
-				a <= Ra.sign ? -rfoa : rfoa;
-				b <= imm;
-			end
-			if (Ra.num==PCREG) begin
-				if (ir[31])
-					b <= opc;
-				else
-					a <= opc;
-			end
+			tOFLogic();
+			b <= imm;
 		end
+	OP_CMPI,OP_DIVI:
+		tOFSwap();
+	OP_FADDI,OP_FMULI:
+		begin
+			tOFFArith();
+			b <= imm;
+		end
+	OP_FCMPI,OP_FDIVI:
+		tOFFSwap();
 	OP_CSR:
-		begin
-			b <= {ir[37:32],ir[30:23]};
-		end
-	OP_Bcc,OP_DBcc:
-		begin
-			if (postfix1.opcode==OP_PFX)
-				b <= imm;
-			else
-				case(ir.br.cnd)
-				BCI,BSI:	b <= Rb.num;
-				default:
-					if (Rb.num==PCREG)
-						b <= opc;
-					else
-						b <= rfob;
-				endcase
-		end
+		b <= {ir.csr.immhi,ir.csr.immlo};
+	OP_Bcc,OP_FBcc,OP_DBcc:
+		tOFBranch();
 	default:
 		begin
 			if (Rb.num!=PCREG)
@@ -799,20 +812,14 @@ begin
 		end
 	endcase
 	case(ir.any.opcode)
-	OP_LOAD,OP_LOADZ,OP_STORE:
-		if (ir.ls.sz==PRCNDX) begin
-			if (ir[11:9]==3'd7) begin
-				c <= 'd0;
-				vc <= 'd0;
-			end
-			else begin
-				c <= rfoc;
-				vc <= rfocv;
-			end
-		end
-		else begin
-			c <= 'd0;
-			vc <= 'd0;
+	OP_LOAD,OP_LOADZ:
+		tOFLoadStore();
+	// Store: same as load except canary register gets stored if r53 specified.
+	OP_STORE:
+		begin
+			tOFLoadStore();
+			if (Ra.num==SCREG && !fnIsVector(ir))
+				a <= canary;
 		end
 	default:	
 		begin
@@ -820,8 +827,6 @@ begin
 			vc <= rfocv;
 		end
 	endcase
-	if (ir.any.opcode==OP_STORE && Ra.num==SCREG && !ir.any.vec)
-		a <= canary;
 
 	// If predicate is false, ignore instruction
 	if (!((predbuf[15:14]==2'b01 &&  rfop[predcond]) || 
@@ -831,6 +836,166 @@ begin
 		goto (IFETCH);
 end
 endtask
+
+// Handling operand fetch for the PRED modifier. Unique in that it goes directly
+// back to the instruction fetch stage.
+task tOFPred;
+begin
+	predbuf <= {ir[33:29],ir[26:16]};
+	predreg <= ir[15:10];
+	predcond <= ir[9:5];
+	goto (IFETCH);
+end
+endtask
+
+// Handling ADDI/RTD/RTE operands. The immediate operand for RTD/RTE is
+// truncated at bit 4. Stack alignment is 16 bytes.
+task tOFAddi;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? -rfoa : rfoa;
+	if (ir[31])	// RTS / RTD / RTE
+		b <= {imm[$bits(value_t)-1:4],4'd0};
+	else
+		b <= imm;
+end
+endtask
+
+// Handling arithmetic operations.
+// Set operand A and B into operand registers, negating if indicated.
+task tOFArith;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? -rfoa : rfoa;
+	if (Rb.num==PCREG)
+		b <= opc;
+	else
+		b <= Rb.sign ? -rfob : rfob;
+end
+endtask
+
+// Handling float arithmetic operations.
+// Set operand A and B into operand registers, negating if indicated.
+task tOFFArith;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+	if (Rb.num==PCREG)
+		b <= opc;
+	else
+		b <= Rb.sign ? {~rfob[127],rfob[126:0]} : rfob;
+end
+endtask
+
+// Handling logical operations.
+// Set operand A and B into operand registers, complementing if indicated.
+task tOFLogic;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? ~rfoa : rfoa;
+	if (Rb.num==PCREG)
+		b <= opc;
+	else
+		b <= Rb.sign ? ~rfob : rfob;
+end
+endtask
+
+// Handling branch operands. Operands do not allow negating or complement.
+task tOFBranch;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= rfoa;
+	case(ir.br.cnd)
+	BCI,BSI:	b <= Rb.num;
+	default:
+		if (Rb.num==PCREG)
+			b <= opc;
+		else
+			b <= rfob;
+	endcase
+	if (postfix1.opcode==OP_PFX)
+		b <= imm;
+end
+endtask
+
+// Handling instructions that can swap operands.
+// CMP / DIV
+// May want to compare against the PC register.
+task tOFSwap;
+begin
+	if (ir[31]) begin
+		a <= imm;
+		b <= Ra.sign ? -rfoa : rfoa;
+	end
+	else begin
+		a <= Ra.sign ? -rfoa : rfoa;
+		b <= imm;
+	end
+	if (Ra.num==PCREG) begin
+		if (ir[31])
+			b <= opc;
+		else
+			a <= opc;
+	end
+end
+endtask
+
+// Handling float operands that can swap.
+// It does not make sense to have the PC register available to float operations.
+task tOFFSwap;
+begin
+	if (ir[31]) begin
+		a <= imm;
+		b <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+	end
+	else begin
+		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+		b <= imm;
+	end
+end
+endtask
+
+// Handling load and store operands.
+task tOFLoadStore;
+begin
+	if (Ra.num==PCREG)
+		a <= opc;
+	else
+		a <= Ra.sign ? -rfoa : rfoa;
+	if (Rb.num==PCREG)
+		b <= opc;
+	else
+		b <= Rb.sign ? -rfob : rfob;
+	if (ir.ls.sz==PRCNDX) begin
+		if (ir[11:9]==3'd7) begin
+			c <= 'd0;
+			vc <= 'd0;
+		end
+		else begin
+			c <= rfoc;
+			vc <= rfocv;
+		end
+	end
+	else begin
+		c <= 'd0;
+		vc <= 'd0;
+	end
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Execute Stage (EX)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tExecute;
 begin
@@ -868,16 +1033,7 @@ begin
 			OP_AND:	begin vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec; end
 			OP_OR:	begin vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec; end
 			OP_EOR:	begin vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec; end
-			OP_JSR:
-				begin
-					is_jsr <= 1'b1;
-					if (ir[31]) begin
-						tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
-						goto (MEMORY);
-					end
-					else
-						pc <= ea;
-				end
+			OP_JSR: tExJsr();
 			default:	;
 			endcase
 		end
@@ -940,16 +1096,7 @@ begin
 			res <= 'd0;
 			// tPrivilege();
 		end
-	OP_JSR:
-		begin
-			is_jsr <= 1'b1;
-			if (ir[31]) begin
-				tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
-				goto (MEMORY);
-			end
-			else
-				pc <= ea;
-		end
+	OP_JSR:	tExJsr();
 	OP_Bcc, OP_DBcc:	tExBranch();
 	OP_LOAD:	begin tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD); goto (MEMORY); end
 	OP_LOADZ:	begin tExLoad(MR_LOADZ); goto (MEMORY); end
@@ -959,52 +1106,54 @@ begin
 end
 endtask
 
-task tMemory;
-input state_t state;
+task tExJsr;
 begin
-	case(state)
-	MEMORY:
-		begin
-			/*
-			if (fnAlignFaultDetect(memreq)) begin
-				memresp.cause = FLT_ALN;
-			end
+	is_jsr <= 1'b1;
+	if (ir[31]) begin
+		if (Ra.sign) begin
+			if (ir[15])
+				case(ir.any.sz)
+				Thor2023Pkg::byt:	pc <= pc + jira[7:0];
+				Thor2023Pkg::wyde: pc <= pc + jira[15:0];
+				Thor2023Pkg::tetra: pc <= pc + jira[31:0];
+				endcase
 			else
-			*/
-			begin
-				memreq.wr <= 1'b1;
-				if (memreq_wack)
-					goto (MEMORY1);
-			end
+				case(ir.any.sz)
+				Thor2023Pkg::byt:	pc[7:0] <= jira[7:0];
+				Thor2023Pkg::wyde: pc[15:8] <= jira[15:0];
+				Thor2023Pkg::tetra: pc[31:0] <= jira[31:0];
+				endcase
 		end
-	MEMORY1:
-		begin
-			if (!memresp_fifo_empty) begin
-				memresp_fifo_rd <= 1'b1;
-				goto (MEMORY2);
-			end
+		else begin
+			tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
+			goto (MEMORY);
 		end
-	MEMORY2:	tMemory2();
-	MEMORY3:
-		begin
-			memreq.wr <= 1'b1;
-			if (memreq_wack)
-				goto (MEMORY4);
-		end
-	MEMORY4:
-		begin
-			if (!memresp_fifo_empty) begin
-				memresp_fifo_rd <= 1'b1;
-				goto (MEMORY5);
-			end
-		end
-	MEMORY5:	tMemory5();
-	default:
-		begin
-			$display("Illegal memory state (%d)", state);
-			$finish;
-		end
-	endcase
+	end
+	else
+		pc <= ea;
+	if (agen_cause != FLT_NONE)
+		tException(agen_cause);
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Memory Stage (MEM)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tMemory;
+begin
+	memreq.wr <= 1'b1;
+	if (memreq_wack)
+		goto (MEMORY1);
+end
+endtask
+
+task tMemory1;
+begin
+	if (!memresp_fifo_empty) begin
+		memresp_fifo_rd <= 1'b1;
+		goto (MEMORY2);
+	end
 end
 endtask
 
@@ -1021,10 +1170,10 @@ begin
 					pc <= opc + memresp.res;
 				else begin
 					case(ir.any.sz)
-					byt:	pc[7:0] <= memresp.res[7:0];
-					wyde: pc[15:0] <= memresp.res[15:0];
-					tetra: pc[31:0] <= memresp.res[31:0];
-					octa: pc[63:0] <= memresp.res[63:0];
+					Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
+					Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
+					Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
+					Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
 					default:	pc <= memresp.res;
 					endcase
 				end
@@ -1061,6 +1210,23 @@ begin
 end
 endtask
 
+task tMemory3;
+begin
+	memreq.wr <= 1'b1;
+	if (memreq_wack)
+		goto (MEMORY4);
+end
+endtask
+
+task tMemory4;
+begin
+	if (!memresp_fifo_empty) begin
+		memresp_fifo_rd <= 1'b1;
+		goto (MEMORY5);
+	end
+end
+endtask
+
 task tMemory5;
 begin
 	goto (IFETCH);
@@ -1070,10 +1236,10 @@ begin
 				pc <= opc + memresp.res;
 			else begin
 				case(ir.any.sz)
-				byt:	pc[7:0] <= memresp.res[7:0];
-				wyde: pc[15:0] <= memresp.res[15:0];
-				tetra: pc[31:0] <= memresp.res[31:0];
-				octa: pc[63:0] <= memresp.res[63:0];
+				Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
+				Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
+				Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
+				Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
 				default:	pc <= memresp.res;
 				endcase
 			end
@@ -1452,7 +1618,7 @@ end
 endtask
 
 task tException;
-input [7:0] c;
+input cause_code_t c;
 integer j;
 begin
 	cause_code <= c;
