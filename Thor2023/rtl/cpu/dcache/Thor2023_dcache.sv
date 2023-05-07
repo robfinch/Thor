@@ -42,14 +42,17 @@ import Thor2023Pkg::*;
 import Thor2023_cache_pkg::*;
 
 module Thor2023_dcache(rst, clk, dce, snoop_adr, snoop_v, snoop_cid,
-	cache_load, hit, uway, cpu_req_i, cpu_resp_o, update_data_i, dump, dump_o,
+	cache_load, hit, modified, uway, cpu_req_i, cpu_resp_o, update_data_i, dump, dump_o,
 	dump_ack_i, wr, way,
 	invce, dc_invline, dc_invall);
+parameter CORENO = 6'd3;
 parameter CID = 4'd3;
 parameter WAYS = 4;
 parameter LINES = 512;
 parameter LOBIT = 6;
 parameter HIBIT = 14;
+parameter T6 = 6;
+parameter T15 = 15;
 parameter TAGBIT = 15;
 localparam LOG_WAYS = $clog2(WAYS)-1;
 
@@ -61,6 +64,7 @@ input snoop_v;								// 1= valid snoop taking place
 input [3:0] snoop_cid;
 input cache_load;							// 1= load operation, 0=update
 output reg hit;
+output reg modified;
 output reg [LOG_WAYS:0] uway;	// way to use on a cache hit
 input wb_cmd_request512_t cpu_req_i;
 output wb_cmd_response512_t cpu_resp_o;
@@ -78,7 +82,7 @@ input dc_invall;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 // Data Cache
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-typedef logic [$bits(Thor2023Pkg::address_t)-1:TAGBIT] cache_tag_t;
+typedef logic [$bits(Thor2023Pkg::address_t)-1:T6] cache_tag_t;
 typedef struct packed
 {
 	logic resv;			// make struct a multiple of eight
@@ -86,7 +90,7 @@ typedef struct packed
 	logic m;
 	Thor2023Pkg::asid_t asid;
 	cache_tag_t tag;
-	logic [DCacheLineWidth-1:0] data;
+	logic [Thor2023_cache_pkg::DCacheLineWidth-1:0] data;
 } cache_line_t;
 
 localparam CACHE_LINE_WIDTH = ($bits(cache_line_t)+7) & 32'hFFF8;	// Must be a multiple of eight
@@ -98,12 +102,12 @@ reg dump1;							// dump the cache line to memory
 cache_line_t cline_in;
 reg [LINES-1:0] validr [0:WAYS-1];
 reg [WAYS-1:0] valid;
-reg [WAYS-1:0] hits;
+reg [WAYS-1:0] hits, mods;
 cache_tag_t [WAYS-1:0] ptags;	// physical tags associated with even cache line
 DCacheLine line;
 cache_line_t [WAYS-1:0] lines;
 reg [pL1DCacheWays-1:0] dcache_wr;
-localparam NSEL = DCacheLineWidth/8;
+localparam NSEL = Thor2023_cache_pkg::DCacheLineWidth/8;
 reg [CACHE_LINE_WIDTH/8-1:0] sel;
 wire cdvndx,cdvndx1;
 reg cdvndx2;
@@ -170,7 +174,7 @@ begin
 	cline_in.v <= 1'b1;					// Whether updating the line or loading a new one, always valid.
 	cline_in.m <= ~cache_load;	// It is not modified if it is a fresh load.
 	cline_in.asid <= cpu_req_i.asid;
-	cline_in.tag <= cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:TAGBIT];
+	cline_in.tag <= cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:T6];
 	if (cache_load)
 		cline_in.data <= update_data_i.dat;
 	else
@@ -210,7 +214,7 @@ for (g = 0; g < WAYS; g = g + 1) begin : gFor
 		.wr(wr && way==g && cache_load),
 		.wadr(vndx),
 		.radr(snoop_adr[HIBIT:LOBIT]),
-		.i(update_data_i.adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT]),
+		.i(update_data_i.adr[$bits(Thor2023Pkg::address_t)-1:T6]),
 		.o(ptags[g])
 	);
 
@@ -296,9 +300,11 @@ always_comb
 				line.vtag = lines[0].tag;
 				line.data = lines[0].data;
 				uway = 2'd0;
-				cpu_resp_o.ack = 1'b0;
-				cpu_resp_o.adr = 'd0;
-				cpu_resp_o.dat = 'd0;
+				cpu_resp_o.cid = update_data_i.cid;
+				cpu_resp_o.tid = update_data_i.tid;
+				cpu_resp_o.ack = update_data_i.ack;
+				cpu_resp_o.adr = update_data_i.adr;
+				cpu_resp_o.dat = update_data_i.dat;
 			end
 		endcase
 
@@ -343,15 +349,22 @@ end
 always_comb
 begin
 	for (j = 0; j < WAYS; j = j + 1) begin
-	  hits[j] = lines[j[LOG_WAYS:0]].tag==cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:TAGBIT] && 
+	  hits[j] = lines[j[LOG_WAYS:0]].tag[$bits(Thor2023Pkg::address_t)-1:T15]==
+	  						cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:T15] && 
 	  					lines[j[LOG_WAYS:0]].asid==cpu_req_i.asid &&
 	  					lines[j[LOG_WAYS:0]].v==1'b1;
+	  mods[j] = lines[j[LOG_WAYS:0]].tag[$bits(Thor2023Pkg::address_t)-1:T15]==
+	  						cpu_req_i.vadr[$bits(Thor2023Pkg::address_t)-1:T15] && 
+	  					lines[j[LOG_WAYS:0]].asid==cpu_req_i.asid &&
+	  					lines[j[LOG_WAYS:0]].m==1'b1;
 	end
 end
 
 
 always_ff @(posedge clk)
 	hit <= |hits;
+always_ff @(posedge clk)
+	modified <= |mods;
 
 initial begin
 for (m = 0; m < WAYS; m = m + 1) begin
@@ -386,7 +399,7 @@ else begin
 	// snoop.
 	if (snoop_v && snoop_cid!=CID) begin
 		for (k = 0; k < WAYS; k = k + 1) begin
-			if (snoop_adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT]==ptags[k])
+			if (snoop_adr[$bits(Thor2023Pkg::address_t)-1:T15]==ptags[k][$bits(Thor2023Pkg::address_t)-1:T15])
 				validr[k][snoop_adr[HIBIT:LOBIT]] <= 1'b0;
 		end
 	end
