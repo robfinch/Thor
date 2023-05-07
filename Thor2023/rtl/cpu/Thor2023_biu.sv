@@ -406,7 +406,7 @@ reg dtlben, dtlbwr;
 TLBE dtlbdato;
 physical_address_t phys_dadr, phys_dadrd1;
 reg dc_wr;
-wire dhit;
+wire dhit,dmodified;
 address_t dadr;
 DCacheLine dci [0:1];
 DCacheLine dci1,dci2;
@@ -452,6 +452,7 @@ udc1
 	.snoop_cid(snoop_cid),
 	.cache_load(dcache_load),
 	.hit(dhit),
+	.modified(dmodified),
 	.uway(dc_uway),
 	.cpu_req_i(cpu_req),
 	.cpu_resp_o(response_from_cache),
@@ -481,6 +482,7 @@ udcctrl
 	.wbm_resp(dwbm_resp),
 	.acr(tlbacr),
 	.hit(dhit),
+	.modified(dmodified),
 	.cache_load(dcache_load),
 	.cpu_request_i(cpu_req),
 	.data_to_cache_o(data_to_cache),

@@ -113,17 +113,17 @@ endcase
 endfunction
 
 always_comb
-	i0_sel = fnSel(i0.sz);
+	i0_sel = i0.sel;//fnSel(i0.sz);
 always_comb
-	i1_sel = fnSel(i1.sz);
+	i1_sel = i1.sel;//fnSel(i1.sz);
 
 // Move select and data values to their raw positions.
 always_comb
 begin
 	i0_ = i0;
 	i1_ = i1;
-	i0_.sel = i0_sel << i0.adr[3:0];
-	i1_.sel = i1_sel << i1.adr[3:0];
+	i0_.sel = i0_sel << i0.adr[5:0];
+	i1_.sel = i1_sel << i1.adr[5:0];
 	i0_.res = i0.res << {i0.adr[3:0],3'b0};
 	i1_.res = i1.res << {i1.adr[3:0],3'b0};
 end

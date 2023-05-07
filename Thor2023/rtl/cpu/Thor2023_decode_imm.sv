@@ -45,10 +45,10 @@ input instruction_t ir2;
 input instruction_t ir3;
 input instruction_t ir4;
 input instruction_t ir5;
-output value_t imm;
+output double_value_t imm;
 output reg [4:0] inc;					// How much PC should increment by
 
-wire value_t imm16x128, imm32x128, imm64x128;
+wire double_value_t imm16x128, imm32x128, imm64x128;
 fpCvt16To128 ucvt16x128({ir[39:32],ir[30:23]}, imm16x128);
 fpCvt32To128 ucvt32x128(ir2[39:8], imm32x128);
 fpCvt64To128 ucvt64x128({ir3[39:8],ir2[39:8]}, imm64x128);

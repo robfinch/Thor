@@ -70,6 +70,7 @@ assign clk_g = clk_i;
 typedef enum logic [3:0] {
 	IFETCH = 8'd1,
 	DECODE,
+	DECODE2,
 	OFETCH,
 	EXECUTE,
 	MEMORY,
@@ -131,7 +132,7 @@ reg [7:0] tid;
 reg pe = 1'b0;
 Thor2023Pkg::asid_t asid;
 reg dce;
-value_t keys2 [0:1];
+double_value_t keys2 [0:1];
 reg [23:0] keys [0:7];
 always_comb
 begin
@@ -164,21 +165,23 @@ reg rollback = 1'b0;
 reg is_jsr;
 
 regspec_t Ra,Rb,Rc,Rt;
+reg Ra1,Rb1,Rc1,Rt1;
 reg rfwr,rfwrg,rfwrv;
-value_t res;
+double_value_t res;
 reg [VWID-1:0] vres;
 reg [VWID/8-1:0] vsel;
 value_t rfoa, rfob, rfoc, rfop;
+value_t rfoah, rfobh, rfoch, rfoph;
 wire [VWID-1:0] rfoav, rfobv, rfocv;
 reg [VWID-1:0] shlv;
-value_t a, b, c;
+double_value_t a, b, c;
 reg [VWID-1:0] va, vb, vc;
 reg [VWID-1:0] va1, vb1, vc1;
 wire [VWID-1:0] vaddo, vcmpo;
-value_t imm2;
-value_t imm;
-value_t vimm2;
-value_t vimm;
+double_value_t imm2;
+double_value_t imm;
+double_value_t vimm2;
+double_value_t vimm;
 wire [4:0] imm_inc;
 wire [4:0] vimm_inc;
 reg predact;
@@ -187,12 +190,13 @@ reg [4:0] predcond;
 reg [5:0] predreg;
 reg predt;
 wire takb;
-quad_value_t group_out;
-quad_value_t group_in;
+octa_value_t group_out;
+octa_value_t group_in;
 reg is_vec;
 reg [4:0] bytcnt2;
 reg [63:0] sel2;
 value_t data2;
+reg fetch_H;
 
 always_comb
 	omode = sr.om;
@@ -292,16 +296,16 @@ Thor2023_regfile urf1
 (
 	.clk(clk_g),
 	.wg(rfwrg),
-	.gwa(Ra.num[3:0]),
+	.gwa(Ra.num[2:0]),
 	.gi(group_in),
 	.wr(rfwr),
-	.wa(Rt.num), 
+	.wa({Rt1,Rt.num}), 
 	.i(res),
-	.gra(Ra.num[3:0]),
+	.gra(Ra.num[2:0]),
 	.go(group_out),
-	.ra0(Ra.num),
-	.ra1(Rb.num),
-	.ra2(Rc.num), 
+	.ra0({Ra1,Ra.num}),
+	.ra1({Rb1,Rb.num}),
+	.ra2({Rc1,Rc.num}),
 	.ra3(predreg),
 	.o0(rfoa),
 	.o1(rfob),
@@ -586,6 +590,7 @@ else begin
 	case(state)
 	IFETCH:	tIFetch();
 	DECODE:	tDecode();
+	DECODE2: tDecode2();
 	OFETCH:	tOFetch();
 	EXECUTE: tExecute();
 	MEMORY: tMemory();
@@ -641,6 +646,10 @@ begin
 	vres <= 'd0;
 	group_in <= 'd0;
 	memresp_fifo_rd <= 1'b0;
+	Ra1 <= 'd0;
+	Rb1 <= 'd0;
+	Rc1 <= 'd0;
+	Rt1 <= 'd0;
 	goto (IFETCH);
 end
 endtask
@@ -674,6 +683,7 @@ endtask
 task tDecode;
 begin
 	goto (OFETCH);
+
 	// Vector instructions may increment the PC by an additional byte.
 	pc <= pc + imm_inc + (fnHasMask(ir) ? 2'd1 : 2'd0);
 	case(ir.any.opcode)
@@ -745,8 +755,33 @@ begin
 	default:	;
 	endcase
 	imm <= imm2;
+	Ra1 <= 1'b0;
+	Rb1 <= 1'b0;
+	Rc1 <= 1'b0;
+	Rt1 <= 1'b0;
+	if (ir.any.sz==PRC128) begin
+		Ra1 <= 1'b1;
+		Rb1 <= 1'b1;
+		Rc1 <= 1'b1;
+		goto (DECODE2);
+	end
 end
 endtask
+
+// Extra cycle to fetch upper half of a register, needed only for 128-bit
+// operations.
+task tDecode2;
+begin
+	Ra1 <= 1'b0;
+	Rb1 <= 1'b0;
+	Rc1 <= 1'b0;
+	rfoah <= rfoa;
+	rfobh <= rfob;
+	rfoch <= rfoc;
+	goto (OFETCH);
+end
+endtask
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Operand Fetch Stage (OF)
@@ -855,9 +890,9 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -rfoa : rfoa;
+		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
 	if (ir[31])	// RTS / RTD / RTE
-		b <= {imm[$bits(value_t)-1:4],4'd0};
+		b <= {imm[$bits(double_value_t)-1:4],4'd0};
 	else
 		b <= imm;
 end
@@ -870,11 +905,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -rfoa : rfoa;
+		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? -rfob : rfob;
+		b <= Rb.sign ? -{rfobh,rfob} : {rfobh,rfob};
 end
 endtask
 
@@ -885,11 +920,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+		a <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? {~rfob[127],rfob[126:0]} : rfob;
+		b <= Rb.sign ? {~rfobh[63],rfobh[62:0],rfob} : {rfobh,rfob};
 end
 endtask
 
@@ -900,11 +935,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? ~rfoa : rfoa;
+		a <= Ra.sign ? ~{rfoah,rfoa} : {rfoah,rfoa};
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? ~rfob : rfob;
+		b <= Rb.sign ? ~{rfobh,rfob} : {rfobh,rfob};
 end
 endtask
 
@@ -935,10 +970,10 @@ task tOFSwap;
 begin
 	if (ir[31]) begin
 		a <= imm;
-		b <= Ra.sign ? -rfoa : rfoa;
+		b <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
 	end
 	else begin
-		a <= Ra.sign ? -rfoa : rfoa;
+		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
 		b <= imm;
 	end
 	if (Ra.num==PCREG) begin
@@ -956,10 +991,10 @@ task tOFFSwap;
 begin
 	if (ir[31]) begin
 		a <= imm;
-		b <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+		b <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
 	end
 	else begin
-		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
+		a <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
 		b <= imm;
 	end
 end
@@ -971,18 +1006,18 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -rfoa : rfoa;
+		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? -rfob : rfob;
+		b <= Rb.sign ? -{rfobh,rfob} : {rfobh,rfob};
 	if (ir.ls.sz==PRCNDX) begin
 		if (ir[11:9]==3'd7) begin
 			c <= 'd0;
 			vc <= 'd0;
 		end
 		else begin
-			c <= rfoc;
+			c <= {rfoch,rfoc};
 			vc <= rfocv;
 		end
 	end
@@ -1011,6 +1046,8 @@ begin
 					rfwr <= !is_vec;
 					if (ir[31])
 						pc <= c;
+ 					if (ir.any.sz==PRC128)
+ 						goto (WRITEBACK);
 				end
 			OP_CMP:	
 				begin
@@ -1021,10 +1058,12 @@ begin
 					2'b11:	res <= {64'd0,Rt.sign ^ cmpo[2]};
 					endcase
 					rfwr <= !is_vec;
-				end
-			OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec; end
-			OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec; end
-			OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec; end
+ 					if (ir.any.sz==PRC128)
+ 						goto (WRITEBACK);
+ 				end
+			OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+			OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+			OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
 			default:	;
 			endcase
 			case(ir.r2.func)
@@ -1045,21 +1084,24 @@ begin
 				vres <= Rt.sign ? ~shlv : shlv;
 				rfwr <= !is_vec;
 				rfwrv <= is_vec;
-				goto (IFETCH);
+				if (ir.any.sz==PRC128)
+					goto (WRITEBACK);
 			end
-		OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; end
-		OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; end
-		OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; end
-		OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; end
-		OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; end
-		OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; end
-		OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; end
-		OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; end
-		OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; end
+		OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
 		default:				begin res <= 'd0; end	 //tUnimp();
 		endcase
 	OP_ADDI:	
 		begin
+			if (ir.any.sz==PRC128)
+				goto (WRITEBACK);
 			res <= Rt.sign ? -(a + b) : a + b; rfwr <= !is_vec;
 			vres <= vaddo; rfwrv <= is_vec;
 			if (ir[31]) begin
@@ -1069,21 +1111,33 @@ begin
 					tRte();
 			end
 		end
-	OP_CMPI:	begin res <= {64'd0,cmpo}; rfwr <= 1'b1; end
+	OP_CMPI:
+		begin
+			res <= {64'd0,cmpo};
+			rfwr <= 1'b1;
+			if (ir.any.sz==PRC128)
+				goto (WRITEBACK);
+		end
 	OP_ANDI:
 		begin
 			res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec;
 			vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec;
+			if (ir.any.sz==PRC128)
+				goto (WRITEBACK);
 		end
 	OP_ORI:		
 		begin
 			res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec;
 			vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec;
+			if (ir.any.sz==PRC128)
+				goto (WRITEBACK);
 		end
 	OP_EORI:
 		begin
 			res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec;
 			vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec;
+			if (ir.any.sz==PRC128)
+				goto (WRITEBACK);
 		end
 	OP_CSR:
 		if (omode >= b[13:12]) begin
@@ -1173,11 +1227,14 @@ begin
 					Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
 					Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
 					Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
-					Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
+//					Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
 					default:	pc <= memresp.res;
 					endcase
 				end
-				goto (IFETCH);
+				if (ir.any.sz==PRC128)
+					goto (WRITEBACK);
+				else
+					goto (IFETCH);
 			end
 		end
 		else begin
@@ -1229,7 +1286,10 @@ endtask
 
 task tMemory5;
 begin
-	goto (IFETCH);
+	if (ir.any.sz==PRC128)
+		goto (WRITEBACK);
+	else
+		goto (IFETCH);
 	if (memresp.load) begin
 		if (is_jsr) begin
 			if (ir[15])
@@ -1239,7 +1299,7 @@ begin
 				Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
 				Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
 				Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
-				Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
+//				Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
 				default:	pc <= memresp.res;
 				endcase
 			end
@@ -1616,6 +1676,22 @@ begin
 	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[5:0]);
 end
 endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Writeback Stage (WB)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+task tWriteback;
+begin
+	Rt1 <= 1'b1;
+	rfwr <= 1'b1;
+	res <= res >> 64;
+	goto (IFETCH);
+end
+endtask
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tException;
 input cause_code_t c;
