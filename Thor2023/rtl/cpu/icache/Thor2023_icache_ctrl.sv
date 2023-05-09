@@ -38,13 +38,13 @@
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_icache_ctrl(rst, clk, wbm_req, wbm_resp, hit, miss_adr, miss_asid,
 	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
 parameter WAYS = 4;
 parameter CID = 6'd2;
-localparam LOG_WAYS = $clog2(WAYS)-1;
+localparam LOG_WAYS = $clog2(WAYS);
 input rst;
 input clk;
 output wb_cmd_request128_t wbm_req;
@@ -53,7 +53,7 @@ input hit;
 input wb_address_t miss_adr;
 input Thor2023Pkg::asid_t miss_asid;
 output wr_ic;
-output [LOG_WAYS:0] way;
+output [LOG_WAYS-1:0] way;
 output ICacheLine line_o;
 input wb_address_t snoop_adr;
 input snoop_v;
@@ -66,6 +66,7 @@ wire Thor2023Pkg::address_t [15:0] vtags;
 
 Thor2023_icache_req_generator
 #(
+	.CORENO(CID),
 	.CID(CID)
 )
 icrq1
@@ -73,7 +74,7 @@ icrq1
 	.rst(rst),
 	.clk(clk),
 	.hit(hit), 
-	.miss_address(miss_adr),
+	.miss_adr(miss_adr),
 	.miss_asid(miss_asid),
 	.wbm_req(wbm_req),
 	.wbm_resp(wbm_resp),

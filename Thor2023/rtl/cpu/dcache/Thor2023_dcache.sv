@@ -181,6 +181,7 @@ begin
 		cline_in.data <= cpu_req_i.dat;
 end
 
+
 generate begin : gDcacheRAM
 for (g = 0; g < WAYS; g = g + 1) begin : gFor
 	sram_1r1w_bw 
@@ -222,11 +223,16 @@ end
 end
 endgenerate
 
-wire non_cacheable =
+reg non_cacheable;
+reg read_allocate;
+
+always_comb
+	non_cacheable =
 	cache_type==NC_NB ||
 	cache_type==NON_CACHEABLE
 	;
-wire read_allocate =
+always_comb
+	read_allocate =
 	cache_type==CACHEABLE_NB ||
 	cache_type==CACHEABLE ||
 	cache_type==WT_READ_ALLOCATE ||
@@ -237,11 +243,13 @@ wire read_allocate =
 
 // Pass through the incoming line back to the CPU when data cache is not enabled.
 // If a cache hit, the update way is the hit way.
+
 always_comb
-	if (non_cacheable|~read_allocate|~dce) begin
-		cpu_resp_o = update_data_i;
+begin
+	line = 'd0;
+	uway = 'd0;
+	if (non_cacheable|~read_allocate|~dce)
 		uway = 'd0;
-	end
 	else
 		casez (hits)
 		4'b1???:
@@ -252,9 +260,6 @@ always_comb
 				line.vtag = lines[3].tag;
 				line.data = lines[3].data;
 				uway = 2'd3;
-				cpu_resp_o.ack = cpu_req_i.cyc;
-				cpu_resp_o.adr = {ptags[3],vndx,{LOBIT{1'b0}}};
-				cpu_resp_o.dat = lines[3].data;
 			end
 		4'b01??:
 			begin
@@ -264,9 +269,6 @@ always_comb
 				line.vtag = lines[2].tag;
 				line.data = lines[2].data;
 				uway = 2'd2;
-				cpu_resp_o.ack = cpu_req_i.cyc;
-				cpu_resp_o.adr = {ptags[2],vndx,{LOBIT{1'b0}}};
-				cpu_resp_o.dat = lines[2].data;
 			end
 		4'b001?:
 			begin
@@ -276,9 +278,6 @@ always_comb
 				line.vtag = lines[1].tag;
 				line.data = lines[1].data;
 				uway = 2'd1;
-				cpu_resp_o.ack = cpu_req_i.cyc;
-				cpu_resp_o.adr = {ptags[1],vndx,{LOBIT{1'b0}}};
-				cpu_resp_o.dat = lines[1].data;
 			end
 		4'b0001:
 			begin
@@ -288,9 +287,6 @@ always_comb
 				line.vtag = lines[0].tag;
 				line.data = lines[0].data;
 				uway = 2'd0;
-				cpu_resp_o.ack = cpu_req_i.cyc;
-				cpu_resp_o.adr = {ptags[0],vndx,{LOBIT{1'b0}}};
-				cpu_resp_o.dat = lines[0].data;
 			end
 		default:
 			begin
@@ -300,6 +296,44 @@ always_comb
 				line.vtag = lines[0].tag;
 				line.data = lines[0].data;
 				uway = 2'd0;
+			end
+		endcase
+end
+
+always_ff @(posedge clk)
+begin
+	cpu_resp_o = 'd0;
+	if (non_cacheable|~read_allocate|~dce)
+		cpu_resp_o = update_data_i;
+	else
+		casez (hits)
+
+		4'b1???:
+			begin
+				cpu_resp_o.ack = cpu_req_i.cyc;
+				cpu_resp_o.adr = {ptags[3],vndx,{LOBIT{1'b0}}};
+				cpu_resp_o.dat = lines[3].data;
+			end
+		4'b01??:
+			begin
+				cpu_resp_o.ack = cpu_req_i.cyc;
+				cpu_resp_o.adr = {ptags[2],vndx,{LOBIT{1'b0}}};
+				cpu_resp_o.dat = lines[2].data;
+			end
+		4'b001?:
+			begin
+				cpu_resp_o.ack = cpu_req_i.cyc;
+				cpu_resp_o.adr = {ptags[1],vndx,{LOBIT{1'b0}}};
+				cpu_resp_o.dat = lines[1].data;
+			end
+		4'b0001:
+			begin
+				cpu_resp_o.ack = cpu_req_i.cyc;
+				cpu_resp_o.adr = {ptags[0],vndx,{LOBIT{1'b0}}};
+				cpu_resp_o.dat = lines[0].data;
+			end
+		default:
+			begin
 				cpu_resp_o.cid = update_data_i.cid;
 				cpu_resp_o.tid = update_data_i.tid;
 				cpu_resp_o.ack = update_data_i.ack;
@@ -307,6 +341,9 @@ always_comb
 				cpu_resp_o.dat = update_data_i.dat;
 			end
 		endcase
+	
+end
+
 
 always_comb
 begin

@@ -40,18 +40,19 @@ import Thor2023Pkg::*;
 module Thor2023_eval_branch(inst, fdm, a, b, takb);
 input instruction_t inst;
 input fdm;
-input value_t a;
-input value_t b;
+input double_value_t a;
+input double_value_t b;
 output reg takb;
 
 wire [15:0] fco, dfco, fpco;
 wire nan;
-fpCompare96 u1 (.a(a), .b(b), .o(fpco), .nan(nan), .snan());
-DFPCompare96 u2 (.a(a), .b(b), .o(dfco));
+fpCompare128 u1 (.a(a), .b(b), .o(fpco), .nan(nan), .snan());
+DFPCompare128 u2 (.a(a), .b(b), .o(dfco));
 assign fco = fdm ? dfco : fpco;
 
 always_comb
-if (inst[0])
+case(inst.br.cm)
+2'd0:
 	case(inst.br.cnd)
 	EQ:	takb = a==b;
 	NE:	takb = a != b;
@@ -70,7 +71,7 @@ if (inst[0])
 	RA:	takb = 1'b1;
 	SR:	takb = 1'b1;
 	endcase
-else
+2'd2:
 	case(inst.br.cnd)
 	FEQ:	takb = fco[0];
 	FNE:	takb = fco[5];
@@ -82,5 +83,19 @@ else
 	FUN:	takb = fco[4];
 	default:	takb = 1'b1;
 	endcase
+2'd3:
+	case(inst.br.cnd)
+	FEQ:	takb = dfco[0];
+	FNE:	takb = dfco[5];
+	FLT:	takb = dfco[1];
+	FGE:	takb = dfco[6];
+	FLE:	takb = dfco[2];
+	FGT:	takb = dfco[7];
+	FORD:	takb = dfco[9];
+	FUN:	takb = dfco[4];
+	default:	takb = 1'b1;
+	endcase
+default:	;
+endcase
 
 endmodule

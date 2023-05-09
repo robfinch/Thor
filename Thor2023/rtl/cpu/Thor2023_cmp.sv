@@ -37,11 +37,12 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_cmp(a, b, o);
-parameter WID=96;
+module Thor2023_cmp(flt, a, b, o);
+parameter WID=128;
+input flt;
 input [WID-1:0] a;
 input [WID-1:0] b;
-output reg [31:0] o;
+output reg [15:0] o;
 
 wire [15:0] fcmpo;
 wire nan;
@@ -69,7 +70,7 @@ generate begin : gFPCmp
 			.snan()
 		);
 	default:
-		fpCompare96 ufpc1
+		fpCompare128 ufpc1
 		(
 			.a(a),
 			.b(b),
@@ -84,40 +85,43 @@ endgenerate
 
 always_comb
 begin
-	o[0] = a==b;
-	o[1] = $signed(a) < $signed(b);
-	o[2] = $signed(a) <= $signed(b);
-	o[3] = a < b;
-	o[4] = a <= b;
-	o[5] = a[0];
-	o[6] = a=='d0;
-	o[7] = a[95];
-	o[8] = a!=b;
-	o[9] = $signed(a) >= $signed(b);
-	o[10] = $signed(a) > $signed(b);
-	o[11] = a >= b;
-	o[12] = a > b;
-	o[13] = ~a[0];
-	o[14] = a != 'd0;
-	o[15] = 1'b1;
-	
-	o[16] = !nan & fcmpo[0];
-	o[17] = fcmpo[8];
-	o[18] = !nan & !fcmpo[0] & !fcmpo[1];
-	o[19] = nan | (!fcmpo[0] & !fcmpo[1]);
-	o[20] = fcmpo[0] | (!nan & !fcmpo[1]);
-	o[21] = nan | (!fcmpo[1] | fcmpo[0]);
-	o[22] = fcmpo[1] & (!nan & !fcmpo[0]);
-	o[23] = nan | (!fcmpo[0] & fcmpo[1]);
-	o[24] = fcmpo[0] | (!nan & fcmpo[1]);
-	o[25] = nan | (fcmpo[0] | fcmpo[1]);
-	o[26] = !nan & !fcmpo[0];
-	o[27] = nan & !fcmpo[0];
-	o[28] = !nan;
-	o[29] = nan;
-	
-	o[30] = 1'b0;
-	o[31] = 1'b0;
+	if (flt) begin
+		o[0] = !nan & fcmpo[0];
+		o[1] = fcmpo[8];
+		o[2] = !nan & !fcmpo[0] & !fcmpo[1];
+		o[3] = nan | (!fcmpo[0] & !fcmpo[1]);
+		o[4] = fcmpo[0] | (!nan & !fcmpo[1]);
+		o[5] = nan | (!fcmpo[1] | fcmpo[0]);
+		o[6] = fcmpo[1] & (!nan & !fcmpo[0]);
+		o[7] = nan | (!fcmpo[0] & fcmpo[1]);
+		o[8] = fcmpo[0] | (!nan & fcmpo[1]);
+		o[9] = nan | (fcmpo[0] | fcmpo[1]);
+		o[10] = !nan & !fcmpo[0];
+		o[11] = nan & !fcmpo[0];
+		o[12] = !nan;
+		o[13] = nan;
+		
+		o[14] = 1'b0;
+		o[15] = 1'b0;
+	end
+	else begin
+		o[0] = a==b;
+		o[1] = $signed(a) < $signed(b);
+		o[2] = $signed(a) <= $signed(b);
+		o[3] = a < b;
+		o[4] = a <= b;
+		o[5] = a[0];
+		o[6] = a=='d0;
+		o[7] = a[95];
+		o[8] = a!=b;
+		o[9] = $signed(a) >= $signed(b);
+		o[10] = $signed(a) > $signed(b);
+		o[11] = a >= b;
+		o[12] = a > b;
+		o[13] = ~a[0];
+		o[14] = a != 'd0;
+		o[15] = 1'b1;
+	end
 end
 
 endmodule

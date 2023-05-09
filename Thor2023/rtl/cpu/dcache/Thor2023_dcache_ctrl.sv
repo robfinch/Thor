@@ -119,13 +119,17 @@ lfsr17 #(.WID(17)) ulfsr1
 );
 
 wire cache_type = cpu_request_i.cache;
+reg non_cacheable;
+reg allocate;
 
-wire non_cacheable =
+always_comb
+	non_cacheable =
 	!dce ||
 	cache_type==NC_NB ||
 	cache_type==NON_CACHEABLE
 	;
-wire allocate =
+always_comb
+	allocate =
 	cache_type==CACHEABLE_NB ||
 	cache_type==CACHEABLE ||
 	cache_type==WT_READ_ALLOCATE ||
@@ -184,6 +188,8 @@ if (rst_i) begin
 	cache_load <= 'd0;
 	cache_load_r <= 'd0;
 	cache_dump <= 'd0;
+	for (nn = 0; nn < 16; nn = nn + 1)
+		tran_req[nn] <= 'd0;
 	tran_active <= 'd0;
 	tran_out <= 'd0;
 	req_load <= 'd0;

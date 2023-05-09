@@ -38,7 +38,7 @@
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_icache_ack_processor(rst, clk, wbm_resp, wr_ic, line_o, vtags, way);
 parameter LOG_WAYS = 2;
@@ -55,9 +55,12 @@ typedef enum logic [2:0] {
 } state_t;
 state_t resp_state;
 
+integer n;
 reg [7:0] last_tid;
-reg [1:0] v;
+reg [1:0] v [0:7];
 wire [16:0] lfsr_o;
+
+ICacheLine [7:0] tran_line;
 
 lfsr17 #(.WID(17)) ulfsr1
 (
@@ -72,7 +75,10 @@ always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	resp_state <= WAIT;
 	wr_ic <= 1'd0;
-	v <= 2'b00;
+	for (n = 0; n < 8; n = n + 1) begin
+		v[n] <= 2'b00;
+		tran_line[n] <= 'd0;
+	end
 	line_o <= 'd0;
 	last_tid <= 'd0;
 	way <= 'd0;
@@ -88,39 +94,33 @@ else begin
 					last_tid <= wbm_resp.tid;
 				end
 				if (wbm_resp.adr[4]) begin
-					v[1] <= 1'b1;
-					line_o.v[1] <= 1'b1;
-					line_o.vtag <= vtags[wbm_resp.tid & 4'hF];
-					line_o.ptag <= wbm_resp.adr[$bits(Thor2023Pkg::address_t)-1:0];
-					line_o.data[255:128] <= wbm_resp.dat;
+					v[wbm_resp.tid [3:1]][1] <= 1'b1;
+					tran_line[wbm_resp.tid[3:1]].v[1] <= 1'b1;
+					tran_line[wbm_resp.tid[3:1]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h10;
+					tran_line[wbm_resp.tid[3:1]].ptag <= wbm_resp.adr[$bits(Thor2023Pkg::address_t)-1:0] & ~64'h10;
+					tran_line[wbm_resp.tid[3:1]].data[255:128] <= wbm_resp.dat;
 				end
 				else begin
-					v[0] <= 1'b1;
-					line_o.v[0] <= 1'b1;
-					line_o.vtag <= vtags[wbm_resp.tid & 4'hF];
-					line_o.ptag <= wbm_resp.adr[$bits(Thor2023Pkg::address_t)-1:0];
-					line_o.data[127:  0] <= wbm_resp.dat;
+					v[wbm_resp.tid[3:1]][0] <= 1'b1;
+					tran_line[wbm_resp.tid[3:1]].v[0] <= 1'b1;
+					tran_line[wbm_resp.tid[3:1]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h10;
+					tran_line[wbm_resp.tid[3:1]].ptag <= wbm_resp.adr[$bits(Thor2023Pkg::address_t)-1:0] & ~64'h10;
+					tran_line[wbm_resp.tid[3:1]].data[127:  0] <= wbm_resp.dat;
 				end
 			end
-			if (v==2'b11) begin
-				v <= 2'b00;
-				wr_ic <= 1'b1;
-				way <= lfsr_o[LOG_WAYS-1:0];
-				resp_state <= DELAY1;
-			end
 		end
-	DELAY1:
-		resp_state <= WAIT_NACK;
-	WAIT_NACK:
-		if (!wbm_resp.ack)
-			resp_state <= DELAY3;
-	DELAY3:
-		resp_state <= DELAY4;
-	DELAY4:
-		resp_state <= WAIT;
 	default:	
 		resp_state <= WAIT;
 	endcase
+	// Search for completely loaded cache lines. Send off to cache.
+	for (n = 0; n < 8; n = n + 1) begin
+		if (v[n]==2'b11) begin
+			v[n] <= 2'b00;
+			line_o <= tran_line[n];
+			wr_ic <= 1'b1;
+			way <= lfsr_o[LOG_WAYS-1:0];
+		end
+	end
 end
 
 endmodule

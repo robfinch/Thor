@@ -1,7 +1,12 @@
+`timescale 1ns / 10ps
+
 package Thor2023Pkg;
 
 `undef IS_SIM
 //`define IS_SIM	1
+
+// Comment out to remove REP instruction
+`define SUPPORT_REP	1
 
 // Comment out to remove the sigmoid approximate function
 //`define SIGMOID	1
@@ -22,6 +27,9 @@ package Thor2023Pkg;
 
 `define L1DCacheWays 4
 
+// Uncomment to have page relative branches.
+//`define PGREL 1
+
 parameter  NLANES = `NLANES;
 // The following thread count carefully choosen.
 // It cannot be over 13 as that makes the vector register file too big for
@@ -41,7 +49,20 @@ parameter pL1DCacheWays = `L1DCacheWays;
 parameter TidMSB = $clog2(`NTHREADS)-1;
 
 parameter REGFILE_LATENCY = 2;
+
 parameter RAS_DEPTH	= 4;
+
+typedef enum logic [3:0] {
+	ST_RST = 4'd0,
+	ST_RUN = 4'd1,
+	ST_INVALL1 = 4'd7,
+	ST_INVALL2 = 4'd8,
+	ST_INVALL3 = 4'd9,
+	ST_INVALL4 = 4'd10,
+	ST_UPD1 = 4'd11,
+	ST_UPD2 = 4'd12,
+	ST_UPD3 = 4'd13
+} tlb_state_t;
 
 typedef enum logic [4:0] {
 	OP_TRAP			= 5'd00,
@@ -55,7 +76,7 @@ typedef enum logic [4:0] {
 	OP_ORI			= 5'd09,
 	OP_EORI			= 5'd10,
 	OP_FLT2			= 5'd12,
-	OP_BIT			= 5'd13,
+	OP_BITFLD		= 5'd13,
 	OP_SHIFT		= 5'd14,
 	OP_FMA			= 5'd15,
 	OP_LOAD			= 5'd16,
@@ -65,55 +86,76 @@ typedef enum logic [4:0] {
 	OP_FCMPI		= 5'd21,
 	OP_FMULI		= 5'd22,
 	OP_FDIVI		= 5'd23,
-	/* 10 to 17h = PFX */
 	OP_JSR			= 5'd24,
 	OP_LOADG		= 5'd26,
-	OP_STOREG		= 5'd27,
-	OP_Bcc			= 5'd28,
+	OP_Bcc			= 5'd27,
+	OP_LBcc			= 5'd28,
 	OP_DBcc			= 5'd29,
 	OP_PFX			= 5'd31
 } opcode_t;
 
+typedef enum logic [2:0] {
+	OP_CLR = 3'd0,
+	OP_SET = 3'd1,
+	OP_COM = 3'd2,
+	OP_SBX = 3'd3,
+	OP_EXTU = 3'd4,
+	OP_EXTS = 3'd5,
+	OP_DEP = 3'd6,
+	OP_FFO = 3'd7
+} bitfld_t;
+
 typedef enum logic [3:0] {
 	OP_CMP_EQ	= 4'h0,
-	OP_CMP_NE	= 4'h8,
-	OP_CMP_LT	= 4'h1,
-	OP_CMP_GE	= 4'h9,
-	OP_CMP_LE	= 4'h2,
-	OP_CMP_GT	= 4'hA,
-	OP_CMP_LTU	= 4'h5,
-	OP_CMP_GEU	= 4'hD,
-	OP_CMP_LEU	= 4'h6,
-	OP_CMP_GTU= 4'hE
+	OP_CMP_NE	= 4'd1,
+	OP_CMP_LT	= 4'd2,
+	OP_CMP_LE	= 4'd3,
+	OP_CMP_GE	= 4'd4,
+	OP_CMP_GT	= 4'd5,
+	OP_CMP_LTU	= 4'd10,
+	OP_CMP_LEU	= 4'd11,
+	OP_CMP_GEU	= 4'd12,
+	OP_CMP_GTU= 4'd13
 } cmp_t;
 
-typedef enum logic [4:0] {
-	EQ = 5'd0,
-	LT = 5'd1,
-	LE = 5'd2,
-	LO = 5'd3,
-	LS = 5'd4,
-	BC = 5'd5,
-	BS = 5'd6,
-//	MI = 5'd7,
-	NE = 5'd8,
-	GE = 5'd9,
-	GT = 5'd10,
-	HS = 5'd11,
-	HI = 5'd12,
-//	EVEN = 5'd13,
-	RA = 5'd14,
-	SR = 5'd15,
+typedef enum logic [1:0] {
+	CM_INT = 2'd0,
+	CM_POSIT = 2'd1,
+	CM_FLOAT = 2'd2,
+	CM_DECFLOAT = 2'd3
+} branch_cm_t;
+
+typedef enum logic [3:0] {
+	EQ = 4'd0,
+	NE = 4'd1,
+	LT = 4'd2,
+	LE = 4'd3,
+	GE = 4'd4,
+	GT = 4'd5,
+	BC = 4'd6,
+	BS = 4'd7,
 	
-	FEQ = 5'd16,
-	FNE = 5'd17,
-	FGT = 5'd18,
-	FGE = 5'd20,
-	FLT = 5'd22,
-	FLE = 5'd24,
-	FORD = 5'd28,
-	FUN = 5'd29
+	BCI = 4'd8,
+	BSI = 4'd9,
+	LO = 4'd10,
+	LS = 4'd11,
+	HS = 4'd12,
+	HI = 4'd13,
+	
+	RA = 4'd14,
+	SR = 4'd15
 } branch_cnd_t;
+
+typedef enum logic [3:0] {
+	FEQ = 4'd0,
+	FNE = 4'd1,
+	FGT = 4'd2,
+	FGE = 4'd3,
+	FLT = 4'd4,
+	FLE = 4'd5,
+	FORD = 4'd6,
+	FUN = 4'd7
+} fbranch_cnd_t;
 
 // R2 ops
 typedef enum logic [5:0] {
@@ -132,7 +174,7 @@ typedef enum logic [5:0] {
 	OP_JSRR			= 6'd24,
 	OP_PRED			= 6'd32,
 	OP_CARRY		= 6'd33,
-	OP_VMASK		= 6'd34,
+	OP_REP			= 6'd34,
 	OP_ATOM			= 6'd35,
 	OP_V2BITS		= 6'd40,
 	OP_BITS2V		= 6'd41
@@ -159,6 +201,18 @@ typedef enum logic [5:0] {
 	OP_SEXTW		= 6'h39
 } r1func_t;
 
+typedef enum logic [4:0] {
+	OP_FSCALEB = 5'd0,
+	OP_FMIN = 5'd1,
+	OP_FMAX = 5'd3,
+	OP_FADD = 5'd4,
+	OP_FCMP = 5'd5,
+	OP_FMUL = 5'd6,
+	OP_FDIV = 5'd7,
+	OP_FNXT = 5'd14,
+	OP_FREM = 5'd15
+} f2func_t;
+
 typedef enum logic [5:0] {
 	OP_ASL 	= 6'd0,
 	OP_ASR	= 6'd1,
@@ -183,9 +237,7 @@ typedef enum logic [2:0] {
 	PRC16 = 3'd1,
 	PRC32 = 3'd2,
 	PRC64 = 3'd3,
-	PRC24 = 3'd4,
-	PRC40 = 3'd5,
-	PRC96 = 3'd6,
+	PRC128 = 3'd4,
 	PRCNDX = 3'd7
 } prec_t;
 
@@ -278,6 +330,7 @@ typedef enum logic [11:0] {
 	FLT_EXV		= 12'h002,
 	FLT_TLBMISS = 12'h04,
 	FLT_DCM		= 12'h005,
+	FLT_CANARY= 12'h00B,
 	FLT_SSM		= 12'h020,
 	FLT_DBG		= 12'h021,
 	FLT_IADR	= 12'h022,
@@ -297,6 +350,7 @@ typedef enum logic [11:0] {
 	FLT_LVL		= 12'h03B,
 	FLT_PMA		= 12'h03D,
 	FLT_BRK		= 12'h03F,
+	FLT_TBL		= 12'h041,
 	FLT_PFX		= 12'h0C8,
 	FLT_TMR		= 12'h0E2,
 	FLT_CSR		= 12'h0EC,
@@ -325,6 +379,13 @@ typedef enum logic [3:0] {
 	vect = 4'd10
 } memsz_t;
 
+typedef enum logic [1:0] {
+	non = 2'd0,
+	postinc = 2'd1,
+	predec = 2'd2,
+	memi = 2'd3
+} addr_upd_t;
+
 typedef logic [TidMSB:0] Tid;
 typedef logic [TidMSB:0] tid_t;
 typedef logic [11:0] order_tag_t;
@@ -334,12 +395,14 @@ typedef logic [31:0] address_t;
 typedef logic [31:0] virtual_address_t;
 typedef logic [47:0] physical_address_t;
 typedef logic [31:0] code_address_t;
-typedef logic [95:0] value_t;
-typedef logic [63:0] double_value_t;
-typedef logic [95:0] triple_value_t;
-typedef logic [15:0] half_value_t;
-typedef logic [127:0] quad_value_t;
-typedef logic [255:0] double_quad_value_t;
+typedef logic [63:0] value_t;
+typedef struct packed {
+	value_t H;
+	value_t L;
+} double_value_t;
+typedef logic [31:0] half_value_t;
+typedef logic [255:0] quad_value_t;
+typedef logic [511:0] octa_value_t;
 typedef logic [5:0] Func;
 typedef logic [127:0] regs_bitmap_t;
 
@@ -376,20 +439,39 @@ typedef struct packed
 	logic [4:0] opcode;
 } postfix_t;
 
+
 typedef struct packed
 {
-	logic [31:0] payload;
+	logic [39:0] imm;
+	logic [2:0] typ;
+	logic [4:0] opcode;
+} lpostfix_t;
+
+
+typedef struct packed
+{
+	logic [30:0] payload;
+	logic vec;
 	prec_t sz;
 	opcode_t opcode;
 } anyinst_t;
 
+
 typedef struct packed
 {
-	logic resv1;
-	logic Rcvec;
+	logic [38:0] payload;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lanyinst_t;
+
+
+typedef struct packed
+{
+	logic [1:0] resv1;
 	logic [5:0] Rc;
-	logic S;
-	logic Rbvec;
+	logic Vc;
+	logic Vb;
 	regspec_t Rb;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -400,10 +482,86 @@ typedef struct packed
 
 typedef struct packed
 {
-	r2func_t func;
+	logic [7:0] pad;
 	logic [1:0] resv1;
+	logic [5:0] Rc;
+	logic Vc;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lf3inst_t;
+
+typedef struct packed
+{
+	f2func_t func;
+	logic [2:0] rm;
+	logic Vc;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} f2inst_t;
+
+typedef struct packed
+{
+	logic [7:0] pad;
+	f2func_t func;
+	logic [2:0] rm;
+	logic Vc;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lf2inst_t;
+
+typedef struct packed
+{
+	logic resv1;
+	logic Vc;
+	logic [5:0] Rc;
 	logic S;
-	logic Rbvec;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} bfinst_t;
+
+typedef struct packed
+{
+	logic [7:0] pad;
+	logic resv1;
+	logic Vc;
+	logic [5:0] Rc;
+	logic S;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lbfinst_t;
+
+typedef struct packed
+{
+	r2func_t func;
+	logic resv1;
+	logic Vc;
+	logic S;
+	logic Vb;
 	regspec_t Rb;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -414,10 +572,27 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic [7:0] pad;
 	r2func_t func;
-	logic [1:0] resv1;
+	logic resv1;
+	logic Vc;
 	logic S;
-	logic Rbvec;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lr2inst_t;
+
+typedef struct packed
+{
+	r2func_t func;
+	logic resv1;
+	logic Vc;
+	logic S;
+	logic Vb;
 	regspec_t Rb;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -428,7 +603,24 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [7:0] immhi;
+	logic [7:0] pad;
+	r2func_t func;
+	logic resv1;
+	logic Vc;
+	logic S;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lcmpinst_t;
+
+typedef struct packed
+{
+	logic [6:0] immhi;
+	logic Vc;
 	logic S;
 	logic [7:0] immlo;
 	regspec_t Ra;
@@ -440,7 +632,22 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [7:0] immhi;
+	logic [7:0] pad;
+	logic [6:0] immhi;
+	logic Vc;
+	logic S;
+	logic [7:0] immlo;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} limminst_t;
+
+typedef struct packed
+{
+	logic [6:0] immhi;
+	logic Vc;
 	logic S;
 	logic [7:0] immlo;
 	regspec_t Ra;
@@ -452,8 +659,23 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [5:0] func;
+	logic [7:0] pad;
+	logic [6:0] immhi;
+	logic Vc;
+	logic S;
+	logic [7:0] immlo;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lcmpiinst_t;
+
+typedef struct packed
+{
+	logic [4:0] func;
 	logic [1:0] resv2;
+	logic Vc;
 	logic S;
 	logic resv1;
 	logic [6:0] immlo;
@@ -466,7 +688,24 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [1:0] resv;
+	logic [7:0] pad;
+	logic [4:0] func;
+	logic [1:0] resv2;
+	logic Vc;
+	logic S;
+	logic resv1;
+	logic [6:0] immlo;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lshiftiinst_t;
+
+typedef struct packed
+{
+	logic i;
+	logic Vc;
 	logic [5:0] immhi;
 	logic S;
 	logic [7:0] immlo;
@@ -479,14 +718,28 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic resv;
-	logic Rcvec;
-	logic [5:0] Rc;
-	logic Sc;
-	logic Rbvec;
+	logic [7:0] pad;
+	logic i;
+	logic Vc;
+	logic [5:0] immhi;
+	logic S;
+	logic [7:0] immlo;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	csrop_t csrop;
+	opcode_t opcode;
+} lcsrinst_t;
+
+typedef struct packed
+{
+	logic F;
+	logic [1:0] ca;
+	logic [5:0] Disphi;
+	logic Vb;
 	regspec_t Rb;
 	regspec_t Rn;
-	logic [6:0] immlo;
+	logic [6:0] Displo;
 	logic vec;
 	prec_t sz;
 	opcode_t opcode;
@@ -494,31 +747,78 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic resv2;
-	logic Rcvec;
-	logic [5:0] Rc;
-	logic Sc;
-	logic Rbvec;
+	logic [7:0] pad;
+	logic F;
+	logic [1:0] ca;
+	logic [5:0] Disphi;
+	logic Vb;
 	regspec_t Rb;
-	logic [2:0] resv;
-	logic [3:0] Grp;
-	logic [6:0] immlo;
+	regspec_t Rn;
+	logic [6:0] Displo;
 	logic vec;
 	prec_t sz;
 	opcode_t opcode;
-} lsginst_t;
+} llsinst_t;
 
 typedef struct packed
 {
-	logic [23:0] disp;
-	logic [5:0]	Rn;
+	logic F;
+	logic Vc;
+	logic [5:0] Rc;
+	logic Sc;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Rn;
+	addr_upd_t upd;
+	logic [1:0] ca;
+	prec_t sz2;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} lsninst_t;
+
+typedef struct packed
+{
+	logic [7:0] pad;
+	logic F;
+	logic Vc;
+	logic [5:0] Rc;
+	logic Sc;
+	logic Vb;
+	regspec_t Rb;
+	regspec_t Rn;
+	addr_upd_t upd;
+	logic [1:0] ca;
+	prec_t sz2;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} llsninst_t;
+
+typedef struct packed
+{
+	logic [16:0] Disp;
+	branch_cm_t cm;
+	logic [5:0] Rn;
+	logic [5:0]	Rm;
 	branch_cnd_t cnd;	
 	opcode_t opcode;
 } brinst_t;
 
 typedef struct packed
 {
-	logic [7:0] immhi;
+	logic [24:0] Disp;
+	branch_cm_t cm;
+	logic [5:0] Rn;
+	logic [5:0]	Rm;
+	branch_cnd_t cnd;	
+	opcode_t opcode;
+} lbrinst_t;
+
+typedef struct packed
+{
+	logic [6:0] immhi;
+	logic Vc;
 	logic S;
 	logic [7:0] immlo;
 	regspec_t Ra;
@@ -528,9 +828,25 @@ typedef struct packed
 	opcode_t opcode;
 } jsrinst_t;
 
+typedef struct packed
+{
+	logic [7:0] pad;
+	logic [6:0] immhi;
+	logic Vc;
+	logic S;
+	logic [7:0] immlo;
+	regspec_t Ra;
+	regspec_t Rt;
+	logic vec;
+	prec_t sz;
+	opcode_t opcode;
+} ljsrinst_t;
+
 typedef union packed
 {
 	f3inst_t 	f3;
+	f2inst_t	f2;
+	bfinst_t 	bf;
 	r2inst_t	r2;
 	brinst_t	br;
 	jsrinst_t	jsr;
@@ -542,10 +858,45 @@ typedef union packed
 	shiftiinst_t shifti;
 	csrinst_t	csr;
 	lsinst_t	ls;
-	lsginst_t	lsg;
+	lsninst_t	lsn;
 	postfix_t	pfx;
 	anyinst_t any;
 } instruction_t;
+
+typedef union packed
+{
+	lf3inst_t 	f3;
+	lf2inst_t	f2;
+	lbfinst_t 	bf;
+	lr2inst_t	r2;
+	lbrinst_t	br;
+	ljsrinst_t	jsr;
+	ljsrinst_t	jmp;
+	limminst_t	imm;
+	limminst_t	ri;
+	lcmpinst_t	cmp;
+	lcmpiinst_t cmpi;
+	lshiftiinst_t shifti;
+	lcsrinst_t	csr;
+	llsinst_t	ls;
+	llsninst_t	lsn;
+	lpostfix_t	pfx;
+	lanyinst_t any;
+} linstruction_t;
+
+typedef struct packed
+{
+	logic resv;
+	regspec_t Vm;
+	instruction_t ins;
+} vector_instruction_t;
+
+typedef struct packed {
+	logic [2:0] icnt;
+	logic [63:0] imm;
+	address_t adr;
+	instruction_t ins;
+} rep_buffer_t;
 
 typedef struct packed
 {
@@ -579,7 +930,7 @@ typedef struct packed
 	logic hasRm;
 	logic hasRt;
 	logic Rtsrc;	// Rt is a source register
-	triple_value_t imm;
+	quad_value_t imm;
 	prec_t prc;
 	logic rfwr;
 	logic vrfwr;
@@ -631,12 +982,12 @@ typedef struct packed
 	logic [2:0] retry;		// retry count
 	cause_code_t cause;
 	address_t badAddr;
-	triple_value_t a;
-	triple_value_t b;
-	triple_value_t c;
-	triple_value_t t;
+	quad_value_t a;
+	quad_value_t b;
+	quad_value_t c;
+	quad_value_t t;
 	value_t mask;
-	triple_value_t res;
+	quad_value_t res;
 } pipeline_reg_t;
 
 typedef struct packed {
@@ -658,7 +1009,7 @@ parameter MR_LDB	= 4'd0;
 parameter MR_LDW	= 4'd1;
 parameter MR_LDT	= 4'd2;
 parameter MR_LDO	= 4'd3;
-parameter MR_LDC 	= 4'd4;
+parameter MR_LDH 	= 4'd4;
 parameter MR_LDP	= 4'd5;
 parameter MR_LDN	= 4'd6;
 parameter MR_LDSR	= 4'd7;
@@ -671,7 +1022,7 @@ parameter MR_STB	= 4'd0;
 parameter MR_STW	= 4'd1;
 parameter MR_STT	= 4'd2;
 parameter MR_STO	= 4'd3;
-parameter MR_STC	= 4'd4;
+parameter MR_STH	= 4'd4;
 parameter MR_STP 	= 4'd5;
 parameter MR_STN	= 4'd6;
 parameter MR_STCR	= 4'd7;
@@ -687,7 +1038,7 @@ typedef struct packed
 	code_address_t ip;			// Debugging aid
 	logic [5:0] step;		// vector step number
 	logic [5:0] count;	// vector operation count
-	logic wr;
+	logic wr;						// fifo write control
 	memop_t func;				// operation to perform
 	logic [3:0] func2;	// more resolution to function
 	logic load;					// needed to place results
@@ -698,13 +1049,14 @@ typedef struct packed
 	logic empty;
 	cause_code_t cause;
 	logic [3:0] cache_type;
-	logic [63:0] sel;
-	ASID asid;
+	logic [63:0] sel;		// +16 for unaligned accesses
+	asid_t asid;
 	address_t adr;
 	code_address_t vcadr;		// victim cache address
 	logic dchit;
 	logic cmt;
 	memsz_t sz;					// indicates size of data
+	logic [7:0] bytcnt;	// byte count of data to load/store
 	logic [1:0] hit;
 	logic [1:0] mod;		// line modified indicators
 	logic [3:0] acr;		// acr bits from TLB lookup

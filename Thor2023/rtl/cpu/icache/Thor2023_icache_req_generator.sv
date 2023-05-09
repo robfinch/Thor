@@ -38,36 +38,37 @@
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
-module Thor2023_icache_req_generator(rst, clk, hit, miss_address, miss_asid,
+module Thor2023_icache_req_generator(rst, clk, hit, miss_adr, miss_asid,
 	wbm_req, wbm_resp, vtags, snoop_v, snoop_adr, snoop_cid);
 parameter CORENO = 6'd1;
+parameter CID = 6'd1;
+parameter WAIT = 6'd6;
 input rst;
 input clk;
 input hit;
-input wb_address_t miss_address;
+input wb_address_t miss_adr;
 input Thor2023Pkg::asid_t miss_asid;
 output wb_cmd_request128_t wbm_req;
 input wb_cmd_response128_t wbm_resp;
-output reg Thor2023Pkg::address_t [15:0] vtags;
+output Thor2023Pkg::address_t [15:0] vtags;
 input snoop_v;
 input wb_address_t snoop_adr;
 input [5:0] snoop_cid;
 
 
-typedef enum logic [2:0] {
+typedef enum logic [3:0] {
 	RESET = 0,
-	WAIT4MISS,STATE2,STATE3,DELAY1,STATE5,RAND_DELAY
+	WAIT4MISS,STATE2,STATE3,STATE4,STATE5,DELAY1,RAND_DELAY
 } state_t;
 state_t req_state;
 
+Thor2023Pkg::address_t madr, vadr;
 reg [7:0] lfsr_cnt;
-reg [4:0] to_cnt;
 wb_tranid_t tid_cnt;
 wire [16:0] lfsr_o;
-reg [5:0] buscnt;
-reg [1:0] vv;
+reg [5:0] wait_cnt;
 
 lfsr17 #(.WID(17)) ulfsr1
 (
@@ -81,11 +82,11 @@ lfsr17 #(.WID(17)) ulfsr1
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	req_state <= RESET;
-	to_cnt <= 'd0;
 	tid_cnt <= {CORENO,1'b0,4'h0};
 	wbm_req <= 'd0;
 	lfsr_cnt <= 'd0;
-	vv <= 'd0;
+	wait_cnt <= 'd0;
+	vtags <= 'd0;
 end
 else begin
 	case(req_state)
@@ -122,33 +123,63 @@ else begin
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.we <= 1'b0;
-			wbm_req.vadr <= {miss_adr[$bits(wb_address_t)-1:ICacheTagLoBit+1],vv[0],{ICacheTagLoBit{1'h0}}};
+			wbm_req.vadr <= {miss_adr[$bits(wb_address_t)-1:Thor2023_cache_pkg::ICacheTagLoBit],{Thor2023_cache_pkg::ICacheTagLoBit{1'h0}}};
 			wbm_req.asid <= miss_asid;
-			to_cnt <= 'd0;
-			buscnt <= 'd0;
-			vtags[tid_cnt] <= {miss_adr[$bits(wb_address_t)-1:ICacheTagLoBit+1],vv[0],{ICacheTagLoBit{1'h0}}};
+			vtags[tid_cnt & 4'hF] <= {miss_adr[$bits(wb_address_t)-1:Thor2023_cache_pkg::ICacheTagLoBit],{Thor2023_cache_pkg::ICacheTagLoBit{1'h0}}};
+			vadr <= {miss_adr[$bits(wb_address_t)-1:Thor2023_cache_pkg::ICacheTagLoBit],{Thor2023_cache_pkg::ICacheTagLoBit{1'h0}}};
+			madr <= {miss_adr[$bits(wb_address_t)-1:Thor2023_cache_pkg::ICacheTagLoBit],{Thor2023_cache_pkg::ICacheTagLoBit{1'h0}}};
 			if (!wbm_resp.rty) begin
-				vv <= vv + 2'd1;
 				tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
 				req_state <= STATE3;
 			end
 		end
 	STATE3:
 		begin
-			buscnt <= buscnt + 2'd1;
-			if (buscnt==3'd0) begin
-				tid_cnt[7:4] <= {CORENO,1'b0};
-				wbm_req.tid <= tid_cnt;
-				wbm_req.cti <= wishbone_pkg::EOB;
-				wbm_req.stb <= 1'b1;
-				wbm_req.sel <= 16'hFFFF;
-				wbm_req.vadr <= wbm_req.vadr + 5'd16;
-				vtags[tid_cnt & 4'hF] <= {miss_adr[$bits(wb_address_t)-1:ICacheTagLoBit+1],vv[0],{ICacheTagLoBit{1'h0}}};
-				vv <= vv + 2'd1;
+			tid_cnt[7:4] <= {CORENO,1'b0};
+			wbm_req.tid <= tid_cnt;
+			wbm_req.cti <= wishbone_pkg::FIXED;
+			wbm_req.stb <= 1'b1;
+			wbm_req.sel <= 16'hFFFF;
+			wbm_req.vadr <= vadr + 5'd16;
+			vtags[tid_cnt & 4'hF] <= madr + 5'd16;
+			if (!wbm_resp.rty) begin
+				vadr <= vadr + 5'd16;
+				madr <= madr + 5'd16;
 				tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
-				to_cnt <= 'd0;
-				buscnt <= 'd0;
-				req_state <= DELAY1;
+				req_state <= STATE4;
+			end
+		end
+	STATE4:
+		begin
+			tid_cnt[7:4] <= {CORENO,1'b0};
+			wbm_req.tid <= tid_cnt;
+			wbm_req.cti <= wishbone_pkg::FIXED;
+			wbm_req.stb <= 1'b1;
+			wbm_req.sel <= 16'hFFFF;
+			wbm_req.vadr <= vadr + 5'd16;
+			vtags[tid_cnt & 4'hF] <= madr + 5'd16;
+			if (!wbm_resp.rty) begin
+				vadr <= vadr + 5'd16;
+				madr <= madr + 5'd16;
+				tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
+				req_state <= STATE5;
+			end
+		end
+	STATE5:
+		begin
+			tid_cnt[7:4] <= {CORENO,1'b0};
+			wbm_req.tid <= tid_cnt;
+			wbm_req.cti <= wishbone_pkg::EOB;
+			wbm_req.stb <= 1'b1;
+			wbm_req.sel <= 16'hFFFF;
+			wbm_req.vadr <= vadr + 5'd16;
+			vtags[tid_cnt & 4'hF] <= madr + 5'd16;
+			if (!wbm_resp.rty) begin
+				wait_cnt <= 'd0;
+				vadr <= vadr + 5'd16;
+				madr <= madr + 5'd16;
+				tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
+				req_state <= RAND_DELAY;
 			end
 		end
 	DELAY1:
@@ -159,14 +190,18 @@ else begin
 	// Wait some random number of clocks before trying again.
 	RAND_DELAY:
 		begin
-			if (lfsr_o[4:2]==3'b111)
+			tBusClear();
+			if (wait_cnt==WAIT && lfsr_o[2:0]==3'b111)
 				req_state <= WAIT4MISS;
+			else if (wait_cnt != WAIT)
+				wait_cnt <= wait_cnt + 2'd1;
 		end
 	default:
 		req_state <= RESET;
 	endcase
 	// Only the cache index need be compared for snoop hit.
-	if (snoop_v && snoop_adr[ITAG_BIT:ICacheTagLoBit]==miss_adr[ITAG_BIT:ICacheTagLoBit] &&
+	if (snoop_v && snoop_adr[Thor2023_cache_pkg::ITAG_BIT:Thor2023_cache_pkg::ICacheTagLoBit]==
+		miss_adr[Thor2023_cache_pkg::ITAG_BIT:Thor2023_cache_pkg::ICacheTagLoBit] &&
 		snoop_cid != CID) begin
 		tBusClear();
 		req_state <= RAND_DELAY;		

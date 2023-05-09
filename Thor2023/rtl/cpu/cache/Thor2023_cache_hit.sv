@@ -1,12 +1,11 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2022-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2023_agen.sv
-//	- bus interface unit
+//	Thor2023_cache_hit.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -33,71 +32,68 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
+//
+// 356 LUTs / 22 FFs                                                                          
 // ============================================================================
 
 import Thor2023Pkg::*;
+import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
-module Thor2023_agen (ir, a, b, c, imm, pc, adr, nxt_adr, cause);
-parameter PCREG = 6'd53;
-input instruction_t ir;
-input double_value_t a;
-input double_value_t b;
-input double_value_t c;
-input double_value_t imm;
-input address_t pc;
-output address_t adr;
-output address_t nxt_adr;
-output cause_code_t cause;
+module Thor2023_cache_hit(clk, adr, ndx, tag, valid, hit, rway, cv);
+parameter LINES=256;
+parameter WAYS=4;
+parameter AWID=32;
+parameter TAGBIT=14;
+input clk;
+input Thor2023Pkg::address_t adr;
+input [$clog2(LINES)-1:0] ndx;
+input cache_tag_t [3:0] tag;
+input [LINES-1:0] valid [0:WAYS-1];
+output reg hit;
+output [1:0] rway;
+output reg cv;
 
-reg [4:0] sc;
+reg [1:0] prev_rway = 'd0;
+reg [WAYS-1:0] hit1, snoop_hit1;
+reg hit2;
+reg cv2, cv1;
+reg [1:0] rway1;
 
-always_comb
-	case(ir.ls.sz)
-	PRC8:		sc = 5'd1;
-	PRC16:	sc = 5'd2;
-	PRC32:	sc = 5'd4;
-	PRC64:	sc = 5'd8;
-	PRC128:	sc = 5'd16;
-	default:
-		case(ir[11:9])
-		PRC8:		sc = 5'd1;
-		PRC16:	sc = 5'd2;
-		PRC32:	sc = 5'd4;
-		PRC64:	sc = 5'd8;
-		PRC128:	sc = 5'd16;
-		default:	sc = 5'd8;
-		endcase
-	endcase
-
-always_comb
+integer k,ks;
+always_comb//ff @(posedge clk)
 begin
-	cause = FLT_NONE;
-	case(ir.any.opcode)
-	OP_R2:	// JSR Rt,Ra,Rb
-		begin
-			if (ir.jsr.Ra.num==PCREG)
-				adr = a + (b * sc) + 4'd5;
-			else
-				adr = a + (b * sc);
-		end
-	OP_JSR:
-		if (ir.jsr.Ra.sign) begin
-			adr = pc + (a * sc);
-			if (a * sc > imm)
-				cause = FLT_TBL;
-		end
-		else
-			adr = (a * sc) + imm;
-	default:
-		if (ir.ls.sz==PRCNDX)
-			adr = b + (ir.lsn.Sc ? c * sc : c) + imm;
-		else
-			adr = b + imm;
-	endcase
+	for (k = 0; k < WAYS; k = k + 1)
+	  hit1[k] = tag[k[1:0]]==adr[$bits(Thor2023Pkg::address_t)-1:TAGBIT] && 
+	  					valid[k][ndx]==1'b1;
 end
 
+integer k1;
 always_comb
-	nxt_adr = {adr[$bits(address_t)-1:6] + 2'd1,6'd0};
+begin
+	cv2 = 1'b0;
+	for (k1 = 0; k1 < WAYS; k1 = k1 + 1)
+	  cv2 = cv2 | valid[k1][ndx]==1'b1;
+end
+
+integer n;
+always_comb
+begin
+	rway1 = prev_rway;
+	for (n = 0; n < WAYS; n = n + 1)	
+		if (hit1[n]) rway1 = n;
+end
+
+always_ff @(posedge clk)
+	prev_rway <= rway1;
+assign rway = rway1;
+
+always_comb//ff @(posedge clk)
+	hit = |hit1;
+
+always_ff @(posedge clk)
+	cv1 <= cv2;
+always_ff @(posedge clk)
+	cv <= cv1;	
 
 endmodule

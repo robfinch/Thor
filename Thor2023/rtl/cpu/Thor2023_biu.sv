@@ -436,6 +436,7 @@ begin
 	memresp.v = response_from_cache.ack;
 end
 
+
 Thor2023_dcache
 #(
 	.CORENO(CORENO),
@@ -466,6 +467,7 @@ udc1
 	.dc_invline(dc_invline),
 	.dc_invall(dc_invall)
 );
+
 
 Thor2023_dcache_ctrl
 #(

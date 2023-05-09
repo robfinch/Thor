@@ -60,7 +60,7 @@ typedef struct {
 #define OP_SCNDX					0x00020000L
 #define OP_LK							0x00040000L
 #define OP_CAREG					0x00080000L
-#define OP_BRTGT16				0x00100000L
+#define OP_IND_SCNDX			0x00100000L
 #define OP_BRTGT28				0x00200000L
 #define OP_BRTGT34				0x00400000L
 #define OP_DATA						0x00800000L
@@ -126,6 +126,7 @@ typedef struct {
 
 #define FLG_NEGIMM	1
 #define FLG_FP			2
+#define FLG_MASK		4
 
 #define EXI8	0x46
 #define EXI24	0x48
@@ -194,9 +195,12 @@ typedef struct {
 #define PFX			58
 #define RIMV		59
 #define RIS			60
+#define JSCNDX	61
+#define REP			62
 
 #define OPC(x)	(((x) & 0x1fLL))
 #define COND(x)	(((x) & 0xfLL) << 5LL)
+#define CND3(x)	(((x) & 0x7LL) << 9LL)
 #define RM(x)		(((x) & 0x3fLL) << 9LL)
 #define RN(x)		(((x) & 0x3fLL) << 15LL)
 #define SZ(x)		(((x) & 7LL) << 5LL)
@@ -229,6 +233,9 @@ typedef struct {
 #define TB6(x)		(((x) & 1LL) << 27LL)
 #define RC6(x)		(((x) & 0x3fLL) << 28LL)
 #define TC6(x)		(((x) & 1LL) << 34LL)
+
+#define RK(x)			(((x) & 0x3fLL) << 40LL)
+#define SK(x)			(((x) & 1LL) << 46LL)
 
 /* special data operand types: */
 #define OP_D8  0x40001001

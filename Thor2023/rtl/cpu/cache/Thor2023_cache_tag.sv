@@ -43,9 +43,9 @@ module Thor2023_cache_tag(rst, clk, wr, vadr_i, padr_i, way, rclk, ndx, tag,
 	ptags0, ptags1, ptags2, ptags3);
 parameter LINES=64;
 parameter WAYS=4;
-parameter TAGBIT=12;
 parameter LOBIT=6;
-localparam HIBIT=$clog2(LINES)-1+LOBIT;
+parameter HIBIT=$clog2(LINES)-1+LOBIT;
+parameter TAGBIT=HIBIT+2;	// +1 more for odd/even lines
 input rst;
 input clk;
 input wr;
@@ -54,7 +54,7 @@ input Thor2023Pkg::address_t padr_i;
 input [1:0] way;
 input rclk;
 input [$clog2(LINES)-1:0] ndx;
-output cache_tag_t [3:0] tag;
+output cache_tag_t [WAYS-1:0] tag;
 (* ram_style="distributed" *)
 output cache_tag_t ptags0 [0:LINES-1];	// physical tags
 (* ram_style="distributed" *)

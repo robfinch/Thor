@@ -37,24 +37,24 @@
 
 package Thor2023_cache_pkg;
 
-parameter ITAG_BIT = 12;
+parameter ITAG_BIT = 14;
 parameter DCacheLineWidth = 512;
-localparam DCacheTagLoBit = $clog2((DCacheLineWidth/8))-1;
+localparam DCacheTagLoBit = $clog2((DCacheLineWidth/8));
 parameter ICacheLineWidth = 256;
 localparam ICacheTagLoBit = $clog2((ICacheLineWidth/8))-1;
 
 `define TAG_ASID $bits(Thor2023Pkg::asid_t) + $bits(Thor2023Pkg::address_t)-ITAG_BIT-1:$bits(Thor2023Pkg::address_t)-ITAG_BIT
 
 //typedef logic [$bits(Thor2023Pkg::asid_t) + $bits(Thor2023Pkg::address_t)-ITAG_BIT-1:0] cache_tag_t;
-typedef logic [$bits(Thor2023Pkg::address_t)-ITAG_BIT-1:0] cache_tag_t;
+typedef logic [$bits(Thor2023Pkg::address_t)-1:ITAG_BIT] cache_tag_t;
 
 typedef struct packed
 {
 	logic v;		// valid indicator
 	logic m;		// modified indicator
 	Thor2023Pkg::asid_t asid;
-	logic [$bits(Thor2023Pkg::address_t)-1:DCacheTagLoBit] vtag;	// virtual tag
-	logic [$bits(Thor2023Pkg::address_t)-1:DCacheTagLoBit] ptag;	// physical tag
+	logic [$bits(Thor2023Pkg::address_t)-1:0] vtag;	// virtual tag
+	logic [$bits(Thor2023Pkg::address_t)-1:0] ptag;	// physical tag
 	logic [DCacheLineWidth-1:0] data;
 } DCacheLine;
 

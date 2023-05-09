@@ -43,7 +43,7 @@
 
 import wishbone_pkg::*;
 import Thor2023Pkg::*;
-import Thor2023Mmupkg::*;
+import Thor2023_cache_pkg::*;
 
 module Thor2023_icache(rst,clk,invce,snoop_adr,snoop_v,snoop_cid,invall,invline,
 	ip_asid,ip,ip_o,ihit_o,ihit,ic_line_hi_o,ic_line_lo_o,ic_valid,miss_adr,miss_asid,
@@ -56,7 +56,7 @@ parameter LINES = 128;
 parameter LOBIT = 6;
 parameter NVICTIM = 0;
 localparam HIBIT=$clog2(LINES)-1+LOBIT;
-localparam TAGBIT = HIBIT+1;
+localparam TAGBIT = HIBIT+2;	//14	+1 more for odd/even lines
 localparam LOG_WAYS = $clog2(WAYS)-1;
 
 input rst;
@@ -91,29 +91,30 @@ ICacheLine victim_line;
 reg icache_wre;
 reg icache_wro;
 ICacheLine ic_eline, ic_oline;
-reg [1:0] ic_rwaye,ic_rwayo,wway;
+reg [LOG_WAYS:0] ic_rwaye,ic_rwayo,wway;
 always_comb icache_wre = wr_ic && !ic_line_i.vtag[LOBIT-1];
 always_comb icache_wro = wr_ic &&  ic_line_i.vtag[LOBIT-1];
 Thor2023Pkg::code_address_t ip2;
-cache_tag_ex_t [3:0] victage;
-cache_tag_ex_t [3:0] victago;
-reg [LINES-1:0] valide [0:3];
-reg [LINES-1:0] valido [0:3];
+cache_tag_t [WAYS-1:0] victage;
+cache_tag_t [WAYS-1:0] victago;
+reg [LINES-1:0] valide [0:WAYS-1];
+reg [LINES-1:0] valido [0:WAYS-1];
 wire [1:0] snoop_waye, snoop_wayo;
-cache_tag_ex_t ptags0e [0:LINES-1];
-cache_tag_ex_t ptags1e [0:LINES-1];
-cache_tag_ex_t ptags2e [0:LINES-1];
-cache_tag_ex_t ptags3e [0:LINES-1];
-cache_tag_ex_t ptags0o [0:LINES-1];
-cache_tag_ex_t ptags1o [0:LINES-1];
-cache_tag_ex_t ptags2o [0:LINES-1];
-cache_tag_ex_t ptags3o [0:LINES-1];
+cache_tag_t ptags0e [0:LINES-1];
+cache_tag_t ptags1e [0:LINES-1];
+cache_tag_t ptags2e [0:LINES-1];
+cache_tag_t ptags3e [0:LINES-1];
+cache_tag_t ptags0o [0:LINES-1];
+cache_tag_t ptags1o [0:LINES-1];
+cache_tag_t ptags2o [0:LINES-1];
+cache_tag_t ptags3o [0:LINES-1];
 reg [2:0] victim_count, vcne, vcno;
 ICacheLine [NVICTIM-1:0] victim_cache;
 ICacheLine victim_eline, victim_oline;
 ICacheLine victim_cache_eline, victim_cache_oline;
 reg icache_wre2;
 reg vce,vco;
+reg iel,iel2;		// increment even line
 
 wire ihit1e, ihit1o;
 reg ihit2e, ihit2o;
@@ -168,7 +169,7 @@ sram_512x256_1rw1r uicmo
 	.clk(clk),
 	.wr(icache_wro),
 	.wadr({wway,ic_line_i.vadr[HIBIT:LOBIT]}),
-	.radr({ic_rwayo,ip[HIBIT:LOBIT]+~ip[LOBIT-1]}),
+	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
 	.i(ic_line_i.data),
 	.o(ic_oline.data),
 	.wo(victim_oline.data)
@@ -177,7 +178,7 @@ end
 else begin
 sram_1r1w
 #(
-	.WID(ICacheLineWidth),
+	.WID(Thor2023_cache_pkg::ICacheLineWidth),
 	.DEP(LINES*WAYS)
 )
 uicme
@@ -186,14 +187,14 @@ uicme
 	.clk(clk),
 	.wr(icache_wre),
 	.wadr({wway,ic_line_i.vtag[HIBIT:LOBIT]}),
-	.radr({ic_rwaye,ip[HIBIT:LOBIT]+ip[LOBIT-1]}),
+	.radr({ic_rwaye,ip[HIBIT:LOBIT]+iel}),
 	.i(ic_line_i.data),
 	.o(ic_eline.data)
 );
 
 sram_1r1w
 #(
-	.WID(ICacheLineWidth),
+	.WID(Thor2023_cache_pkg::ICacheLineWidth),
 	.DEP(LINES*WAYS)
 )
 uicmo
@@ -202,7 +203,7 @@ uicmo
 	.clk(clk),
 	.wr(icache_wro),
 	.wadr({wway,ic_line_i.vtag[HIBIT:LOBIT]}),
-	.radr({ic_rwayo,ip[HIBIT:LOBIT]+~ip[LOBIT-1]}),
+	.radr({ic_rwayo,ip[HIBIT:LOBIT]}),
 	.i(ic_line_i.data),
 	.o(ic_oline.data)
 );
@@ -260,9 +261,13 @@ always_ff @(posedge clk)
 	victim_cache_eline <= victim_cache[vce];
 always_ff @(posedge clk)
 	victim_cache_oline <= victim_cache[vco];
+always_comb
+	iel <= ip[LOBIT-1];
+always_ff @(posedge clk)
+	iel2 <= iel;
 
 always_comb
-	case(ip2[LOBIT-1])
+	case(iel2)
 	1'b0:	
 		begin
 			if (vco) begin
@@ -311,11 +316,12 @@ always_comb
 		end
 	endcase
 
-Thor2023_cache_tag_ex 
+Thor2023_cache_tag
 #(
 	.LINES(LINES),
 	.WAYS(WAYS),
 	.TAGBIT(TAGBIT),
+	.HIBIT(HIBIT),
 	.LOBIT(LOBIT)
 )
 uictage
@@ -327,7 +333,7 @@ uictage
 	.padr_i(ic_line_i.ptag),
 	.way(wway),
 	.rclk(clk),
-	.ndx(ip[TAGBIT-1:LOBIT]+ip[LOBIT-1]),	// virtual index (same bits as physical address)
+	.ndx(ip[HIBIT:LOBIT]+iel),	// virtual index (same bits as physical address)
 	.tag(victage),
 	.ptags0(ptags0e),
 	.ptags1(ptags1e),
@@ -335,11 +341,12 @@ uictage
 	.ptags3(ptags3e)
 );
 
-Thor2023_cache_tag_ex 
+Thor2023_cache_tag 
 #(
 	.LINES(LINES),
 	.WAYS(WAYS),
 	.TAGBIT(TAGBIT),
+	.HIBIT(HIBIT),
 	.LOBIT(LOBIT)
 )
 uictago
@@ -351,7 +358,7 @@ uictago
 	.padr_i(ic_line_i.ptag),
 	.way(wway),
 	.rclk(clk),
-	.ndx(ip[TAGBIT-1:LOBIT]+~ip[LOBIT-1]),		// virtual index (same bits as physical address)
+	.ndx(ip[HIBIT:LOBIT]),		// virtual index (same bits as physical address)
 	.tag(victago),
 	.ptags0(ptags0o),
 	.ptags1(ptags1o),
@@ -369,7 +376,7 @@ uichite
 (
 	.clk(clk),
 	.adr(ip),
-	.ndx(ip[TAGBIT-1:LOBIT]+ip[LOBIT-1]),
+	.ndx(ip[HIBIT:LOBIT]+iel),
 	.tag(victage),
 	.valid(valide),
 	.hit(ihit1e),
@@ -387,7 +394,7 @@ uichito
 (
 	.clk(clk),
 	.adr(ip),
-	.ndx(ip[TAGBIT-1:LOBIT]+~ip[LOBIT-1]),
+	.ndx(ip[HIBIT:LOBIT]),
 	.tag(victago),
 	.valid(valido),
 	.hit(ihit1o),
@@ -479,7 +486,7 @@ always_comb
 
 always_comb
 	if (!ihit1e)
-		miss_adr = {ip[$bits(Thor2023Pkg::address_t)-1:LOBIT]+ip[LOBIT-1],1'b0,{LOBIT-1{1'b0}}};
+		miss_adr = {ip[$bits(Thor2023Pkg::address_t)-1:LOBIT]+iel,1'b0,{LOBIT-1{1'b0}}};
 	else if (!ihit1o)
 		miss_adr = {ip[$bits(Thor2023Pkg::address_t)-1:LOBIT],1'b1,{LOBIT-1{1'b0}}};
 	else
