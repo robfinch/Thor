@@ -43,12 +43,13 @@ import Thor2023_cache_pkg::*;
 module Thor2023seq(coreno_i, rst_i, clk_i, bok_i, wbm_req, wbm_resp, rb_i,
 	iwbm_req, iwbm_resp, dwbm_req, dwbm_resp,
 	snoop_v, snoop_adr, snoop_cid);
-parameter CORENO = 6'd1;
+parameter CORENO = 128'd1;
 parameter CID = 6'd1;
 parameter VWID=128;
 parameter PCREG = 53;
 parameter SCREG = 53;
-input value_t coreno_i;
+parameter LCREG = 55;
+input double_value_t coreno_i;
 input rst_i;
 input clk_i;
 input bok_i;
@@ -112,7 +113,7 @@ wire cr_o;
 instruction_t ir;
 reg [255:0] jir;						// jump table ir
 reg [31:0] jira;
-vector_instruction_t vir;
+linstruction_t vir;
 postfix_t postfix1;
 postfix_t postfix2;
 postfix_t postfix3;
@@ -125,10 +126,12 @@ wire [31:0] cmpo;
 wire [VWID-1:0] vcmpo;
 address_t ea, nea;
 reg [7:0] tid;
+reg rfwr, rfwr1;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // CSRs
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+value_t lc;
 reg pe = 1'b0;
 Thor2023Pkg::asid_t asid;
 reg dce;
@@ -146,10 +149,11 @@ begin
 	keys[7] = keys2[1][127:96];
 end
 value_t tick;
-value_t canary;
+double_value_t canary;
 cause_code_t cause_code;					// exception cause
 Thor2023Pkg::address_t [3:0] tvec;
 Thor2023Pkg::address_t [7:0] epc;
+rep_buffer_t repbuf;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -166,12 +170,13 @@ reg is_jsr;
 
 regspec_t Ra,Rb,Rc,Rt;
 reg Ra1,Rb1,Rc1,Rt1;
-reg rfwr,rfwrg,rfwrv;
+reg rfwr,rfwrv;
+reg [7:0] rfwrg;
+reg [7:0] group_mask;
 double_value_t res;
 reg [VWID-1:0] vres;
 reg [VWID/8-1:0] vsel;
-value_t rfoa, rfob, rfoc, rfop;
-value_t rfoah, rfobh, rfoch, rfoph;
+double_value_t rfoa, rfob, rfoc, rfop;
 wire [VWID-1:0] rfoav, rfobv, rfocv;
 reg [VWID-1:0] shlv;
 double_value_t a, b, c;
@@ -195,8 +200,11 @@ octa_value_t group_in;
 reg is_vec;
 reg [4:0] bytcnt2;
 reg [63:0] sel2;
-value_t data2;
+reg [511:0] data2;
 reg fetch_H;
+reg mem_indirect;
+reg repcond;
+reg fcmp;
 
 always_comb
 	omode = sr.om;
@@ -262,7 +270,7 @@ begin
 	OP_BITFLD:	fnIsVector = ir.any.vec|ir.bf.Vb|ir.bf.Vc;
 	OP_CSR:	fnIsVector = ir.any.vec|ir.csr.Vc;
 	OP_Bcc:	fnIsVector = 1'b0;
-	OP_FBcc:	fnIsVector = 1'b0;
+	OP_LBcc:	fnIsVector = 1'b0;
 	OP_DBcc:	fnIsVector = 1'b0;
 	OP_PFX:	fnIsVector = 1'b0;
 	OP_ADDI:	fnIsVector = (ir.any.vec|ir.ri.Vc) & ~ir[31];
@@ -284,7 +292,6 @@ input instruction_t ir;
 begin
 	case(ir.any.opcode)
 	OP_Bcc:	fnHasMask = 1'b0;
-	OP_FBcc:	fnHasMask = 1'b0;
 	OP_DBcc:	fnHasMask = 1'b0;
 	OP_PFX:	fnHasMask = 1'b0;
 	default:	fnHasMask = ir.any.vec;
@@ -292,9 +299,35 @@ begin
 end
 endfunction
 
+function fnIsLong;
+input instruction_t ir;
+begin
+	case(ir.any.opcode)
+	OP_Bcc:	fnIsLong = 1'b0;
+	OP_LBcc:	fnIsLong = 1'b1;
+	OP_DBcc:	fnIsLong = 1'b0;
+	OP_PFX:	fnIsLong = 1'b0;
+	default:	fnIsLong = ir.any.vec;
+	endcase
+end
+endfunction
+
+function fnMemIndirect;
+input instruction_t ir;
+begin
+	fnMemIndirect = 'd0;
+	if (ir.any.opcode==OP_JSR)
+		fnMemIndirect = ir[31];
+	else
+		if (ir.ls.sz==PRCNDX)
+			fnMemIndirect = ir.lsn.upd==memi;
+end
+endfunction
+
 Thor2023_regfile urf1 
 (
 	.clk(clk_g),
+	.regset(1'b0),
 	.wg(rfwrg),
 	.gwa(Ra.num[2:0]),
 	.gi(group_in),
@@ -318,6 +351,24 @@ Thor2023_regfile urf1
 	.sc(canary),
 	.om(omode)
 );
+
+reg [511:0] group_outm;
+
+always_comb
+	group_outm = {32'd0,group_out} & {
+			{8{group_mask[7]}},
+			{8{group_mask[6]}},
+			{8{group_mask[5]}},
+			{8{group_mask[4]}},
+			{8{group_mask[3]}},
+			{8{group_mask[2]}},
+			{8{group_mask[1]}},
+			{8{group_mask[0]}}
+			};
+
+reg ls_group;
+always_comb
+	ls_group = ir.ls.sz==3'd6 || (ir.ls.sz==3'd7 && ir[11:9]==3'd6);
 
 Thor2023_vec_regfile
 #(
@@ -455,7 +506,7 @@ Thor2023_decode_imm udci1
 
 Thor2023_decode_imm udci2
 (
-	.ir(vir),
+	.ir(vir[39:0]),
 	.ir2(vpostfix1),
 	.ir3(vpostfix2),
 	.ir4(vpostfix3),
@@ -464,12 +515,16 @@ Thor2023_decode_imm udci2
 	.inc(vimm_inc)
 );
 
+always_comb
+	fcmp = ir.any.opcode==OP_FCMPI || (ir.any.opcode==OP_FLT2 && ir.f2.func==OP_FCMP);
+
 Thor2023_cmp
 #(
-	.WID(96)
+	.WID($bits(double_value_t))
 )
 ucmp1
 (
+	.flt(fcmp),
 	.a(a),
 	.b(b),
 	.o(cmpo)
@@ -499,6 +554,18 @@ Thor2023_eval_branch ube1
 	.b(b),
 	.takb(takb)
 );
+
+always_comb
+	case(repbuf.ins[11:9])
+	3'd0:	repcond = lc == repbuf.imm;
+	3'd1:	repcond = lc != repbuf.imm;
+	3'd2: repcond = $signed(lc) < $signed(repbuf.imm);
+	3'd3: repcond = $signed(lc) <= $signed(repbuf.imm);
+	3'd4: repcond = $signed(lc) >= $signed(repbuf.imm);
+	3'd5: repcond = $signed(lc) > $signed(repbuf.imm);
+	3'd6:	repcond = ~lc[repbuf.imm[6:0]];
+	3'd7:	repcond =  lc[repbuf.imm[6:0]];
+	endcase
 
 Thor2023_vec_add
 #(
@@ -590,7 +657,6 @@ else begin
 	case(state)
 	IFETCH:	tIFetch();
 	DECODE:	tDecode();
-	DECODE2: tDecode2();
 	OFETCH:	tOFetch();
 	EXECUTE: tExecute();
 	MEMORY: tMemory();
@@ -599,12 +665,9 @@ else begin
 	MEMORY3: tMemory3();
 	MEMORY4: tMemory4();
 	MEMORY5: tMemory5();
+	WRITEBACK: tWriteback(rfwr1);
 	endcase
-	$display("===================================================================");
-	$display("%d", $time);
-	$display("===================================================================");
-	$display("pc = %h", pc);
-	$display("pfx2:%h pfx1:%h ir: %h", postfix2,postfix1,ir);
+	tDump();
 end
 
 task tReset;
@@ -640,6 +703,7 @@ begin
 	vc <= 'd0;
 	imm <= 'd0;
 	rfwr <= 'd0;
+	rfwr1 <= 'd0;
 	rfwrg <= 'd0;
 	rfwrv <= 'd0;
 	res <= 'd0;
@@ -650,15 +714,16 @@ begin
 	Rb1 <= 'd0;
 	Rc1 <= 'd0;
 	Rt1 <= 'd0;
+	group_mask <= 8'hFF;
+	mem_indirect <= 'd0;
+	repbuf <= 'd0;
+	lc <= 'd0;
 	goto (IFETCH);
 end
 endtask
 
 task tOnce;
 begin
-	rfwr <= 1'b0;
-	rfwrg <= 1'b0;
-	rfwrv <= 1'b0;
 	memreq.wr <= 1'b0;
 	memresp_fifo_rd <= 1'b0;
 end
@@ -670,9 +735,15 @@ endtask
 
 task tIFetch;
 begin
+	rfwr <= 'd0;
+	rfwr1 <= 'd0;
+	rfwrg <= 'd0;
+	rfwrv <= 1'b0;
 	opc <= pc;
 	if (ihit)
 		goto (DECODE);
+	group_mask <= 8'hFF;
+	mem_indirect <= 'd0;
 end
 endtask
 
@@ -685,7 +756,9 @@ begin
 	goto (OFETCH);
 
 	// Vector instructions may increment the PC by an additional byte.
-	pc <= pc + imm_inc + (fnHasMask(ir) ? 2'd1 : 2'd0);
+	pc <= pc + imm_inc + (fnIsLong(ir) ? 2'd1 : 2'd0);
+	if (fnHasMask(ir))
+		group_mask <= vir[47:40];
 	case(ir.any.opcode)
 	OP_R2:
 		case(ir.r2.func)
@@ -759,29 +832,8 @@ begin
 	Rb1 <= 1'b0;
 	Rc1 <= 1'b0;
 	Rt1 <= 1'b0;
-	if (ir.any.sz==PRC128) begin
-		Ra1 <= 1'b1;
-		Rb1 <= 1'b1;
-		Rc1 <= 1'b1;
-		goto (DECODE2);
-	end
 end
 endtask
-
-// Extra cycle to fetch upper half of a register, needed only for 128-bit
-// operations.
-task tDecode2;
-begin
-	Ra1 <= 1'b0;
-	Rb1 <= 1'b0;
-	Rc1 <= 1'b0;
-	rfoah <= rfoa;
-	rfobh <= rfob;
-	rfoch <= rfoc;
-	goto (OFETCH);
-end
-endtask
-
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Operand Fetch Stage (OF)
@@ -805,6 +857,10 @@ begin
 				tOFLogic();
 			OP_PRED:
 				tOFPred();
+`ifdef SUPPORT_REP
+			OP_REP:
+				tOFRep();
+`endif				
 			default:	;
 			endcase
 		end
@@ -837,7 +893,7 @@ begin
 		tOFFSwap();
 	OP_CSR:
 		b <= {ir.csr.immhi,ir.csr.immlo};
-	OP_Bcc,OP_FBcc,OP_DBcc:
+	OP_Bcc,OP_LBcc,OP_DBcc:
 		tOFBranch();
 	default:
 		begin
@@ -868,9 +924,21 @@ begin
 			(predbuf[15:14]==2'b10 && ~rfop[predcond]) ||
 			(predbuf[15:14]==2'b11) ||
 			(predbuf[15:14]==2'b00)))
-		goto (IFETCH);
+		goto (WRITEBACK);
 end
 endtask
+
+// Handling the repeat modifier.
+`ifdef SUPPORT_REP
+task tOFRep;
+begin
+	repbuf.ins <= ir;
+	repbuf.icnt <= 'd0;
+	repbuf.adr <= pc;		// capture loopback address
+	repbuf.imm <= imm[63:0];
+end
+endtask
+`endif	
 
 // Handling operand fetch for the PRED modifier. Unique in that it goes directly
 // back to the instruction fetch stage.
@@ -879,7 +947,7 @@ begin
 	predbuf <= {ir[33:29],ir[26:16]};
 	predreg <= ir[15:10];
 	predcond <= ir[9:5];
-	goto (IFETCH);
+	goto (WRITEBACK);
 end
 endtask
 
@@ -890,7 +958,7 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? -rfoa : rfoa;
 	if (ir[31])	// RTS / RTD / RTE
 		b <= {imm[$bits(double_value_t)-1:4],4'd0};
 	else
@@ -905,11 +973,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? -rfoa : rfoa;
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? -{rfobh,rfob} : {rfobh,rfob};
+		b <= Rb.sign ? -rfob : rfob;
 end
 endtask
 
@@ -920,11 +988,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? {~rfobh[63],rfobh[62:0],rfob} : {rfobh,rfob};
+		b <= Rb.sign ? {~rfob[127],rfob[126:0]} : rfob;
 end
 endtask
 
@@ -935,11 +1003,11 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? ~{rfoah,rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? ~rfoa : rfoa;
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? ~{rfobh,rfob} : {rfobh,rfob};
+		b <= Rb.sign ? ~rfob : rfob;
 end
 endtask
 
@@ -970,10 +1038,10 @@ task tOFSwap;
 begin
 	if (ir[31]) begin
 		a <= imm;
-		b <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
+		b <= Ra.sign ? -rfoa : rfoa;
 	end
 	else begin
-		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? -rfoa : rfoa;
 		b <= imm;
 	end
 	if (Ra.num==PCREG) begin
@@ -991,10 +1059,10 @@ task tOFFSwap;
 begin
 	if (ir[31]) begin
 		a <= imm;
-		b <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
+		b <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
 	end
 	else begin
-		a <= Ra.sign ? {~rfoah[63],rfoah[62:0],rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? {~rfoa[127],rfoa[126:0]} : rfoa;
 		b <= imm;
 	end
 end
@@ -1006,18 +1074,18 @@ begin
 	if (Ra.num==PCREG)
 		a <= opc;
 	else
-		a <= Ra.sign ? -{rfoah,rfoa} : {rfoah,rfoa};
+		a <= Ra.sign ? -rfoa : rfoa;
 	if (Rb.num==PCREG)
 		b <= opc;
 	else
-		b <= Rb.sign ? -{rfobh,rfob} : {rfobh,rfob};
+		b <= Rb.sign ? -rfob : rfob;
 	if (ir.ls.sz==PRCNDX) begin
 		if (ir[11:9]==3'd7) begin
 			c <= 'd0;
 			vc <= 'd0;
 		end
 		else begin
-			c <= {rfoch,rfoc};
+			c <= rfoc;
 			vc <= rfocv;
 		end
 	end
@@ -1034,8 +1102,8 @@ endtask
 
 task tExecute;
 begin
-	// Default action is to go back to IFETCH.
-	goto (IFETCH);
+	// Default action is to go back to WRITEBACK.
+	goto (WRITEBACK);
 	case(ir.any.opcode)
 	OP_R2:
 		begin
@@ -1043,11 +1111,9 @@ begin
 			OP_ADD:	
 				begin
 					res <= Rt.sign ? -(a + b) : a + b;
-					rfwr <= !is_vec;
+					tUpdRegs(!is_vec);
 					if (ir[31])
 						pc <= c;
- 					if (ir.any.sz==PRC128)
- 						goto (WRITEBACK);
 				end
 			OP_CMP:	
 				begin
@@ -1057,13 +1123,11 @@ begin
 					2'b10:	res <= {64'd0,Rt.sign ^ cmpo[3]};
 					2'b11:	res <= {64'd0,Rt.sign ^ cmpo[2]};
 					endcase
-					rfwr <= !is_vec;
- 					if (ir.any.sz==PRC128)
- 						goto (WRITEBACK);
+					tUpdRegs(!is_vec);
  				end
-			OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-			OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-			OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+			OP_AND:	begin res <= Rt.sign ? ~(a & b) : a & b; tUpdRegs(!is_vec); end
+			OP_OR:	begin res <= Rt.sign ? ~(a | b) : a | b; tUpdRegs(!is_vec); end
+			OP_EOR:	begin res <= Rt.sign ? ~(a ^ b) : a ^ b; tUpdRegs(!is_vec); end
 			default:	;
 			endcase
 			case(ir.r2.func)
@@ -1082,27 +1146,25 @@ begin
 			begin
 				res <= Rt.sign ? ~shl : shl;
 				vres <= Rt.sign ? ~shlv : shlv;
-				rfwr <= !is_vec;
+				tUpdRegs(!is_vec);
 				rfwrv <= is_vec;
-				if (ir.any.sz==PRC128)
-					goto (WRITEBACK);
 			end
-		OP_LSR:					begin res <= Rt.sign ? ~shr : shr; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ASR:					begin res <= Rt.sign ? ~asr : asr; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ROL:					begin res <= Rt.sign ? ~rol : rol; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ROR:					begin res <= Rt.sign ? ~ror : ror; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
-		OP_RORI:				begin res <= Rt.sign ? ~rori : rori; rfwr <= 1'b1; if (ir.any.sz==PRC128) goto (WRITEBACK); end
+		OP_LSR:					begin res <= Rt.sign ? ~shr : shr; tUpdRegs(1'b1); end
+		OP_ASR:					begin res <= Rt.sign ? ~asr : asr; tUpdRegs(1'b1); end
+		OP_ROL:					begin res <= Rt.sign ? ~rol : rol; tUpdRegs(1'b1); end
+		OP_ROR:					begin res <= Rt.sign ? ~ror : ror; tUpdRegs(1'b1); end
+		OP_ASLI,OP_LSLI:	begin res <= Rt.sign ? ~shli : shli; tUpdRegs(1'b1); end
+		OP_LSRI:				begin res <= Rt.sign ? ~shri : shri; tUpdRegs(1'b1); end
+		OP_ASRI:				begin res <= Rt.sign ? ~asri : asri; tUpdRegs(1'b1); end
+		OP_ROLI:				begin res <= Rt.sign ? ~roli : roli; tUpdRegs(1'b1); end
+		OP_RORI:				begin res <= Rt.sign ? ~rori : rori; tUpdRegs(1'b1); end
 		default:				begin res <= 'd0; end	 //tUnimp();
 		endcase
 	OP_ADDI:	
 		begin
-			if (ir.any.sz==PRC128)
+//			if (ir.any.sz==PRC128)
 				goto (WRITEBACK);
-			res <= Rt.sign ? -(a + b) : a + b; rfwr <= !is_vec;
+			res <= Rt.sign ? -(a + b) : a + b; tUpdRegs(!is_vec);
 			vres <= vaddo; rfwrv <= is_vec;
 			if (ir[31]) begin
 				if (ir[26:25]==2'b00)
@@ -1114,35 +1176,27 @@ begin
 	OP_CMPI:
 		begin
 			res <= {64'd0,cmpo};
-			rfwr <= 1'b1;
-			if (ir.any.sz==PRC128)
-				goto (WRITEBACK);
+			tUpdRegs(1'b1);
 		end
 	OP_ANDI:
 		begin
-			res <= Rt.sign ? ~(a & b) : a & b; rfwr <= !is_vec;
+			res <= Rt.sign ? ~(a & b) : a & b; tUpdRegs(!is_vec);
 			vres <= Rt.sign ? ~(va & vb) : va & vb; rfwrv <= is_vec;
-			if (ir.any.sz==PRC128)
-				goto (WRITEBACK);
 		end
 	OP_ORI:		
 		begin
-			res <= Rt.sign ? ~(a | b) : a | b; rfwr <= !is_vec;
+			res <= Rt.sign ? ~(a | b) : a | b; tUpdRegs(!is_vec);
 			vres <= Rt.sign ? ~(va | vb) : va | vb; rfwrv <= is_vec;
-			if (ir.any.sz==PRC128)
-				goto (WRITEBACK);
 		end
 	OP_EORI:
 		begin
-			res <= Rt.sign ? ~(a ^ b) : a ^ b; rfwr <= !is_vec;
+			res <= Rt.sign ? ~(a ^ b) : a ^ b; tUpdRegs(!is_vec);
 			vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec;
-			if (ir.any.sz==PRC128)
-				goto (WRITEBACK);
 		end
 	OP_CSR:
 		if (omode >= b[13:12]) begin
 			case(b[11:0])
-			12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; rfwr <= 1'b1; end
+			12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; tUpdRegs(1'b1); end
 			default:	res <= 'd0;
 			endcase
 		end
@@ -1152,9 +1206,31 @@ begin
 		end
 	OP_JSR:	tExJsr();
 	OP_Bcc, OP_DBcc:	tExBranch();
-	OP_LOAD:	begin tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD); goto (MEMORY); end
-	OP_LOADZ:	begin tExLoad(MR_LOADZ); goto (MEMORY); end
-	OP_STORE:	begin tExStore(); goto (MEMORY); end
+	OP_LOAD:	
+		begin
+			if (fnMemIndirect(ir))
+				tExLoad(MR_LOADZ, 1, ea);
+			else 
+				tExLoad((fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD), 0, ea);
+			mem_indirect <= fnMemIndirect(ir);	
+			goto (MEMORY);
+		end
+	OP_LOADZ:
+		begin
+			tExLoad(MR_LOADZ, fnMemIndirect(ir), ea);
+			mem_indirect <= fnMemIndirect(ir);
+			goto (MEMORY);
+		end
+	OP_STORE:	
+		begin
+			if (fnMemIndirect(ir)) begin
+				tExLoad(MR_LOADZ,1,ea);
+				mem_indirect <= 1'b1;
+			end
+			else
+				tExStore(ea);
+			goto (MEMORY); 
+		end
 	default:	;
 	endcase
 end
@@ -1179,7 +1255,7 @@ begin
 				endcase
 		end
 		else begin
-			tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD);
+			tExLoad(fnSpan(ir.any.sz,ea) ? MR_LOADZ : MR_LOAD,fnMemIndirect(ir), ea);
 			goto (MEMORY);
 		end
 	end
@@ -1211,58 +1287,86 @@ begin
 end
 endtask
 
+task tMemIndirect;
+begin
+	mem_indirect <= 1'b0;
+	if (ir.any.opcode==OP_STORE)
+		tExStore(memresp.res);
+	else if (ir.any.opcode==OP_LOADZ)
+		tExLoad(MR_LOADZ, 0, memresp.adr);
+	else
+		tExLoad((fnSpan(ir.any.sz,memresp.adr) ? MR_LOADZ : MR_LOAD), 0, memresp.adr);
+	goto (MEMORY);
+end
+endtask
+
 task tMemory2;
 begin
 	if (memresp.load) begin
 		if (is_jsr) begin
 			if (|sel2) begin
-				tExLoad2(MR_LOAD);
+				tExLoad2(ir.any.opcode==OP_LOADZ || mem_indirect ? MR_LOADZ : MR_LOAD, mem_indirect, ea);
 				goto (MEMORY3);
 			end
 			else begin
-				if (ir[15])
-					pc <= opc + memresp.res;
+				if (mem_indirect)
+					tMemIndirect();
 				else begin
-					case(ir.any.sz)
-					Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
-					Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
-					Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
-//					Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
-					default:	pc <= memresp.res;
-					endcase
-				end
-				if (ir.any.sz==PRC128)
+					if (ir[15])
+						pc <= opc + memresp.res;
+					else begin
+						case(ir.any.sz)
+						Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
+						Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
+						Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
+	//					Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
+						default:	pc <= memresp.res;
+						endcase
+					end
 					goto (WRITEBACK);
-				else
-					goto (IFETCH);
+				end
 			end
 		end
 		else begin
-			if (memresp.group)
-				rfwrg <= ~|sel2;
-			else
-				rfwr <= ~|sel2;
-			Rt <= memresp.tgt;
-			res <= memresp.res;
-			group_in <= memresp.res;
-			if (memresp.tgt==SCREG && memresp.res[127:0] != canary) begin
-				tException(FLT_CANARY);
+			begin
+				if (|sel2) begin
+					tExLoad2((ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD), mem_indirect, ea);
+					goto (MEMORY3);
+				end
+				else begin
+					if (mem_indirect)
+						tMemIndirect();
+					else begin
+						goto (WRITEBACK);
+						if (memresp.group) begin
+							// The only time a group update would occur in just a single cycle is
+							// if the data is 512-bit aligned.
+							if (~|sel2)
+								rfwrg <= group_mask;
+							else
+								rfwrg <= 'd0;
+						end
+						else
+							tUpdRegs(~|sel2);
+						Rt <= memresp.tgt;
+						res <= memresp.res;
+						group_in <= memresp.res;
+						if (memresp.tgt==SCREG && memresp.res[127:0] != canary) begin
+							tException(FLT_CANARY);
+						end
+					end
+				end
 			end
-			if (|sel2) begin
-				tExLoad2(ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD);
-				goto (MEMORY3);
-			end
-			else
-				goto (IFETCH);
 		end
 	end
+	// Store.
 	else begin
 		if (|sel2) begin
-			tExStore2();
+			tExStore2(ea);
 			goto (MEMORY3);
 		end
 		else
-			goto (IFETCH);
+			goto (WRITEBACK);
 	end
 end
 endtask
@@ -1286,32 +1390,35 @@ endtask
 
 task tMemory5;
 begin
-	if (ir.any.sz==PRC128)
-		goto (WRITEBACK);
-	else
-		goto (IFETCH);
+	goto (WRITEBACK);
 	if (memresp.load) begin
-		if (is_jsr) begin
-			if (ir[15])
-				pc <= opc + memresp.res;
-			else begin
-				case(ir.any.sz)
-				Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
-				Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
-				Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
-//				Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
-				default:	pc <= memresp.res;
-				endcase
-			end
-		end
+		// Note mem indirect logic need not be applied for stores. The first
+		// memory access of an indirect store is a load.
+		if (mem_indirect)
+			tMemIndirect();
 		else begin
-			if (memresp.group)
-				rfwrg <= 1'b1;
-			else
-				rfwr <= 1'b1;
-			Rt <= memresp.tgt;
-			res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
-			group_in <= group_in | (memresp.res << {7'd64-ea[5:0],3'b0});
+			if (is_jsr) begin
+				if (ir[15])
+					pc <= opc + memresp.res;
+				else begin
+					case(ir.any.sz)
+					Thor2023Pkg::byt:	pc[7:0] <= memresp.res[7:0];
+					Thor2023Pkg::wyde: pc[15:0] <= memresp.res[15:0];
+					Thor2023Pkg::tetra: pc[31:0] <= memresp.res[31:0];
+	//				Thor2023Pkg::octa: pc[63:0] <= memresp.res[63:0];
+					default:	pc <= memresp.res;
+					endcase
+				end
+			end
+			else begin
+				if (memresp.group)
+					rfwrg <= group_mask;
+				else
+					tUpdRegs(1'b1);
+				Rt <= memresp.tgt;
+				res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
+				group_in <= group_in | (memresp.res << {7'd64-ea[5:0],3'b0});
+			end
 		end
 	end
 end
@@ -1335,104 +1442,155 @@ begin
 		end
 	SR:
 		begin
-			rfwr <= 1'b1;
+			tUpdRegs(1'b1);
 			Rt <= 6'd56+ir.br.Rn[1:0];
 			res <= opc + 4'd5;
 `ifdef PGREL			
-			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:38]};
+			pc[13:0] <= ir[36:23];
+			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:37]};
 `else
-			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[23:11],ir[39:24]};
+			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[22:11],ir[39:23]};
 `endif
 		end
 	default:
-		if (takb) begin
+		begin
+			$display("Branch: %d", takb);
+			if (takb) begin
 `ifdef PGREL			
-			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{109{ir[23]}},ir[23:21],ir[39:38]};
+				pc[13:0] <= ir[36:23];
+				pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{111{ir[23]}},ir[39:37]};
 `else
-			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{109{ir[23]}},ir[23:21],ir[39:24]};
+				pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{111{ir[23]}},ir[39:23]};
 `endif			
+			end
 		end
 	endcase
 	goto (IFETCH);
 end				
 endtask
 
-
-task tMemsz;
+function fnAddrUpdate;
 input st;
 begin
 	case(ir.ls.sz)
 	PRC8:		
 		if (st && ir[39:38]==2'b01) begin
 			case(sr.ptrsz)
-			2'd0:	memreq.sz <= Thor2023Pkg::tetra;
-			2'd1: memreq.sz <= Thor2023Pkg::octa;
-			2'd2:	memreq.sz <= Thor2023Pkg::hexi;
-			default:	memreq.sz <= Thor2023Pkg::hexi;
+			2'd0:	fnAddrUpdate = 8'd4;
+			2'd1: fnAddrUpdate = 8'd8;
+			2'd2:	fnAddrUpdate = 8'd16;
+			default:	fnAddrUpdate = 8'd16;
 			endcase
 		end
 		else
-			memreq.sz <= Thor2023Pkg::byt;
-	PRC16:	memreq.sz <= Thor2023Pkg::wyde;
-	PRC32:	memreq.sz <= Thor2023Pkg::tetra;
-	PRC64:	memreq.sz <= Thor2023Pkg::octa;
-	PRC128:	memreq.sz <= Thor2023Pkg::hexi;
+			fnAddrUpdate = 8'd1;
+	PRC16:	fnAddrUpdate = 8'd2;
+	PRC32:	fnAddrUpdate = 8'd4;
+	PRC64:	fnAddrUpdate = 8'd8;
+	PRC128:	fnAddrUpdate = 8'd16;
 	PRCNDX:
 		case(ir[11:9])
-		PRC8:		memreq.sz <= Thor2023Pkg::byt;
+		PRC8:		fnAddrUpdate = 8'd1;
+		PRC16:	fnAddrUpdate = 8'd2;
+		PRC32:	fnAddrUpdate = 8'd4;
+		PRC64:	fnAddrUpdate = 8'd8;
+		PRC128:	fnAddrUpdate = 8'd16;
+		PRCNDX:	fnAddrUpdate = 8'd64;
+		default:	fnAddrUpdate = 8'd16;
+		endcase
+	default:	
+		fnAddrUpdate = 8'd16;
+	endcase
+end
+endfunction
+
+// Data for loads and stores is right justified. It will be positioned
+// correctly by the memory request queue.
+
+task tMemsz;
+input st;
+input memi;
+begin
+	if (memi)
+		memreq.sz <= Thor2023Pkg::hexi;
+	else
+		case(ir.ls.sz)
+		PRC8:		
+			if (st && ir[39:38]==2'b01) begin
+				case(sr.ptrsz)
+				2'd0:	memreq.sz <= Thor2023Pkg::tetra;
+				2'd1: memreq.sz <= Thor2023Pkg::octa;
+				2'd2:	memreq.sz <= Thor2023Pkg::hexi;
+				default:	memreq.sz <= Thor2023Pkg::hexi;
+				endcase
+			end
+			else
+				memreq.sz <= Thor2023Pkg::byt;
 		PRC16:	memreq.sz <= Thor2023Pkg::wyde;
 		PRC32:	memreq.sz <= Thor2023Pkg::tetra;
 		PRC64:	memreq.sz <= Thor2023Pkg::octa;
 		PRC128:	memreq.sz <= Thor2023Pkg::hexi;
-		PRCNDX:	memreq.sz <= Thor2023Pkg::vect;
-		default:	memreq.sz <= Thor2023Pkg::hexi;
+		PRCNDX:
+			case(ir[11:9])
+			PRC8:		memreq.sz <= Thor2023Pkg::byt;
+			PRC16:	memreq.sz <= Thor2023Pkg::wyde;
+			PRC32:	memreq.sz <= Thor2023Pkg::tetra;
+			PRC64:	memreq.sz <= Thor2023Pkg::octa;
+			PRC128:	memreq.sz <= Thor2023Pkg::hexi;
+			PRCNDX:	memreq.sz <= Thor2023Pkg::vect;
+			default:	memreq.sz <= Thor2023Pkg::hexi;
+			endcase
+		default:	
+			memreq.sz <= Thor2023Pkg::hexi;
 		endcase
-	default:	
-		memreq.sz <= Thor2023Pkg::hexi;
-	endcase
 end
 endtask
 
 task tMemsel;
 input st;
+input memi;
+input address_t adr;
 begin
-	case(ir.ls.sz)
-	PRC8:
-		if (st && ir[39:38]==2'b01) begin
-			case(sr.ptrsz)
-			2'd0:	memreq.sel <= 64'h000F;
-			2'd1: memreq.sel <= 64'h00FF;
-			2'd2:	memreq.sel <= 64'hFFFF;
-			default:	memreq.sel <= 64'h00FF;
+	if (memi)
+		memreq.sel <= 64'hFFFF;
+	else
+		case(ir.ls.sz)
+		PRC8:
+			if (st && ir[39:38]==2'b01) begin
+				case(sr.ptrsz)
+				2'd0:	memreq.sel <= 64'h000F;
+				2'd1: memreq.sel <= 64'h00FF;
+				2'd2:	memreq.sel <= 64'hFFFF;
+				default:	memreq.sel <= 64'h00FF;
+				endcase
+			end
+			else begin
+				memreq.sel <= 64'h0001;
+				sel2 <= 64'h0000;
+			end
+		PRC16:	tPRC16(adr);
+		PRC32:	tPRC32(adr);
+		PRC64:	tPRC64(adr);
+		PRC128:	tPRC128(adr);
+		PRCNDX:
+			case(ir[11:9])
+			PRC16:	tPRC16(adr);
+			PRC32:	tPRC32(adr);
+			PRC64:	tPRC64(adr);
+			PRC128:	tPRC128(adr);
+			PRCNDX:	tPRC512(adr);
+			default:	tPRC128(adr);
 			endcase
-		end
-		else begin
-			memreq.sel <= 64'h0001;
-			sel2 <= 64'h0000;
-		end
-	PRC16:	tPRC16();
-	PRC32:	tPRC32();
-	PRC64:	tPRC64();
-	PRC128:	tPRC128();
-	PRCNDX:
-		case(ir[11:9])
-		PRC16:	tPRC16();
-		PRC32:	tPRC32();
-		PRC64:	tPRC64();
-		PRC128:	tPRC128();
-		PRCNDX:	tPRC512();
-		default:	tPRC128();
+		default:
+			tPRC128(adr);
 		endcase
-	default:
-		tPRC128();
-	endcase
 end
 endtask
 
 task tExLoad;
 input memop_t fn;
+input memi;
+input address_t adr;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -1442,7 +1600,7 @@ begin
 	memreq.ip <= pc;
 	memreq.step <= 'd0;
 	memreq.count <= 'd0;
-	memreq.adr <= ea; 
+	memreq.adr <= adr; 
 	memreq.func <= fn;//ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD;
 	memreq.load <= 1'b1;
 	memreq.store <= 1'b0;
@@ -1450,20 +1608,17 @@ begin
 	memreq.v <= 1'b1;
 	memreq.empty <= 1'b0;
 	memreq.cause <= FLT_NONE;
-	tMemsel(0);
-	if (ir.ls.sz==3'd7 && ir[11:9]==3'd7)
+	tMemsel(0, memi, adr);
+	if (ls_group)
 		memreq.group <= 1'b1;
 	memreq.asid <= data_asid;
-	if (ir.ls.sz==PRCNDX)
-		memreq.adr <= ir[14]==1'b1 ? nea : ea;
-	else
-		memreq.adr <= ir[38]==1'b1 ? nea : ea;
+	memreq.adr <= adr;
 	memreq.vcadr <= 'd0;
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(0);
+	tMemsz(0, memi);
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
 	memreq.acr <= 4'hF;
@@ -1474,12 +1629,22 @@ begin
 	memreq.pmtram_ena <= 1'b0;
 	memreq.wr_tgt <= 1'b1;
 	memreq.tgt <= Rt;
+	if (ir.ls.sz==PRCNDX) begin
+		case(ir.lsn.upd)
+		non:	;
+		postinc: begin Rt <= Rc; tUpdRegs(1'b1); res <= c + fnAddrUpdate(0); end
+		predec:	 begin Rt <= Rc; tUpdRegs(1'b1); res <= c + fnAddrUpdate(0); memreq.adr <= adr + fnAddrUpdate(0); end
+		memi: ;
+		endcase
+	end
 	tid <= tid + 2'd1;
 end
 endtask
 
 task tExLoad2;
 input memop_t fn;
+input memi;
+input address_t adr;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -1489,7 +1654,15 @@ begin
 	memreq.ip <= pc;
 	memreq.step <= 'd0;
 	memreq.count <= 'd0;
-	memreq.adr <= nea; 
+	memreq.adr <= {adr[$bits(Thor2023Pkg::address_t)-1:6] + 2'd1,6'h0}; 	//nea
+	if (ir.ls.sz==PRCNDX) begin
+		case(ir.lsn.upd)
+		non:	;
+		postinc:	;
+		predec:	memreq.adr <= {adr[$bits(Thor2023Pkg::address_t)-1:6] + 2'd1,6'h0} + fnAddrUpdate(0);
+		memi:	;
+		endcase
+	end
 	memreq.func <= fn;
 	memreq.load <= 1'b1;
 	memreq.store <= 1'b0;
@@ -1504,7 +1677,7 @@ begin
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(0);
+	tMemsz(0, memi);
 //	memreq.bycnt <= bytcnt2;
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
@@ -1521,6 +1694,7 @@ end
 endtask
 
 task tExStore;
+input address_t adr;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -1545,25 +1719,29 @@ begin
 	memreq.v <= 1'b1;
 	memreq.empty <= 1'b0;
 	memreq.cause <= FLT_NONE;
-	tMemsel(1);
+	tMemsel(1, 0, adr);
 	memreq.asid <= data_asid;
 
-	if (ir.ls.sz==PRCNDX)
-		memreq.adr <= ir[14]==1'b1 ? nea : ea;
-	else
-		memreq.adr <= ir[38]==1'b1 ? nea : ea;
-	
+	memreq.adr <= adr;
+	if (ir.ls.sz==PRCNDX) begin
+		case(ir.lsn.upd)
+		non:	;
+		postinc: begin Rt <= Rc; tUpdRegs(1'b1); res <= c + fnAddrUpdate(1); end
+		predec:	 begin Rt <= Rc; tUpdRegs(1'b1); res <= c + fnAddrUpdate(1); memreq.adr <= adr + fnAddrUpdate(1); end
+		memi: ;
+		endcase
+	end
 	memreq.vcadr <= 'd0;
-	if (ir.ls.sz==3'd7 && ir[11:9]==3'd7) begin
+	if (ls_group) begin
 		memreq.group <= 1'b1;
-		memreq.res <= {32'd0,group_out};
+		memreq.res <= {32'd0,group_outm};
 	end
 	else
 		memreq.res <= {416'd0,a};
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(1);
+	tMemsz(1, 0);
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
 	memreq.acr <= 4'hF;
@@ -1579,6 +1757,7 @@ end
 endtask
 
 task tExStore2;
+input address_t adr;
 begin
 	memreq <= 'd0;
 	memreq.tid <= tid;
@@ -1604,14 +1783,22 @@ begin
 	memreq.cause <= FLT_NONE;
 	memreq.sel <= sel2;
 	memreq.asid <= asid;
-	memreq.adr <= nea;
+	memreq.adr <= {adr[$bits(Thor2023Pkg::address_t)-1:6] + 2'd1,6'h0};//nea;
+	if (ir.ls.sz==PRCNDX) begin
+		case(ir.lsn.upd)
+		non:	;
+		postinc:	;
+		predec:	memreq.adr <= {adr[$bits(Thor2023Pkg::address_t)-1:6] + 2'd1,6'h0} + fnAddrUpdate(1);
+		memi:	;
+		endcase
+	end
 	memreq.vcadr <= 'd0;
 	memreq.res <= {416'd0,data2};
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
 
-	tMemsz(1);
+	tMemsz(1, 0);
 	memreq.bytcnt <= bytcnt2;
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
@@ -1628,52 +1815,57 @@ end
 endtask
 
 task tPRC16;
+input address_t adr;
 begin
 	memreq.bytcnt <= 8'd2;
-	data2 <= a >> (10'd512 - {ea[0],3'b0});
-	bytcnt2 <= {7'h0,ea[0]};
-	memreq.sel <= 64'h0000000000000003 >> ea[0];
-	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[0]);
+	data2 <= a >> (10'd512 - {adr[0],3'b0});
+	bytcnt2 <= {7'h0,adr[0]};
+	memreq.sel <= 64'h0000000000000003 >> adr[0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[0]);
 end
 endtask
 
 task tPRC32;
+input address_t adr;
 begin
 	memreq.bytcnt <= 8'd4;
-	data2 <= a >> (10'd512 - {ea[1:0],3'b0});
-	bytcnt2 <= {6'h0,ea[1:0]};
-	memreq.sel <= 64'h000000000000000F >> ea[1:0];
-	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[1:0]);
+	data2 <= a >> (10'd512 - {adr[1:0],3'b0});
+	bytcnt2 <= {6'h0,adr[1:0]};
+	memreq.sel <= 64'h000000000000000F >> adr[1:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[1:0]);
 end
 endtask
 
 task tPRC64;
+input address_t adr;
 begin
 	memreq.bytcnt <= 8'd8;
-	data2 <= a >> (10'd512 - {ea[2:0],3'b0});
-	bytcnt2 <= {5'h0,ea[2:0]};
-	memreq.sel <= 64'h00000000000000FF >> ea[2:0];
-	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[2:0]);
+	data2 <= a >> (10'd512 - {adr[2:0],3'b0});
+	bytcnt2 <= {5'h0,adr[2:0]};
+	memreq.sel <= 64'h00000000000000FF >> adr[2:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[2:0]);
 end
 endtask
 
 task tPRC128;
+input address_t adr;
 begin
 	memreq.bytcnt <= 8'd16;
-	data2 <= a >> (10'd512 - {ea[3:0],3'b0});
-	bytcnt2 <= {4'h0,ea[3:0]};
-	memreq.sel <= 64'h000000000000FFFF >> ea[3:0];
-	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[3:0]);
+	data2 <= a >> (10'd512 - {adr[3:0],3'b0});
+	bytcnt2 <= {4'h0,adr[3:0]};
+	memreq.sel <= 64'h000000000000FFFF >> adr[3:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[3:0]);
 end
 endtask
 
 task tPRC512;
+input address_t adr;
 begin
 	memreq.bytcnt <= 8'd64;
-	data2 <= a >> (10'd512 - {ea[5:0],3'b0});
-	bytcnt2 <= {2'h0,ea[5:0]};
-	memreq.sel <= 64'hFFFFFFFFFFFFFFFF >> ea[5:0];
-	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << ea[5:0]);
+	data2 <= group_outm >> (10'd512 - {adr[5:0],3'b0});
+	bytcnt2 <= {2'h0,adr[5:0]};
+	memreq.sel <= 64'hFFFFFFFFFFFFFFFF >> adr[5:0];
+	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[5:0]);
 end
 endtask
 
@@ -1682,10 +1874,25 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tWriteback;
+input wr;
 begin
-	Rt1 <= 1'b1;
-	rfwr <= 1'b1;
-	res <= res >> 64;
+	Rt1 <= 1'b0;
+	rfwr <= wr;
+	if (wr && Rt==LCREG)
+		lc <= res;
+`ifdef SUPPORT_REP
+	repbuf.icnt <= repbuf.icnt + 2'd1;
+	if (repbuf.ins.any.opcode==OP_REP && repbuf.icnt==repbuf.ins[14:12] && repcond) begin
+		repbuf.icnt <= 'd0;
+		pc <= repbuf.adr;
+		if (repbuf.ins[15])
+			lc <= lc + 2'd1;
+		else
+			lc <= lc - 2'd1;
+	end
+	else
+		repbuf.ins.any.opcode <= OP_PFX;
+`endif		
 	goto (IFETCH);
 end
 endtask
@@ -1732,16 +1939,53 @@ begin
 		epc[6] <= RSTPC;
 		epc[7] <= RSTPC;
 	end
-	rfwr <= 1'b1;
+	tUpdRegs(1'b1);
 	res <= a + {ir[30:27],4'h0};
 	goto (IFETCH);
 end
 endtask
 
+// Handle state transitions and the REP modifier.
 task goto;
 input state_t nst;
 begin
 	state <= nst;
+end
+endtask
+
+// Handle register file updates including the loop counter.
+task tUpdRegs;
+input wr;
+begin
+	rfwr1 <= wr;
+end
+endtask
+
+task tDump;
+integer nn;
+begin
+	if (coreno_i==128'd1) begin
+		$display("===================================================================");
+		$display("%d", $time);
+		$display("===================================================================");
+		$display("State: %s", state.name);
+		$display("pc = %h", pc);
+		$display("pfx2:%h pfx1:%h ir: %h", postfix2,postfix1,ir);
+		$display("----- regfile -----------------------------------------------------");
+		for (nn = 0; nn < 8; nn = nn + 1)
+			$display("regs: 0:%x 1:%x 2:%x 3:%x 4:%x 5:%x 6:%x 7:%x",
+				{urf1.c0h_regs[nn],urf1.c0_regs[nn]},
+				{urf1.c1h_regs[nn],urf1.c1_regs[nn]},
+				{urf1.c2h_regs[nn],urf1.c2_regs[nn]},
+				{urf1.c3h_regs[nn],urf1.c3_regs[nn]},
+				{urf1.c4h_regs[nn],urf1.c4_regs[nn]},
+				{urf1.c5h_regs[nn],urf1.c5_regs[nn]},
+				{urf1.c6h_regs[nn],urf1.c6_regs[nn]},
+				{urf1.c7h_regs[nn],urf1.c7_regs[nn]}
+			);
+		$display("op --  ----- res -----   ----- a -----   ----- b -----");
+		$display("%d: r%d%c%x %x %x", ir.any.opcode, Rt.num, rfwr ? "=" : " ", res, a, b);
+	end
 end
 endtask
 

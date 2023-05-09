@@ -149,7 +149,8 @@ begin
 	if (wg[6]) c6_regs[gwa1] <= gi[$bits(value_t)*7-1:$bits(value_t)*6];
 	if (wg[7]) c7_regs[gwa1] <= gi[$bits(value_t)*8-1:$bits(value_t)*7];
 
-	if (wr) 
+	if (wr) begin
+		$display("reg %d (%d) write %x", wa, {gwa1,wa[2:0]}, i);
 		case(wa[2:0])
 		3'd0:	{c0h_regs[gwa1],c0_regs[gwa1]} <= i;
 		3'd1:	{c1h_regs[gwa1],c1_regs[gwa1]} <= i;
@@ -161,6 +162,7 @@ begin
 		3'd7:	{c7h_regs[gwa1],c7_regs[gwa1]} <= i;
 		default:	;
 		endcase
+	end
 		
 	if (wr && wa==SCREG)
 		sc <= i;
