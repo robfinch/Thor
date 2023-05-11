@@ -1,4 +1,5 @@
- 
+extern int printf(char *,...); 
+extern int printf_again(char *,...); 
 //#define true 1
 //#define false 0
 #define size 8190
@@ -6,7 +7,7 @@
 
 char	flags[sizepl];
 
-main()
+int main()
 {
 	int i,prime,k,count,iter;
 	printf("10 iterations\n");
@@ -26,5 +27,5 @@ main()
 				}
 			}
 		}
-	printf("\n%d primes\n",count);
+	printf_again("\n%d primes\n",count);
 }

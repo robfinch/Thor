@@ -39,8 +39,9 @@
 
 import Thor2023Pkg::*;
 
-module Thor2023_regfile(clk, regset, wg, gwa, gi, wr, wa, i, gra, go, ra0, ra1, ra2, ra3,
+module Thor2023_regfile(rst, clk, regset, wg, gwa, gi, wr, wa, i, gra, go, ra0, ra1, ra2, ra3,
 	o0, o1, o2, o3, asp, ssp, hsp, msp, lc, sc, om);
+input rst;
 input clk;
 input regset;
 input [7:0] wg;
@@ -138,8 +139,10 @@ always_comb
 	else
 		gwa1 <= 7'd7;
 
-always_ff @(posedge clk)
-begin
+always_ff @(posedge clk, posedge rst)
+if (rst)
+	sc <= 'd0;
+else begin
 	if (wg[0]) c0_regs[gwa1] <= gi[$bits(value_t)*1-1:  0];
 	if (wg[1]) c1_regs[gwa1] <= gi[$bits(value_t)*2-1:$bits(value_t)*1];
 	if (wg[2]) c2_regs[gwa1] <= gi[$bits(value_t)*3-1:$bits(value_t)*2];
@@ -185,29 +188,29 @@ end
 
 task tGetReg;
 input [7:0] ra;
-output value_t o;
+output double_value_t o;
 begin
 	case(ra[5:0])
-	6'd0:		o <= 'd0;
-	wa:			o <= i;
-	LCREG:	o <= lc;
+	6'd0:		o = 'd0;
+	wa:			o = i;
+	LCREG:	o = lc;
 	SPREG:
 		case(om)
-		2'd0:	o <= asp;
-		2'd1:	o <= ssp;
-		2'd2:	o <= hsp;
-		2'd3:	o <= msp;
+		2'd0:	o = asp;
+		2'd1:	o = ssp;
+		2'd2:	o = hsp;
+		2'd3:	o = msp;
 		endcase
 	default:
 		case(ra[2:0])
-		3'd0:	o <= {c0h_regs[ra[7:3]],c0_regs[ra[7:3]]};
-		3'd1:	o <= {c1h_regs[ra[7:3]],c1_regs[ra[7:3]]};
-		3'd2:	o <= {c2h_regs[ra[7:3]],c2_regs[ra[7:3]]};
-		3'd3:	o <= {c3h_regs[ra[7:3]],c3_regs[ra[7:3]]};
-		3'd4:	o <= {c4h_regs[ra[7:3]],c4_regs[ra[7:3]]};
-		3'd5:	o <= {c5h_regs[ra[7:3]],c5_regs[ra[7:3]]};
-		3'd6:	o <= {c6h_regs[ra[7:3]],c6_regs[ra[7:3]]};
-		3'd7:	o <= {c7h_regs[ra[7:3]],c7_regs[ra[7:3]]};
+		3'd0:	o = {c0h_regs[ra[7:3]],c0_regs[ra[7:3]]};
+		3'd1:	o = {c1h_regs[ra[7:3]],c1_regs[ra[7:3]]};
+		3'd2:	o = {c2h_regs[ra[7:3]],c2_regs[ra[7:3]]};
+		3'd3:	o = {c3h_regs[ra[7:3]],c3_regs[ra[7:3]]};
+		3'd4:	o = {c4h_regs[ra[7:3]],c4_regs[ra[7:3]]};
+		3'd5:	o = {c5h_regs[ra[7:3]],c5_regs[ra[7:3]]};
+		3'd6:	o = {c6h_regs[ra[7:3]],c6_regs[ra[7:3]]};
+		3'd7:	o = {c7h_regs[ra[7:3]],c7_regs[ra[7:3]]};
 		default:	;
 		endcase
 	endcase

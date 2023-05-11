@@ -65,6 +65,12 @@ always_comb
 begin
 // Computing immediate constant
 case(ir.any.opcode)
+OP_R2:
+	case(ir.r2.func)
+	OP_REP:
+		imm = {{113{ir[30]}},ir[30:16]};
+	default:	;
+	endcase
 OP_SHIFT:
 	case(ir.r2.func)
 	OP_ASLI,OP_LSRI,OP_LSLI,OP_ASRI,OP_ROLI,OP_RORI:

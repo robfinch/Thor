@@ -87,7 +87,7 @@ state_t state;
 Thor2023Pkg::asid_t pc_asid;
 Thor2023Pkg::asid_t data_asid;
 address_t pc, opc, pc_o;
-value_t asp, ssp, hsp, msp;		// stack pointers
+double_value_t asp, ssp, hsp, msp;		// stack pointers
 wire ihit;
 wire ic_valid;
 Thor2023_cache_pkg::ICacheLine ic_line_lo, ic_line_hi;
@@ -131,7 +131,7 @@ reg rfwr, rfwr1;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // CSRs
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-value_t lc;
+double_value_t lc;
 reg pe = 1'b0;
 Thor2023Pkg::asid_t asid;
 reg dce;
@@ -326,10 +326,11 @@ endfunction
 
 Thor2023_regfile urf1 
 (
+	.rst(rst_i),
 	.clk(clk_g),
 	.regset(1'b0),
 	.wg(rfwrg),
-	.gwa(Ra.num[2:0]),
+	.gwa(Ra.num[3:0]),
 	.gi(group_in),
 	.wr(rfwr),
 	.wa({Rt1,Rt.num}), 
@@ -339,7 +340,7 @@ Thor2023_regfile urf1
 	.ra0({Ra1,Ra.num}),
 	.ra1({Rb1,Rb.num}),
 	.ra2({Rc1,Rc.num}),
-	.ra3(predreg),
+	.ra3({1'b0,predreg}),
 	.o0(rfoa),
 	.o1(rfob),
 	.o2(rfoc),
@@ -348,6 +349,7 @@ Thor2023_regfile urf1
 	.ssp(ssp),
 	.hsp(hsp),
 	.msp(msp), 
+	.lc(lc),
 	.sc(canary),
 	.om(omode)
 );
@@ -482,8 +484,8 @@ if (rst_i)
 	{postfix4,postfix3,postfix2,postfix1,ir} <= {5{NOP_INSN}};
 else begin
 	if (state==IFETCH && ihit) begin
-		{postfix4,postfix3,postfix2,postfix1,ir} <= ic_data >> {pc_o[4:0],3'b0};
-		{vpostfix4,vpostfix3,vpostfix2,vpostfix1,vir} <= ic_data >> {pc_o[4:0],3'b0};
+		{postfix4,postfix3,postfix2,postfix1,ir} <= ic_data >> {pc[4:0],3'b0};
+		{vpostfix4,vpostfix3,vpostfix2,vpostfix1,vir} <= ic_data >> {pc[4:0],3'b0};
 	end
 end
 
@@ -557,12 +559,12 @@ Thor2023_eval_branch ube1
 
 always_comb
 	case(repbuf.ins[11:9])
-	3'd0:	repcond = lc == repbuf.imm;
-	3'd1:	repcond = lc != repbuf.imm;
-	3'd2: repcond = $signed(lc) < $signed(repbuf.imm);
-	3'd3: repcond = $signed(lc) <= $signed(repbuf.imm);
-	3'd4: repcond = $signed(lc) >= $signed(repbuf.imm);
-	3'd5: repcond = $signed(lc) > $signed(repbuf.imm);
+	3'd0:	repcond = lc[REP_BIT:0] == repbuf.imm[REP_BIT:0];
+	3'd1:	repcond = lc[REP_BIT:0] != repbuf.imm[REP_BIT:0];
+	3'd2: repcond = $signed(lc[REP_BIT:0]) < $signed(repbuf.imm[REP_BIT:0]);
+	3'd3: repcond = $signed(lc[REP_BIT:0]) <= $signed(repbuf.imm[REP_BIT:0]);
+	3'd4: repcond = $signed(lc[REP_BIT:0]) >= $signed(repbuf.imm[REP_BIT:0]);
+	3'd5: repcond = $signed(lc[REP_BIT:0]) > $signed(repbuf.imm[REP_BIT:0]);
 	3'd6:	repcond = ~lc[repbuf.imm[6:0]];
 	3'd7:	repcond =  lc[repbuf.imm[6:0]];
 	endcase
@@ -822,8 +824,8 @@ begin
 		end
 	OP_Bcc, OP_DBcc:
 		begin
-			Ra <= ir.br.Rm;
-			Rb <= ir.br.Rn;
+			Ra <= {1'b0,ir.br.Rm};
+			Rb <= {1'b0,ir.br.Rn};
 		end
 	default:	;
 	endcase
@@ -857,10 +859,9 @@ begin
 				tOFLogic();
 			OP_PRED:
 				tOFPred();
-`ifdef SUPPORT_REP
 			OP_REP:
-				tOFRep();
-`endif				
+				if (SUPPORT_REP)
+					tOFRep();
 			default:	;
 			endcase
 		end
@@ -929,16 +930,15 @@ end
 endtask
 
 // Handling the repeat modifier.
-`ifdef SUPPORT_REP
 task tOFRep;
 begin
-	repbuf.ins <= ir;
+	repbuf.v <= VAL;
+	repbuf.ins <= ir[15:9];
 	repbuf.icnt <= 'd0;
 	repbuf.adr <= pc;		// capture loopback address
-	repbuf.imm <= imm[63:0];
+	repbuf.imm <= imm[REP_BIT:0];
 end
 endtask
-`endif	
 
 // Handling operand fetch for the PRED modifier. Unique in that it goes directly
 // back to the instruction fetch stage.
@@ -1104,6 +1104,7 @@ task tExecute;
 begin
 	// Default action is to go back to WRITEBACK.
 	goto (WRITEBACK);
+	if (!SUPPORT_REP || (!repbuf.v || repcond))
 	case(ir.any.opcode)
 	OP_R2:
 		begin
@@ -1193,17 +1194,7 @@ begin
 			res <= Rt.sign ? ~(a ^ b) : a ^ b; tUpdRegs(!is_vec);
 			vres <= Rt.sign ? ~(va ^ vb) : va ^ vb; rfwrv <= is_vec;
 		end
-	OP_CSR:
-		if (omode >= b[13:12]) begin
-			case(b[11:0])
-			12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; tUpdRegs(1'b1); end
-			default:	res <= 'd0;
-			endcase
-		end
-		else begin
-			res <= 'd0;
-			// tPrivilege();
-		end
+	OP_CSR:	tExCsr();
 	OP_JSR:	tExJsr();
 	OP_Bcc, OP_DBcc:	tExBranch();
 	OP_LOAD:	
@@ -1233,6 +1224,46 @@ begin
 		end
 	default:	;
 	endcase
+end
+endtask
+
+task tExCsr;
+begin
+	if (omode >= b[13:12]) begin
+		case(b[11:0])
+		12'h001:	begin res <= Rt.sign ? ~coreno_i : coreno_i; tUpdRegs(1'b1); end
+		12'h008:	begin res <= repbuf; tUpdRegs(1'b1); end
+		default:	res <= 'd0;
+		endcase
+		case(ir.csr.csrop)
+		csrRead:	;
+		csrWrite:
+			case(b[11:0])
+			12'h008:	repbuf <= a;
+			default:	;
+			endcase
+		csrAndNot:
+			case(b[11:0])
+			12'h008:	repbuf <= repbuf & ~a;
+			default:	;
+			endcase
+		csrOr:
+			case(b[11:0])
+			12'h008:	repbuf <= repbuf | a;
+			default:	;
+			endcase
+		csrEor:
+			case(b[11:0])
+			12'h008:	repbuf <= repbuf ^ a;
+			default:	;
+			endcase
+		default:	;
+		endcase
+	end
+	else begin
+		res <= 'd0;
+		// tPrivilege();
+	end
 end
 endtask
 
@@ -1433,39 +1464,39 @@ begin
 			Rt <= 'd0;
 			res <= opc;
 //			pc[27:0] <= {ir[23:12],ir[39:24]};
-`ifdef PGREL
-			pc[13:0] <= ir[37:24];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:38]};
-`else
-			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[23:11],ir[39:24]};
-`endif
+			if (SUPPORT_PGREL) begin
+				pc[13:0] <= ir[37:24];
+				pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:38]};
+			end
+			else
+				pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[23:11],ir[39:24]};
 		end
 	SR:
 		begin
 			tUpdRegs(1'b1);
 			Rt <= 6'd56+ir.br.Rn[1:0];
 			res <= opc + 4'd5;
-`ifdef PGREL			
-			pc[13:0] <= ir[36:23];
-			pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:37]};
-`else
-			pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[22:11],ir[39:23]};
-`endif
+			if (SUPPORT_PGREL) begin
+				pc[13:0] <= ir[36:23];
+				pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{99{ir[23]}},ir[23:11],ir[39:37]};
+			end
+			else
+				pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{99{ir[23]}},ir[22:11],ir[39:23]};
 		end
 	default:
 		begin
 			$display("Branch: %d", takb);
 			if (takb) begin
-`ifdef PGREL			
-				pc[13:0] <= ir[36:23];
-				pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{111{ir[23]}},ir[39:37]};
-`else
-				pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{111{ir[23]}},ir[39:23]};
-`endif			
+				if (SUPPORT_PGREL) begin	
+					pc[13:0] <= ir[36:23];
+					pc[$bits(address_t)-1:14] <= opc[$bits(address_t)-1:14] + {{111{ir[39]}},ir[39:37]};
+				end
+				else
+					pc[$bits(address_t)-1:0] <= opc[$bits(address_t)-1:0] + {{111{ir[39]}},ir[39:23]};
 			end
 		end
 	endcase
-	goto (IFETCH);
+	goto (WRITEBACK);
 end				
 endtask
 
@@ -1880,19 +1911,22 @@ begin
 	rfwr <= wr;
 	if (wr && Rt==LCREG)
 		lc <= res;
-`ifdef SUPPORT_REP
-	repbuf.icnt <= repbuf.icnt + 2'd1;
-	if (repbuf.ins.any.opcode==OP_REP && repbuf.icnt==repbuf.ins[14:12] && repcond) begin
-		repbuf.icnt <= 'd0;
-		pc <= repbuf.adr;
-		if (repbuf.ins[15])
-			lc <= lc + 2'd1;
+	if (SUPPORT_REP) begin
+		if (repbuf.v)
+			repbuf.icnt <= repbuf.icnt + 2'd1;
+		if (repbuf.v && repcond) begin
+			if (repbuf.icnt == repbuf.ins[14:12]) begin
+				repbuf.icnt <= 'd0;
+				pc <= repbuf.adr;
+				if (repbuf.ins[15])
+					lc <= lc + 2'd1;
+				else
+					lc <= lc - 2'd1;
+			end
+		end
 		else
-			lc <= lc - 2'd1;
+			repbuf.v <= INV;
 	end
-	else
-		repbuf.ins.any.opcode <= OP_PFX;
-`endif		
 	goto (IFETCH);
 end
 endtask

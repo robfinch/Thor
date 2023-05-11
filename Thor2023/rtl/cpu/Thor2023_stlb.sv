@@ -96,7 +96,7 @@ tlb_state_t state = ST_RST;
 integer n;
 integer n1,j1;
 integer n2;
-integer n3, n4, n5, n6, n7, n8, n9, n10;
+integer n3, n4, n5, n6, n7, n8, n9, n10, n11, n12;
 genvar g;
 
 reg tlbmiss_irq;
@@ -356,6 +356,7 @@ reg [CHANNELS-1:0] rr_req;
 wire [CHANNELS-1:0] rr_sel;
 wire ne_ack;
 wire [CHANNELS-1:0] ne_cyc;
+wb_cmd_request128_t [CHANNELS-1:0] wbn_req_d;
 
 edge_det uedack
 (
@@ -389,31 +390,19 @@ if (rst_i)
 else
 	arbit_ctr <= arbit_ctr + 2'd1;
 
-// Arbit when there is no request pending or at the end of a request.
-//always_comb
-//	rr_ce = ne_ack| |(rr_req & ~rr_active);
-always_comb
-	for (n5 = 0; n5 < CHANNELS; n5 = n5 + 1) begin
-//		if (n5==CHANNELS-1)
-//			rr_req[n5] = wbm_req.cyc;
-//		else
-			rr_req[n5] = wbn_req_i[n5].cyc;
-		rr_ce = arbit_ctr;//ne_ack | ne_cyc[n5] | (~|rr_req & arbit_ctr[0] | ~req.cyc);
-	end
-always_comb// @(posedge clk_i)
+// Piplein delay to line up with seleect.
+always_ff @(posedge clk_i)
+	for (n12 = 0; n12 < CHANNELS; n12 = n12 + 1)
+		wbn_req_d[n12] <= wbn_req_i[n12];
+	
+always_ff @(posedge clk_i)
 begin
 	req = 'd0;
 	selected_channel = 'd0;
 	for (n8 = 0; n8 < CHANNELS; n8 = n8 + 1)
 		if (rr_sel[n8])	begin // should be one hot
-//			if (n8==CHANNELS-1)
-//				req = wbm_req;
-//			els
-				if (arbit_ctr[3:0] < 4'd12)
-					req = wbn_req_i[arbit_ctr[5:4]];
-				else
-					req = 'd0;
-				selected_channel = arbit_ctr[5:4];
+			req = wbn_req_d[n8];
+			selected_channel = n8;
 		end
 end
 
@@ -451,14 +440,32 @@ begin
 end
 endfunction
 
+always_comb
+	for (n11 = 0; n11 < CHANNELS; n11 = n11 + 1)
+		rr_req[n11] = wbn_req_i[n11].cyc;
+
+reg [5:0] chcnt = 'd0;
+always_ff @(posedge clk_i)
+	chcnt <= chcnt + 2'd1;
+
 // Send a retry back as the response for non-selected channels.
 always_comb
 begin
 	wbn_resp_o = 'd0;
-	for (n9 = 0; n9 < CHANNELS; n9 = n9 + 1) begin
-		wbn_resp_o[n9].rty = (n9!=selected_channel);
-		ch_active[n9] = wbn_req_i[n9].cyc;
-	end
+	case(rr_req)
+	// No channels active, one of them should not be retrying.
+	4'b0000:
+		begin
+			for (n9 = 0; n9 < CHANNELS; n9 = n9 + 1) begin
+				wbn_resp_o[n9].rty = 'd1;
+				wbn_resp_o[chcnt[$clog2(CHANNELS)-1:0]].rty = 'd0;
+			end
+		end
+	// Some channels are active, only the chosen one gets the bus.
+	default:
+		for (n9 = 0; n9 < CHANNELS; n9 = n9 + 1)
+			wbn_resp_o[n9].rty = (n9!=selected_channel);
+	endcase
 	wbn_resp_o[fnRespch(wb_resp_i.tid)] = wb_resp_i;
 	if (wbm_resp.ack)
 		wbn_resp_o[fnRespch(wbm_resp.tid)] = wbm_resp;
