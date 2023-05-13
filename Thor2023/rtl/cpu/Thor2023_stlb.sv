@@ -425,9 +425,15 @@ reg [3:0] used_tid [0:CHANNELS-1];
 reg [3:0] resp_ch;
 
 always_ff @(posedge clk_i)
+if (rst_i) begin
+	for (n10 = 0; n10 < CHANNELS; n10 = n10 + 1)
+		used_tid[n10] <= 4'hF;
+end
+else begin
 	for (n10 = 0; n10 < CHANNELS; n10 = n10 + 1)
 		if (wbn_req_i[n10].cyc)
 			used_tid[n10] <= wbn_req_i[n10].tid[7:4];
+end
 
 function [3:0] fnRespch;
 input [7:0] tid;

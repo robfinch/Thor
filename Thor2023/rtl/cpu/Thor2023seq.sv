@@ -75,6 +75,7 @@ typedef enum logic [3:0] {
 	OFETCH,
 	EXECUTE,
 	MEMORY,
+	MEMORY_ST,
 	MEMORY1,
 	MEMORY2,
 	MEMORY3,
@@ -114,19 +115,91 @@ instruction_t ir;
 reg [255:0] jir;						// jump table ir
 reg [31:0] jira;
 linstruction_t vir;
-postfix_t postfix1;
-postfix_t postfix2;
-postfix_t postfix3;
-postfix_t postfix4;
-postfix_t vpostfix1;
-postfix_t vpostfix2;
-postfix_t vpostfix3;
-postfix_t vpostfix4;
+reg [135:0] postfix;
+reg [135:0] vpostfix;
 wire [31:0] cmpo;
 wire [VWID-1:0] vcmpo;
 address_t ea, nea;
 reg [7:0] tid;
 reg rfwr, rfwr1;
+wire bad_ilen;							// bad instruction length
+reg dec_store;
+reg lsm;										// load / store multiple decoded
+reg [1:0] lsmcnt;
+reg [63:0] reglist_mask;		// working register list mask
+reg [383:0] reglist2;
+reg [383:0] reglist_work;
+reg [511:0] st_line;
+reg ls_advtid;
+
+initial begin
+	reglist2 = {
+		6'd63,			// HSP
+		6'd63,			// SSP
+		6'd63,			// ASP
+		6'd51,			// r51
+		6'd50,			// r50
+		6'd49,			// r49
+		6'd48,			// r48
+		6'd54,			// CTA
+		6'd60,			// GP1
+		6'd52,			// TP
+		6'd59,			// LR3
+		6'd58,			// LR2
+		6'd57,			// LR1
+		6'd39,			// VM7
+		6'd38,			// VM6
+		6'd37,			// VM5
+		6'd36,			// VM4
+		6'd35,			// VM3
+		6'd34,			// VM2
+		6'd33,			// VM1
+		6'd31,			// S15
+		6'd30,			// S14
+		6'd29,			// S13
+		6'd28,			// S12
+		6'd27,			// S11
+		6'd26,			// S10
+		6'd25,			// S9
+		6'd47,			// T11
+		6'd46,			// T10
+		6'd45,			// T9
+		6'd44,			// T8
+		6'd43,			// A10
+		6'd42,			// A9
+		6'd41,			// A8
+		6'd40,			// A7
+		6'd7,				// A6
+		6'd6,				// A5
+		6'd5,				// A4
+		6'd4,				// A3
+		6'd62,			// FP
+		6'd61,			// GP0
+		6'd56,			// LR0
+		6'd55,			// LC
+		6'd32,			// VM0
+		6'd24,			// S8
+		6'd23,			// S7
+		6'd22,			// S6
+		6'd21,			// S5
+		6'd20,			// S4
+		6'd19,			// S3
+		6'd18,			// S2
+		6'd17,			// S1
+		6'd16,			// S0
+		6'd15,			// T7
+		6'd14,			// T6
+		6'd13,			// T5
+		6'd12,			// T4
+		6'd11,			// T3
+		6'd10,			// T2
+		6'd9,				// T1
+		6'd8,				// T0
+		6'd3,				// A2
+		6'd2,				// A1
+		6'd1				// A0
+	};
+end
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // CSRs
@@ -185,10 +258,9 @@ reg [VWID-1:0] va1, vb1, vc1;
 wire [VWID-1:0] vaddo, vcmpo;
 double_value_t imm2;
 double_value_t imm;
-double_value_t vimm2;
-double_value_t vimm;
-wire [4:0] imm_inc;
-wire [4:0] vimm_inc;
+reg [255:0] line;
+wire [63:0] reglist;
+wire [5:0] imm_inc;
 reg predact;
 reg [15:0] predbuf;
 reg [4:0] predcond;
@@ -324,13 +396,26 @@ begin
 end
 endfunction
 
+function fnStptr;
+input instruction_t ir;
+begin
+	fnStptr = 'b0;
+	if (ir.any.opcode==OP_LOADZ && ir[39]) begin
+		if (ir[7:5]==3'd2)
+			fnStptr = 1'b1;
+		else if (ir[7:5]==3'd7 && ir[11:9]==3'd2)
+			fnStptr = 1'b1;
+	end
+end
+endfunction
+
 Thor2023_regfile urf1 
 (
 	.rst(rst_i),
 	.clk(clk_g),
 	.regset(1'b0),
 	.wg(rfwrg),
-	.gwa(Ra.num[3:0]),
+	.gwa(Ra.num[2:0]),
 	.gi(group_in),
 	.wr(rfwr),
 	.wa({Rt1,Rt.num}), 
@@ -478,14 +563,15 @@ ubiu
 
 always_comb
 	ic_data = {ic_line_hi.data,ic_line_lo.data};
-	
+always_comb
+	line = ic_data >> {pc[4:0],3'b0};
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
-	{postfix4,postfix3,postfix2,postfix1,ir} <= {5{NOP_INSN}};
+	{postfix,ir} <= {5{NOP_INSN}};
 else begin
 	if (state==IFETCH && ihit) begin
-		{postfix4,postfix3,postfix2,postfix1,ir} <= ic_data >> {pc[4:0],3'b0};
-		{vpostfix4,vpostfix3,vpostfix2,vpostfix1,vir} <= ic_data >> {pc[4:0],3'b0};
+		ir <= line[39:0];
+		vir <= line[47:0];
 	end
 end
 
@@ -497,24 +583,11 @@ always_comb
 
 Thor2023_decode_imm udci1
 (
-	.ir(ir),
-	.ir2(postfix1),
-	.ir3(postfix2),
-	.ir4(postfix3),
-	.ir5(postfix4),
+	.line(line),
 	.imm(imm2),
-	.inc(imm_inc)
-);
-
-Thor2023_decode_imm udci2
-(
-	.ir(vir[39:0]),
-	.ir2(vpostfix1),
-	.ir3(vpostfix2),
-	.ir4(vpostfix3),
-	.ir5(vpostfix4),
-	.imm(vimm2),
-	.inc(vimm_inc)
+	.reglist(reglist),
+	.inc(imm_inc),
+	.abrt(bad_ilen)
 );
 
 always_comb
@@ -651,7 +724,7 @@ generate begin : gInvB
 end
 endgenerate
 
-always_ff @(posedge clk_g, posedge rst_i)
+always_ff @(posedge clk_g)
 if (rst_i)
 	tReset();
 else begin
@@ -661,7 +734,8 @@ else begin
 	DECODE:	tDecode();
 	OFETCH:	tOFetch();
 	EXECUTE: tExecute();
-	MEMORY: tMemory();
+	MEMORY: tMemory(dec_store);
+	MEMORY_ST: tMemorySt();
 	MEMORY1: tMemory1();
 	MEMORY2: tMemory2();
 	MEMORY3: tMemory3();
@@ -718,8 +792,13 @@ begin
 	Rt1 <= 'd0;
 	group_mask <= 8'hFF;
 	mem_indirect <= 'd0;
+	lsm <= 'd0;
+	lsmcnt <= 'd0;
 	repbuf <= 'd0;
 	lc <= 'd0;
+	reglist_work <= 'd0;
+	dec_store <= 'd0;
+	ls_advtid <= 'd0;
 	goto (IFETCH);
 end
 endtask
@@ -758,7 +837,10 @@ begin
 	goto (OFETCH);
 
 	// Vector instructions may increment the PC by an additional byte.
-	pc <= pc + imm_inc + (fnIsLong(ir) ? 2'd1 : 2'd0);
+	pc <= pc + imm_inc;
+	lsm <= |reglist;
+	reglist_mask <= reglist;
+	ls_advtid <= 1'b1;
 	if (fnHasMask(ir))
 		group_mask <= vir[47:40];
 	case(ir.any.opcode)
@@ -814,6 +896,8 @@ begin
 			Rb <= ir.ls.Rb;
 			Rc <= ir.lsn.Rc;
 			Rt <= ir.ls.Rn;
+			if (fnStptr(ir))
+				dec_store <= 1'b1;
 		end
 	OP_STORE:
 		begin
@@ -821,6 +905,7 @@ begin
 			Rb <= ir.ls.Rb;
 			Rc <= ir.lsn.Rc;
 			Rt <= 'd0;
+			dec_store <= 1'b1;
 		end
 	OP_Bcc, OP_DBcc:
 		begin
@@ -1026,7 +1111,7 @@ begin
 		else
 			b <= rfob;
 	endcase
-	if (postfix1.opcode==OP_PFX)
+	if (postfix[4:0]==OP_PFX)
 		b <= imm;
 end
 endtask
@@ -1302,6 +1387,38 @@ endtask
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 task tMemory;
+input st;
+begin
+	// Do not write out until four registers have been moved to the data, or if
+	// there are no more registers to move.
+	if (st && lsm) begin
+		case(lsmcnt)
+		2'd0:	st_line[127:0] <= rfoa;
+		2'd1:	st_line[255:128] <= rfoa;
+		2'd2:	st_line[383:256] <= rfoa;
+		2'd3:	st_line[511:384] <= rfoa;
+		endcase
+		Ra <= reglist_work[5:0];
+		reglist_work <= reglist_work >> 6;
+		reglist_mask <= reglist_mask >> 1;
+		lsmcnt <= lsmcnt + reglist_mask[0];
+		if (lsmcnt==2'd3 || ~|reglist_mask[63:1]) begin
+			goto (MEMORY_ST);
+		end
+	end
+	else if (st) begin
+		st_line <= a;
+		goto (MEMORY_ST);
+	end
+	else begin
+		memreq.wr <= 1'b1;
+		if (memreq_wack)
+			goto (MEMORY1);
+	end
+end
+endtask
+
+task tMemorySt;
 begin
 	memreq.wr <= 1'b1;
 	if (memreq_wack)
@@ -1379,8 +1496,26 @@ begin
 						end
 						else
 							tUpdRegs(~|sel2);
-						Rt <= memresp.tgt;
-						res <= memresp.res;
+						if (lsm) begin
+							Rt <= reglist_work[5:0];
+							reglist_work <= reglist_work >> 6;
+							reglist_mask <= reglist_mask >> 1;
+							lsmcnt <= lsmcnt + reglist_mask[0];
+							tUpdRegs(~|sel2 & reglist_mask[0]);
+						end
+						else
+							Rt <= memresp.tgt;
+						if (lsm && lsmcnt==2'd0)
+							res <= memresp.res;
+						else if (lsm) begin
+							res <= res >> 128;
+							if (lsmcnt==2'd3 || reglist_mask==64'd1)
+								goto (WRITEBACK);
+							else
+								goto (MEMORY2);
+						end
+						else
+							res <= memresp.res;
 						group_in <= memresp.res;
 						if (memresp.tgt==SCREG && memresp.res[127:0] != canary) begin
 							tException(FLT_CANARY);
@@ -1396,15 +1531,32 @@ begin
 			tExStore2(ea);
 			goto (MEMORY3);
 		end
-		else
-			goto (WRITEBACK);
+		else begin
+			if (lsm) begin
+				lsmcnt <= lsmcnt + 2'd1;
+				reglist_mask <= reglist_mask >> 1;
+				reglist_work <= reglist_work >> 6;
+				Ra <= reglist_work[5:0];
+				if (reglist_mask=='d0)
+					goto (WRITEBACK);
+				else
+					goto (MEMORY);
+			end
+			else
+				goto (WRITEBACK);
+		end
 	end
 end
 endtask
 
 task tMemory3;
 begin
-	memreq.wr <= 1'b1;
+	if (dec_store && lsm) begin
+		if (lsmcnt==2'd3 || ~|reglist_mask[63:1])
+			memreq.wr <= 1'b1;
+	end
+	else
+		memreq.wr <= 1'b1;
 	if (memreq_wack)
 		goto (MEMORY4);
 end
@@ -1445,12 +1597,45 @@ begin
 				if (memresp.group)
 					rfwrg <= group_mask;
 				else
-					tUpdRegs(1'b1);
-				Rt <= memresp.tgt;
-				res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
+					tUpdRegs(1'b1);	
+				if (lsm) begin
+					Rt <= reglist_work[5:0];
+					reglist_work <= reglist_work >> 6;
+					reglist_mask <= reglist_mask >> 1;
+					lsmcnt <= lsmcnt + reglist_mask[0];
+				end
+				else
+					Rt <= memresp.tgt;
+				if (lsm && lsmcnt==2'd0) begin
+					res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
+				end
+				else if (lsm) begin
+					res <= res >> 128;
+					if (lsmcnt==2'd3 || reglist_mask==64'd1)
+						goto (WRITEBACK);
+					else
+						goto (MEMORY5);
+				end
+				else
+					res <= res | (memresp.res << {7'd64-ea[5:0],3'b0});
 				group_in <= group_in | (memresp.res << {7'd64-ea[5:0],3'b0});
 			end
 		end
+	end
+	// Else: store
+	else begin
+		if (lsm) begin
+			lsmcnt <= lsmcnt + 2'd1;
+			reglist_mask <= reglist_mask >> 1;
+			reglist_work <= reglist_work >> 6;
+			Ra <= reglist_work[5:0];
+			if (reglist_mask=='d0)
+				goto (WRITEBACK);
+			else
+				goto (MEMORY);
+		end
+		else
+			goto (WRITEBACK);
 	end
 end
 endtask
@@ -1538,42 +1723,70 @@ endfunction
 // Data for loads and stores is right justified. It will be positioned
 // correctly by the memory request queue.
 
+function memsz_t fnMemsz2;
+input stptr;
+input memsz_t sz;
+begin
+	fnMemsz2 = sz;
+	if (stptr)
+		case(sr.ptrsz)
+		2'd0:	fnMemsz2 = Thor2023Pkg::tetra;
+		2'd1: fnMemsz2 = Thor2023Pkg::octa;
+		2'd2:	fnMemsz2 = Thor2023Pkg::hexi;
+		default:	fnMemsz2 = Thor2023Pkg::hexi;
+		endcase
+end
+endfunction
+
 task tMemsz;
 input st;
+input stptr;
 input memi;
 begin
 	if (memi)
 		memreq.sz <= Thor2023Pkg::hexi;
 	else
 		case(ir.ls.sz)
-		PRC8:		
-			if (st && ir[39:38]==2'b01) begin
-				case(sr.ptrsz)
-				2'd0:	memreq.sz <= Thor2023Pkg::tetra;
-				2'd1: memreq.sz <= Thor2023Pkg::octa;
-				2'd2:	memreq.sz <= Thor2023Pkg::hexi;
-				default:	memreq.sz <= Thor2023Pkg::hexi;
-				endcase
-			end
-			else
-				memreq.sz <= Thor2023Pkg::byt;
+		PRC8:		memreq.sz <= Thor2023Pkg::byt;
 		PRC16:	memreq.sz <= Thor2023Pkg::wyde;
-		PRC32:	memreq.sz <= Thor2023Pkg::tetra;
-		PRC64:	memreq.sz <= Thor2023Pkg::octa;
-		PRC128:	memreq.sz <= Thor2023Pkg::hexi;
+		PRC32:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::tetra);
+		PRC64:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::octa);
+		PRC128:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::hexi);
 		PRCNDX:
 			case(ir[11:9])
 			PRC8:		memreq.sz <= Thor2023Pkg::byt;
 			PRC16:	memreq.sz <= Thor2023Pkg::wyde;
-			PRC32:	memreq.sz <= Thor2023Pkg::tetra;
-			PRC64:	memreq.sz <= Thor2023Pkg::octa;
-			PRC128:	memreq.sz <= Thor2023Pkg::hexi;
-			PRCNDX:	memreq.sz <= Thor2023Pkg::vect;
+			PRC32:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::tetra);
+			PRC64:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::octa);
+			PRC128:	memreq.sz <= fnMemsz2(stptr,Thor2023Pkg::hexi);
 			default:	memreq.sz <= Thor2023Pkg::hexi;
 			endcase
 		default:	
 			memreq.sz <= Thor2023Pkg::hexi;
 		endcase
+end
+endtask
+
+task tPRC8;
+input st;
+input ndx;
+input address_t adr;
+begin
+	if (st && ndx && ir[39]==1'b1 && ir[11:9]==PRCNDX) begin
+		sel2 <= 'd0;
+		bytcnt2 <= 'd0;
+		case(sr.ptrsz)
+		2'd0:	tPRC32(adr);
+		2'd1: tPRC64(adr);
+		2'd2:	tPRC128(adr);
+		default:	tPRC64(adr);
+		endcase
+	end
+	else begin
+		memreq.sel <= 64'h0001;
+		sel2 <= 'd0;
+		bytcnt2 <= 'd0;
+	end
 end
 endtask
 
@@ -1584,31 +1797,33 @@ input address_t adr;
 begin
 	if (memi)
 		memreq.sel <= 64'hFFFF;
+	else if (lsm) begin
+		if (st)
+			case(lsmcnt)
+			2'd0:	memreq.sel <= 64'hFFFF;
+			2'd1: memreq.sel <= 64'hFFFFFFFF;
+			2'd2: memreq.sel <= 64'hFFFFFFFFFFFF;
+			2'd3: memreq.sel <= 64'hFFFFFFFFFFFFFFFF;
+			endcase
+		else
+			memreq.sel <= 64'hFFFFFFFFFFFFFFFF;
+	end
 	else
 		case(ir.ls.sz)
-		PRC8:
-			if (st && ir[39:38]==2'b01) begin
-				case(sr.ptrsz)
-				2'd0:	memreq.sel <= 64'h000F;
-				2'd1: memreq.sel <= 64'h00FF;
-				2'd2:	memreq.sel <= 64'hFFFF;
-				default:	memreq.sel <= 64'h00FF;
-				endcase
-			end
-			else begin
-				memreq.sel <= 64'h0001;
-				sel2 <= 64'h0000;
-			end
+		PRC8:		tPRC8(st,0,adr);
 		PRC16:	tPRC16(adr);
 		PRC32:	tPRC32(adr);
 		PRC64:	tPRC64(adr);
 		PRC128:	tPRC128(adr);
+		PRC512:	tPRC512(adr);
 		PRCNDX:
 			case(ir[11:9])
+			PRC8:		tPRC8(st,1,adr);
 			PRC16:	tPRC16(adr);
 			PRC32:	tPRC32(adr);
 			PRC64:	tPRC64(adr);
 			PRC128:	tPRC128(adr);
+			PRC512:	tPRC512(adr);
 			PRCNDX:	tPRC512(adr);
 			default:	tPRC128(adr);
 			endcase
@@ -1632,9 +1847,9 @@ begin
 	memreq.step <= 'd0;
 	memreq.count <= 'd0;
 	memreq.adr <= adr; 
-	memreq.func <= fn;//ir.any.opcode==OP_LOADZ ? MR_LOADZ : MR_LOAD;
-	memreq.load <= 1'b1;
-	memreq.store <= 1'b0;
+	memreq.func <= fnStptr(ir) ? MR_STOREPTR : fn;
+	memreq.load <= !fnStptr(ir);
+	memreq.store <= fnStptr(ir);
 	memreq.need_steps <= 1'b0;
 	memreq.v <= 1'b1;
 	memreq.empty <= 1'b0;
@@ -1645,11 +1860,18 @@ begin
 	memreq.asid <= data_asid;
 	memreq.adr <= adr;
 	memreq.vcadr <= 'd0;
+	// The following not used except for STPTR
+	if (ls_group) begin
+		memreq.group <= 1'b1;
+		memreq.res <= {32'd0,group_outm};
+	end
+	else
+		memreq.res <= {416'd0,a};
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(0, memi);
+	tMemsz(0, fnStptr(ir), memi);
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
 	memreq.acr <= 4'hF;
@@ -1668,7 +1890,8 @@ begin
 		memi: ;
 		endcase
 	end
-	tid <= tid + 2'd1;
+	if (ls_advtid)
+		tid <= tid + 2'd1;
 end
 endtask
 
@@ -1694,9 +1917,9 @@ begin
 		memi:	;
 		endcase
 	end
-	memreq.func <= fn;
-	memreq.load <= 1'b1;
-	memreq.store <= 1'b0;
+	memreq.func <= fnStptr(ir) ? MR_STOREPTR : fn;
+	memreq.load <= !fnStptr(ir);
+	memreq.store <= fnStptr(ir);
 	memreq.need_steps <= 1'b0;
 	memreq.v <= 1'b1;
 	memreq.empty <= 1'b0;
@@ -1708,7 +1931,8 @@ begin
 	memreq.res <= 'd0;
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(0, memi);
+	tMemsz(0, fnStptr(ir), memi);
+	memreq.res <= data2;			// in case STPTR
 //	memreq.bycnt <= bytcnt2;
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
@@ -1720,7 +1944,8 @@ begin
 	memreq.pmtram_ena <= 1'b0;
 	memreq.wr_tgt <= 1'b1;
 	memreq.tgt <= Rt;
-	tid <= tid + 2'd1;
+	if (ls_advtid)
+		tid <= tid + 2'd1;
 end
 endtask
 
@@ -1736,14 +1961,6 @@ begin
 	memreq.step <= 'd0;
 	memreq.count <= 'd0;
 	memreq.func <= MR_STORE;
-
-	case(ir.ls.sz)
-	PRC8:		
-		if (ir[39:38]==2'b01)
-			memreq.func <= MR_STOREPTR;
-	default:	;
-	endcase
-
 	memreq.load <= 1'b0;
 	memreq.store <= 1'b1;
 	memreq.need_steps <= 1'b0;
@@ -1763,16 +1980,15 @@ begin
 		endcase
 	end
 	memreq.vcadr <= 'd0;
+	memreq.res <= st_line;
 	if (ls_group) begin
 		memreq.group <= 1'b1;
 		memreq.res <= {32'd0,group_outm};
 	end
-	else
-		memreq.res <= {416'd0,a};
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
-	tMemsz(1, 0);
+	tMemsz(1, fnStptr(ir), 0);
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
 	memreq.acr <= 4'hF;
@@ -1783,7 +1999,8 @@ begin
 	memreq.pmtram_ena <= 1'b0;
 	memreq.wr_tgt <= 1'b0;
 	memreq.tgt <= 'd0;
-	tid <= tid + 2'd1;
+	if (ls_advtid)
+		tid <= tid + 2'd1;
 end
 endtask
 
@@ -1799,13 +2016,6 @@ begin
 	memreq.step <= 'd0;
 	memreq.count <= 'd0;
 	memreq.func <= MR_STORE;
-
-	case(ir.ls.sz)
-	PRC8:		
-		if (ir[39:38]==2'b01)
-			memreq.func <= MR_STOREPTR;
-	default:	;
-	endcase
 	memreq.load <= 1'b0;
 	memreq.store <= 1'b1;
 	memreq.need_steps <= 1'b0;
@@ -1824,12 +2034,12 @@ begin
 		endcase
 	end
 	memreq.vcadr <= 'd0;
-	memreq.res <= {416'd0,data2};
+	memreq.res <= data2;
 	memreq.cache_type <= 4'(wishbone_pkg::CACHEABLE);
 	memreq.dchit <= 'd0;
 	memreq.cmt <= 'd0;
 
-	tMemsz(1, 0);
+	tMemsz(1, fnStptr(ir), 0);
 	memreq.bytcnt <= bytcnt2;
 	memreq.hit <= 2'b00;
 	memreq.mod <= 2'b00;
@@ -1841,7 +2051,8 @@ begin
 	memreq.pmtram_ena <= 1'b0;
 	memreq.wr_tgt <= 1'b0;
 	memreq.tgt <= 'd0;
-	tid <= tid + 2'd1;
+	if (ls_advtid)
+		tid <= tid + 2'd1;
 end
 endtask
 
@@ -1849,7 +2060,7 @@ task tPRC16;
 input address_t adr;
 begin
 	memreq.bytcnt <= 8'd2;
-	data2 <= a >> (10'd512 - {adr[0],3'b0});
+	data2 <= st_line >> (10'd512 - {adr[0],3'b0});
 	bytcnt2 <= {7'h0,adr[0]};
 	memreq.sel <= 64'h0000000000000003 >> adr[0];
 	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[0]);
@@ -1860,7 +2071,7 @@ task tPRC32;
 input address_t adr;
 begin
 	memreq.bytcnt <= 8'd4;
-	data2 <= a >> (10'd512 - {adr[1:0],3'b0});
+	data2 <= st_line >> (10'd512 - {adr[1:0],3'b0});
 	bytcnt2 <= {6'h0,adr[1:0]};
 	memreq.sel <= 64'h000000000000000F >> adr[1:0];
 	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[1:0]);
@@ -1871,7 +2082,7 @@ task tPRC64;
 input address_t adr;
 begin
 	memreq.bytcnt <= 8'd8;
-	data2 <= a >> (10'd512 - {adr[2:0],3'b0});
+	data2 <= st_line >> (10'd512 - {adr[2:0],3'b0});
 	bytcnt2 <= {5'h0,adr[2:0]};
 	memreq.sel <= 64'h00000000000000FF >> adr[2:0];
 	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[2:0]);
@@ -1882,7 +2093,7 @@ task tPRC128;
 input address_t adr;
 begin
 	memreq.bytcnt <= 8'd16;
-	data2 <= a >> (10'd512 - {adr[3:0],3'b0});
+	data2 <= st_line >> (10'd512 - {adr[3:0],3'b0});
 	bytcnt2 <= {4'h0,adr[3:0]};
 	memreq.sel <= 64'h000000000000FFFF >> adr[3:0];
 	sel2 <= ~(64'hFFFFFFFFFFFFFFFF << adr[3:0]);
@@ -2004,9 +2215,11 @@ begin
 		$display("===================================================================");
 		$display("State: %s", state.name);
 		$display("pc = %h", pc);
-		$display("pfx2:%h pfx1:%h ir: %h", postfix2,postfix1,ir);
+		$display("pfx:%h ir: %h", postfix,ir);
 		$display("----- regfile -----------------------------------------------------");
+		/*
 		for (nn = 0; nn < 8; nn = nn + 1)
+		
 			$display("regs: 0:%x 1:%x 2:%x 3:%x 4:%x 5:%x 6:%x 7:%x",
 				{urf1.c0h_regs[nn],urf1.c0_regs[nn]},
 				{urf1.c1h_regs[nn],urf1.c1_regs[nn]},
@@ -2017,6 +2230,7 @@ begin
 				{urf1.c6h_regs[nn],urf1.c6_regs[nn]},
 				{urf1.c7h_regs[nn],urf1.c7_regs[nn]}
 			);
+		*/
 		$display("op --  ----- res -----   ----- a -----   ----- b -----");
 		$display("%d: r%d%c%x %x %x", ir.any.opcode, Rt.num, rfwr ? "=" : " ", res, a, b);
 	end

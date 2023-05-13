@@ -4,10 +4,6 @@ package Thor2023Pkg;
 
 `undef IS_SIM
 //`define IS_SIM	1
-
-// Comment out to remove REP instruction
-`define SUPPORT_REP	1
-
 // Comment out to remove the sigmoid approximate function
 //`define SIGMOID	1
 
@@ -26,6 +22,12 @@ package Thor2023Pkg;
 `define L1ICacheWays 4
 
 `define L1DCacheWays 4
+
+parameter SUPPORT_PGREL	= 1'b0;	// Page relative branching
+parameter SUPPORT_REP = 1'b1;
+parameter REP_BIT = 31;
+parameter VAL = 1'b1;
+parameter INV = 1'b0;
 
 // Uncomment to have page relative branches.
 //`define PGREL 1
@@ -238,6 +240,7 @@ typedef enum logic [2:0] {
 	PRC32 = 3'd2,
 	PRC64 = 3'd3,
 	PRC128 = 3'd4,
+	PRC512 = 3'd6,
 	PRCNDX = 3'd7
 } prec_t;
 
@@ -272,6 +275,7 @@ typedef enum logic [4:0] {
 
 parameter CSR_IE		= 16'h?004;
 parameter CSR_CAUSE	= 16'h?006;
+parameter CSR_REPBUF = 16'h0008;
 parameter CSR_SEMA	= 16'h?00C;
 parameter CSR_PTBR	= 16'h1003;
 parameter CSR_HMASK	= 16'h1005;
@@ -892,10 +896,13 @@ typedef struct packed
 } vector_instruction_t;
 
 typedef struct packed {
-	logic [2:0] icnt;
-	logic [63:0] imm;
 	address_t adr;
-	instruction_t ins;
+	logic [3:0] resv2;
+	logic v;
+	logic [2:0] icnt;
+	logic [REP_BIT:0] imm;
+	logic resv;
+	logic [15:9] ins;
 } rep_buffer_t;
 
 typedef struct packed

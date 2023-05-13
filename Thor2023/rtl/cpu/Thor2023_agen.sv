@@ -59,6 +59,15 @@ always_comb
 	PRC32:	sc = 5'd4;
 	PRC64:	sc = 5'd8;
 	PRC128:	sc = 5'd16;
+	PRCNDX:
+		case(ir[11:9])
+		PRC8:		sc = 5'd1;
+		PRC16:	sc = 5'd2;
+		PRC32:	sc = 5'd4;
+		PRC64:	sc = 5'd8;
+		PRC128:	sc = 5'd16;
+		default:	sc = 5'd8;
+		endcase
 	default:
 		case(ir[11:9])
 		PRC8:		sc = 5'd1;
