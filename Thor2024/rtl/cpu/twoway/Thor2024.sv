@@ -108,7 +108,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8;
 genvar g;
 
 wire value_t [AREGS-1:0] rf;
@@ -121,12 +121,13 @@ assign rst = rst_i;
 reg  [3:0] panic;		// indexes the message structure
 reg [128:0] message [0:15];	// indexed by panic
 
-typedef logic [7:0] que_bitmask_t;
+typedef logic [QENTRIES-1:0] que_bitmask_t;
 
 
 // instruction queue (ROB)
 iq_entry_t [7:0] iq;
 
+que_bitmask_t iq_v;
 que_bitmask_t iqentry_source;
 que_bitmask_t iqentry_imm;
 que_bitmask_t iqentry_memready;
@@ -139,14 +140,7 @@ que_bitmask_t iqentry_fcu_issue;
 reg [1:0] iqentry_islot [0:7];
 
 reg_bitmask_t livetarget;
-reg_bitmask_t iqentry_0_livetarget;
-reg_bitmask_t iqentry_1_livetarget;
-reg_bitmask_t iqentry_2_livetarget;
-reg_bitmask_t iqentry_3_livetarget;
-reg_bitmask_t iqentry_4_livetarget;
-reg_bitmask_t iqentry_5_livetarget;
-reg_bitmask_t iqentry_6_livetarget;
-reg_bitmask_t iqentry_7_livetarget;
+reg_bitmask_t [QENTRIES-1:0] iqentry_livetarget;
 reg_bitmask_t iqentry_0_latestID;
 reg_bitmask_t iqentry_1_latestID;
 reg_bitmask_t iqentry_2_latestID;
@@ -163,14 +157,7 @@ reg_bitmask_t iqentry_4_cumulative;
 reg_bitmask_t iqentry_5_cumulative;
 reg_bitmask_t iqentry_6_cumulative;
 reg_bitmask_t iqentry_7_cumulative;
-reg_bitmask_t iq0_out;
-reg_bitmask_t iq1_out;
-reg_bitmask_t iq2_out;
-reg_bitmask_t iq3_out;
-reg_bitmask_t iq4_out;
-reg_bitmask_t iq5_out;
-reg_bitmask_t iq6_out;
-reg_bitmask_t iq7_out;
+reg_bitmask_t [QENTRIES-1:0] iq_out;
 
 que_ndx_t tail0;
 que_ndx_t tail1;
@@ -375,14 +362,17 @@ begin
 end
 endfunction
 
-decoder6 iq0(.num(iq[0].tgt), .out(iq0_out));
-decoder6 iq1(.num(iq[1].tgt), .out(iq1_out));
-decoder6 iq2(.num(iq[2].tgt), .out(iq2_out));
-decoder6 iq3(.num(iq[3].tgt), .out(iq3_out));
-decoder6 iq4(.num(iq[4].tgt), .out(iq4_out));
-decoder6 iq5(.num(iq[5].tgt), .out(iq5_out));
-decoder6 iq6(.num(iq[6].tgt), .out(iq6_out));
-decoder6 iq7(.num(iq[7].tgt), .out(iq7_out));
+
+generate begin : gIqOut
+	for (g = 0; g < QENTRIES; g = g + 1)
+		decoder6 iqog(.num(iq[g].tgt), .out(iq_out[g]));
+end
+endgenerate
+
+// Get the valid slice.
+always_comb
+for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
+	iq_v[n5] = iq[n5].v;
 
     initial begin: stop_at
 	#1000000; panic <= `PANIC_OVERRUN;
@@ -717,60 +707,21 @@ assign backpc = ({fetchbuf0_v, fnIsBackBranch(fetchbuf0_instr[0])} == {VAL, TRUE
 // therefore, if it is zero it implies the rf_v value should become VALID on a branchmiss
 // 
 
-assign  livetarget[1] = iqentry_0_livetarget[1] | iqentry_1_livetarget[1] | iqentry_2_livetarget[1] | iqentry_3_livetarget[1]
-	    | iqentry_4_livetarget[1] | iqentry_5_livetarget[1] | iqentry_6_livetarget[1] | iqentry_7_livetarget[1]
-	    ;
-assign  livetarget[2] = iqentry_0_livetarget[2] | iqentry_1_livetarget[2] | iqentry_2_livetarget[2] | iqentry_3_livetarget[2]
-	    | iqentry_4_livetarget[2] | iqentry_5_livetarget[2] | iqentry_6_livetarget[2] | iqentry_7_livetarget[2]
-	    ;
-assign  livetarget[3] = iqentry_0_livetarget[3] | iqentry_1_livetarget[3] | iqentry_2_livetarget[3] | iqentry_3_livetarget[3]
-	    | iqentry_4_livetarget[3] | iqentry_5_livetarget[3] | iqentry_6_livetarget[3] | iqentry_7_livetarget[3]
-			;
-assign  livetarget[4] = iqentry_0_livetarget[4] | iqentry_1_livetarget[4] | iqentry_2_livetarget[4] | iqentry_3_livetarget[4]
-	    | iqentry_4_livetarget[4] | iqentry_5_livetarget[4] | iqentry_6_livetarget[4] | iqentry_7_livetarget[4]
-			;
-assign  livetarget[5] = iqentry_0_livetarget[5] | iqentry_1_livetarget[5] | iqentry_2_livetarget[5] | iqentry_3_livetarget[5]
-	    | iqentry_4_livetarget[5] | iqentry_5_livetarget[5] | iqentry_6_livetarget[5] | iqentry_7_livetarget[5]
-			;
-assign  livetarget[6] = iqentry_0_livetarget[6] | iqentry_1_livetarget[6] | iqentry_2_livetarget[6] | iqentry_3_livetarget[6]
-	    | iqentry_4_livetarget[6] | iqentry_5_livetarget[6] | iqentry_6_livetarget[6] | iqentry_7_livetarget[6]
-	    ;
-assign  livetarget[7] = iqentry_0_livetarget[7] | iqentry_1_livetarget[7] | iqentry_2_livetarget[7] | iqentry_3_livetarget[7]
-	    | iqentry_4_livetarget[7] | iqentry_5_livetarget[7] | iqentry_6_livetarget[7] | iqentry_7_livetarget[7]
-			;
-assign  livetarget[8] = iqentry_0_livetarget[8] | iqentry_1_livetarget[8] | iqentry_2_livetarget[8] | iqentry_3_livetarget[8]
-	    | iqentry_4_livetarget[8] | iqentry_5_livetarget[8] | iqentry_6_livetarget[8] | iqentry_7_livetarget[8]
-			;
-assign  livetarget[9] = iqentry_0_livetarget[9] | iqentry_1_livetarget[9] | iqentry_2_livetarget[9] | iqentry_3_livetarget[9]
-	    | iqentry_4_livetarget[9] | iqentry_5_livetarget[9] | iqentry_6_livetarget[9] | iqentry_7_livetarget[9]
-			;
-assign  livetarget[10] = iqentry_0_livetarget[10] | iqentry_1_livetarget[10] | iqentry_2_livetarget[10] | iqentry_3_livetarget[10]
-	    | iqentry_4_livetarget[10] | iqentry_5_livetarget[10] | iqentry_6_livetarget[10] | iqentry_7_livetarget[10]
-			;
-assign  livetarget[11] = iqentry_0_livetarget[11] | iqentry_1_livetarget[11] | iqentry_2_livetarget[11] | iqentry_3_livetarget[11]
-	    | iqentry_4_livetarget[11] | iqentry_5_livetarget[11] | iqentry_6_livetarget[11] | iqentry_7_livetarget[11]
-			;
-assign  livetarget[12] = iqentry_0_livetarget[12] | iqentry_1_livetarget[12] | iqentry_2_livetarget[12] | iqentry_3_livetarget[12]
-	    | iqentry_4_livetarget[12] | iqentry_5_livetarget[12] | iqentry_6_livetarget[12] | iqentry_7_livetarget[12]
-			;
-assign  livetarget[13] = iqentry_0_livetarget[13] | iqentry_1_livetarget[13] | iqentry_2_livetarget[13] | iqentry_3_livetarget[13]
-	    | iqentry_4_livetarget[13] | iqentry_5_livetarget[13] | iqentry_6_livetarget[13] | iqentry_7_livetarget[13]
-			;
-assign  livetarget[14] = iqentry_0_livetarget[14] | iqentry_1_livetarget[14] | iqentry_2_livetarget[14] | iqentry_3_livetarget[14]
-	    | iqentry_4_livetarget[14] | iqentry_5_livetarget[14] | iqentry_6_livetarget[14] | iqentry_7_livetarget[14]
-			;
-assign  livetarget[15] = iqentry_0_livetarget[15] | iqentry_1_livetarget[15] | iqentry_2_livetarget[15] | iqentry_3_livetarget[15]
-	    | iqentry_4_livetarget[15] | iqentry_5_livetarget[15] | iqentry_6_livetarget[15] | iqentry_7_livetarget[15]
-			;
-assign  
-	iqentry_0_livetarget = {63 {iq[0].v}} & {63 {~iqentry_stomp[0]}} & iq0_out,
-  iqentry_1_livetarget = {63 {iq[1].v}} & {63 {~iqentry_stomp[1]}} & iq1_out,
-  iqentry_2_livetarget = {63 {iq[2].v}} & {63 {~iqentry_stomp[2]}} & iq2_out,
-  iqentry_3_livetarget = {63 {iq[3].v}} & {63 {~iqentry_stomp[3]}} & iq3_out,
-  iqentry_4_livetarget = {63 {iq[4].v}} & {63 {~iqentry_stomp[4]}} & iq4_out,
-  iqentry_5_livetarget = {63 {iq[5].v}} & {63 {~iqentry_stomp[5]}} & iq5_out,
-  iqentry_6_livetarget = {63 {iq[6].v}} & {63 {~iqentry_stomp[6]}} & iq6_out,
-  iqentry_7_livetarget = {63 {iq[7].v}} & {63 {~iqentry_stomp[7]}} & iq7_out;
+always_comb
+for (n7 = 1; n7 < AREGS; n7 = n7 + 1)
+	livetarget[n7] = iqentry_livetarget[0][n7]
+								| iqentry_livetarget[1][n7]
+								| iqentry_livetarget[2][n7]
+								| iqentry_livetarget[3][n7]
+	    					| iqentry_livetarget[4][n7]
+	    					| iqentry_livetarget[5][n7]
+	    					| iqentry_livetarget[6][n7]
+	    					| iqentry_livetarget[7][n7]
+	    					;
+
+always_comb
+for (n6 = 0; n6 < QENTRIES; n6 = n6 + 1)
+	iqentry_livetarget[n6] = {63 {iq[n6].v}} & {63 {~iqentry_stomp[n6]}} & iq_out[n6];
 
 //
 // BRANCH-MISS LOGIC: latestID
@@ -779,67 +730,67 @@ assign
 // a particular register.  looks a lot like scheduling logic, but in reverse.
 // 
 
-assign iqentry_0_latestID = (missid == 3'd0 || ((iqentry_0_livetarget & iqentry_1_cumulative) == 'd0))
-		    ? iqentry_0_livetarget
+assign iqentry_0_latestID = (missid == 3'd0 || ((iqentry_livetarget[0] & iqentry_1_cumulative) == 'd0))
+		    ? iqentry_livetarget[0]
 		    : 'd0;
 assign iqentry_0_cumulative = (missid == 3'd0)
-		    ? iqentry_0_livetarget
-		    : iqentry_0_livetarget | iqentry_1_cumulative;
+		    ? iqentry_livetarget[0]
+		    : iqentry_livetarget[0] | iqentry_1_cumulative;
 
-assign iqentry_1_latestID = (missid == 3'd1 || ((iqentry_1_livetarget & iqentry_2_cumulative) == 'd0))
-		    ? iqentry_1_livetarget
+assign iqentry_1_latestID = (missid == 3'd1 || ((iqentry_livetarget[1] & iqentry_2_cumulative) == 'd0))
+		    ? iqentry_livetarget[1]
 		    : 'd0;
 assign iqentry_1_cumulative = (missid == 3'd1)
-		    ? iqentry_1_livetarget
-		    : iqentry_1_livetarget | iqentry_2_cumulative;
+		    ? iqentry_livetarget[1]
+		    : iqentry_livetarget[1] | iqentry_2_cumulative;
 
-assign iqentry_2_latestID = (missid == 3'd2 || ((iqentry_2_livetarget & iqentry_3_cumulative) == 'd0))
-		    ? iqentry_2_livetarget
+assign iqentry_2_latestID = (missid == 3'd2 || ((iqentry_livetarget[2] & iqentry_3_cumulative) == 'd0))
+		    ? iqentry_livetarget[2]
 		    : 'd0;
 assign iqentry_2_cumulative = (missid == 3'd2)
-		    ? iqentry_2_livetarget
-		    : iqentry_2_livetarget | iqentry_3_cumulative;
+		    ? iqentry_livetarget[2]
+		    : iqentry_livetarget[2] | iqentry_3_cumulative;
 
-assign iqentry_3_latestID = (missid == 3'd3 || ((iqentry_3_livetarget & iqentry_4_cumulative) == 'd0))
-		    ? iqentry_3_livetarget
+assign iqentry_3_latestID = (missid == 3'd3 || ((iqentry_livetarget[3] & iqentry_4_cumulative) == 'd0))
+		    ? iqentry_livetarget[3]
 		    : 'd0;
 assign iqentry_3_cumulative = (missid == 3'd3)
-		    ? iqentry_3_livetarget
-		    : iqentry_3_livetarget | iqentry_4_cumulative;
+		    ? iqentry_livetarget[3]
+		    : iqentry_livetarget[3] | iqentry_4_cumulative;
 
-assign iqentry_4_latestID = (missid == 3'd4 || ((iqentry_4_livetarget & iqentry_5_cumulative) == 'd0))
-		    ? iqentry_4_livetarget
+assign iqentry_4_latestID = (missid == 3'd4 || ((iqentry_livetarget[4] & iqentry_5_cumulative) == 'd0))
+		    ? iqentry_livetarget[4]
 		    : 'd0;
 assign iqentry_4_cumulative = (missid == 3'd4)
-		    ? iqentry_4_livetarget
-		    : iqentry_4_livetarget | iqentry_5_cumulative;
+		    ? iqentry_livetarget[4]
+		    : iqentry_livetarget[4] | iqentry_5_cumulative;
 
-assign iqentry_5_latestID = (missid == 3'd5 || ((iqentry_5_livetarget & iqentry_6_cumulative) == 'd0))
-		    ? iqentry_5_livetarget
+assign iqentry_5_latestID = (missid == 3'd5 || ((iqentry_livetarget[5] & iqentry_6_cumulative) == 'd0))
+		    ? iqentry_livetarget[5]
 		    : 'd0;
 assign iqentry_5_cumulative = (missid == 3'd5)
-		    ? iqentry_5_livetarget
-		    : iqentry_5_livetarget | iqentry_6_cumulative;
+		    ? iqentry_livetarget[5]
+		    : iqentry_livetarget[5] | iqentry_6_cumulative;
 
-assign iqentry_6_latestID = (missid == 3'd6 || ((iqentry_6_livetarget & iqentry_7_cumulative) == 'd0))
-		    ? iqentry_6_livetarget
+assign iqentry_6_latestID = (missid == 3'd6 || ((iqentry_livetarget[6] & iqentry_7_cumulative) == 'd0))
+		    ? iqentry_livetarget[6]
 		    : 'd0;
 assign iqentry_6_cumulative = (missid == 3'd6)
-		    ? iqentry_6_livetarget
-		    : iqentry_6_livetarget | iqentry_7_cumulative;
+		    ? iqentry_livetarget[6]
+		    : iqentry_livetarget[6] | iqentry_7_cumulative;
 
-assign iqentry_7_latestID = (missid == 3'd7 || ((iqentry_7_livetarget & iqentry_0_cumulative) == 'd0))
-		    ? iqentry_7_livetarget
+assign iqentry_7_latestID = (missid == 3'd7 || ((iqentry_livetarget[7] & iqentry_0_cumulative) == 'd0))
+		    ? iqentry_livetarget[7]
 		    : 'd0;
 assign iqentry_7_cumulative = (missid == 3'd7)
-		    ? iqentry_7_livetarget
-		    : iqentry_7_livetarget | iqentry_0_cumulative;
-assign iqentry_7_latestID = (missid == 3'd7 || ((iqentry_7_livetarget & iqentry_0_cumulative) == 'd0))
-		    ? iqentry_7_livetarget
+		    ? iqentry_livetarget[7]
+		    : iqentry_livetarget[7] | iqentry_0_cumulative;
+assign iqentry_7_latestID = (missid == 3'd7 || ((iqentry_livetarget[7] & iqentry_0_cumulative) == 'd0))
+		    ? iqentry_livetarget[7]
 		    : 'd0;
 assign iqentry_7_cumulative = (missid == 3'd7)
-		    ? iqentry_7_livetarget
-		    : iqentry_7_livetarget | iqentry_0_cumulative;
+		    ? iqentry_livetarget[7]
+		    : iqentry_livetarget[7] | iqentry_0_cumulative;
 
 assign 
 	iqentry_source[0] = | iqentry_0_latestID,
@@ -944,17 +895,6 @@ always_comb
 	Rc1 = fnRc(fetchbuf1_instr[0]);
 always_comb
 	Rt1 = fnRt(fetchbuf1_instr[0]);
-
-assign
-	iq[0].imm = fnIsImm(iq[0].op),
-	iq[1].imm = fnIsImm(iq[1].op),
-	iq[2].imm = fnIsImm(iq[2].op),
-	iq[3].imm = fnIsImm(iq[3].op),
-	iq[4].imm = fnIsImm(iq[4].op),
-	iq[5].imm = fnIsImm(iq[5].op),
-	iq[6].imm = fnIsImm(iq[6].op),
-	iq[7].imm = fnIsImm(iq[7].op)
-	;
 
 //
 // additional logic for ISSUE
@@ -1420,18 +1360,21 @@ always_comb
 				: (iqentry_islot[(n2+7)&7] + {1'b0, iqentry_issue[(n2+7)&7]});
 	end
 */
-    // 
-    // additional logic for handling a branch miss (STOMP logic)
-    //
-    assign
-    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
-	    iqentry_stomp[1] = branchmiss && iq[1].v && head0 != 3'd1 && (missid == 3'd0 || iqentry_stomp[0]),
-	    iqentry_stomp[2] = branchmiss && iq[2].v && head0 != 3'd2 && (missid == 3'd1 || iqentry_stomp[1]),
-	    iqentry_stomp[3] = branchmiss && iq[3].v && head0 != 3'd3 && (missid == 3'd2 || iqentry_stomp[2]),
-	    iqentry_stomp[4] = branchmiss && iq[4].v && head0 != 3'd4 && (missid == 3'd3 || iqentry_stomp[3]),
-	    iqentry_stomp[5] = branchmiss && iq[5].v && head0 != 3'd5 && (missid == 3'd4 || iqentry_stomp[4]),
-	    iqentry_stomp[6] = branchmiss && iq[6].v && head0 != 3'd6 && (missid == 3'd5 || iqentry_stomp[5]),
-	    iqentry_stomp[7] = branchmiss && iq[7].v && head0 != 3'd7 && (missid == 3'd6 || iqentry_stomp[6]);
+// 
+// additional logic for handling a branch miss (STOMP logic)
+//
+reg [$clog2(QENTRIES)-1:0] n4p;
+always_comb
+for (n4 = 0; n4 < QENTRIES; n4 = n4 + 1)
+begin
+	n4p = (n4 + (QENTRIES-1)) % QENTRIES;
+	iqentry_stomp[n4] = branchmiss
+											&& iq[n4].v
+											&& head0 != n4[$clog2(QENTRIES)-1:0]
+											&& (missid == n4p || iqentry_stomp[n4p])
+											;
+end											
+//    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
 
 //
@@ -1778,6 +1721,7 @@ always_ff @(posedge clk) begin
 				iq[tail0].bt    <=   (fnIsBranch(fetchbuf1_instr[0])	&& fnBranchDispSign(fetchbuf1_instr[0])); 
 				iq[tail0].agen    <=   INV;
 				iq[tail0].pc    <=   fetchbuf1_pc;
+				iq[tail0].imm <= fnIsImm(fetchbuf1_instr[0]);
 				iq[tail0].fc <= fnIsFlowCtrl(fetchbuf1_instr[0]);
 		    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf1_instr[0]);
 		    iq[tail0].mul <= fnIsMuls(fetchbuf1_instr[0]);
@@ -1821,6 +1765,7 @@ always_ff @(posedge clk) begin
 				iq[tail0].bt <= VAL;
 				iq[tail0].agen <= INV;
 				iq[tail0].pc <= fetchbuf0_pc;
+				iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
 				iq[tail0].fc <= fnIsFlowCtrl(fetchbuf0_instr[0]);
 		    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf0_instr[0]);
 		    iq[tail0].mul <= fnIsMuls(fetchbuf0_instr[0]);
@@ -1862,6 +1807,7 @@ always_ff @(posedge clk) begin
 			    iq[tail0].bt    <=	VAL;
 			    iq[tail0].agen    <=	INV;
 			    iq[tail0].pc    <=	fetchbuf0_pc;
+					iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
 					iq[tail0].fc <= fnIsFlowCtrl(fetchbuf0_instr[0]);
 			    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf0_instr[0]);
 			    iq[tail0].mul <= fnIsMuls(fetchbuf0_instr[0]);
@@ -1909,6 +1855,7 @@ always_ff @(posedge clk) begin
 			    iq[tail0].bt    <=   INV;
 			    iq[tail0].agen    <=   INV;
 			    iq[tail0].pc    <=   fetchbuf0_pc;
+					iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
 					iq[tail0].fc <= fnIsFlowCtrl(fetchbuf0_instr[0]);
 			    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf0_instr[0]);
 			    iq[tail0].mul <= fnIsMuls(fetchbuf0_instr[0]);
@@ -1947,6 +1894,7 @@ always_ff @(posedge clk) begin
 						iq[tail1].bt    <=   (fnIsBackBranch(fetchbuf1_instr[0])); 
 						iq[tail1].agen    <=   INV;
 						iq[tail1].pc    <=   fetchbuf1_pc;
+						iq[tail1].imm <= fnIsImm(fetchbuf1_instr[0]);
 						iq[tail1].fc <= fnIsFlowCtrl(fetchbuf1_instr[0]);
 				    iq[tail1].alu <= !fnIsFlowCtrl(fetchbuf1_instr[0]);
 				    iq[tail1].mul <= fnIsMuls(fetchbuf1_instr[0]);
