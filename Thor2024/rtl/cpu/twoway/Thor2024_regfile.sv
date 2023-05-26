@@ -18,12 +18,14 @@ integer n,n1;
 initial begin
 	for (n = 0; n < 64; n = n + 1)
 		rf[n] = 'd0;
+	rf[46] = {64{1'b1}};
 end
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	for (n1 = 0; n1 < 64; n1 = n1 + 1)
 		rf[n1] = 'd0;
+	rf[46] = {64{1'b1}};
 end
 else begin
 	//

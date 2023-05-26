@@ -108,7 +108,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10;
 genvar g;
 
 wire value_t [AREGS-1:0] rf;
@@ -123,6 +123,10 @@ reg [128:0] message [0:15];	// indexed by panic
 
 typedef logic [QENTRIES-1:0] que_bitmask_t;
 
+reg [7:0] atom_mask;
+reg [5:0] postfix_mask;
+reg [27:0] pred_mask;
+reg [1:0] pred_val;
 
 // instruction queue (ROB)
 iq_entry_t [7:0] iq;
@@ -172,8 +176,8 @@ que_ndx_t head7;	// used only to determine memory-access ordering
 
 que_ndx_t missid;
 
-regspec_t Ra0, Rb0, Rc0, Rt0;
-regspec_t Ra1, Rb1, Rc1, Rt1;
+regspec_t Ra0, Rb0, Rc0, Rt0, Rp0;
+regspec_t Ra1, Rb1, Rc1, Rt1, Rp1;
 
 wire        fetchbuf;	// determines which pair to read from & write to
 
@@ -204,6 +208,8 @@ reg alu0_div;
 value_t alu0_argA;
 value_t alu0_argB;
 value_t alu0_argC;
+value_t alu0_argT;
+value_t alu0_argP;
 value_t alu0_argI;	// only used by BEQ
 value_t alu0_cmpo;
 reg [31:0] alu0_pc;
@@ -227,6 +233,8 @@ reg alu1_div;
 value_t alu1_argA;
 value_t alu1_argB;
 value_t alu1_argC;
+value_t alu1_argT;
+value_t alu1_argP;
 value_t alu1_argI;	// only used by BEQ
 value_t alu1_cmpo;
 reg [31:0] alu1_pc;
@@ -250,6 +258,8 @@ reg        fcu_bt;
 value_t fcu_argA;
 value_t fcu_argB;
 value_t fcu_argC;
+value_t fcu_argT;
+value_t fcu_argP;
 value_t fcu_argI;	// only used by BEQ
 reg [31:0] fcu_pc;
 value_t fcu_bus;
@@ -443,10 +453,14 @@ always_comb
 	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> {pco[5:0]+4'd5,3'd0};
 
 // hirq squashes the pc increment if there's an irq.
+// Normally atom_mask is zero.
 reg hirq;
 
 always_comb
-	hirq = (irq_i > im) && ~int_commit;
+if ((fnIsAtom(fetchbuf0_instr) || fnIsAtom(fetchbuf1_instr)) && irq_i != 3'd7)
+	hirq = 'd0;
+else
+	hirq = (irq_i > im) && ~int_commit && (irq_i > atom_mask[2:0]);
 always_comb
 if (hirq)
 	inst0 <= {{4{33'h1FFFFFFFF,OP_NOP}},FN_IRQ,1'b0,vect_i,5'd0,2'd0,irq_i,OP_SYS};
@@ -888,6 +902,8 @@ always_comb
 always_comb
 	Rt0 = fnRt(fetchbuf0_instr[0]);
 always_comb
+	Rp0 = &pred_mask[3:0] ? fnRp(fetchbuf0_instr[0]) : {2'b10,pred_mask[3:0]};
+always_comb
 	Ra1 = fnRa(fetchbuf1_instr[0]);
 always_comb
 	Rb1 = fnRb(fetchbuf1_instr[0]);
@@ -895,6 +911,8 @@ always_comb
 	Rc1 = fnRc(fetchbuf1_instr[0]);
 always_comb
 	Rt1 = fnRt(fetchbuf1_instr[0]);
+always_comb
+	Rp1 = &pred_mask[7:4] ? fnRp(fetchbuf1_instr[0]) : {2'b10,pred_mask[7:4]};
 
 //
 // additional logic for ISSUE
@@ -923,6 +941,12 @@ assign args_valid[g] = (iq[g].a1_v
 				    && (iq[g].a3_v
 				    || (iq[g].a3_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].a3_s == alu1_sourceid && alu1_dataready))
+				    && (iq[g].at_v
+				    || (iq[g].at_s == alu0_sourceid && alu0_dataready)
+				    || (iq[g].at_s == alu1_sourceid && alu1_dataready))
+				    && (iq[g].ap_v
+				    || (iq[g].ap_s == alu0_sourceid && alu0_dataready)
+				    || (iq[g].ap_s == alu1_sourceid && alu1_dataready))
 				    ;
 assign could_issue[g] = iq[g].v && !iq[g].done && !iq[g].out
 												&& args_valid[g]
@@ -1380,220 +1404,39 @@ end
 //
 // EXECUTE
 //
-always_ff @(posedge clk)
-begin
-	alu0_prod2 <= $signed(alu0_argA) * $signed(alu0_argB);
-	alu0_prod1 <= alu0_prod2;
-	alu0_prod <= alu0_prod1;
-end
-always_ff @(posedge clk)
-begin
-	alu0_produ2 <= alu0_argA * alu0_argB;
-	alu0_produ1 <= alu0_produ2;
-	alu0_produ <= alu0_produ1;
-end
-always_ff @(posedge clk)
-begin
-	alu1_prod2 <= $signed(alu1_argA) * $signed(alu1_argB);
-	alu1_prod1 <= alu1_prod2;
-	alu1_prod <= alu1_prod1;
-end
-always_ff @(posedge clk)
-begin
-	alu1_produ2 <= alu1_argA * alu1_argB;
-	alu1_produ1 <= alu1_produ2;
-	alu1_produ <= alu1_produ1;
-end
-always_ff @(posedge clk)
-begin
-	mul0_cnt <= {mul0_cnt[2:0],1'b1};
-	if (cd0_args)
-		mul0_cnt <= 'd0;
-	mul0_done <= mul0_cnt[3];
-end
-always_ff @(posedge clk)
-begin
-	mul1_cnt <= {mul1_cnt[2:0],1'b1};
-	if (cd1_args)
-		mul1_cnt <= 'd0;
-	mul1_done <= mul1_cnt[3];
-end
-
-wire cd0_args,cd1_args;
-
-// A change in arguments is used to load the divider.
-change_det #(.WID($bits(double_value_t))) uargcd0 (
+Thor2024_alu ualu0
+(
 	.rst(rst),
 	.clk(clk),
-	.ce(1'b1),
-	.i({alu0_argA,alu0_argB}),
-	.cd(cd0_args)
-);
-
-change_det #(.WID($bits(double_value_t))) uargcd1 (
-	.rst(rst),
-	.clk(clk),
-	.ce(1'b1),
-	.i({alu1_argA,alu1_argB}),
-	.cd(cd1_args)
-);
-
-Thor2024_cmp ualu0_cmp(alu0_argA, alu0_argB, alu0_cmpo);
-Thor2024_cmp ualu1_cmp(alu1_argA, alu1_argB, alu1_cmpo);
-
-Thor2024_divider udiv0(
-	.rst(rst),
-	.clk(clk),
-	.ld(cd0_args),
-	.sgn(alu0_div),
-	.sgnus(1'b0),
+	.ir(alu0_instr),
+	.div(alu0_div),
 	.a(alu0_argA),
 	.b(alu0_argB),
-	.qo(div0_q),
-	.ro(div0_r),
-	.dvByZr(div0_dbz),
-	.done(div0_done),
-	.idle()
+	.c(alu0_argC),
+	.t(alu0_argT),
+	.p(alu0_argP),
+	.o(alu0_bus),
+	.mul_done(mul0_done),
+	.div_done(div0_done),
+	.div_dbz()
 );
 
-Thor2024_divider udiv1(
+Thor2024_alu ualu1
+(
 	.rst(rst),
 	.clk(clk),
-	.ld(cd1_args),
-	.sgn(alu1_div),
-	.sgnus(1'b0),
+	.ir(alu1_instr),
+	.div(alu1_div),
 	.a(alu1_argA),
 	.b(alu1_argB),
-	.qo(div1_q),
-	.ro(div1_r),
-	.dvByZr(div1_dbz),
-	.done(div1_done),
-	.idle()
+	.c(alu1_argC),
+	.t(alu1_argT),
+	.p(alu1_argP),
+	.o(alu1_bus),
+	.mul_done(mul1_done),
+	.div_done(div1_done),
+	.div_dbz()
 );
-
-always_comb
-	case(alu0_instr.any.opcode)
-	OP_R2:
-		case(alu0_instr.r2.func)
-		FN_ADD:	alu0_bus = alu0_argA + alu0_argB;
-		FN_SUB:	alu0_bus = alu0_argA - alu0_argB;
-		FN_CMP:	alu0_bus = alu0_cmpo;
-		FN_MUL:	alu0_bus = alu0_prod[31:0];
-		FN_MULU:	alu0_bus = alu0_produ[31:0];
-		FN_MULH:	alu0_bus = alu0_prod[63:32];
-		FN_MULUH:	alu0_bus = alu0_produ[63:32];
-		FN_DIV: alu0_bus = div0_q;
-		FN_MOD: alu0_bus = div0_r;
-		FN_DIVU: alu0_bus = div0_q;
-		FN_MODU: alu0_bus = div0_r;
-		FN_AND:	alu0_bus = alu0_argA & alu0_argB;
-		FN_OR:	alu0_bus = alu0_argA | alu0_argB;
-		FN_EOR:	alu0_bus = alu0_argA ^ alu0_argB;
-		FN_ANDC:	alu0_bus = alu0_argA & ~alu0_argB;
-		FN_NAND:	alu0_bus = ~(alu0_argA & alu0_argB);
-		FN_NOR:	alu0_bus = ~(alu0_argA | alu0_argB);
-		FN_ENOR:	alu0_bus = ~(alu0_argA ^ alu0_argB);
-		FN_ORC:	alu0_bus = alu0_argA | ~alu0_argB;
-		FN_SEQ:	alu0_bus = alu0_argA == alu0_argB;
-		FN_SNE:	alu0_bus = alu0_argA != alu0_argB;
-		FN_SLT:	alu0_bus = $signed(alu0_argA) < $signed(alu0_argB);
-		FN_SLE:	alu0_bus = $signed(alu0_argA) <= $signed(alu0_argB);
-		FN_SLTU:	alu0_bus = alu0_argA < alu0_argB;
-		FN_SLEU:	alu0_bus = alu0_argA <= alu0_argB;
-		default:	alu0_bus = 32'hDEADBEEF;
-		endcase
-	OP_ADDI:	alu0_bus = alu0_argA + alu0_argB;
-	OP_CMPI:	alu0_bus = alu0_cmpo;
-	OP_MULI:	alu0_bus = alu0_prod[31:0];
-	OP_MULUI:	alu0_bus = alu0_produ[31:0];
-	OP_DIVI:	alu0_bus = div0_q;
-	OP_DIVUI:	alu0_bus = div0_r;
-	OP_ANDI:	alu0_bus = alu0_argA & alu0_argB;
-	OP_ORI:		alu0_bus = alu0_argA | alu0_argB;
-	OP_EORI:	alu0_bus = alu0_argA ^ alu0_argB;
-	OP_SLTI:	alu0_bus = $signed(alu0_argA) < $signed(alu0_argB);
-	OP_BEQ:		alu0_bus = alu0_argA == alu0_argB;
-	OP_BNE:		alu0_bus = alu0_argA != alu0_argB;
-	OP_BLT:		alu0_bus = $signed(alu0_argA) < $signed(alu0_argB);
-	OP_BLE:		alu0_bus = $signed(alu0_argA) <= $signed(alu0_argB);
-	OP_BGT:		alu0_bus = $signed(alu0_argA) > $signed(alu0_argB);
-	OP_BGE:		alu0_bus = $signed(alu0_argA) >= $signed(alu0_argB);
-	OP_RTD:	alu0_bus = alu0_argA + alu0_argB;
-	OP_LDB:		alu0_bus = alu0_argA + alu0_argB;
-	OP_LDBU:	alu0_bus = alu0_argA + alu0_argB;
-	OP_LDW:		alu0_bus = alu0_argA + alu0_argB;
-	OP_LDWU:	alu0_bus = alu0_argA + alu0_argB;
-	OP_LDT:		alu0_bus = alu0_argA + alu0_argB;
-	OP_LDA:		alu0_bus = alu0_argA + alu0_argB;
-	OP_STB:		alu0_bus = alu0_argA + alu0_argB;
-	OP_STW:		alu0_bus = alu0_argA + alu0_argB;
-	OP_STT:		alu0_bus = alu0_argA + alu0_argB;
-	OP_LDX:	alu0_bus = alu0_argA + (alu0_argB);
-	OP_STX:	alu0_bus = alu0_argA + (alu0_argB);
-	default:	alu0_bus = 32'hDEADBEEF;
-	endcase
-
-always_comb
-	case(alu1_instr.any.opcode)
-	OP_R2:
-		case(alu1_instr.r2.func)
-		FN_ADD:	alu1_bus = alu1_argA + alu1_argB;
-		FN_SUB:	alu1_bus = alu1_argA - alu1_argB;
-		FN_CMP:	alu1_bus = alu1_cmpo;
-		FN_MUL:	alu1_bus = alu1_prod[31:0];
-		FN_MULU:	alu1_bus = alu1_produ[31:0];
-		FN_MULH:	alu1_bus = alu1_prod[63:32];
-		FN_MULUH:	alu1_bus = alu1_produ[63:32];
-		FN_DIV: alu1_bus = div1_q;
-		FN_MOD: alu1_bus = div1_r;
-		FN_DIVU: alu1_bus = div1_q;
-		FN_MODU: alu1_bus = div1_r;
-		FN_AND:	alu1_bus = alu1_argA & alu1_argB;
-		FN_OR:	alu1_bus = alu1_argA | alu1_argB;
-		FN_EOR:	alu1_bus = alu1_argA ^ alu1_argB;
-		FN_ANDC:	alu1_bus = alu1_argA & ~alu1_argB;
-		FN_NAND:	alu1_bus = ~(alu1_argA & alu1_argB);
-		FN_NOR:	alu1_bus = ~(alu1_argA | alu1_argB);
-		FN_ENOR:	alu1_bus = ~(alu1_argA ^ alu1_argB);
-		FN_ORC:	alu1_bus = alu1_argA | ~alu1_argB;
-		FN_SEQ:	alu1_bus = alu1_argA == alu1_argB;
-		FN_SNE:	alu1_bus = alu1_argA != alu1_argB;
-		FN_SLT:	alu1_bus = $signed(alu1_argA) < $signed(alu1_argB);
-		FN_SLE:	alu1_bus = $signed(alu1_argA) <= $signed(alu1_argB);
-		FN_SLTU:	alu1_bus = alu1_argA < alu1_argB;
-		FN_SLEU:	alu1_bus = alu1_argA <= alu1_argB;
-		default:	alu1_bus = 32'hDEADBEEF;
-		endcase
-	OP_ADDI:	alu1_bus = alu1_argA + alu1_argB;
-	OP_CMPI:	alu1_bus = alu1_cmpo;
-	OP_MULI:	alu1_bus = alu1_prod[31:0];
-	OP_MULUI:	alu1_bus = alu1_produ[31:0];
-	OP_DIVI:	alu1_bus = div1_q;
-	OP_DIVUI:	alu1_bus = div1_r;
-	OP_ANDI:	alu1_bus = alu1_argA & alu1_argB;
-	OP_ORI:		alu1_bus = alu1_argA | alu1_argB;
-	OP_EORI:	alu1_bus = alu1_argA ^ alu1_argB;
-	OP_SLTI:	alu1_bus = $signed(alu1_argA) < $signed(alu1_argB);
-	OP_BEQ:		alu1_bus = alu1_argA == alu1_argB;
-	OP_BNE:		alu1_bus = alu1_argA != alu1_argB;
-	OP_BLT:		alu1_bus = $signed(alu1_argA) < $signed(alu1_argB);
-	OP_BLE:		alu1_bus = $signed(alu1_argA) <= $signed(alu1_argB);
-	OP_BGT:		alu1_bus = $signed(alu1_argA) > $signed(alu1_argB);
-	OP_BGE:		alu1_bus = $signed(alu1_argA) >= $signed(alu1_argB);
-	OP_RTD:	alu1_bus = alu1_argA + alu1_argB;
-	OP_LDB:		alu1_bus = alu1_argA + alu1_argB;
-	OP_LDBU:	alu1_bus = alu1_argA + alu1_argB;
-	OP_LDW:		alu1_bus = alu1_argA + alu1_argB;
-	OP_LDWU:	alu1_bus = alu1_argA + alu1_argB;
-	OP_LDT:		alu1_bus = alu1_argA + alu1_argB;
-	OP_LDA:		alu1_bus = alu1_argA + alu1_argB;
-	OP_STB:		alu1_bus = alu1_argA + alu1_argB;
-	OP_STW:		alu1_bus = alu1_argA + alu1_argB;
-	OP_STT:		alu1_bus = alu1_argA + alu1_argB;
-	OP_LDX:	alu1_bus = alu1_argA + (alu1_argB);
-	OP_STX:	alu1_bus = alu1_argA + (alu1_argB);
-	default:	alu1_bus = 32'hDEADBEEF;
-	endcase
 
     assign  alu0_v = alu0_dataready,
 	    alu1_v = alu1_dataready;
@@ -1621,16 +1464,31 @@ always_comb
 		fcu_misspc = 32'hFFFD0000;
 
 always_comb
-	case(fcu_instr.any.opcode)
-	OP_BEQ:	takb = fcu_argA==fcu_argB;
-	OP_BNE:	takb = fcu_argA!=fcu_argB;
-	OP_BLT:	takb = $signed(fcu_argA) < $signed(fcu_argB);
-	OP_BLE:	takb = $signed(fcu_argA) <= $signed(fcu_argB);
-	OP_BGT:	takb = $signed(fcu_argA) > $signed(fcu_argB);
-	OP_BGE:	takb = $signed(fcu_argA) >= $signed(fcu_argB);
-	OP_BBS:	takb = fcu_argA[fcu_argB[5:0]];
+	case(fcu_instr.br.cm)
+	2'd0:	// integer signed branches
+		case(fcu_instr.any.opcode)
+		OP_BEQ:	takb = fcu_argA==fcu_argB;
+		OP_BNE:	takb = fcu_argA!=fcu_argB;
+		OP_BLT:	takb = $signed(fcu_argA) < $signed(fcu_argB);
+		OP_BLE:	takb = $signed(fcu_argA) <= $signed(fcu_argB);
+		OP_BGT:	takb = $signed(fcu_argA) > $signed(fcu_argB);
+		OP_BGE:	takb = $signed(fcu_argA) >= $signed(fcu_argB);
+		OP_BBS:	takb = fcu_argA[fcu_argB[5:0]];
+		default:	takb = 1'b0;
+		endcase	
+	2'd1:	// integer usigned branches
+		case(fcu_instr.any.opcode)
+		OP_BEQ:	takb = fcu_argA==fcu_argB;
+		OP_BNE:	takb = fcu_argA!=fcu_argB;
+		OP_BLT:	takb = fcu_argA < fcu_argB;
+		OP_BLE:	takb = fcu_argA <= fcu_argB;
+		OP_BGT:	takb = fcu_argA > fcu_argB;
+		OP_BGE:	takb = fcu_argA >= fcu_argB;
+		OP_BBS:	takb = fcu_argA[fcu_argB[5:0]];
+		default:	takb = 1'b0;
+		endcase	
 	default:	takb = 1'b0;
-	endcase	
+	endcase
 
 always_comb
 if (fcu_instr.any.opcode==OP_SYS) begin
@@ -1664,25 +1522,19 @@ assign  branchmiss = fcu_branchmiss,
 
 assign dram_avail = (dram0 == `DRAMSLOT_AVAIL || dram1 == `DRAMSLOT_AVAIL);// || dram2 == `DRAMSLOT_AVAIL);
 
-assign
-	iqentry_memopsvalid[0] = (iq[0].mem & (iq[0].load|iq[0].a3_v) & iq[0].agen),
-  iqentry_memopsvalid[1] = (iq[1].mem & (iq[1].load|iq[1].a3_v) & iq[1].agen),
-  iqentry_memopsvalid[2] = (iq[2].mem & (iq[2].load|iq[2].a3_v) & iq[2].agen),
-  iqentry_memopsvalid[3] = (iq[3].mem & (iq[3].load|iq[3].a3_v) & iq[3].agen),
-  iqentry_memopsvalid[4] = (iq[4].mem & (iq[4].load|iq[4].a3_v) & iq[4].agen),
-  iqentry_memopsvalid[5] = (iq[5].mem & (iq[5].load|iq[5].a3_v) & iq[5].agen),
-  iqentry_memopsvalid[6] = (iq[6].mem & (iq[6].load|iq[6].a3_v) & iq[6].agen),
-  iqentry_memopsvalid[7] = (iq[7].mem & (iq[7].load|iq[7].a3_v) & iq[7].agen);
+always_comb
+for (n9 = 0; n9 < QENTRIES; n9 = n9 + 1)
+	iqentry_memopsvalid[n9] = (iq[n9].mem & (iq[n9].load|iq[n9].a3_v) & iq[n9].agen);
 
-assign
-  iqentry_memready[0] = (iq[0].v & iqentry_memopsvalid[0] & ~iqentry_memissue[0] & ~iq[0].done & ~iq[0].out & ~iqentry_stomp[0]),
-  iqentry_memready[1] = (iq[1].v & iqentry_memopsvalid[1] & ~iqentry_memissue[1] & ~iq[1].done & ~iq[1].out & ~iqentry_stomp[1]),
-  iqentry_memready[2] = (iq[2].v & iqentry_memopsvalid[2] & ~iqentry_memissue[2] & ~iq[2].done & ~iq[2].out & ~iqentry_stomp[2]),
-  iqentry_memready[3] = (iq[3].v & iqentry_memopsvalid[3] & ~iqentry_memissue[3] & ~iq[3].done & ~iq[3].out & ~iqentry_stomp[3]),
-  iqentry_memready[4] = (iq[4].v & iqentry_memopsvalid[4] & ~iqentry_memissue[4] & ~iq[4].done & ~iq[4].out & ~iqentry_stomp[4]),
-  iqentry_memready[5] = (iq[5].v & iqentry_memopsvalid[5] & ~iqentry_memissue[5] & ~iq[5].done & ~iq[5].out & ~iqentry_stomp[5]),
-  iqentry_memready[6] = (iq[6].v & iqentry_memopsvalid[6] & ~iqentry_memissue[6] & ~iq[6].done & ~iq[6].out & ~iqentry_stomp[6]),
-  iqentry_memready[7] = (iq[7].v & iqentry_memopsvalid[7] & ~iqentry_memissue[7] & ~iq[7].done & ~iq[7].out & ~iqentry_stomp[7]);
+always_comb
+for (n10 = 0; n10 < QENTRIES; n10 = n10 + 1)
+  iqentry_memready[n10] = (iq[n10].v
+  		& iqentry_memopsvalid[n10] 
+  		& ~iqentry_memissue[n10] 
+  		& ~iq[n10].done 
+  		& ~iq[n10].out 
+  		& ~iqentry_stomp[n10])
+  		;
 
 assign outstanding_stores = (dram0 && dram0_store) || (dram1 && dram1_store);// || (dram2 && dram2_store);
 
@@ -1697,6 +1549,14 @@ assign outstanding_stores = (dram0 && dram0_store) || (dram1 && dram1_store);// 
 // predict it taken (set branchback/backpc and delete any instructions after it in fetchbuf)
 //
 always_ff @(posedge clk) begin
+
+if (rst)
+	tReset();
+
+if (fnIsAtom(fetchbuf0_instr))
+	atom_mask <= fetchbuf0_instr[30:7];
+if (fnIsAtom(fetchbuf1_instr))
+	atom_mask <= fetchbuf1_instr[30:7];
 
 	//
 	// enqueue fetchbuf0 and fetchbuf1, but only if there is room, 
@@ -1746,51 +1606,87 @@ always_ff @(posedge clk) begin
 				iq[tail0].a3 <= rf [ Rc1 ];
 				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) | rf_v[ Rc1 ];
 				iq[tail0].a3_s  <= rf_source [ Rc1 ];
-	    end
-
+				iq[tail0].at <= rf [ Rt1 ];
+				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
+				iq[tail0].at_s  <= rf_source [ Rt1 ];
+				iq[tail0].ap <= rf [ Rp1 ];
+				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
+				iq[tail0].ap_s  <= rf_source [ Rp1 ];
+				if (!fnIsPostfix(fetchbuf1_instr)) begin
+					atom_mask <= atom_mask >> 4'd3;
+					pred_mask <= {4'hF,pred_mask} >> 4'd4;
+					postfix_mask <= 'd0;
+				end
+				else
+					postfix_mask <= {postfix_mask[4:0],1'b1};
+				if (postfix_mask[5])
+					iq[tail0].exc <= FLT_PFX;
+				if (fnIsPred(fetchbuf1_instr)) begin
+					pred_mask <= fetchbuf1_instr[34:7];
+				end
+			end
     2'b10:
-    	if (iq[tail0].v == INV) begin
-				if (!fnIsBranch(fetchbuf0_instr[0]))		panic <= `PANIC_FETCHBUFBEQ;
-				if (!fnIsBackBranch(fetchbuf0_instr[0]))	panic <= `PANIC_FETCHBUFBEQ;
-				//
-				// this should only happen when the first instruction is a BEQ-backwards and the IQ
-				// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
-				// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
-				//
-				iq[tail0].v	<=	VAL;
-				iq[tail0].done <= INV;
-				iq[tail0].out	<= INV;
-				iq[tail0].res	<= `ZERO;
-				iq[tail0].op <= fetchbuf0_instr[0]; 			// BEQ
-				iq[tail0].bt <= VAL;
-				iq[tail0].agen <= INV;
-				iq[tail0].pc <= fetchbuf0_pc;
-				iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
-				iq[tail0].fc <= fnIsFlowCtrl(fetchbuf0_instr[0]);
-		    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf0_instr[0]);
-		    iq[tail0].mul <= fnIsMuls(fetchbuf0_instr[0]);
-		    iq[tail0].mulu <= fnIsMulu(fetchbuf0_instr[0]);
-		    iq[tail0].div <= fnIsDivs(fetchbuf0_instr[0]);
-		    iq[tail0].divu <= fnIsDivu(fetchbuf0_instr[0]);
-		    iq[tail0].sync <= 1'b0;
-				iq[tail0].mem <= fetchbuf0_mem;
-				iq[tail0].load <= fnIsLoad(fetchbuf0_instr[0]);
-				iq[tail0].store <= fnIsStore(fetchbuf0_instr[0]);
-				iq[tail0].jmp <= fetchbuf0_jmp;
-				iq[tail0].rfw <= fetchbuf0_rfw;
-				iq[tail0].tgt <= Rt0;
-				iq[tail0].exc    <=	FLT_NONE;
-				iq[tail0].a0	<=	fnImm(fetchbuf0_instr);
-				iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, fnImm(fetchbuf0_instr));
-				iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
-				iq[tail0].a1_s <= rf_source [ Ra0 ];
-				iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, fnImm(fetchbuf0_instr));
-				iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
-				iq[tail0].a2_s  <= rf_source [ Rb0 ];
-				iq[tail0].a3 <= rf [ Rc0 ];
-				iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
-				iq[tail0].a3_s  <= rf_source [ Rc0 ];
-	    end
+    	begin
+	    	if (iq[tail0].v == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
+					if (!fnIsBranch(fetchbuf0_instr[0]))		panic <= `PANIC_FETCHBUFBEQ;
+					if (!fnIsBackBranch(fetchbuf0_instr[0]))	panic <= `PANIC_FETCHBUFBEQ;
+					//
+					// this should only happen when the first instruction is a BEQ-backwards and the IQ
+					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
+					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
+					//
+					iq[tail0].v	<=	VAL;
+					iq[tail0].done <= INV;
+					iq[tail0].out	<= INV;
+					iq[tail0].res	<= `ZERO;
+					iq[tail0].op <= fetchbuf0_instr[0]; 			// BEQ
+					iq[tail0].bt <= VAL;
+					iq[tail0].agen <= INV;
+					iq[tail0].pc <= fetchbuf0_pc;
+					iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
+					iq[tail0].fc <= fnIsFlowCtrl(fetchbuf0_instr[0]);
+			    iq[tail0].alu <= !fnIsFlowCtrl(fetchbuf0_instr[0]);
+			    iq[tail0].mul <= fnIsMuls(fetchbuf0_instr[0]);
+			    iq[tail0].mulu <= fnIsMulu(fetchbuf0_instr[0]);
+			    iq[tail0].div <= fnIsDivs(fetchbuf0_instr[0]);
+			    iq[tail0].divu <= fnIsDivu(fetchbuf0_instr[0]);
+			    iq[tail0].sync <= 1'b0;
+					iq[tail0].mem <= fetchbuf0_mem;
+					iq[tail0].load <= fnIsLoad(fetchbuf0_instr[0]);
+					iq[tail0].store <= fnIsStore(fetchbuf0_instr[0]);
+					iq[tail0].jmp <= fetchbuf0_jmp;
+					iq[tail0].rfw <= fetchbuf0_rfw;
+					iq[tail0].tgt <= Rt0;
+					iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].a0	<=	fnImm(fetchbuf0_instr);
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, fnImm(fetchbuf0_instr));
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
+					iq[tail0].a1_s <= rf_source [ Ra0 ];
+					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, fnImm(fetchbuf0_instr));
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
+					iq[tail0].a2_s  <= rf_source [ Rb0 ];
+					iq[tail0].a3 <= rf [ Rc0 ];
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
+					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rf [ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					if (!fnIsPostfix(fetchbuf0_instr)) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr)) begin
+						pred_mask <= fetchbuf0_instr[34:7];
+		    end
+	  	end
 
     2'b11:
     	if (iq[tail0].v == INV) begin
@@ -1832,9 +1728,28 @@ always_ff @(posedge clk) begin
 					iq[tail0].a3 <= rf [ Rc0 ];
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rf [ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					if (!fnIsPostfix(fetchbuf0_instr)) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr)) begin
+						pred_mask <= fetchbuf0_instr[34:7];
 				end
 
 				else begin	// fetchbuf0 doesn't contain a backwards branch
+					if (!fnIsPostfix(fetchbuf0_instr))
+						pred_mask <= pred_mask >> 4'd2;
 			    //
 			    // so -- we can enqueue 1 or 2 instructions, depending on space in the IQ
 			    // update tail0/tail1 separately (at top)
@@ -1880,6 +1795,23 @@ always_ff @(posedge clk) begin
 					iq[tail0].a3 <= rf [ Rc0 ];
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rf [ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					if (!fnIsPostfix(fetchbuf0_instr)) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr)) begin
+						pred_mask <= fetchbuf0_instr[34:7];
 
 			    //
 			    // if there is room for a second instruction, enqueue it
@@ -1913,6 +1845,23 @@ always_ff @(posedge clk) begin
 						iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, fnImm(fetchbuf1_instr));
 						iq[tail1].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, fnImm(fetchbuf1_instr));
 						iq[tail1].a3 <= rf [ Rc1 ];
+						iq[tail1].at <= rf [ Rt1 ];
+						iq[tail1].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
+						iq[tail1].at_s  <= rf_source [ Rt1 ];
+						iq[tail1].ap <= rf [ Rp1 ];
+						iq[tail1].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
+						iq[tail1].ap_s  <= rf_source [ Rp1 ];
+						if (!fnIsPostfix(fetchbuf1_instr)) begin
+							atom_mask <= atom_mask >> 4'd6;
+							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
+							postfix_mask <= 'd0;
+						end
+						else
+							postfix_mask <= {postfix_mask[4:0],1'b1};
+						if (postfix_mask[5])
+							iq[tail0].exc <= FLT_PFX;
+						if (fnIsPred(fetchbuf1_instr)) begin
+							pred_mask <= fetchbuf1_instr[34:7];
 
 						// a1/a2_v and a1/a2_s values require a bit of thinking ...
 
@@ -1992,6 +1941,57 @@ always_ff @(posedge clk) begin
 					    iq[tail1].a3_v <= rf_v [ Rc1 ];
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
+
+						//
+						// SOURCE T ... 
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSourceTv(fetchbuf1_instr[0])) begin
+					    iq[tail1].at_v <= VAL;
+					    iq[tail1].at_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_s <= rf_source [ Rt1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 5'd0 && Rt1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].at_v <= INV;
+					    iq[tail1].at_s <= { fetchbuf0_mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_s <= rf_source [ Rt1 ];
+						end
+
+						//
+						// SOURCE T ... 
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSourcePv(fetchbuf1_instr[0])) begin
+					    iq[tail1].ap_v <= VAL;
+					    iq[tail1].ap_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_s <= rf_source [ Rp1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 5'd0 && Rp1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].ap_v <= INV;
+					    iq[tail1].ap_s <= { fetchbuf0_mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_s <= rf_source [ Rp1 ];
+						end
+
 					end	// ends the "else fetchbuf0 doesn't have a backwards branch" clause
 	    	end
 	    end
@@ -2082,6 +2082,14 @@ always_ff @(posedge clk) begin
 	    iq[nn].a3 <= alu0_bus;
 	    iq[nn].a3_v <= VAL;
 		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+	    iq[nn].at <= alu0_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+	    iq[nn].ap <= alu0_bus;
+	    iq[nn].ap_v <= VAL;
+		end
 
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
 	    iq[nn].a1 <= alu1_bus;
@@ -2094,6 +2102,14 @@ always_ff @(posedge clk) begin
 		if (iq[nn].a3_v == INV && iq[nn].a3_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
 	    iq[nn].a3 <= alu1_bus;
 	    iq[nn].a3_v <= VAL;
+		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+	    iq[nn].at <= alu1_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+	    iq[nn].ap <= alu1_bus;
+	    iq[nn].ap_v <= VAL;
 		end
 
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
@@ -2108,6 +2124,14 @@ always_ff @(posedge clk) begin
 	    iq[nn].a3 <= fcu_bus;
 	    iq[nn].a3_v <= VAL;
 		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+	    iq[nn].at <= fcu_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+	    iq[nn].ap <= fcu_bus;
+	    iq[nn].ap_v <= VAL;
+		end
 		
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
 	    iq[nn].a1 <= dram_bus0;
@@ -2120,6 +2144,14 @@ always_ff @(posedge clk) begin
 		if (iq[nn].a3_v == INV && iq[nn].a3_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
 	    iq[nn].a3 <= dram_bus0;
 	    iq[nn].a3_v <= VAL;
+		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+	    iq[nn].at <= dram_bus0;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+	    iq[nn].ap <= dram_bus0;
+	    iq[nn].ap_v <= VAL;
 		end
 		
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
@@ -2134,6 +2166,14 @@ always_ff @(posedge clk) begin
 	    iq[nn].a3 <= dram_bus1;
 	    iq[nn].a3_v <= VAL;
 		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+	    iq[nn].at <= dram_bus1;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+	    iq[nn].ap <= dram_bus1;
+	    iq[nn].ap_v <= VAL;
+		end
 		
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
 	    iq[nn].a1 <= commit0_bus;
@@ -2147,6 +2187,14 @@ always_ff @(posedge clk) begin
 	    iq[nn].a3 <= commit0_bus;
 	    iq[nn].a3_v <= VAL;
 		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+	    iq[nn].at <= commit0_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+	    iq[nn].ap <= commit0_bus;
+	    iq[nn].ap_v <= VAL;
+		end
 		
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
 	    iq[nn].a1 <= commit1_bus;
@@ -2159,6 +2207,14 @@ always_ff @(posedge clk) begin
 		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
 	    iq[nn].a3 <= commit1_bus;
 	    iq[nn].a3_v <= VAL;
+		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+	    iq[nn].at <= commit1_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+	    iq[nn].ap <= commit1_bus;
+	    iq[nn].ap_v <= VAL;
 		end
 	end
 
@@ -2233,6 +2289,16 @@ fcu_dataready <= fcu_available
 										: (iq[n1].a3_s == alu0_id) ? alu0_bus
 										: (iq[n1].a3_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
+						alu0_argT	<= 
+								      (iq[n1].at_v ? iq[n1].at
+										: (iq[n1].at_s == alu0_id) ? alu0_bus
+										: (iq[n1].at_s == alu1_id) ? alu1_bus
+										: 32'hDEADBEEF);
+						alu0_argP	<= 
+								      (iq[n1].ap_v ? iq[n1].ap
+										: (iq[n1].ap_s == alu0_id) ? alu0_bus
+										: (iq[n1].ap_s == alu1_id) ? alu1_bus
+										: 32'hDEADBEEF);
 						alu0_argI	<= iq[n1].a0[33:2];
 			    end
 				2'd1:
@@ -2257,6 +2323,16 @@ fcu_dataready <= fcu_available
 								      (iq[n1].a3_v ? iq[n1].a3
 										: (iq[n1].a3_s == alu0_id) ? alu0_bus
 										: (iq[n1].a3_s == alu1_id) ? alu1_bus
+										: 32'hDEADBEEF);
+						alu1_argT	<= 
+								      (iq[n1].at_v ? iq[n1].at
+										: (iq[n1].at_s == alu0_id) ? alu0_bus
+										: (iq[n1].at_s == alu1_id) ? alu1_bus
+										: 32'hDEADBEEF);
+						alu1_argP	<= 
+								      (iq[n1].ap_v ? iq[n1].ap
+										: (iq[n1].ap_s == alu0_id) ? alu0_bus
+										: (iq[n1].ap_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
 						alu1_argI	<= iq[n1].a0[33:2];
 			    end
@@ -2890,6 +2966,15 @@ always_ff @(posedge clk) begin: clock_n_debug
 	end
 
     end
+
+task tReset;
+begin
+	atom_mask <= 'd0;
+	postfix_mask <= 'd0;
+	pred_mask <= 28'hFFFFFFF;
+	pred_val <= 1'b1;
+end
+endtask
 
 endmodule
 
