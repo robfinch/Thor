@@ -1553,10 +1553,10 @@ always_ff @(posedge clk) begin
 if (rst)
 	tReset();
 
-if (fnIsAtom(fetchbuf0_instr))
-	atom_mask <= fetchbuf0_instr[30:7];
-if (fnIsAtom(fetchbuf1_instr))
-	atom_mask <= fetchbuf1_instr[30:7];
+if (fnIsAtom(fetchbuf0_instr[0]))
+	atom_mask <= fetchbuf0_instr[0][30:7];
+if (fnIsAtom(fetchbuf1_instr[1]))
+	atom_mask <= fetchbuf1_instr[1][30:7];
 
 	//
 	// enqueue fetchbuf0 and fetchbuf1, but only if there is room, 
@@ -1612,7 +1612,7 @@ if (fnIsAtom(fetchbuf1_instr))
 				iq[tail0].ap <= rf [ Rp1 ];
 				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
-				if (!fnIsPostfix(fetchbuf1_instr)) begin
+				if (!fnIsPostfix(fetchbuf1_instr[0])) begin
 					atom_mask <= atom_mask >> 4'd3;
 					pred_mask <= {4'hF,pred_mask} >> 4'd4;
 					postfix_mask <= 'd0;
@@ -1621,8 +1621,8 @@ if (fnIsAtom(fetchbuf1_instr))
 					postfix_mask <= {postfix_mask[4:0],1'b1};
 				if (postfix_mask[5])
 					iq[tail0].exc <= FLT_PFX;
-				if (fnIsPred(fetchbuf1_instr)) begin
-					pred_mask <= fetchbuf1_instr[34:7];
+				if (fnIsPred(fetchbuf1_instr[0])) begin
+					pred_mask <= fetchbuf1_instr[0][34:7];
 				end
 			end
     2'b10:
@@ -1674,7 +1674,7 @@ if (fnIsAtom(fetchbuf1_instr))
 					iq[tail0].ap <= rf [ Rp0 ];
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					if (!fnIsPostfix(fetchbuf0_instr)) begin
+					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -1683,8 +1683,8 @@ if (fnIsAtom(fetchbuf1_instr))
 						postfix_mask <= {postfix_mask[4:0],1'b1};
 					if (postfix_mask[5])
 						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr)) begin
-						pred_mask <= fetchbuf0_instr[34:7];
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
 		    end
 	  	end
 
@@ -1734,7 +1734,7 @@ if (fnIsAtom(fetchbuf1_instr))
 					iq[tail0].ap <= rf [ Rp0 ];
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					if (!fnIsPostfix(fetchbuf0_instr)) begin
+					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -1743,12 +1743,12 @@ if (fnIsAtom(fetchbuf1_instr))
 						postfix_mask <= {postfix_mask[4:0],1'b1};
 					if (postfix_mask[5])
 						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr)) begin
-						pred_mask <= fetchbuf0_instr[34:7];
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
 				end
 
 				else begin	// fetchbuf0 doesn't contain a backwards branch
-					if (!fnIsPostfix(fetchbuf0_instr))
+					if (!fnIsPostfix(fetchbuf0_instr[0]))
 						pred_mask <= pred_mask >> 4'd2;
 			    //
 			    // so -- we can enqueue 1 or 2 instructions, depending on space in the IQ
@@ -1801,7 +1801,7 @@ if (fnIsAtom(fetchbuf1_instr))
 					iq[tail0].ap <= rf [ Rp0 ];
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					if (!fnIsPostfix(fetchbuf0_instr)) begin
+					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -1810,8 +1810,8 @@ if (fnIsAtom(fetchbuf1_instr))
 						postfix_mask <= {postfix_mask[4:0],1'b1};
 					if (postfix_mask[5])
 						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr)) begin
-						pred_mask <= fetchbuf0_instr[34:7];
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
 
 			    //
 			    // if there is room for a second instruction, enqueue it
@@ -1851,7 +1851,7 @@ if (fnIsAtom(fetchbuf1_instr))
 						iq[tail1].ap <= rf [ Rp1 ];
 						iq[tail1].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
 						iq[tail1].ap_s  <= rf_source [ Rp1 ];
-						if (!fnIsPostfix(fetchbuf1_instr)) begin
+						if (!fnIsPostfix(fetchbuf1_instr[0])) begin
 							atom_mask <= atom_mask >> 4'd6;
 							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
 							postfix_mask <= 'd0;
@@ -1860,8 +1860,8 @@ if (fnIsAtom(fetchbuf1_instr))
 							postfix_mask <= {postfix_mask[4:0],1'b1};
 						if (postfix_mask[5])
 							iq[tail0].exc <= FLT_PFX;
-						if (fnIsPred(fetchbuf1_instr)) begin
-							pred_mask <= fetchbuf1_instr[34:7];
+						if (fnIsPred(fetchbuf1_instr[0]))
+							pred_mask <= fetchbuf1_instr[0][34:7];
 
 						// a1/a2_v and a1/a2_s values require a bit of thinking ...
 

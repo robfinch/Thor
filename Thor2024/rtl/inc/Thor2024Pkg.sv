@@ -139,7 +139,15 @@ typedef enum logic [6:0] {
 	OP_DIVI			= 7'd13,
 	OP_MULUI		= 7'd14,
 	OP_MOV			= 7'd15,
+	OP_CLR			= 7'd16,
+	OP_SET			= 7'd17,
+	OP_EXTU			= 7'd18,
+	OP_EXT			= 7'd19,
+	OP_COM			= 7'd20,
 	OP_DIVUI		= 7'd21,
+	OP_DEP			= 7'd23,
+	/* 24 to 31 empty
+	*/
 	OP_DBcc			= 7'd29,
 	OP_RTD			= 7'd35,
 	OP_JSR			= 7'd36,
@@ -167,10 +175,12 @@ typedef enum logic [6:0] {
 	OP_STO			= 7'd83,
 	OP_STX			= 7'd87,
 	OP_ADDIPC		= 7'd96,
+	OP_PRED			= 7'd121,
+	OP_ATOM			= 7'd122,
 	OP_PFX			= 7'd124,
 	OP_NOP			= 7'd127
 } opcode_t;
-
+/*
 typedef enum logic [2:0] {
 	OP_CLR = 3'd0,
 	OP_SET = 3'd1,
@@ -181,7 +191,7 @@ typedef enum logic [2:0] {
 	OP_DEP = 3'd6,
 	OP_FFO = 3'd7
 } bitfld_t;
-
+*/
 typedef enum logic [3:0] {
 	OP_CMP_EQ	= 4'h0,
 	OP_CMP_NE	= 4'd1,
@@ -939,6 +949,12 @@ typedef struct packed {
 	value_t a3;
 	logic a3_v;
 	logic [4:0] a3_s;
+	value_t at;
+	logic at_v;
+	logic [4:0] at_s;
+	value_t ap;
+	logic ap_v;
+	logic [4:0] ap_s;
 	address_t pc;
 } iq_entry_t;
 
@@ -1028,7 +1044,7 @@ begin
 end
 endfunction
 
-function [4:0] fnRa;
+function [5:0] fnRa;
 input instruction_t ir;
 begin
 	case(ir.any.opcode)
@@ -1042,7 +1058,7 @@ begin
 end
 endfunction
 
-function [4:0] fnRb;
+function [5:0] fnRb;
 input instruction_t ir;
 begin
 	case(ir.any.opcode)
@@ -1054,7 +1070,7 @@ begin
 end
 endfunction
 
-function [4:0] fnRc;
+function [5:0] fnRc;
 input instruction_t ir;
 begin
 	case(ir.any.opcode)
@@ -1068,7 +1084,7 @@ begin
 end
 endfunction
 
-function [4:0] fnRt;
+function [5:0] fnRt;
 input instruction_t ir;
 begin
 	case(ir.any.opcode)
@@ -1115,6 +1131,57 @@ begin
 		fnRt = ir[12:7];
 	default:
 		fnRt = 'd0;
+	endcase
+end
+endfunction
+
+function [5:0] fnRp;
+input instruction_t ir;
+begin
+	case(ir.any.opcode)
+	OP_R2:
+		case(ir.r2.func)
+		FN_ADD:	fnRp = {3'b100,ir[36:34]};
+		FN_CMP:	fnRp = {3'b100,ir[36:34]};
+		FN_MUL:	fnRp = {3'b100,ir[36:34]};
+		FN_DIV:	fnRp = {3'b100,ir[36:34]};
+		FN_SUB:	fnRp = {3'b100,ir[36:34]};
+		FN_MULU: fnRp = {3'b100,ir[36:34]};
+		FN_DIVU:	fnRp = {3'b100,ir[36:34]};
+		FN_MULH:	fnRp = {3'b100,ir[36:34]};
+		FN_MOD:	fnRp = {3'b100,ir[36:34]};
+		FN_MULUH:	fnRp = {3'b100,ir[36:34]};
+		FN_MODU:	fnRp = {3'b100,ir[36:34]};
+		FN_AND:	fnRp = {3'b100,ir[36:34]};
+		FN_OR:	fnRp = {3'b100,ir[36:34]};
+		FN_EOR:	fnRp = {3'b100,ir[36:34]};
+		FN_ANDC:	fnRp = {3'b100,ir[36:34]};
+		FN_NAND:	fnRp = {3'b100,ir[36:34]};
+		FN_NOR:	fnRp = {3'b100,ir[36:34]};
+		FN_ENOR:	fnRp = {3'b100,ir[36:34]};
+		FN_ORC:	fnRp = {3'b100,ir[36:34]};
+		FN_SEQ:	fnRp = {3'b100,ir[36:34]};
+		FN_SNE:	fnRp = {3'b100,ir[36:34]};
+		FN_SLT:	fnRp = {3'b100,ir[36:34]};
+		FN_SLE:	fnRp = {3'b100,ir[36:34]};
+		FN_SLTU:	fnRp = {3'b100,ir[36:34]};
+		FN_SLEU:	fnRp = {3'b100,ir[36:34]};
+		default:	fnRp = 6'd46;
+		endcase
+	OP_JSR:	fnRp = {3'b100,ir[37:35]};
+	OP_RTD:	fnRp = {3'b100,ir[37:35]};
+	OP_JSR,
+	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
+	OP_MULUI,OP_DIVUI,
+	OP_ANDI,OP_ORI,OP_EORI:
+		fnRp = {3'b100,ir[37:35]};
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
+	OP_LDX:
+		fnRp = {3'b100,ir[37:35]};
+	OP_ADDIPC:
+		fnRp = {3'b100,ir[37:35]};
+	default:
+		fnRp = 6'd46;
 	endcase
 end
 endfunction
@@ -1254,10 +1321,116 @@ begin
 end
 endfunction
 
+function fnSourceTv;
+input instruction_t ir;
+begin
+	case(ir.r2.opcode)
+	OP_SYS:	fnSourceTv = 1'b1;
+	OP_R2:
+		case(ir.r2.func)
+		FN_ADD:	fnSourceTv = ir[12:7]=='d0;
+		FN_CMP:	fnSourceTv = ir[12:7]=='d0;
+		FN_MUL:	fnSourceTv = ir[12:7]=='d0;
+		FN_DIV:	fnSourceTv = ir[12:7]=='d0;
+		FN_SUB:	fnSourceTv = ir[12:7]=='d0;
+		FN_MULU: fnSourceTv = ir[12:7]=='d0;
+		FN_DIVU: fnSourceTv = ir[12:7]=='d0;
+		FN_AND:	fnSourceTv = ir[12:7]=='d0;
+		FN_OR:	fnSourceTv = ir[12:7]=='d0;
+		FN_EOR:	fnSourceTv = ir[12:7]=='d0;
+		FN_ANDC:	fnSourceTv = ir[12:7]=='d0;
+		FN_NAND:	fnSourceTv = ir[12:7]=='d0;
+		FN_NOR:	fnSourceTv = ir[12:7]=='d0;
+		FN_ENOR:	fnSourceTv = ir[12:7]=='d0;
+		FN_ORC:	fnSourceTv = ir[12:7]=='d0;
+		FN_SEQ:	fnSourceTv = ir[12:7]=='d0;
+		FN_SNE:	fnSourceTv = ir[12:7]=='d0;
+		FN_SLT:	fnSourceTv = ir[12:7]=='d0;
+		FN_SLE:	fnSourceTv = ir[12:7]=='d0;
+		FN_SLTU:	fnSourceTv = ir[12:7]=='d0;
+		FN_SLEU:	fnSourceTv = ir[12:7]=='d0;
+		default:	fnSourceTv = 1'b1;
+		endcase
+	OP_JSR,
+	OP_ADDI:	fnSourceTv = ir[12:7]=='d0;
+	OP_CMPI:	fnSourceTv = ir[12:7]=='d0;
+	OP_MULI:	fnSourceTv = ir[12:7]=='d0;
+	OP_DIVI:	fnSourceTv = ir[12:7]=='d0;
+	OP_ANDI:	fnSourceTv = ir[12:7]=='d0;
+	OP_ORI:		fnSourceTv = ir[12:7]=='d0;
+	OP_EORI:	fnSourceTv = ir[12:7]=='d0;
+	OP_SLTI:	fnSourceTv = ir[12:7]=='d0;
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+		fnSourceTv = ir[12:7]=='d0;
+	OP_LDX:
+		fnSourceTv = ir[12:7]=='d0;
+	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
+		fnSourceTv = 1'b1;
+	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+		fnSourceTv = 1'b1;	
+	default:
+		fnSourceTv = 1'b1;
+	endcase
+end
+endfunction
+
+function fnSourcePv;
+input instruction_t ir;
+begin
+	case(ir.r2.opcode)
+	OP_SYS:	fnSourcePv = ~ir.r2.fmt[0];
+	OP_R2:
+		case(ir.r2.func)
+		FN_ADD:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_CMP:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_MUL:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_DIV:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SUB:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_MULU: fnSourcePv = ~ir.r2.fmt[0];
+		FN_DIVU: fnSourcePv = ~ir.r2.fmt[0];
+		FN_AND:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_OR:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_EOR:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_ANDC:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_NAND:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_NOR:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_ENOR:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_ORC:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SEQ:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SNE:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SLT:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SLE:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SLTU:	fnSourcePv = ~ir.r2.fmt[0];
+		FN_SLEU:	fnSourcePv = ~ir.r2.fmt[0];
+		default:	fnSourcePv = 1'b1;
+		endcase
+	OP_JSR,
+	OP_ADDI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_CMPI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_MULI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_DIVI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_ANDI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_ORI:		fnSourcePv = ~ir.ri.fmt[0];
+	OP_EORI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_SLTI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+		fnSourcePv = ~ir.ri.fmt[0];
+	OP_LDX:
+		fnSourcePv = ~ir.ri.fmt[0];
+	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
+		fnSourcePv = ~ir.ri.fmt[0];
+	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+		fnSourcePv = 1'b1;
+	default:
+		fnSourcePv = 1'b1;
+	endcase
+end
+endfunction
+
 function fnIsLoad;
 input [18:0] op;
 begin
-	case(opcode_t'(op[5:0]))
+	case(opcode_t'(op[6:0]))
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
 	OP_LDX:
 		fnIsLoad = 1'b1;
@@ -1270,7 +1443,7 @@ endfunction
 function fnIsStore;
 input [18:0] op;
 begin
-	case(opcode_t'(op[5:0]))
+	case(opcode_t'(op[6:0]))
 	OP_STB,OP_STW,OP_STT,OP_STO,
 	OP_STX:
 		fnIsStore = 1'b1;
@@ -1291,7 +1464,7 @@ function fnIsImm;
 input [18:0] op;
 begin
 	fnIsImm = 1'b0;
-	case(opcode_t'(op[5:0]))
+	case(opcode_t'(op[6:0]))
 	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_DIVUI,OP_MULUI,
 	OP_ANDI,OP_ORI,OP_EORI,OP_SLTI:
 		fnIsImm = 1'b1;
@@ -1314,21 +1487,6 @@ reg [1:0] sz;
 begin
 	fnImm = 'd0;
 	case(ins[0].any.opcode)
-	OP_R2:
-		if (|ins[0].r2.im) begin
-			if (ins[0].r2.im[0])
-				sz = ins[0][14:13];
-			else if (ins[0].r2.im[1])
-				sz = ins[0][20:19];
-			else
-				sz = 'd0;
-			case(sz)
-			2'd0:	fnImm = 'd0;
-			2'd1:	fnImm = {{32{ins[1][39]}},ins[1][39:8]};
-			2'd2:	fnImm = {ins[2][39:8],ins[1][39:8]};
-			2'd3:	fnImm = {ins[2][39:8],ins[1][39:8]};
-			endcase
-		end
 	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
 		fnImm = {{48{ins[0][34]}},ins[0][34:19]};
 	OP_ANDI:	fnImm = {48'hFFFFFFFFFFFF,ins[0][34:19]};
@@ -1337,20 +1495,17 @@ begin
 	OP_RTD:	fnImm = {{16{ins[0][34]}},ins[0][34:19]};
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
 	OP_STB,OP_STW,OP_STT,OP_STO:
-		begin
-			sz = ins[0][22:21];
-			case(sz)
-			2'd0:	fnImm = {{52{ins[0][34]}},ins[0][34:23]};
-			2'd1:	fnImm = {{32{ins[1][39]}},ins[1][39:8]};
-			2'd2:	fnImm = {ins[2][39:8],ins[1][39:8]};
-			2'd3:	fnImm = {ins[2][39:8],ins[1][39:8]};
-			endcase
-		end
+		fnImm = {{52{ins[0][34]}},ins[0][34:23]};
 	OP_ADDIPC:
 		fnImm = {{42{ins[0][34]}},ins[0][34:13]};
 	default:
 		fnImm = 'd0;
 	endcase
+	if (ins[1].any.opcode==OP_PFX) begin
+		fnImm = {{32{ins[1][39]}},ins[1][39:8]};
+		if (ins[2].any.opcode==OP_PFX)
+			fnImm[63:32] = ins[2][39:8];
+	end
 end
 endfunction
 
@@ -1360,7 +1515,7 @@ begin
 	fnImma = 1'b0;
 	case(ir.any.opcode)
 	OP_R2:
-		if (ir.r2.im[0])
+		if (&ir.r2.Ra)
 			fnImma = 1'b1;
 	default:	fnImma = 1'b0;
 	endcase
@@ -1373,7 +1528,7 @@ begin
 	fnImmb = 1'b0;
 	case(ir.any.opcode)
 	OP_R2:
-		if (ir.r2.im[1])
+		if (&ir.r2.Rb)
 			fnImmb = 1'b1;
 	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
 		fnImmb = 1'b1;
@@ -1443,6 +1598,27 @@ function fnIsIrq;
 input instruction_t ir;
 begin
 	fnIsIrq = ir.any.opcode==OP_SYS && ir.sys.func==FN_IRQ;
+end
+endfunction
+
+function fnIsAtom;
+input instruction_t ir;
+begin
+	fnIsAtom = ir.any.opcode==OP_ATOM;
+end
+endfunction
+
+function fnIsPred;
+input instruction_t ir;
+begin
+	fnIsPred = ir.any.opcode==OP_PRED;
+end
+endfunction
+
+function fnIsPostfix;
+input instruction_t ir;
+begin
+	fnIsPostfix = ir.any.opcode==OP_PFX;
 end
 endfunction
 
