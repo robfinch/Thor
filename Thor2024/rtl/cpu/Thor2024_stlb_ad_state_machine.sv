@@ -40,7 +40,7 @@ import fta_bus_pkg::*;
 import Thor2024pkg::*;
 import Thor2024Mmupkg::*;
 
-module Thor2024_stlb_ad_state_machine(clk, state, rcount, tlbadr_i, tlbadro, 
+module Thor2024_stlb_ad_state_machine(clk, state, lookup_ack, rcount, tlbadr_i, tlbadro, 
 	tlbdat_rst, tlbdat_i, tlbdato, master_count, inv_count);
 parameter ENTRIES = 1024;
 parameter PAGE_SIZE = 8192;
@@ -49,6 +49,7 @@ localparam LOG_ENTRIES = $clog2(ENTRIES);
 localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 input clk;
 input tlb_state_t state;
+input lookup_ack;
 input [LOG_ENTRIES-1:0] rcount;
 input [31:0] tlbadr_i;
 output reg [LOG_ENTRIES-1:0] tlbadro;
@@ -80,6 +81,9 @@ begin
 			tlbadro <= inv_count;
 			tlbdato <= 'd0;
 		end
+	ST_LOOKUP:
+		if (lookup_ack)
+			tlbdato <= tlbdat_rst;
 	default:
 		begin
 			tlbadro <= tlbadr_i[5+LOG_ENTRIES-1:5];

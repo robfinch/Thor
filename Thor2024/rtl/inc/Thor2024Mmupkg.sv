@@ -57,6 +57,17 @@ typedef logic [2:0] rwx_t;
 
 typedef struct packed
 {
+	logic [63:12] adr;	// page table address, bits 16 to 67
+	logic [3:0] level;	// entry level of hierarchical page table
+	logic [1:0] al;	// replacement algorithm, 0=fixed,1=LRU,2=random
+	logic [1:0] resv2;
+	logic soft;		// 0=hardware,1=software TLB updates
+	logic [1:0] resv1;
+	logic type;		// 0=hierarchical,1=hash
+} ptbr_t;
+
+typedef struct packed
+{
 	logic [7:0] resv3;
 	logic [7:0] dev_type;
 	logic resv2;
@@ -163,16 +174,29 @@ typedef struct packed
 	VPN vpn;
 } TLBE;
 
+// Small Hash Page Table Entry
+// Used to map 36-bit virtual addresses into a 32-bit physical address space.
 typedef struct packed
 {
-	tlb_count_t count;
-	logic [2:0] lru;
-	SPTE pte;
-	SVPN vpn;
-} STLBE;
+	logic [7:0] asid;
+	logic [19:0] vpn;
+	logic [15:0] ppn;
+	logic v;
+	logic [4:0] bc;
+	logic [2:0] rgn;
+	logic m;
+	logic a;
+	logic t;
+	logic s;
+	logic g;
+	logic sw;
+	logic [3:0] cache;
+	logic [2:0] hrwx;
+	logic [2:0] srwx;
+	logic [2:0] urwx;
+} SHPTE;	// 72 bits
 
-// Small Hash Page Table Entry
-// Used to map 32-bit virtual addresses into a 36-bit physical address space.
+/*
 typedef struct packed
 {
 	logic [11:0] asid;
@@ -186,6 +210,15 @@ typedef struct packed
 	logic c;
 	logic [2:0] rwx;
 } SHPTE;	// 64 bits
+*/
+
+typedef struct packed
+{
+	tlb_count_t count;
+	logic [2:0] lru;
+	SHPTE pte;
+	SVPN vpn;
+} STLBE;
 
 // Hash Page Table Entry
 typedef struct packed

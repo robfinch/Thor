@@ -41,7 +41,7 @@ import fta_bus_pkg::*;
 import Thor2024pkg::*;
 import Thor2024Mmupkg::*;
 
-module Thor2024_stlb(rst_i, clk_i, rdy_o,	rwx_o, tlbmiss_irq_o,
+module Thor2024_stlb(rst_i, clk_i, clk2x_i, rdy_o, rwx_o, tlbmiss_irq_o,
 	wbn_req_i, wbn_resp_o, fta_req_o, fta_resp_i, snoop_v, snoop_adr, snoop_cid);
 parameter ASSOC = 6;	// MAX assoc = 15
 parameter LVL1_ASSOC = 1;
@@ -77,6 +77,7 @@ localparam CFG_HEADER_TYPE = 8'h00;			// 00 = a general device
 
 input rst_i;
 input clk_i;
+input clk2x_i;
 output rdy_o;
 output reg [2:0] rwx_o;
 output [31:0] tlbmiss_irq_o;
@@ -157,11 +158,17 @@ wire [LOG_ENTRIES-1:0] tlbadri;
 reg clock_r;
 reg [LOG_ENTRIES-1:0] rcount;
 
-SPTE pte_reg;
+SHPTE pte_reg;
 SVPN vpn_reg;
 reg [31:0] ctrl_req;
 reg [3:0] selected_channel;
 reg [CHANNELS-1:0] ch_active;
+reg htable_lookup,htable_update;
+wire htable_ack,htable_exc;
+reg [31:0] htable_adr;
+reg [11:0] htable_asid;
+SHPTE htable_pte;
+SHPTE htable_pte_o;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -263,11 +270,16 @@ else begin
 	tlben_i <= |rd_tlb;
 	rd_tlb <= {rd_tlb[1:0],1'b0};
 	wr_tlb <= 1'b0;
+	htable_update <= 1'b0;
 	if (state==ST_UPD3)
 		wrtlb_i <= 1'b0;
 	if (cs_stlbq & wbs_req.we) begin
 		case(wbs_req.padr[6:4])
-		3'd0:	pte_reg <= wbs_req.data1;
+		3'd0:	
+			case(wbs_req.padr[3])
+			1'b0:	pte_reg[63:0] <= wbs_req.data1[63:0];
+			1'b1: pte_reg[71:64] <= wbs_req.data1[7:0];
+			endcase
 		3'd1:	vpn_reg <= wbs_req.data1;
 		3'd7:	
 			begin
@@ -277,6 +289,7 @@ else begin
 					ctrl_reg <= wbs_req.data1[31:0];
 					LRU <= wbs_req.data1[17:16]==2'b01;
 					RAND <= wbs_req.data1[17:16]==2'b10;
+					htable_update <= wbs_req.data1[24];
 				end
 			default:	;
 			endcase
@@ -656,10 +669,12 @@ if (rst_i) begin
 	inv_count <= 'd0;
 	invall <= 'd0;
 	clock_r <= 1'b0;
+	htable_lookup <= 'd0;
 end
 else begin
 tlbeni  <= 1'b0;
 tlbwrr <= 'd0;
+htable_lookup <= 1'b0;
 case(state)
 	
 // Setup the last 256kB/16 pages of memory to point to the ROM BIOS.
@@ -681,7 +696,9 @@ ST_RST:
 				tlbdat_rst.pte.v <= 1'b1;
 				tlbdat_rst.pte.m <= 1'b1;
 				tlbdat_rst.pte.g <= 1'b1;
-				tlbdat_rst.pte.rwx <= 3'd7;
+				tlbdat_rst.pte.urwx <= 3'd7;
+				tlbdat_rst.pte.srwx <= 3'd7;
+				tlbdat_rst.pte.hrwx <= 3'd7;
 				//tlbdat_rst.pte.c <= 1'b1;
 				// FFFC0000
 				// 1111_1111_1111_1100_00 00_0000_0000_0000
@@ -717,6 +734,10 @@ ST_RUN:
 			wrtlb <= 'd0;
 			inv_count <= inv_count + 2'd1;
 			state <= ST_INVALL1;
+		end
+		else if (tlbmiss_irq) begin
+			htable_lookup <= 1'b1;
+			state <= ST_LOOKUP;
 		end
 	end
 ST_UPD1:
@@ -760,6 +781,25 @@ ST_INVALL4:
 		end
 		state <= ST_RUN;
 	end
+ST_LOOKUP:
+	begin
+		tlbdat_rst <= 'd0;
+		tlbdat_rst.count <= master_count;
+		//tlbdat_rst.pte.g <= 1'b1;
+		tlbdat_rst.pte.v <= 1'b1;
+		tlbdat_rst.pte.m <= htable_pte_o.m;
+		tlbdat_rst.pte.g <= htable_pte_o.g;
+		tlbdat_rst.pte.urwx <= htable_pte_o.urwx;
+		//tlbdat_rst.pte.c <= 1'b1;
+		// FFFC0000
+		// 1111_1111_1111_1100_00 00_0000_0000_0000
+		tlbdat_rst.vpn.asid <= tlbmiss_asid;
+		tlbdat_rst.vpn <= tlbmiss_adr[31:18];
+		tlbdat_rst.pte.ppn <= htable_pte_o.ppn;
+		tlbdat_rst.pte.cache <= htable_pte_o.cache;
+		if (htable_ack)
+			state <= ST_RUN;
+	end
 default:
 	state <= ST_RUN;
 endcase
@@ -776,6 +816,7 @@ usm2
 (
 	.clk(clk_g),
 	.state(state),
+	.lookup_ack(htable_ack),
 	.rcount(rcount),
 	.tlbadr_i(tlbadr_i),
 	.tlbadro(tlbadri), 
@@ -940,6 +981,31 @@ begin
 end
 endfunction
 
+always_ff @(posedge clk_g)
+	if (tlbmiss_irq) begin
+		htable_adr <= tlbmiss_adr;
+		htable_asid <= tlbmiss_asid;
+	end
+	else begin
+		htable_adr <= vpn_reg.vpn;
+		htable_asid <= vpn_reg.asid;
+		htable_pte <= pte_reg;
+	end
+
+Thor2024_htable uhtbl1
+(
+	.rst(rst_i),
+	.clk(clk2x_i),
+	.lookup(htable_lookup),
+	.update(htable_update),
+	.upte(htable_pte),
+	.asid(htable_asid),
+	.vadr(htable_adr),
+	.pte_o(htable_pte_o),
+	.ack(htable_ack),
+	.exc(htable_exc)
+);
+
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin
 //	fta_req_o <= 'd0;
@@ -1028,16 +1094,21 @@ else begin
 							if (fnCompareVPN2Address(
 								tentryo[n].vpn.vpn,
 								{{2{&iadrd[$bits(Thor2024pkg::address_t)-1:$bits(Thor2024pkg::address_t)-4]}},iadrd},
-								tentryo[n].pte.lvl
+								tentryo[n].pte.bc
 								)) begin
-								rwx <= tentryo[n].pte.rwx[omd];
+								case(omd)
+								2'd0:	rwx <= tentryo[n].pte.urwx;
+								2'd1:	rwx <= tentryo[n].pte.srwx;
+								2'd2:	rwx <= tentryo[n].pte.hrwx;
+								2'd3:	rwx <= 3'd7;
+								endcase
 								cache <= tentryo[n].pte.cache;
 								tlbmiss_irq <= FALSE;
 							  rgn <= tentryo[n].pte.rgn;
 								hit <= n;
 								fta_req.cyc <= req1.cyc;
-								fta_req.padr <= (iadrd & fnAmask(tentryo[n].pte.lvl)) |
-											  				({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.lvl));
+								fta_req.padr <= (iadrd & fnAmask(tentryo[n].pte.bc)) |
+											  				({tentryo[n].pte.ppn,{LOG_PAGE_SIZE{1'b0}}} & ~fnAmask(tentryo[n].pte.bc));
 							end
 						end
 					end
