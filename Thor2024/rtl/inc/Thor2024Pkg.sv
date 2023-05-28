@@ -121,7 +121,8 @@ typedef enum logic [3:0] {
 	ST_INVALL4 = 4'd10,
 	ST_UPD1 = 4'd11,
 	ST_UPD2 = 4'd12,
-	ST_UPD3 = 4'd13
+	ST_UPD3 = 4'd13,
+	ST_LOOKUP = 4'd14
 } tlb_state_t;
 
 typedef enum logic [6:0] {
@@ -175,6 +176,8 @@ typedef enum logic [6:0] {
 	OP_STO			= 7'd83,
 	OP_STX			= 7'd87,
 	OP_ADDIPC		= 7'd96,
+	OP_FLT2			= 7'd98,
+	OP_FLT3			= 7'd99,
 	OP_PRED			= 7'd121,
 	OP_ATOM			= 7'd122,
 	OP_PFX			= 7'd124,
@@ -939,7 +942,7 @@ typedef struct packed {
 	instruction_t op;
 	cause_code_t exc;
 	regspec_t tgt;
-	logic [33:0] a0;
+	value_t a0;
 	value_t a1;
 	logic a1_v;
 	logic [4:0] a1_s;
@@ -1196,52 +1199,52 @@ begin
 	OP_SYS:	fnSource1v = 1'b1;
 	OP_R2:
 		case(ir.r2.func)
-		FN_ADD:	fnSource1v = ir[18:13]=='d0;
-		FN_CMP:	fnSource1v = ir[18:13]=='d0;
-		FN_MUL:	fnSource1v = ir[18:13]=='d0;
-		FN_DIV:	fnSource1v = ir[18:13]=='d0;
-		FN_SUB:	fnSource1v = ir[18:13]=='d0;
-		FN_MULU: fnSource1v = ir[18:13]=='d0;
-		FN_DIVU:	fnSource1v = ir[18:13]=='d0;
-		FN_AND:	fnSource1v = ir[18:13]=='d0;
-		FN_OR:	fnSource1v = ir[18:13]=='d0;
-		FN_EOR:	fnSource1v = ir[18:13]=='d0;
-		FN_ANDC:	fnSource1v = ir[18:13]=='d0;
-		FN_NAND:	fnSource1v = ir[18:13]=='d0;
-		FN_NOR:	fnSource1v = ir[18:13]=='d0;
-		FN_ENOR:	fnSource1v = ir[18:13]=='d0;
-		FN_ORC:	fnSource1v = ir[18:13]=='d0;
-		FN_SEQ:	fnSource1v = ir[18:13]=='d0;
-		FN_SNE:	fnSource1v = ir[18:13]=='d0;
-		FN_SLT:	fnSource1v = ir[18:13]=='d0;
-		FN_SLE:	fnSource1v = ir[18:13]=='d0;
-		FN_SLTU:	fnSource1v = ir[18:13]=='d0;
-		FN_SLEU:	fnSource1v = ir[18:13]=='d0;
+		FN_ADD:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_CMP:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_MUL:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_DIV:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SUB:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_MULU: fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_DIVU:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_AND:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_OR:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_EOR:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_ANDC:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_NAND:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_NOR:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_ENOR:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_ORC:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SEQ:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SNE:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SLT:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SLE:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SLTU:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+		FN_SLEU:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 		default:	fnSource1v = 1'b1;
 		endcase
 	OP_JSR,
-	OP_ADDI:	fnSource1v = ir[18:13]=='d0;
-	OP_CMPI:	fnSource1v = ir[18:13]=='d0;
-	OP_MULI:	fnSource1v = ir[18:13]=='d0;
-	OP_DIVI:	fnSource1v = ir[18:13]=='d0;
-	OP_ANDI:	fnSource1v = ir[18:13]=='d0;
-	OP_ORI:		fnSource1v = ir[18:13]=='d0;
-	OP_EORI:	fnSource1v = ir[18:13]=='d0;
-	OP_SLTI:	fnSource1v = ir[18:13]=='d0;
-	OP_BEQ:		fnSource1v = ir[18:13]=='d0;
-	OP_BNE:		fnSource1v = ir[18:13]=='d0;
-	OP_BLT:		fnSource1v = ir[18:13]=='d0;
-	OP_BLE:		fnSource1v = ir[18:13]=='d0;
-	OP_BGT:		fnSource1v = ir[18:13]=='d0;
-	OP_BGE:		fnSource1v = ir[18:13]=='d0;
+	OP_ADDI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_CMPI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_MULI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_DIVI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_ANDI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_ORI:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_EORI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_SLTI:	fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BEQ:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BNE:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BLT:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BLE:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BGT:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
+	OP_BGE:		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
-		fnSource1v = ir[18:13]=='d0;
+		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 	OP_LDX:
-		fnSource1v = ir[18:13]=='d0;
+		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 	OP_STB,OP_STW,OP_STT,OP_STO:
-		fnSource1v = ir[18:13]=='d0;
+		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 	OP_STX:
-		fnSource1v = ir[18:13]=='d0;
+		fnSource1v = ir[18:13]=='d0 || &ir[18:13];
 	default:	fnSource1v = 1'b1;
 	endcase
 end
@@ -1254,27 +1257,27 @@ begin
 	OP_SYS:	fnSource2v = 1'b1;
 	OP_R2:
 		case(ir.r2.func)
-		FN_ADD:	fnSource2v = ir[24:19]=='d0;
-		FN_CMP:	fnSource2v = ir[24:19]=='d0;
-		FN_MUL:	fnSource2v = ir[24:19]=='d0;
-		FN_DIV:	fnSource2v = ir[24:19]=='d0;
-		FN_SUB:	fnSource2v = ir[24:19]=='d0;
-		FN_MULU: fnSource2v = ir[24:19]=='d0;
-		FN_DIVU: fnSource2v = ir[24:19]=='d0;
-		FN_AND:	fnSource2v = ir[24:19]=='d0;
-		FN_OR:	fnSource2v = ir[24:19]=='d0;
-		FN_EOR:	fnSource2v = ir[24:19]=='d0;
-		FN_ANDC:	fnSource2v = ir[24:19]=='d0;
-		FN_NAND:	fnSource2v = ir[24:19]=='d0;
-		FN_NOR:	fnSource2v = ir[24:19]=='d0;
-		FN_ENOR:	fnSource2v = ir[24:19]=='d0;
-		FN_ORC:	fnSource2v = ir[24:19]=='d0;
-		FN_SEQ:	fnSource2v = ir[24:19]=='d0;
-		FN_SNE:	fnSource2v = ir[24:19]=='d0;
-		FN_SLT:	fnSource2v = ir[24:19]=='d0;
-		FN_SLE:	fnSource2v = ir[24:19]=='d0;
-		FN_SLTU:	fnSource2v = ir[24:19]=='d0;
-		FN_SLEU:	fnSource2v = ir[24:19]=='d0;
+		FN_ADD:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_CMP:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_MUL:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_DIV:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SUB:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_MULU: fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_DIVU: fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_AND:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_OR:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_EOR:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_ANDC:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_NAND:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_NOR:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_ENOR:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_ORC:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SEQ:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SNE:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SLT:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SLE:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SLTU:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+		FN_SLEU:	fnSource2v = ir[24:19]=='d0 || &ir[24:19];
 		default:	fnSource2v = 1'b1;
 		endcase
 	OP_JSR,
@@ -1286,20 +1289,20 @@ begin
 	OP_ORI:		fnSource2v = 1'b1;
 	OP_EORI:	fnSource2v = 1'b1;
 	OP_SLTI:	fnSource2v = 1'b1;
-	OP_BEQ:		fnSource2v = ir[24:19]=='d0;
-	OP_BNE:		fnSource2v = ir[24:19]=='d0;
-	OP_BLT:		fnSource2v = ir[24:19]=='d0;
-	OP_BLE:		fnSource2v = ir[24:19]=='d0;
-	OP_BGT:		fnSource2v = ir[24:19]=='d0;
-	OP_BGE:		fnSource2v = ir[24:19]=='d0;
+	OP_BEQ:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+	OP_BNE:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+	OP_BLT:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+	OP_BLE:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+	OP_BGT:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
+	OP_BGE:		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
 		fnSource2v = 1'b1;
 	OP_LDX:
-		fnSource2v = ir[24:19]=='d0;
+		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
 	OP_STB,OP_STW,OP_STT,OP_STO:
 		fnSource2v = 1'b1;
 	OP_STX:
-		fnSource2v = ir[24:19]=='d0;
+		fnSource2v = ir[24:19]=='d0 || &ir[24:19];
 	default:	fnSource2v = 1'b1;
 	endcase
 end
@@ -1435,7 +1438,7 @@ begin
 	OP_LDX:
 		fnIsLoad = 1'b1;
 	default:
-		fnIsLoad = 1'b1;
+		fnIsLoad = 1'b0;
 	endcase
 end
 endfunction

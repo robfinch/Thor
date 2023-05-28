@@ -39,7 +39,7 @@ package Thor2024Mmupkg;
 
 `define SMALL_TLB	1'b1
 
-parameter PAGE_SIZE = 16384;
+parameter PAGE_SIZE = 65536;
 parameter ENTRIES = 1024;
 parameter LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 parameter LOG_ENTRIES = $clog2(ENTRIES);
@@ -59,11 +59,11 @@ typedef struct packed
 {
 	logic [63:12] adr;	// page table address, bits 16 to 67
 	logic [3:0] level;	// entry level of hierarchical page table
-	logic [1:0] al;	// replacement algorithm, 0=fixed,1=LRU,2=random
+	logic [1:0] al;			// replacement algorithm, 0=fixed,1=LRU,2=random
 	logic [1:0] resv2;
-	logic soft;		// 0=hardware,1=software TLB updates
+	logic sft;					// 0=hardware,1=software TLB updates
 	logic [1:0] resv1;
-	logic type;		// 0=hierarchical,1=hash
+	logic typ;					// 0=hierarchical,1=hash
 } ptbr_t;
 
 typedef struct packed
@@ -145,13 +145,13 @@ typedef struct packed
 	logic [77:0] vpn;
 } VPN;	// 96 bits
 
-// Small VPN, Virtual memory < 2^60B
+// Small VPN, Virtual memory < 2^62B
 typedef struct packed
 {
 	logic [3:0] resv4;
 	Thor2024pkg::asid_t asid;
 	logic [1:0] resv2;
-	logic [69:24] vpn;
+	logic [45:0] vpn;
 } SVPN;	// 64 bits
 
 typedef struct packed

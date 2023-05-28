@@ -47,9 +47,11 @@ parameter ASSOC = 6;	// MAX assoc = 15
 parameter LVL1_ASSOC = 1;
 parameter CHANNELS = 4;
 parameter RSTIP = 32'hFFFD0000;
-parameter PAGE_SIZE = 16384;
+parameter PAGE_SIZE = 65536;
 localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 localparam LOG_ENTRIES = $clog2(ENTRIES);
+parameter HTABLE = 1'b0;		// 1=support hash table
+parameter SMALL = 1'b1;
 
 parameter IO_ADDR = 32'hFEF00001;
 parameter IO_ADDR2 = 32'hFEEF0001;
@@ -703,8 +705,8 @@ ST_RST:
 				// FFFC0000
 				// 1111_1111_1111_1100_00 00_0000_0000_0000
 				tlbdat_rst.vpn.asid <= 'd0;
-				tlbdat_rst.vpn <= 8'hFF;
-				tlbdat_rst.pte.ppn <= {14'h3FFF,count[3:0]};
+				tlbdat_rst.vpn <= 8'h3F;
+				tlbdat_rst.pte.ppn <= {16'hFFFF,count[3:0]};
 				tlbdat_rst.pte.cache <= 'd0;//fta_bus_pkg::CACHEABLE;
 				//tlbdat_rst.ppnx <= 12'h000;
 				rcount <= {6'h3F,count[3:0]};
@@ -735,7 +737,7 @@ ST_RUN:
 			inv_count <= inv_count + 2'd1;
 			state <= ST_INVALL1;
 		end
-		else if (tlbmiss_irq) begin
+		else if (HTABLE && tlbmiss_irq) begin
 			htable_lookup <= 1'b1;
 			state <= ST_LOOKUP;
 		end
@@ -992,19 +994,27 @@ always_ff @(posedge clk_g)
 		htable_pte <= pte_reg;
 	end
 
-Thor2024_htable uhtbl1
-(
-	.rst(rst_i),
-	.clk(clk2x_i),
-	.lookup(htable_lookup),
-	.update(htable_update),
-	.upte(htable_pte),
-	.asid(htable_asid),
-	.vadr(htable_adr),
-	.pte_o(htable_pte_o),
-	.ack(htable_ack),
-	.exc(htable_exc)
-);
+generate begin : gHtable
+if (HTABLE)
+	Thor2024_htable uhtbl1
+	(
+		.rst(rst_i),
+		.clk(clk2x_i),
+		.lookup(htable_lookup),
+		.update(htable_update),
+		.upte(htable_pte),
+		.asid(htable_asid),
+		.vadr(htable_adr),
+		.pte_o(htable_pte_o),
+		.ack(htable_ack),
+		.exc(htable_exc)
+	);
+else begin
+	assign htable_ack = 1'b0;
+	assign htable_exc = 1'b0;
+end
+end
+endgenerate
 
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i) begin

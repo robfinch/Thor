@@ -37,152 +37,46 @@
 // 238 LUTs
 // ============================================================================
 
-import Thor2024Pkg::*;
+import Thor2024pkg::*;
 
-module Thor2024_decode_imm(insn, imma, immb, immc, immd, inc);
+module Thor2024_decode_imm(ins, imm);
 parameter WID=32;
-input [255:0] insn;
-output reg [WID-1:0] imma;
-output reg [WID-1:0] immb;
-output reg [WID-1:0] immc;
-output reg [WID-1:0] immd;
-output reg [5:0] inc;
+input instruction_t [4:0] ins;
+output reg [63:0] imm;
 
-reg [159:0] postfix;
+wire [63:0] imm32x64;
+
+fpCvt32To64 ucvt32x64(imm[31:0], imm32x64);
 
 always_comb
 begin
-	imma = 'd0;
-	immb = 'd0;
-	immc = 'd0;
-	immd = 'd0;
-	inc = 6'd04;
-	
-	casez(insn[7:0])
-	8'b?0000000:	begin inc = 6'd04; imma = insn[15:7]; end
-	8'b?0000100:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end
-	8'b?0000101:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end
-	8'b?0000110:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end
-	8'b?0000111:	// CSR
-		begin
-			inc = 6'd08;
-			imma = {{WID-28{insn[53]}},insn[53:31],insn[16:12]};
-			immb = {{WID-14{1'b0}},insn[30:17]};
-		end
-	8'b?00010??:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end
-	8'b?0001101:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end	// MULI
-	8'b?0001110:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end	// DIVI
-	8'b?0010101:	begin inc = 6'd04; immb = {{WID-10{insn[26]}},insn[26:17]}; end	// DIVUI
-	8'b10100000:	inc = 6'd08;
-	8'b10100001:	inc = 6'd08;
-	8'b10100010:	inc = 6'd08;
-	8'b10100110:	inc = 6'd08;
-	8'b10100111:	inc = 6'd08;
-	8'b10101???:	inc = 6'd08;
-	8'b?0110100:	begin inc = 6'd04; imma = {{WID-25{insn[31]}},insn[31:7]}; end
-	8'b?0110101:	begin inc = 6'd04; imma = {{WID-5{1'b0}},insn[11:7]}; immb = {{WID-20{insn[31]}},insn[31:12]}; end
-	8'b0011011?:	begin inc = 6'd04; imma = {{WID-19{1'b0}},insn[26:8]}; end	// PUSH / POP
-	8'b1011011?:	begin inc = 6'd08; imma = {{WID-51{1'b0}},insn[58:8]}; end
-	8'b?0111???:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end
-	8'b?1000???:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001000:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001001:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001010:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001011:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001100:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001101:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001110:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// LDx
-	8'b?1001111:	begin inc = 6'd08; immc = {{WID-24{insn[48]}},insn[48:25]}; end	// LDxX
-	8'b?1010000:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010001:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010010:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010011:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010100:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010101:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010110:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// STx
-	8'b?1010111:	begin inc = 6'd08; immc = {{WID-24{insn[48]}},insn[48:25]}; end	// STxX
-	8'b?1011101:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// DFST
-	8'b?1011110:	begin inc = 6'd04; immb = {{WID-8{insn[26]}},insn[26:19]}; end	// PSTS
-	8'b?1011111:	begin inc = 6'd08; immc = {{WID-24{insn[48]}},insn[48:25]}; end	// PSTD
-	8'b?1100001:	begin inc = 6'd08; immb = insn[48:17]; end
-	8'b?1100011:	inc = 6'd08;
-	8'b?1100111:	inc = 6'd08;
-	8'b?1101000:	inc = 6'd08;
-	8'b?1101001:	begin inc = 6'd08; immb = insn[48:17]; end	// PSTI
-	8'b?1101011:	begin inc = 6'd08; immb = insn[48:17]; end	// PST3
-	8'b?1110000:	begin inc = 6'd04; imma = insn[18:7]; end		// IRQ
-	8'b?1110001:	begin inc = 6'd04; imma = insn[26:11]; end	// STOP
-	8'b?1110011:	begin inc = 6'd04; imma = insn[26:12]; end	// PFI
-	8'b?1110101:	begin inc = 6'd08; imma = insn[63:9]; end		// REGS
-	8'b?1111000:	begin inc = 6'd04; imma = insn[25:14]; end	// REP
-	8'b?1111001:	begin inc = 6'd04; imma = insn[25:12]; end	// PRED
-	8'b11111100:	inc = 6'd08;
-	8'b11111101:	inc = 6'd16;
-	8'b11111110:	inc = 6'd20;
-	8'b?1111111:	inc = 6'd04;
-	default:	inc = 6'd04;
+	imm = 'd0;
+	case(ins[0].any.opcode)
+	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
+		imm = {{48{ins[0][34]}},ins[0][34:19]};
+	OP_ANDI:	imm = {48'hFFFFFFFFFFFF,ins[0][34:19]};
+	OP_ORI,OP_EORI:
+		imm = {48'h0000,ins[0][34:19]};
+	OP_RTD:	imm = {{16{ins[0][34]}},ins[0][34:19]};
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
+	OP_STB,OP_STW,OP_STT,OP_STO:
+		imm = {{50{ins[0][34]}},ins[0][34:21]};
+	OP_ADDIPC:
+		imm = {{42{ins[0][34]}},ins[0][34:13]};
+	default:
+		imm = 'd0;
 	endcase
-	
-	postfix = insn >> {inc,3'd0};
-
-	case(postfix[7:0])
-	// PFX22
-	8'b01111100:
-		begin
-			inc = inc + 6'd4;
-			case(postfix[9:8])
-			2'b00:	imma = postfix[31:10];
-			2'b01:	immb = postfix[31:10];
-			2'b10:	immc = postfix[31:10];
-			2'b11:	immd = postfix[31:10];
-			endcase
-		end
-	// PFX54
-	8'b11111100:
-		begin
-			inc = inc + 6'd8;
-			case(postfix[9:8])
-			2'b00:	imma = postfix[63:10];
-			2'b01:	immb = postfix[63:10];
-			2'b10:	immc = postfix[63:10];
-			2'b11:	immd = postfix[63:10];
-			endcase
-		end
-	// PFX86
-	8'b01111101:
-		begin
-			inc = inc + 6'd12;
-			case(postfix[9:8])
-			2'b00:	imma = postfix[95:10];
-			2'b01:	immb = postfix[95:10];
-			2'b10:	immc = postfix[95:10];
-			2'b11:	immd = postfix[95:10];
-			endcase
-		end
-	// PFX118
-	8'b11111101:
-		begin
-			inc = inc + 6'd16;
-			case(postfix[9:8])
-			2'b00:	imma = postfix[127:10];
-			2'b01:	immb = postfix[127:10];
-			2'b10:	immc = postfix[127:10];
-			2'b11:	immd = postfix[127:10];
-			endcase
-		end
-	// PFX150
-	8'b01111110:
-		begin
-			inc = inc + 6'd20;
-			case(postfix[9:8])
-			2'b00:	imma = postfix[159:10];
-			2'b01:	immb = postfix[159:10];
-			2'b10:	immc = postfix[159:10];
-			2'b11:	immd = postfix[159:10];
-			endcase
-		end
+	if (ins[1].any.opcode==OP_PFX) begin
+		imm = {{32{ins[1][39]}},ins[1][39:8]};
+		if (ins[2].any.opcode==OP_PFX)
+			imm[63:32] = ins[2][39:8];
+	end
+	case(ins[0].any.opcode)
+	OP_FLT2,OP_FLT3:
+		if (ins[1].any.opcode==OP_PFX && ins[2].any.opcode!=OP_PFX)
+			imm = imm32x64;
+	default:	;
 	endcase
-		
 end
 
 endmodule

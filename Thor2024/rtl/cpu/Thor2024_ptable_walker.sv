@@ -119,6 +119,9 @@ typedef struct packed
 } rootptr_t;
 
 ptbr_t ptbr;
+wire sack;
+reg [63:0] fault_adr;
+asid_t fault_asid;
 reg tlbmiss_ip;		// miss processing in progress.
 reg hit, fault;
 reg upd_req;
@@ -130,7 +133,7 @@ reg [31:0] miss_adr = miss_stack[miss_sp].adr;
 reg [7:0] miss_asid = miss_stack[miss_sp].asid;
 reg wr1,wr2;
 reg [1:0] stk;
-reg [31:0] stlb_adr;
+reg [63:0] stlb_adr;
 reg [10:0] addrb;
 
 rootptr_t root_ptrs, root_ptrs2;
@@ -269,6 +272,11 @@ wire [127:0] cfg_out;
 
 always_ff @(posedge clk)
 	sreq <= ftas_req;
+always_ff @(posedge clk)
+begin
+	ftas_resp <= sresp;
+	ftas_resp.ack <= sack;
+end
 
 always_ff @(posedge clk)
 	cs_config <= ftas_req.cyc && ftas_req.stb &&
@@ -280,7 +288,7 @@ always_ff @(posedge clk)
 always_comb
 	cs_hwtw <= cs_tw && sreq.cyc && sreq.stb;
 
-vtdl #(.WID(1), .DEP(16)) urdyd1 (.clk(clk_i), .ce(1'b1), .a(4'd1), .d(cs_hwtw|cs_config), .q(sresp.ack));
+vtdl #(.WID(1), .DEP(16)) urdyd1 (.clk(clk_i), .ce(1'b1), .a(4'd1), .d(cs_hwtw|cs_config), .q(sack));
 
 pci128_config #(
 	.CFG_BUS(CFG_BUS),
@@ -324,30 +332,32 @@ upci
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-	stlb_adr <= 32'hFEF00000;
+	stlb_adr <= 64'h0FEF00000;
 end
 else begin
 	if (cs_hwtw && sreq.we)
-		casez(sreq.adr[15:0])
+		casez(sreq.padr[15:0])
 		16'hFF20:	ptbr <= sreq.data1[63:0];
+		16'hFF30: stlb_adr <= sreq.data1[63:0];
 		default:	;
 		endcase
 end
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-	sresp.dat <= 'd0;
+	sresp <= 'd0;
 end
 else begin
 	if (cs_config)
 		sresp.dat <= cfg_out;
 	else if (cs_hwtw) begin
 		sresp.dat <= 'd0;
-		casez(sreq.adr[15:0])
+		casez(sreq.padr[15:0])
 		16'b00??????????????:	sresp.dat <= {root_ptrs.ptr,16'd0};
 		16'hFF00:	sresp.dat[63: 0] <= fault_adr;
-		16'bFF10:	sresp.dat[59:48] <= fault_asid;
-		16'bFF20:	sresp.dat[63: 0] <= ptbr;
+		16'hFF10:	sresp.dat[59:48] <= fault_asid;
+		16'hFF20:	sresp.dat[63: 0] <= ptbr;
+		16'hFF30: sresp.dat[63: 0] <= stlb_adr;
 		default:	sresp.dat <= 'd0;
 		endcase
 	end
@@ -370,6 +380,7 @@ always_ff @(posedge clk)
 if (rst) begin
 	tlbmiss_ip <= 'd0;
 	miss_sp <= 'd0;
+	ftam_req <= 'd0;
 	ftam_req.cid <= CID;
 	ftam_req.bte <= fta_bus_pkg::LINEAR;
 	ftam_req.cti <= fta_bus_pkg::CLASSIC;

@@ -108,7 +108,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11;
 genvar g;
 
 wire value_t [AREGS-1:0] rf;
@@ -122,6 +122,8 @@ reg  [3:0] panic;		// indexes the message structure
 reg [128:0] message [0:15];	// indexed by panic
 
 typedef logic [QENTRIES-1:0] que_bitmask_t;
+
+wire [63:0] dec_imm0, dec_imm1;
 
 reg [7:0] atom_mask;
 reg [5:0] postfix_mask;
@@ -380,15 +382,16 @@ end
 endgenerate
 
 // Get the valid slice.
-always_comb
+initial begin
 for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
 	iq_v[n5] = iq[n5].v;
-
-    initial begin: stop_at
-	#1000000; panic <= `PANIC_OVERRUN;
-    end
-
-    initial begin: Init
+end
+/*
+initial begin: stop_at
+	#1000000; panic = `PANIC_OVERRUN;
+end
+*/
+initial begin: Init
 	integer i;
 
 /*
@@ -399,25 +402,7 @@ for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
 	for (i=0; i<QENTRIES; i=i+1) begin
 	  iq[i].v = INV;
 	end
-	head0 = 0;
-	head1 = 1;
-	head2 = 2;
-	head3 = 3;
-	head4 = 4;
-	head5 = 5;
-	head6 = 6;
-	head7 = 7;
-	panic = `PANIC_NONE;
-	alu0_available = 1;
-	alu0_dataready = 0;
-	alu1_available = 1;
-	alu1_dataready = 0;
-	dram_v0 = 0;
-	dram_v1 = 0;
-	I = 0;
 
-	dram0 = 0;
-	dram1 = 0;
 //	dram2 = 0;
 
 	//
@@ -434,7 +419,8 @@ for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
 	message[ `PANIC_BRANCHBACK ]		= "BRANCHBACK      ";
 	message[ `PANIC_MEMORYRACE ]		= "MEMORYRACE      ";
 
-    end
+end
+
 address_t pco;
 wire ihito,ihit;
 
@@ -572,6 +558,18 @@ Thor2024_ifetch uif1
 	.fetchbuf1_instr(fetchbuf1_instr),
 	.fetchbuf1_v(fetchbuf1_v),
 	.fetchbuf1_pc(fetchbuf1_pc)
+);
+
+Thor2024_decode_imm udeci0
+(
+	.ins(fetchbuf0_instr),
+	.imm(dec_imm0)
+);
+
+Thor2024_decode_imm udeci1
+(
+	.ins(fetchbuf1_instr),
+	.imm(dec_imm1)
 );
 
 assign fetchbuf0_mem = fnIsMem(fetchbuf0_instr[0]);
@@ -1596,11 +1594,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].rfw    <=   fetchbuf1_rfw;
 				iq[tail0].tgt <= Rt1;
 				iq[tail0].exc <= FLT_NONE;
-				iq[tail0].a0 <= fnImm(fetchbuf1_instr);
-				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, fnImm(fetchbuf1_instr));
+				iq[tail0].a0 <= dec_imm1;
+				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, dec_imm1);
 				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) | rf_v[ Ra1 ];
 				iq[tail0].a1_s <= rf_source [ Ra1 ];
-				iq[tail0].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, fnImm(fetchbuf1_instr));
+				iq[tail0].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
 				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) | rf_v[ Rb1 ];
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
 				iq[tail0].a3 <= rf [ Rc1 ];
@@ -1658,11 +1656,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].rfw <= fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 					iq[tail0].exc    <=	FLT_NONE;
-					iq[tail0].a0	<=	fnImm(fetchbuf0_instr);
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, fnImm(fetchbuf0_instr));
+					iq[tail0].a0	<=	dec_imm0;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, fnImm(fetchbuf0_instr));
+					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1718,11 +1716,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].rfw    <=	fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=	FLT_NONE;
-			    iq[tail0].a0 <= fnImm(fetchbuf0_instr);
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, fnImm(fetchbuf0_instr));
+			    iq[tail0].a0 <= dec_imm0;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, fnImm(fetchbuf0_instr));
+					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1785,11 +1783,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].rfw    <=   fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=   FLT_NONE;
-			    iq[tail0].a0 <= fnImm(fetchbuf0_instr);
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, fnImm(fetchbuf0_instr));
+			    iq[tail0].a0 <= dec_imm0;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, fnImm(fetchbuf0_instr));
+					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1841,9 +1839,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						iq[tail1].rfw    <=   fetchbuf1_rfw;
 						iq[tail1].tgt <= Rt1;
 						iq[tail1].exc <= FLT_NONE;
-						iq[tail1].a0 <= fnImm(fetchbuf1_instr);
-						iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, fnImm(fetchbuf1_instr));
-						iq[tail1].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, fnImm(fetchbuf1_instr));
+						iq[tail1].a0 <= dec_imm1;
+						iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, dec_imm1);
+						iq[tail1].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
 						iq[tail1].a3 <= rf [ Rc1 ];
 						iq[tail1].at <= rf [ Rt1 ];
 						iq[tail1].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
@@ -2273,17 +2271,15 @@ fcu_dataready <= fcu_available
 						alu0_div <= iq[n1].div;
 						alu0_pc <= iq[n1].pc;
 						alu0_argA	<= 
-										iq[n1].a0[1:0]==2'b00 ? iq[n1].a0[33:2]
-										: iq[n1].a1_v ? iq[n1].a1
+										  iq[n1].a1_v ? iq[n1].a1
 								    : (iq[n1].a1_s == alu0_id) ? alu0_bus
 								    : (iq[n1].a1_s == alu1_id) ? alu1_bus
 								    : 32'hDEADBEEF;
 						alu0_argB	<= 
-										iq[n1].a0[1:0]==2'b01 ? iq[n1].a0[33:2]
-								    : (iq[n1].a2_v ? iq[n1].a2
+								       iq[n1].a2_v ? iq[n1].a2
 										: (iq[n1].a2_s == alu0_id) ? alu0_bus
 										: (iq[n1].a2_s == alu1_id) ? alu1_bus
-										: 32'hDEADBEEF);
+										: 32'hDEADBEEF;
 						alu0_argC	<= 
 								      (iq[n1].a3_v ? iq[n1].a3
 										: (iq[n1].a3_s == alu0_id) ? alu0_bus
@@ -2299,7 +2295,7 @@ fcu_dataready <= fcu_available
 										: (iq[n1].ap_s == alu0_id) ? alu0_bus
 										: (iq[n1].ap_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
-						alu0_argI	<= iq[n1].a0[33:2];
+						alu0_argI	<= iq[n1].a0;
 			    end
 				2'd1:
 					if (alu1_available) begin
@@ -2308,14 +2304,12 @@ fcu_dataready <= fcu_available
 						alu1_div <= iq[n1].div;
 						alu1_pc <= iq[n1].pc;
 						alu1_argA	<= 
-										iq[n1].a0[1:0]==2'b00 ? iq[n1].a0[33:2]
-										: iq[n1].a1_v ? iq[n1].a1
+										  iq[n1].a1_v ? iq[n1].a1
 								    : (iq[n1].a1_s == alu0_id) ? alu0_bus
 								    : (iq[n1].a1_s == alu1_id) ? alu1_bus
 								    : 32'hDEADBEEF;
 						alu1_argB	<= 
-										iq[n1].a0[1:0]==2'b01 ? iq[n1].a0[33:2]
-								    : (iq[n1].a2_v ? iq[n1].a2
+								      (iq[n1].a2_v ? iq[n1].a2
 										: (iq[n1].a2_s == alu0_id) ? alu0_bus
 										: (iq[n1].a2_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
@@ -2334,7 +2328,7 @@ fcu_dataready <= fcu_available
 										: (iq[n1].ap_s == alu0_id) ? alu0_bus
 										: (iq[n1].ap_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
-						alu1_argI	<= iq[n1].a0[33:2];
+						alu1_argI	<= iq[n1].a0;
 			    end
 				default: panic <= `PANIC_INVALIDISLOT;
 		    endcase
@@ -2352,14 +2346,12 @@ fcu_dataready <= fcu_available
 					fcu_bt		<= iq[n1].bt;
 					fcu_pc		<= iq[n1].pc;
 					fcu_argA	<= 
-									iq[n1].a0[1:0]==2'b00 ? iq[n1].a0[33:2]
-									: iq[n1].a1_v ? iq[n1].a1
+									  iq[n1].a1_v ? iq[n1].a1
 							    : (iq[n1].a1_s == alu0_id) ? alu0_bus
 							    : (iq[n1].a1_s == alu1_id) ? alu1_bus
 							    : 32'hDEADBEEF;
 					fcu_argB	<= 
-									iq[n1].a0[1:0]==2'b01 ? iq[n1].a0[33:2]
-							    : (iq[n1].a2_v ? iq[n1].a2
+							      (iq[n1].a2_v ? iq[n1].a2
 									: (iq[n1].a2_s == alu0_id) ? alu0_bus
 									: (iq[n1].a2_s == alu1_id) ? alu1_bus
 									: 32'hDEADBEEF);
@@ -2368,7 +2360,7 @@ fcu_dataready <= fcu_available
 									: (iq[n1].a3_s == alu0_id) ? alu0_bus
 									: (iq[n1].a3_s == alu1_id) ? alu1_bus
 									: 32'hDEADBEEF);
-					fcu_argI	<= iq[n1].a0[33:2];
+					fcu_argI	<= iq[n1].a0;
 		    end
 		  end
 		end
@@ -2832,13 +2824,13 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr, uif1.fetchbufD_pc);
 
 	for (i=0; i<8; i=i+1) 
-	    $display("%c%c %d: %d %d %d %d %d %d %d %d %d %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
+	    $display("%c%c %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
 		(i[2:0]==head0)?72:46, (i[2:0]==tail0)?84:46, i,
-		iq[i].v, iq[i].done, iq[i].out, iq[i].bt, iqentry_memissue[i], iq[i].agen, iqentry_issue[i],
+		iq[i].v?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue[i]?"i":"-",
 		((i==0) ? iqentry_islot[0] : (i==1) ? iqentry_islot[1] : (i==2) ? iqentry_islot[2] : (i==3) ? iqentry_islot[3] :
-		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i],
-		(fnIsFlowCtrl(iq[i].op) ? 98 : (iq[i].load || iq[i].store) ? 109 : 97), 
-		iq[i].op, iq[i].tgt, iq[i].exc, iq[i].res, iq[i].a0, iq[i].a1, iq[i].a1_v,
+		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
+		(fnIsFlowCtrl(iq[i].op) ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
+		iq[i].op.any.opcode, iq[i].tgt, iq[i].exc, iq[i].res, iq[i].a0, iq[i].a1, iq[i].a1_v,
 		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].pc);
 
 	$display("%d %h %h %c%d %o #",
@@ -2969,10 +2961,37 @@ always_ff @(posedge clk) begin: clock_n_debug
 
 task tReset;
 begin
+	ip_asid <= 'd0;
 	atom_mask <= 'd0;
 	postfix_mask <= 'd0;
 	pred_mask <= 28'hFFFFFFF;
 	pred_val <= 1'b1;
+	dram0 <= 'd0;
+	dram1 <= 'd0;
+	dram_v0 <= 'd0;
+	dram_v1 <= 'd0;
+	head0 <= 'd0;
+	head1 <= 1;
+	head2 <= 2;
+	head3 <= 3;
+	head4 <= 4;
+	head5 <= 5;
+	head6 <= 6;
+	head7 <= 7;
+	panic <= `PANIC_NONE;
+	alu0_available <= 1;
+	alu0_dataready <= 0;
+	alu1_available <= 1;
+	alu1_dataready <= 0;
+	for (n11 = 0; n11 < NDATA_PORTS; n11 = n11 + 1) begin
+		dramN[n11] <= 'd0;
+		dramN_load[n11] <= 'd0;
+		dramN_store[n11] <= 'd0;
+		dramN_addr[n11] <= 'd0;
+		dramN_data[n11] <= 'd0;
+		dramN_ack[n11] <= 'd0;
+	end
+	I <= 0;
 end
 endtask
 

@@ -83,8 +83,13 @@ wire [31:0] pit_irq;
 wire pic_ack,pit_ack;
 wire [31:0] pic_dato;
 wire [63:0] pit_dato;
+wire [31:0] page_fault;
 fta_cmd_request32_t wbm32_req;
 fta_cmd_request64_t wbm64_req;
+fta_cmd_response128_t [3:0] resp_ch;
+fta_cmd_response128_t pwalk_resp;
+fta_cmd_request128_t pwalk_mreq;
+fta_cmd_response128_t pwalk_mresp;
 fta_cmd_response32_t pic_resp;
 fta_cmd_response128_t pic128_resp;
 fta_cmd_response64_t pit_resp;
@@ -98,6 +103,18 @@ fta_cmd_request128_t cpu2_ireq;
 fta_cmd_response128_t cpu2_iresp;
 fta_cmd_request128_t [NDATA_PORTS-1:0] cpu2_dreq;
 fta_cmd_response128_t [NDATA_PORTS-1:0] cpu2_dresp;
+
+Thor2024_ptable_walker uwalker1
+(
+	.rst(rst_i),
+	.clk(clk_i),
+	.tlbmiss(tlbmiss_irq),
+	.ftas_req(ftam_req),
+	.ftas_resp(pwalk_resp),
+	.ftam_req(pwalk_mreq),
+	.ftam_resp(pwalk_mresp),
+	.fault_o(page_fault)
+);
 
 Thor2024_stlb
 #(
@@ -326,8 +343,10 @@ always_comb wbn_req[1] = cpu1_dreq[0];
 always_comb cpu1_dresp[0] = wbn_resp[1];
 always_comb wbn_req[2] = cpu1_dreq[1];
 always_comb cpu1_dresp[1] = wbn_resp[2];
-always_comb wbn_req[3] = cpu1_dreq[2];
-always_comb cpu1_dresp[2] = wbn_resp[3];
+//always_comb wbn_req[3] = cpu1_dreq[2];
+//always_comb cpu1_dresp[2] = wbn_resp[3];
+always_comb wbn_req[4] = pwalk_mreq;
+always_comb pwalk_mresp = wbn_resp[4];
 /*
 always_comb wbn_req[4] = cpu2_ireq;
 always_comb cpu2_iresp = wbn_resp[4];
@@ -338,7 +357,7 @@ always_comb cpu2_dresp[1] = wbn_resp[6];
 always_comb wbn_req[7] = cpu2_dreq[2];
 always_comb cpu2_dresp[2] = wbn_resp[7];
 */
-always_comb wbn_req[4] = 'd0;
+always_comb wbn_req[3] = 'd0;
 always_comb wbn_req[5] = 'd0;
 always_comb wbn_req[6] = 'd0;
 always_comb wbn_req[7] = 'd0;
@@ -346,15 +365,24 @@ always_comb wbn_req[7] = 'd0;
 always_comb cpu2_iresp = wbn_resp[2];
 always_comb cpu2_dresp = wbn_resp[3];
 */
-always_comb
-	if (pic_ack)
-		wb128_resp = pic128_resp;
-	else if (pit_ack)
-		wb128_resp = pit128_resp;
-	else
-		wb128_resp = ftam_resp;
+
+
+fta_respbuf 
+#(.CHANNELS(4))
+urb1
+(
+	.rst(rst_i),
+	.clk(clk_i),
+	.resp(resp_ch),
+	.resp_o(wb128_resp)
+);
+
+assign resp_ch[0] = pic128_resp;
+assign resp_ch[1] = pit128_resp;
+assign resp_ch[2] = pwalk_resp;
+assign resp_ch[3] = ftam_resp;
 
 always_comb
-	iirq = irq_bus|pit_irq|tlbmiss_irq;
+	iirq = irq_bus|pit_irq|tlbmiss_irq|page_fault;
 
 endmodule

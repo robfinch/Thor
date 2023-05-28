@@ -75,13 +75,6 @@ reg [WID:0] r;
 reg b0;
 wire [WID-1:0] r1 = b0 ? r - bb : r;
 
-initial begin
-  q = 'd0;
-  r = 'd0;
-  qo = 'd0;
-  ro = 'd0;
-end
-
 reg ld1;
 reg sgn1,sgnus1;
 value_t a1, b1;
