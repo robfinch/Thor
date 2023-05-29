@@ -353,10 +353,16 @@ wire commit0_v;
 wire [4:0] commit0_id;
 regspec_t commit0_tgt;
 value_t commit0_bus;
+address_t commit_pc0;
+reg commit_takb0;
+address_t commit_brtgt0;
 wire commit1_v;
 wire [4:0] commit1_id;
 regspec_t commit1_tgt;
 value_t commit1_bus;
+address_t commit_pc1;
+reg commit_takb1;
+address_t commit_brtgt1;
 wire int_commit;
 
 // CSRs
@@ -526,6 +532,9 @@ always_comb
 // unless either one of the buffers is still full, in which case we
 // do nothing (kinda like alpha approach)
 //
+
+address_t next_pc;
+wire ntakb,ptakb;
 reg invce = 1'b0;
 reg dc_invline = 1'b0;
 reg dc_invall = 1'b0;
@@ -582,6 +591,22 @@ Thor2024_icache_ctrl icctrl1
 	.snoop_cid(snoop_cid)
 );
 
+Thor2024_btb ubtb1
+(
+	.rst(rst),
+	.clk(clk),
+	.rclk(~clk),
+	.pc(pc),
+	.next_pc(next_pc),
+	.takb(ntakb),
+	.commit_pc0(commit_pc0),
+	.commit_brtgt0(commit_brtgt0),
+	.commit_takb0(commit_takb0),
+	.commit_pc1(commit_pc1),
+	.commit_brtgt1(commit_brtgt1),
+	.commit_takb1(commit_takb1)
+);
+
 Thor2024_ifetch uif1
 (
 	.rst(rst),
@@ -592,6 +617,9 @@ Thor2024_ifetch uif1
 	.backpc(backpc),
 	.branchmiss(branchmiss),
 	.misspc(misspc),
+	.next_pc(next_pc),
+	.takb(ntakb),
+	.ptakb(ptakb),
 	.pc(pc),
 	.pc_i(pco),
 	.stall(istall),
@@ -1519,6 +1547,24 @@ Thor2024_alu ualu1
     assign  fcu_v = fcu_dataready;
     assign  fcu_id = fcu_sourceid;
 
+address_t tgtpc;
+
+always_comb
+	if (fnIsBccR(fcu_instr))
+		tgtpc = fcu_argC + fcu_argI;
+	else if (fnIsBranch(fcu_instr))
+		tgtpc = fcu_pc + fcu_argI;
+	else if (fnIsCall(fcu_instr)) begin
+		if (fcu_instr[7:6]==2'd3)
+			tgtpc = fcu_argI;
+		else
+			tgtpc = fcu_pc + fcu_argI;
+	end
+	else if (fnIsRet(fcu_instr))
+		tgtpc = fcu_argC + fcu_instr[15:8];
+	else
+		tgtpc = 32'hFFFD0000;
+
 always_comb
 	if (fnIsBccR(fcu_instr))
 		fcu_misspc = fcu_bt ? fcu_pc + 4'd4 : fcu_argC + fcu_argI;
@@ -1650,7 +1696,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].out    <=   INV;
 				iq[tail0].res    <=   `ZERO;
 				iq[tail0].op    <=   fetchbuf1_instr[0]; 
-				iq[tail0].bt    <=   (fnIsBranch(fetchbuf1_instr[0])	&& fnBranchDispSign(fetchbuf1_instr[0])); 
+				iq[tail0].bt    <=   ((fnIsBranch(fetchbuf1_instr[0])	&& fnBranchDispSign(fetchbuf1_instr[0]))) | ptakb; 
 				iq[tail0].agen    <=   INV;
 				iq[tail0].pc    <=   fetchbuf1_pc;
 				iq[tail0].imm <= fnIsImm(fetchbuf1_instr[0]);
@@ -1669,6 +1715,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].rfw    <=   fetchbuf1_rfw;
 				iq[tail0].tgt <= Rt1;
 				iq[tail0].exc <= FLT_NONE;
+				iq[tail0].takb <= 1'b0;
+				iq[tail0].brtgt <= 'd0;
 				iq[tail0].a0 <= dec_imm1;
 				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], fetchbuf1_pc, Ra1, dec_imm1);
 				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) | rf_v[ Ra1 ];
@@ -1732,6 +1780,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].rfw <= fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 					iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
 					iq[tail0].a0	<=	dec_imm0;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
@@ -1793,6 +1843,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].rfw    <=	fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
 			    iq[tail0].a0 <= dec_imm0;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
@@ -1842,7 +1894,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
 			    iq[tail0].op    <=   fetchbuf0_instr[0]; 
-			    iq[tail0].bt    <=   INV;
+			    iq[tail0].bt    <=   ptakb;
 			    iq[tail0].agen    <=   INV;
 			    iq[tail0].pc    <=   fetchbuf0_pc;
 					iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
@@ -1861,6 +1913,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].rfw    <=   fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=   FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
 			    iq[tail0].a0 <= dec_imm0;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
@@ -1899,7 +1953,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						iq[tail1].out    <=   INV;
 						iq[tail1].res    <=   `ZERO;
 						iq[tail1].op    <=   fetchbuf1_instr[0]; 
-						iq[tail1].bt    <=   (fnIsBackBranch(fetchbuf1_instr[0])); 
+						iq[tail1].bt    <=   (fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
 						iq[tail1].agen    <=   INV;
 						iq[tail1].pc    <=   fetchbuf1_pc;
 						iq[tail1].imm <= fnIsImm(fetchbuf1_instr[0]);
@@ -1918,6 +1972,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						iq[tail1].rfw    <=   fetchbuf1_rfw;
 						iq[tail1].tgt <= Rt1;
 						iq[tail1].exc <= FLT_NONE;
+						iq[tail1].takb <= 1'b0;
+						iq[tail1].brtgt <= 'd0;
 						iq[tail1].a0 <= dec_imm1;
 						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], fetchbuf1_pc, Ra1, dec_imm1);
 						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
@@ -2103,6 +2159,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
     iq[ fcu_id[2:0] ].done <= VAL;
     iq[ fcu_id[2:0] ].out <= INV;
     iq[ fcu_id[2:0] ].agen <= VAL;
+    iq[ fcu_id[2:0] ].takb <= takb;
+    iq[ fcu_id[2:0] ].brtgt <= tgtpc;
 	end
 	if (dram_v0 && iq[ dram_id0[2:0] ].v && iq[ dram_id0[2:0] ].mem ) begin	// if data for stomped instruction, ignore
     iq[ dram_id0[2:0] ].res <= dram_bus0;
@@ -2890,6 +2948,13 @@ assign commit1_tgt = iq[head1].tgt;
 
 assign commit0_bus = iq[head0].res;
 assign commit1_bus = iq[head1].res;
+
+assign commit_pc0 = iq[head0].pc;
+assign commit_pc1 = iq[head1].pc;
+assign commit_brtgt0 = iq[head0].brtgt;
+assign commit_brtgt1 = iq[head1].brtgt;
+assign commit_takb0 =iq[head0].takb;
+assign commit_takb1 =iq[head1].takb;
 
 assign int_commit = (commit0_v && fnIsIrq(iq[head0].op)) ||
                     (commit0_v && commit1_v && fnIsIrq(iq[head1].op));

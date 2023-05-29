@@ -1,7 +1,7 @@
 import Thor2024pkg::*;
 
 module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc,
-	pc, pc_i, stall, inst0, inst1, iq, tail0, tail1,
+	next_pc, takb, ptakb, pc, pc_i, stall, inst0, inst1, iq, tail0, tail1,
 	fetchbuf, fetchbuf0_instr, fetchbuf0_v, fetchbuf0_pc, 
 	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc);
 input rst;
@@ -12,6 +12,9 @@ input branchback;
 input address_t backpc;
 input branchmiss;
 input address_t misspc;
+input address_t next_pc;
+input takb;
+output reg ptakb;
 output address_t pc;
 input address_t pc_i;
 output reg stall;
@@ -35,6 +38,7 @@ reg fetchbufB_v;
 reg fetchbufC_v;
 reg fetchbufD_v;
 reg hitd;
+address_t ppc;
 
 instruction_t [4:0] inst0a;
 instruction_t [4:0] inst1a;
@@ -46,10 +50,13 @@ address_t fetchbufA_pc;
 address_t fetchbufB_pc;
 address_t fetchbufC_pc;
 address_t fetchbufD_pc;
+reg takb1;
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	pc <= 32'hFFFD0000;
+	ppc <= 32'hFFFD0000;
+	ptakb <= 'd0;
 	stall <= 1'b0;
 	hitd <= 1'b0;
 	did_branchback <= 'd0;
@@ -542,13 +549,16 @@ begin
   fetchbufB_instr <= inst1;
   fetchbufB_v <= VAL;
   fetchbufB_pc <= pc_i + INSN_LEN;
+  ptakb <= takb1;
   if (hit & ~irq) begin
-	  pc <= pc + INSN_LEN * 2;
+  	ppc <= pc;
+	  pc <= next_pc;
+	  takb1 <= takb;
 	  hitd <= 1'b1;
 	end
 	else begin
   	if (hitd & !(hit & ~irq))
-  		pc <= pc - INSN_LEN * 2;
+  		pc <= ppc;
 		hitd <= 1'b0;
 	end
 end
@@ -562,13 +572,16 @@ begin
   fetchbufD_instr <= inst1;
   fetchbufD_v <= VAL;
   fetchbufD_pc <= pc_i + INSN_LEN;
+  ptakb <= takb1;
   if (hit & ~irq) begin
-	  pc <= pc + INSN_LEN * 2;
+  	ppc <= pc;
+	  pc <= next_pc;
+	  takb1 <= takb;
 	  hitd <= 1'b1;
   end
   else begin
   	if (hitd & !(hit & ~irq))
-  		pc <= pc - INSN_LEN * 2;
+  		pc <= ppc;
   	hitd <= 1'b0;
   end
 end
