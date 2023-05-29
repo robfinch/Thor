@@ -1057,6 +1057,7 @@ else begin
 	fta_req.om <= req1.om;
 	fta_req.cid <= req1.cid;
 	fta_req.tid <= req1.tid;
+	fta_req.cmd <= req1.cmd;
 	fta_req.seg <= req1.seg;
 	fta_req.cti <= req1.cti;
 	fta_req.cyc <= 1'b0;

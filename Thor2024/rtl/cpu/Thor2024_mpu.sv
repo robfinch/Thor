@@ -281,6 +281,7 @@ ucpu1
 	.adr_o(),
 	.dat_i('d0),
 	.dat_o(),
+	.irq_i(pic_irq[2:0]),
 	.ftaim_req(cpu1_ireq),
 	.ftaim_resp(cpu1_iresp),
 	.ftadm_req(cpu1_dreq),

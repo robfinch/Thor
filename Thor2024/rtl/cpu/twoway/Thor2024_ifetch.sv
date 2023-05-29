@@ -1,7 +1,7 @@
 import Thor2024pkg::*;
 
 module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc,
-	pc, inst0, inst1, iq, tail0, tail1,
+	pc, pc_i, stall, inst0, inst1, iq, tail0, tail1,
 	fetchbuf, fetchbuf0_instr, fetchbuf0_v, fetchbuf0_pc, 
 	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc);
 input rst;
@@ -13,6 +13,8 @@ input address_t backpc;
 input branchmiss;
 input address_t misspc;
 output address_t pc;
+input address_t pc_i;
+output reg stall;
 input instruction_t [4:0] inst0;
 input instruction_t [4:0] inst1;
 input iq_entry_t [7:0] iq;
@@ -32,11 +34,14 @@ reg fetchbufA_v;
 reg fetchbufB_v;
 reg fetchbufC_v;
 reg fetchbufD_v;
+reg hitd;
 
-instruction_t fetchbufA_instr;
-instruction_t fetchbufB_instr;
-instruction_t fetchbufC_instr;
-instruction_t fetchbufD_instr;
+instruction_t [4:0] inst0a;
+instruction_t [4:0] inst1a;
+instruction_t [4:0] fetchbufA_instr;
+instruction_t [4:0] fetchbufB_instr;
+instruction_t [4:0] fetchbufC_instr;
+instruction_t [4:0] fetchbufD_instr;
 address_t fetchbufA_pc;
 address_t fetchbufB_pc;
 address_t fetchbufC_pc;
@@ -45,6 +50,8 @@ address_t fetchbufD_pc;
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	pc <= 32'hFFFD0000;
+	stall <= 1'b0;
+	hitd <= 1'b0;
 	did_branchback <= 'd0;
 	fetchbuf <= 'd0;
 	fetchbufA_v <= INV;
@@ -63,6 +70,7 @@ end
 else begin
 
 	did_branchback <= branchback;
+	stall <= 1'b0;
 
 	if (branchmiss) begin
     pc <= misspc;
@@ -508,6 +516,8 @@ else begin
     end
     else if (fetchbufC_v == INV && fetchbufD_v == INV)
     	tFetchCD();
+    else
+    	stall <= 1'b1;
 	end
 end
 
@@ -528,12 +538,19 @@ task tFetchAB;
 begin
   fetchbufA_instr <= inst0;
   fetchbufA_v <= VAL;
-  fetchbufA_pc <= pc;
+  fetchbufA_pc <= pc_i;
   fetchbufB_instr <= inst1;
   fetchbufB_v <= VAL;
-  fetchbufB_pc <= pc + INSN_LEN;
-  if (hit & ~irq)
+  fetchbufB_pc <= pc_i + INSN_LEN;
+  if (hit & ~irq) begin
 	  pc <= pc + INSN_LEN * 2;
+	  hitd <= 1'b1;
+	end
+	else begin
+  	if (hitd & !(hit & ~irq))
+  		pc <= pc - INSN_LEN * 2;
+		hitd <= 1'b0;
+	end
 end
 endtask
 
@@ -541,12 +558,19 @@ task tFetchCD;
 begin
   fetchbufC_instr <= inst0;
   fetchbufC_v <= VAL;
-  fetchbufC_pc <= pc;
+  fetchbufC_pc <= pc_i;
   fetchbufD_instr <= inst1;
   fetchbufD_v <= VAL;
-  fetchbufD_pc <= pc + INSN_LEN;
-  if (hit & ~irq)
-  	pc <= pc + INSN_LEN * 2;
+  fetchbufD_pc <= pc_i + INSN_LEN;
+  if (hit & ~irq) begin
+	  pc <= pc + INSN_LEN * 2;
+	  hitd <= 1'b1;
+  end
+  else begin
+  	if (hitd & !(hit & ~irq))
+  		pc <= pc - INSN_LEN * 2;
+  	hitd <= 1'b0;
+  end
 end
 endtask
 

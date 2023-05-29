@@ -57,10 +57,10 @@ state_t resp_state;
 
 integer n;
 reg [7:0] last_tid;
-reg [1:0] v [0:7];
+reg [3:0] v [0:3];
 wire [16:0] lfsr_o;
 
-ICacheLine [7:0] tran_line;
+ICacheLine [3:0] tran_line;
 
 lfsr17 #(.WID(17)) ulfsr1
 (
@@ -75,8 +75,8 @@ always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	resp_state <= WAIT;
 	wr_ic <= 1'd0;
-	for (n = 0; n < 8; n = n + 1) begin
-		v[n] <= 2'b00;
+	for (n = 0; n < 4; n = n + 1) begin
+		v[n] <= 4'b0000;
 		tran_line[n] <= 'd0;
 	end
 	line_o <= 'd0;
@@ -93,29 +93,49 @@ else begin
 				if (wbm_resp.tid != last_tid) begin
 					last_tid <= wbm_resp.tid;
 				end
-				if (wbm_resp.adr[4]) begin
-					v[wbm_resp.tid [3:1]][1] <= 1'b1;
-					tran_line[wbm_resp.tid[3:1]].v[1] <= 1'b1;
-					tran_line[wbm_resp.tid[3:1]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h10;
-					tran_line[wbm_resp.tid[3:1]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h10;
-					tran_line[wbm_resp.tid[3:1]].data[255:128] <= wbm_resp.dat;
-				end
-				else begin
-					v[wbm_resp.tid[3:1]][0] <= 1'b1;
-					tran_line[wbm_resp.tid[3:1]].v[0] <= 1'b1;
-					tran_line[wbm_resp.tid[3:1]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h10;
-					tran_line[wbm_resp.tid[3:1]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h10;
-					tran_line[wbm_resp.tid[3:1]].data[127:  0] <= wbm_resp.dat;
-				end
+				case(wbm_resp.adr[5:4])
+				2'b00:
+					begin
+						v[wbm_resp.tid[3:2]][0] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].v[0] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].data[127:  0] <= wbm_resp.dat;
+					end
+				2'b01:
+					begin
+						v[wbm_resp.tid [3:2]][1] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].v[1] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].data[255:128] <= wbm_resp.dat;
+					end
+				2'b10:
+					begin
+						v[wbm_resp.tid [3:2]][2] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].v[2] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].data[383:256] <= wbm_resp.dat;
+					end
+				2'b11:
+					begin
+						v[wbm_resp.tid [3:2]][3] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].v[3] <= 1'b1;
+						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid[3:2]].data[511:384] <= wbm_resp.dat;
+					end
+				endcase
 			end
 		end
 	default:	
 		resp_state <= WAIT;
 	endcase
 	// Search for completely loaded cache lines. Send off to cache.
-	for (n = 0; n < 8; n = n + 1) begin
-		if (v[n]==2'b11) begin
-			v[n] <= 2'b00;
+	for (n = 0; n < 4; n = n + 1) begin
+		if (v[n]==4'b1111) begin
+			v[n] <= 4'b0000;
 			line_o <= tran_line[n];
 			wr_ic <= 1'b1;
 			way <= lfsr_o[LOG_WAYS-1:0];

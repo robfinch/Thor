@@ -182,6 +182,7 @@ regspec_t Ra0, Rb0, Rc0, Rt0, Rp0;
 regspec_t Ra1, Rb1, Rc1, Rt1, Rp1;
 
 wire        fetchbuf;	// determines which pair to read from & write to
+wire istall;
 
 instruction_t [4:0] fetchbuf0_instr;
 instruction_t fetchbuf0_postfixes [0:3];	
@@ -285,23 +286,31 @@ reg	 [1:0] dram1;	// state of the DRAM request (latency = 4; can have three in p
 
 value_t dram0_data;
 reg [31:0] dram0_addr;
+reg [63:0] dram0_sel;
 instruction_t dram0_op;
+memsz_t dram0_memsz;
 reg dram0_load;
+reg dram0_loadz;
 reg dram0_store;
 regspec_t dram0_tgt;
 reg  [4:0] dram0_id;
 cause_code_t dram0_exc;
 reg dram0_ack;
+reg [7:0] dram0_tid;
 
 value_t dram1_data;
 reg [31:0] dram1_addr;
+reg [63:0] dram1_sel;
 instruction_t dram1_op;
+memsz_t dram1_memsz;
 reg dram1_load;
+reg dram1_loadz;
 reg dram1_store;
 regspec_t dram1_tgt;
 reg  [4:0] dram1_id;
 cause_code_t dram1_exc;
 reg dram1_ack;
+reg [7:0] dram1_tid;
 
 /*
 value_t dram2_data;
@@ -317,10 +326,14 @@ reg dram2_ack;
 
 reg [1:0] dramN [0:NDATA_PORTS-1];
 value_t [NDATA_PORTS-1:0] dramN_data;
+reg [63:0] dramN_sel [0:NDATA_PORTS-1];
 reg [31:0] dramN_addr [0:NDATA_PORTS-1];
 reg [NDATA_PORTS-1:0] dramN_load;
+reg [NDATA_PORTS-1:0] dramN_loadz;
 reg [NDATA_PORTS-1:0] dramN_store;
 reg [NDATA_PORTS-1:0] dramN_ack;
+reg [7:0] dramN_tid [0:NDATA_PORTS-1];
+memsz_t dramN_memsz;
 
 value_t dram_bus0;
 regspec_t dram_tgt0;
@@ -351,29 +364,63 @@ wire [2:0] im = 3'd7;
 
 assign clk = clk_i;
 
-function fnA1;
+function [63:0] fnA1;
 input instruction_t fetchbuf_instr;
+input address_t fetchbuf_pc;
 input [5:0] Ra;
 input [63:0] imm;
 begin
-	fnA1 = fnImma(fetchbuf_instr) ? imm : rf[ Ra ];
+	fnA1 = fnImma(fetchbuf_instr) ? imm : Ra==6'd53 ? fetchbuf_pc : rf[ Ra ];
 end
 endfunction
 
-function fnA2;
-input fetchbuf_rfw;
+function [63:0] fnA2;
 input instruction_t fetchbuf_instr;
 input address_t fetchbuf_pc;
 input [5:0] Rb;
 input [63:0] imm;
 begin
-	fnA2 = fnImmb(fetchbuf_instr) ? imm :
-					fetchbuf_rfw ?
-				 (fnIsCall(fetchbuf_instr) ? fetchbuf_pc : rf[ Rb ])
-							      : rf[ Rb ];
+	fnA2 = fnImmb(fetchbuf_instr) ? imm : Rb==6'd53 ? fetchbuf_pc : rf[ Rb ];
 end
 endfunction
 
+function [63:0] fnAP;
+input instruction_t ir;
+input [5:0] Rp;
+begin
+	case(ir.any.opcode)
+	OP_R2:	
+		if (ir.r2.fmt[0])
+			fnAP = rf [ Rp ];
+		else
+			fnAP = {64{1'b1}};
+	OP_JSR,
+	OP_ADDI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_CMPI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_MULI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_DIVI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_ANDI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_ORI:		fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_EORI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_SLTI:	fnAP = ir.ri.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_BEQ:		fnAP = {64{1'b1}};
+	OP_BNE:		fnAP = {64{1'b1}};
+	OP_BLT:		fnAP = {64{1'b1}};
+	OP_BLE:		fnAP = {64{1'b1}};
+	OP_BGT:		fnAP = {64{1'b1}};
+	OP_BGE:		fnAP = {64{1'b1}};
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+		fnAP = ir.ls.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_LDX:
+		fnAP = ir.lsn.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_STB,OP_STW,OP_STT,OP_STO:
+		fnAP = ir.ls.fmt[0] ? rf [Rp] : {64{1'b1}};
+	OP_STX:
+		fnAP = ir.lsn.fmt[0] ? rf [Rp] : {64{1'b1}};
+	default:	fnAP = {64{1'b1}};
+	endcase
+end
+endfunction
 
 generate begin : gIqOut
 	for (g = 0; g < QENTRIES; g = g + 1)
@@ -450,7 +497,7 @@ else
 always_comb
 if (hirq)
 	inst0 <= {{4{33'h1FFFFFFFF,OP_NOP}},FN_IRQ,1'b0,vect_i,5'd0,2'd0,irq_i,OP_SYS};
-else if (ihit)
+else if (ihito)
  	inst0 <= {pfx0[3],pfx0[2],pfx0[1],pfx0[0],ins0};
 else
   inst0 <= {5{33'h1FFFFFFFE,OP_NOP}};
@@ -458,7 +505,7 @@ else
 always_comb
 if (hirq)
 	inst1 <= {{4{33'h1FFFFFFFF,OP_NOP}},FN_IRQ,1'b0,vect_i,5'd0,2'd0,irq_i,OP_SYS};
-else if (ihit)
+else if (ihito)
   inst1 <= {pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1};
 else
   inst1 <= {5{33'h1FFFFFFFE,OP_NOP}};
@@ -539,13 +586,15 @@ Thor2024_ifetch uif1
 (
 	.rst(rst),
 	.clk(clk),
-	.hit(ihit),
+	.hit(ihito),
 	.irq(hirq),
 	.branchback(branchback),
 	.backpc(backpc),
 	.branchmiss(branchmiss),
 	.misspc(misspc),
 	.pc(pc),
+	.pc_i(pco),
+	.stall(istall),
 	.inst0(inst0),
 	.inst1(inst1),
 	.iq(iq),
@@ -596,13 +645,23 @@ begin
 	dramN[0] = dram0;
 	dramN_addr[0] = dram0_addr;
 	dramN_data[0] = dram0_data;
+	dramN_sel[0] = dram0_sel;
 	dramN_store[0] = dram0_store;
+	dramN_load[0] = dram0_load;
+	dramN_loadz[0] = dram0_loadz;
+	dramN_memsz[0] = dram0_memsz;
+	dramN_tid[0] = dram0_tid;
 	dram0_ack = dramN_ack[0];
-
+	
 	dramN[1] = dram1;
 	dramN_addr[1] = dram1_addr;
 	dramN_data[1] = dram1_data;
+	dramN_sel[1] = dram1_sel;
 	dramN_store[1] = dram1_store;
+	dramN_load[1] = dram1_load;
+	dramN_loadz[1] = dram1_loadz;
+	dramN_memsz[1] = dram1_memsz;
+	dramN_tid[1] = dram1_tid;
 	dram1_ack = dramN_ack[1];
 /*
 	dramN[2] = dram2;
@@ -618,11 +677,26 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 
 	always_comb
 	begin
+		cpu_request_i[g].cid = CID + g + 1;
+		cpu_request_i[g].tid = dramN_tid[g];
+		cpu_request_i[g].om = fta_bus_pkg::MACHINE;
+		cpu_request_i[g].cmd = dramN_store[g] ? CMD_STORE : dramN_loadz[g] ? CMD_LOADZ : dramN_load[g] ? CMD_LOAD : CMD_NONE;
+		cpu_request_i[g].bte = fta_bus_pkg::LINEAR;
+		cpu_request_i[g].cti = fta_bus_pkg::CLASSIC;
+		cpu_request_i[g].blen = 'd0;
+		cpu_request_i[g].seg = fta_bus_pkg::DATA;
+		cpu_request_i[g].asid = ip_asid;
 		cpu_request_i[g].cyc = dramN[g]==`DRAMREQ_READY;
 		cpu_request_i[g].stb = dramN[g]==`DRAMREQ_READY;
 		cpu_request_i[g].we = dramN_store[g];
 		cpu_request_i[g].vadr = dramN_addr[g];
+		cpu_request_i[g].padr = 'd0;
+		cpu_request_i[g].sz = fta_bus_pkg::fta_size_t'(dramN_memsz[g]);
 		cpu_request_i[g].dat = dramN_data[g] << {dramN_addr[g][5:0],3'd0};
+		cpu_request_i[g].sel = dramN_sel[g];
+		cpu_request_i[g].pl = 8'h00;
+		cpu_request_i[g].pri = 4'd7;
+		cpu_request_i[g].cache = fta_bus_pkg::WT_READWRITE_ALLOCATE;
 		dramN_ack[g] = cpu_resp_o[g].ack;
 	end
 
@@ -1589,16 +1663,17 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 		    iq[tail0].sync <= 1'b0;
 				iq[tail0].mem    <=   fetchbuf1_mem;
 				iq[tail0].load <= fnIsLoad(fetchbuf1_instr[0]);
+				iq[tail0].loadz <= fnIsLoadz(fetchbuf1_instr[0]);
 				iq[tail0].store <= fnIsStore(fetchbuf1_instr[0]);
 				iq[tail0].jmp    <=   fetchbuf1_jmp;
 				iq[tail0].rfw    <=   fetchbuf1_rfw;
 				iq[tail0].tgt <= Rt1;
 				iq[tail0].exc <= FLT_NONE;
 				iq[tail0].a0 <= dec_imm1;
-				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, dec_imm1);
+				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], fetchbuf1_pc, Ra1, dec_imm1);
 				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) | rf_v[ Ra1 ];
 				iq[tail0].a1_s <= rf_source [ Ra1 ];
-				iq[tail0].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
+				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
 				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) | rf_v[ Rb1 ];
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
 				iq[tail0].a3 <= rf [ Rc1 ];
@@ -1607,7 +1682,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].at <= rf [ Rt1 ];
 				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
 				iq[tail0].at_s  <= rf_source [ Rt1 ];
-				iq[tail0].ap <= rf [ Rp1 ];
+				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], Rp1);
 				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
 				if (!fnIsPostfix(fetchbuf1_instr[0])) begin
@@ -1651,16 +1726,17 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].sync <= 1'b0;
 					iq[tail0].mem <= fetchbuf0_mem;
 					iq[tail0].load <= fnIsLoad(fetchbuf0_instr[0]);
+					iq[tail0].loadz <= fnIsLoadz(fetchbuf0_instr[0]);
 					iq[tail0].store <= fnIsStore(fetchbuf0_instr[0]);
 					iq[tail0].jmp <= fetchbuf0_jmp;
 					iq[tail0].rfw <= fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 					iq[tail0].exc    <=	FLT_NONE;
 					iq[tail0].a0	<=	dec_imm0;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1669,7 +1745,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].at <= rf [ Rt0 ];
 					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
@@ -1711,16 +1787,17 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem    <=	fetchbuf0_mem;
 					iq[tail0].load <= fnIsLoad(fetchbuf0_instr[0]);
+					iq[tail0].loadz <= fnIsLoadz(fetchbuf0_instr[0]);
 					iq[tail0].store <= fnIsStore(fetchbuf0_instr[0]);
 			    iq[tail0].jmp    <=	fetchbuf0_jmp;
 			    iq[tail0].rfw    <=	fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=	FLT_NONE;
 			    iq[tail0].a0 <= dec_imm0;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1729,7 +1806,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].at <= rf [ Rt0 ];
 					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
@@ -1778,16 +1855,17 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem    <=   fetchbuf0_mem;
 					iq[tail0].load <= fnIsLoad(fetchbuf0_instr[0]);
+					iq[tail0].loadz <= fnIsLoadz(fetchbuf0_instr[0]);
 					iq[tail0].store <= fnIsStore(fetchbuf0_instr[0]);
 			    iq[tail0].jmp    <=   fetchbuf0_jmp;
 			    iq[tail0].rfw    <=   fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=   FLT_NONE;
 			    iq[tail0].a0 <= dec_imm0;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], Ra0, dec_imm0);
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], fetchbuf0_pc, Ra0, dec_imm0);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_rfw, fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= rf [ Rc0 ];
@@ -1796,7 +1874,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].at <= rf [ Rt0 ];
 					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= rf [ Rp0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
@@ -1834,19 +1912,20 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				    iq[tail1].sync <= 1'b0;
 						iq[tail1].mem    <=   fetchbuf1_mem;
 						iq[tail1].load <= fnIsLoad(fetchbuf1_instr[0]);
+						iq[tail1].loadz <= fnIsLoadz(fetchbuf1_instr[0]);
 						iq[tail1].store <= fnIsStore(fetchbuf1_instr[0]);
 						iq[tail1].jmp    <=   fetchbuf1_jmp;
 						iq[tail1].rfw    <=   fetchbuf1_rfw;
 						iq[tail1].tgt <= Rt1;
 						iq[tail1].exc <= FLT_NONE;
 						iq[tail1].a0 <= dec_imm1;
-						iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], Ra1, dec_imm1);
-						iq[tail1].a2 <= fnA2(fetchbuf1_rfw, fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
+						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], fetchbuf1_pc, Ra1, dec_imm1);
+						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
 						iq[tail1].a3 <= rf [ Rc1 ];
 						iq[tail1].at <= rf [ Rt1 ];
 						iq[tail1].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
 						iq[tail1].at_s  <= rf_source [ Rt1 ];
-						iq[tail1].ap <= rf [ Rp1 ];
+						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], Rp1);
 						iq[tail1].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
 						iq[tail1].ap_s  <= rf_source [ Rp1 ];
 						if (!fnIsPostfix(fetchbuf1_instr[0])) begin
@@ -1857,7 +1936,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						else
 							postfix_mask <= {postfix_mask[4:0],1'b1};
 						if (postfix_mask[5])
-							iq[tail0].exc <= FLT_PFX;
+							iq[tail1].exc <= FLT_PFX;
 						if (fnIsPred(fetchbuf1_instr[0]))
 							pred_mask <= fetchbuf1_instr[0][34:7];
 
@@ -2383,23 +2462,29 @@ fcu_dataready <= fcu_available
 	// completed and the instruction can commit.
 	//
 
-	case(dram0)
-	`DRAMSLOT_AVAIL:	;
-	`DRAMREQ_READY:
-		if (dram0_ack)
+	if (rst)
+		dram0 <= `DRAMSLOT_AVAIL;
+	else
+		case(dram0)
+		`DRAMSLOT_AVAIL:	;
+		`DRAMREQ_READY:
+			if (dram0_ack)
+				dram0 <= dram0 + 2'd1;
+		default:
 			dram0 <= dram0 + 2'd1;
-	default:
-		dram0 <= dram0 + 2'd1;
-	endcase
+		endcase
 
-	case(dram1)
-	`DRAMSLOT_AVAIL:	;
-	`DRAMREQ_READY:
-		if (dram1_ack)
+	if (rst)
+		dram1 <= `DRAMSLOT_AVAIL;
+	else
+		case(dram1)
+		`DRAMSLOT_AVAIL:	;
+		`DRAMREQ_READY:
+			if (dram1_ack)
+				dram1 <= dram1 + 2'd1;
+		default:
 			dram1 <= dram1 + 2'd1;
-	default:
-		dram1 <= dram1 + 2'd1;
-	endcase
+		endcase
 /*
 	case(dram2)
 	`DRAMSLOT_AVAIL:	;
@@ -2650,17 +2735,21 @@ fcu_dataready <= fcu_available
 	if (dram1 == `DRAMSLOT_AVAIL)	dram1_exc <= FLT_NONE;
 //	if (dram2 == `DRAMSLOT_AVAIL)	dram2_exc <= FLT_NONE;
 
-	for (n3 = 0; n3 < 8; n3 = n3 + 1) begin
+	for (n3 = 0; n3 < QENTRIES; n3 = n3 + 1) begin
 		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out) begin
 	    if (dram0 == `DRAMSLOT_AVAIL) begin
 				dram0 		<= 2'd1;
 				dram0_id 	<= { 1'b1, n3[2:0] };
 				dram0_op 	<= iq[n3].op;
 				dram0_load <= iq[n3].load;
+				dram0_loadz <= iq[n3].loadz;
 				dram0_store <= iq[n3].store;
 				dram0_tgt 	<= iq[n3].tgt;
-				dram0_data	<= iq[n3].a2;
+				dram0_data	<= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
 				dram0_addr	<= iq[n3].a1;
+				dram0_memsz <= fnMemsz(iq[n3].op);
+				dram0_sel <= {48'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
+				dram0_tid[2:0] <= dram0_tid[2:0] + 2'd1;
 				iq[n3].out	<= VAL;
 	    end
 	    else if (dram1 == `DRAMSLOT_AVAIL) begin
@@ -2668,10 +2757,14 @@ fcu_dataready <= fcu_available
 				dram1_id 	<= { 1'b1, n3[2:0] };
 				dram1_op 	<= iq[n3].op;
 				dram1_load <= iq[n3].load;
+				dram1_loadz <= iq[n3].loadz;
 				dram1_store <= iq[n3].store;
 				dram1_tgt 	<= iq[n3].tgt;
-				dram1_data	<= iq[n3].a2;
+				dram1_data	<= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
 				dram1_addr	<= iq[n3].a1;
+				dram1_memsz <= fnMemsz(iq[n3].op);
+				dram1_sel <= {48'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
+				dram1_tid[2:0] <= dram1_tid[2:0] + 2'd1;
 				iq[n3].out	<= VAL;
 	    end
 	    /*
@@ -2814,14 +2907,14 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    $display("%d: %h %d %o #", i, rf[i], rf_v[i], rf_source[i]);
 
 	$display("%d %h #", branchback, backpc);
-	$display("%c%c A: %d %h %h #",
-	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr, uif1.fetchbufA_pc);
-	$display("%c%c B: %d %h %h #",
-	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr, uif1.fetchbufB_pc);
-	$display("%c%c C: %d %h %h #",
-	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr, uif1.fetchbufC_pc);
-	$display("%c%c D: %d %h %h #",
-	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr, uif1.fetchbufD_pc);
+	$display("%c%c A: %d %h,%h %h #",
+	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc);
+	$display("%c%c B: %d %h,%h %h #",
+	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr[1], uif1.fetchbufB_instr[0], uif1.fetchbufB_pc);
+	$display("%c%c C: %d %h,%h %h #",
+	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr[1], uif1.fetchbufC_instr[0], uif1.fetchbufC_pc);
+	$display("%c%c D: %d %h,%h %h #",
+	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc);
 
 	for (i=0; i<8; i=i+1) 
 	    $display("%c%c %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
@@ -2966,8 +3059,18 @@ begin
 	postfix_mask <= 'd0;
 	pred_mask <= 28'hFFFFFFF;
 	pred_val <= 1'b1;
-	dram0 <= 'd0;
+	dram0 <= `DRAMSLOT_AVAIL;
+	dram0_addr <= 'd0;
+	dram0_data <= 'd0;
+	dram0_exc <= FLT_NONE;
+	dram0_id <= 'd0;
+	dram0_load <= 'd0;
+	dram0_store <= 'd0;
+	dram0_op <= OP_NOP;
+	dram0_tgt <= 'd0;
+	dram0_tid <= 'd0;
 	dram1 <= 'd0;
+	dram1_tid <= 8'h08;
 	dram_v0 <= 'd0;
 	dram_v1 <= 'd0;
 	head0 <= 'd0;
@@ -2986,10 +3089,14 @@ begin
 	for (n11 = 0; n11 < NDATA_PORTS; n11 = n11 + 1) begin
 		dramN[n11] <= 'd0;
 		dramN_load[n11] <= 'd0;
+		dramN_loadz[n11] <= 'd0;
 		dramN_store[n11] <= 'd0;
 		dramN_addr[n11] <= 'd0;
 		dramN_data[n11] <= 'd0;
+		dramN_sel[n11] <= 'd0;
 		dramN_ack[n11] <= 'd0;
+		dramN_memsz[n11] <= Thor2024pkg::nul;
+		dramN_tid[n11] = {4'd0,n11[0],3'd0};
 	end
 	I <= 0;
 end
