@@ -144,18 +144,18 @@ wire locked;
 wire clk10, clk20, clk40, clk50, clk100, clk200;
 wire xclk_bufg;
 wire node_clk = clk50;
-wb_cmd_request128_t cpu_req;
-wb_cmd_response128_t cpu_resp;
-wb_cmd_request128_t ch7req;
-wb_cmd_request128_t ch7dreq;	// DRAM request
-wb_cmd_response128_t ch7resp;
-wb_cmd_request128_t fb_req;
-wb_cmd_response128_t fb_resp;
+fta_cmd_request128_t cpu_req;
+fta_cmd_response128_t cpu_resp;
+fta_cmd_request128_t ch7req;
+fta_cmd_request128_t ch7dreq;	// DRAM request
+fta_cmd_response128_t ch7resp;
+fta_cmd_request128_t fb_req;
+fta_cmd_response128_t fb_resp;
 reg [31:0] irq_bus;
-wb_cycle_type_t cpu_cti;	// cycle type indicator
+fta_cycle_type_t cpu_cti;	// cycle type indicator
 wire [3:0] cpu_cid;
 wire [7:0] cpu_tid;
-wb_burst_len_t cpu_blen;	// length of burst-1
+fta_burst_len_t cpu_blen;	// length of burst-1
 wire cpu_cyc;
 wire cpu_stb;
 wire cpu_we;
@@ -173,8 +173,8 @@ wire [127:0] dato;
 wire mmus, ios, iops;
 wire mmu_ack;
 wire [31:0] mmu_dato;
-wb_cmd_request128_t br1_req;
-wb_cmd_response128_t br1_resp;
+fta_cmd_request128_t br1_req;
+fta_cmd_response128_t br1_resp;
 fta_cmd_request64_t br1_mreq;
 wire br1_cyc;
 wire br1_stb;
@@ -188,8 +188,9 @@ wire [31:0] br1_dato;
 wire br1_cack;
 wire [3:0] br1_cido;
 wire [7:0] br1_tido;
-wb_cmd_request128_t br3_req;
-wb_cmd_response128_t br3_resp;
+fta_cmd_request128_t br3_req;
+fta_cmd_response128_t br3_resp;
+fta_cmd_request64_t br3_mreq;
 wire br3_cyc;
 wire br3_stb;
 reg br3_ack;
@@ -204,6 +205,7 @@ wire [7:0] br3_tido;
 wire br3_cack;
 fta_cmd_response64_t fb_cresp;
 fta_cmd_response64_t tc_cresp;
+fta_cmd_response64_t leds_cresp;
 wire fb_ack;
 wire [31:0] fb_irq;
 wire [31:0] fb_dato;
@@ -222,7 +224,7 @@ wire scr_ack;
 wire scr_next;
 wire [127:0] scr_dato;
 wire [31:0] scr_adro;
-wire [7:0] scr_tido;
+fta_tranid_t scr_tido;
 wire [3:0] scr_cido;
 wire acia_ack;
 wire [31:0] acia_dato;
@@ -297,7 +299,7 @@ NexysVideoClkgen ucg1
 );
 
 assign rst = !locked;
-
+/*
 rgb2dvi #(
 	.kGenerateSerialClk(1'b0),
 	.kClkPrimitive("MMCM"),
@@ -319,7 +321,7 @@ ur2d1
 	.PixelClk(clk40),
 	.SerialClk(clk200)
 );
-
+*/
 wire cs_io;
 assign cs_io = ios;//ch7req.adr[31:20]==12'hFD0;
 wire cs_io2 = ch7req.padr[31:20]==12'hFD0;
@@ -332,13 +334,14 @@ assign cs_mmu = mmus;	//cpu_adr[31:16]==16'hFC00 || cpu_adr[31:16]==16'hFC01;
 wire cs_config = ch7req.padr[31:28]==4'hD;
 
 wire cs_leds = ch7req.padr[19:8]==12'hFFF && ch7req.stb && cs_io2;
-wire cs_br3_leds = br3_adr[19:8]==12'hFFF && br3_stb && cs_io2;
+wire cs_br3_leds = br3_mreq.padr[31:8]==24'hFD0FFF && br3_mreq.stb;
 wire cs_br3_rst  = br3_adr[19:8]==12'hFFC && br3_stb && cs_io2;
 wire cs_sema = ch7req.padr[19:16]==4'h5 && ch7req.stb && cs_io2;
 wire cs_scr = ch7req.padr[31:20]==12'h001;
 wire cs_dram = ch7req.padr[31:29]==3'b001 && !cs_mmu && !cs_iobitmap && !cs_io;
 
 assign io_gate_en = ch7req.padr[31:20]==12'hFD0 || ch7req.padr[31:20]==12'hFD1;
+
 
 rfFrameBuffer_fta64 uframebuf1
 (
@@ -367,8 +370,6 @@ rfFrameBuffer_fta64 uframebuf1
 	.vblank_o()
 );
 
-//assign fb_ack = 1'b0;
-
 rfTextController_fta64 utc1
 (
 	.rst_i(rst),
@@ -386,6 +387,10 @@ rfTextController_fta64 utc1
 	.zrgb_o(tc_rgb),
 	.xonoff_i(sw[1])
 );
+
+
+//assign fb_cresp = 'd0;
+//assign tc_cresp = 'd0;
 
 always_comb
 begin
@@ -515,7 +520,19 @@ begin
 	br3_req.we = ch7req.we & io_gate_en;
 end
 
-IOBridge128wb ubridge3
+IOBridge128to64fta ubridge3
+(
+	.rst_i(rst),
+	.clk_i(node_clk),
+	.s1_req(br3_req),
+	.s1_resp(br3_resp),
+	.m_req(br3_mreq),
+	.ch0resp(leds_cresp),
+	.ch1resp('d0)
+);
+
+/*
+IOBridge128wb ubridge3wb
 (
 	.rst_i(rst),
 	.clk_i(node_clk),
@@ -536,6 +553,7 @@ IOBridge128wb ubridge3
 	.m32_dat_i(br3_dati),
 	.m32_dat_o(br3_dato)
 );
+*/
 
 always_ff @(posedge node_clk)
 	casez(cs_br3_leds)
@@ -548,12 +566,22 @@ always_ff @(posedge node_clk, posedge rst)
 if (rst)
 	br3_ack <= 'd0;
 else
-	br3_ack <= leds_ack|kbd_ack|rand_ack|acia_ack|i2c2_ack;
+	br3_ack <= kbd_ack|rand_ack|acia_ack|i2c2_ack;
 
-assign leds_ack = cs_br3_leds;
-always_ff @(posedge node_clk)
-	if (cs_br3_leds & br3_we)
-		led <= br3_dato[7:0];
+ledport_fta64 uleds1
+(
+	.rst(rst),
+	.clk(node_clk),
+	.cs(cs_br3_leds),
+	.req(br3_mreq),
+	.resp(leds_cresp),
+	.led(led)
+);
+
+//assign leds_ack = cs_br3_leds;
+//always_ff @(posedge node_clk)
+//	if (cs_br3_leds & br3_we)
+//		led <= br3_dato[7:0];
 
 wire mem_ui_rst;
 wire calib_complete;
@@ -928,8 +956,11 @@ assign resps[3].adr = cpu_adr;
 assign resps[4].cid = scr_cido;
 assign resps[4].tid = scr_tido;
 assign resps[4].ack = scr_ack;
+assign resps[4].rty = 1'b0;
+assign resps[4].err = 1'b0;
 assign resps[4].dat = scr_dato;
 assign resps[4].adr = scr_adro;
+assign resps[4].pri = 4'd7;
 
 //assign ch7req.sel = ch7req.we ? sel << {ch7req.padr[3:2],2'b0} : 16'hFFFF;
 //assign ch7req.data1 = {4{dato}};
@@ -991,6 +1022,7 @@ Thor2024_mpu umpu1
 (
 	.rst_i(rst),
 	.clk_i(node_clk),
+	.clk2x_i(clk100),
 	.ftam_req(cpu_req),
 	.ftam_resp(cpu_resp),
 	.irq_bus(irq_bus),

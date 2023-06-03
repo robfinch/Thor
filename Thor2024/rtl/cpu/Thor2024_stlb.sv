@@ -436,7 +436,7 @@ begin
 	wbm_resp.adr = fta_req_o.padr;
 end
 
-reg [3:0] used_tid [0:CHANNELS-1];
+fta_tranid_t used_tid [0:CHANNELS-1];
 reg [3:0] resp_ch;
 
 always_ff @(posedge clk_i)
@@ -447,16 +447,16 @@ end
 else begin
 	for (n10 = 0; n10 < CHANNELS; n10 = n10 + 1)
 		if (wbn_req_i[n10].cyc)
-			used_tid[n10] <= wbn_req_i[n10].tid[7:4];
+			used_tid[n10] <= wbn_req_i[n10].tid;
 end
 
 function [3:0] fnRespch;
-input [7:0] tid;
+input fta_tranid_t tid;
 integer n;
 begin
 	fnRespch = CHANNELS;
 	for (n = 0; n < CHANNELS; n = n + 1)
-		if (tid[7:4]==used_tid[n])
+		if (tid.core==used_tid[n].core && tid.channel==used_tid[n].channel)
 			fnRespch = n;
 end
 endfunction

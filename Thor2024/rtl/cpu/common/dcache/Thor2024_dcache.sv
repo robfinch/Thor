@@ -45,8 +45,8 @@ module Thor2024_dcache(rst, clk, dce, snoop_adr, snoop_v, snoop_cid,
 	cache_load, hit, modified, uway, cpu_req_i, cpu_resp_o, update_data_i, dump, dump_o,
 	dump_ack_i, wr, way,
 	invce, dc_invline, dc_invall);
-parameter CORENO = 6'd3;
-parameter CID = 4'd3;
+parameter CORENO = 6'd1;
+parameter CID = 6'd1;
 parameter WAYS = 4;
 parameter LINES = 512;
 parameter LOBIT = 6;

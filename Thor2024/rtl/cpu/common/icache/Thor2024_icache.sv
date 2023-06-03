@@ -49,7 +49,8 @@ module Thor2024_icache(rst,clk,invce,snoop_adr,snoop_v,snoop_cid,invall,invline,
 	ip_asid,ip,ip_o,ihit_o,ihit,ic_line_hi_o,ic_line_lo_o,ic_valid,miss_adr,miss_asid,
 	ic_line_i,wway,wr_ic
 	);
-parameter CID = 6'd2;
+parameter CORENO = 6'd1;
+parameter CID = 6'd0;
 parameter FALSE = 1'b0;
 parameter WAYS = 4;
 parameter LINES = 128;

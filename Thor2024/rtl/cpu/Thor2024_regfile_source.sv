@@ -79,7 +79,7 @@ else begin
 		2'b01:
 			if (iq[tail0].v == INV) begin
 				if (fetchbuf1_rfw)
-			    rf_source[ fetchbuf1_instr.r2.Ra.num ] <= { fetchbuf1_mem, tail0 };	// top bit indicates ALU/MEM bus
+			    rf_source[ fetchbuf1_instr.r2.Rt.num ] <= { fetchbuf1_mem, tail0 };	// top bit indicates ALU/MEM bus
 			end
 		2'b10:	;
 		2'b11:
@@ -92,22 +92,22 @@ else begin
 						// first is allowed to update rf_v and rf_source only if the
 						// second has no target (BEQ or SW)
 						//
-						if (fetchbuf0_instr.r2.Ra.num == fetchbuf1_instr.r2.Ra.num) begin
+						if (fetchbuf0_instr.r2.Rt.num == fetchbuf1_instr.r2.Rt.num) begin
 					    if (fetchbuf1_rfw)
-								rf_source[ fetchbuf1_instr.r2.Ra.num ] <= { fetchbuf1_mem, tail1 };
+								rf_source[ fetchbuf1_instr.r2.Rt.num ] <= { fetchbuf1_mem, tail1 };
 					    else if (fetchbuf0_rfw)
-								rf_source[ fetchbuf0_instr.r2.Ra.num ] <= { fetchbuf0_mem, tail0 };
+								rf_source[ fetchbuf0_instr.r2.Rt.num ] <= { fetchbuf0_mem, tail0 };
 						end
 						else begin
 					    if (fetchbuf0_rfw)
-								rf_source[ fetchbuf0_instr.r2.Ra.num ] <= { fetchbuf0_mem, tail0 };
+								rf_source[ fetchbuf0_instr.r2.Rt.num ] <= { fetchbuf0_mem, tail0 };
 					    if (fetchbuf1_rfw)
-								rf_source[ fetchbuf1_instr.r2.Ra.num ] <= { fetchbuf1_mem, tail1 };
+								rf_source[ fetchbuf1_instr.r2.Rt.num ] <= { fetchbuf1_mem, tail1 };
 						end
 			    end	// ends the "if IQ[tail1] is available" clause
 		    	else begin	// only first instruction was enqueued
 						if (fetchbuf0_rfw)
-					    rf_source[ fetchbuf0_instr.r2.Ra.num ] <= {fetchbuf0_mem, tail0};
+					    rf_source[ fetchbuf0_instr.r2.Rt.num ] <= {fetchbuf0_mem, tail0};
 			    end
 				end		
 			end

@@ -175,6 +175,12 @@ que_ndx_t head4;	// used only to determine memory-access ordering
 que_ndx_t head5;	// used only to determine memory-access ordering
 que_ndx_t head6;	// used only to determine memory-access ordering
 que_ndx_t head7;	// used only to determine memory-access ordering
+que_ndx_t lastq0;
+que_ndx_t lastq1;
+reg fetch0,fetch1;
+reg q1open,q2open,q3open,q4open;
+reg canq1,canq2;
+reg queued1Nop, queued2Nop;
 
 que_ndx_t missid;
 
@@ -274,14 +280,14 @@ reg [31:0] fcu_misspc;
 reg takb;
 
 
-wire        branchback;
-wire [31:0] backpc;
-wire        branchmiss;
-wire [31:0] misspc;
+wire branchback;
+address_t backpc;
+wire branchmiss;
+address_t misspc;
 
-wire        dram_avail;
-reg	 [1:0] dram0;	// state of the DRAM request (latency = 4; can have three in pipeline)
-reg	 [1:0] dram1;	// state of the DRAM request (latency = 4; can have three in pipeline)
+wire dram_avail;
+reg	[1:0] dram0;	// state of the DRAM request (latency = 4; can have three in pipeline)
+reg	[1:0] dram1;	// state of the DRAM request (latency = 4; can have three in pipeline)
 //reg	 [1:0] dram2;	// state of the DRAM request (latency = 4; can have three in pipeline)
 
 value_t dram0_data;
@@ -387,6 +393,16 @@ input [5:0] Rb;
 input [63:0] imm;
 begin
 	fnA2 = fnImmb(fetchbuf_instr) ? imm : Rb==6'd53 ? fetchbuf_pc : rf[ Rb ];
+end
+endfunction
+
+function [63:0] fnA3;
+input instruction_t fetchbuf_instr;
+input address_t fetchbuf_pc;
+input [5:0] Rc;
+input [63:0] imm;
+begin
+	fnA3 = fnImmc(fetchbuf_instr) ? imm : Rc==6'd53 ? fetchbuf_pc : rf[ Rc ];
 end
 endfunction
 
@@ -549,7 +565,9 @@ address_t ic_miss_adr;
 asid_t ic_miss_asid;
 wire [1:0] ic_wway;
   
-Thor2024_icache uic1
+Thor2024_icache
+#(.CORENO(CORENO),.CID(0))
+uic1
 (
 	.rst(rst),
 	.clk(clk),
@@ -574,7 +592,9 @@ Thor2024_icache uic1
 	.wr_ic(wr_ic)
 );
 
-Thor2024_icache_ctrl icctrl1
+Thor2024_icache_ctrl
+#(.CORENO(CORENO),.CID(0))
+icctrl1
 (
 	.rst(rst),
 	.clk(clk),
@@ -654,6 +674,35 @@ assign fetchbuf1_mem = fnIsMem(fetchbuf1_instr[0]);
 assign fetchbuf0_rfw = Rt0 != 'd0;
 assign fetchbuf1_rfw = Rt1 != 'd0;
 
+always_comb
+	q1open = ~iq[tail0].v;
+always_comb
+	q2open = ~iq[tail0].v & ~iq[tail1].v;
+always_comb
+begin
+	canq1 = FALSE;
+	canq2 = FALSE;
+	queued2Nop = FALSE;
+	queued1Nop = FALSE;
+	if (!branchmiss) begin
+		if (fetchbuf0_v & fetchbuf1_v) begin
+			canq2 = TRUE;
+			if (fnIsNop(fetchbuf0_instr[0]) && fnIsNop(fetchbuf1_instr[0]))
+				queued2Nop = TRUE;
+		end
+		else if (fetchbuf0_v) begin
+			canq1 = TRUE;
+			if (fnIsNop(fetchbuf0_instr[0]))
+				queued1Nop = TRUE;
+		end
+		else if (fetchbuf1_v) begin
+			canq1 = TRUE;
+			if (fnIsNop(fetchbuf1_instr[0]))
+				queued1Nop = TRUE;
+		end
+	end
+end
+
 wire [NDATA_PORTS-1:0] dcache_load;
 wire [NDATA_PORTS-1:0] dhit;
 wire [NDATA_PORTS-1:0] modified;
@@ -728,7 +777,9 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		dramN_ack[g] = cpu_resp_o[g].ack;
 	end
 
-	Thor2024_dcache udc1
+	Thor2024_dcache
+	#(.CORENO(CORENO), .CID(g+1))
+	udc1
 	(
 		.rst(rst),
 		.clk(clk),
@@ -753,7 +804,9 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		.dc_invall(dc_invall)
 	);
 
-	Thor2024_dcache_ctrl udcctrl1
+	Thor2024_dcache_ctrl
+	#(.CORENO(CORENO), .CID(g+1))
+	udcctrl1
 	(
 		.rst_i(rst),
 		.clk_i(clk),
@@ -804,16 +857,6 @@ assign fetchbuf1_rfw   = (fetchbuf == 1'b0)
 		? (fetchbufB_instr[`INSTRUCTION_OP] != `BEQ && fetchbufB_instr[`INSTRUCTION_OP] != `SW)
 		: (fetchbufD_instr[`INSTRUCTION_OP] != `BEQ && fetchbufD_instr[`INSTRUCTION_OP] != `SW);
 */
-//
-// set branchback and backpc values ... ignore branches in fetchbuf slots not ready for enqueue yet
-//
-assign branchback = ({fetchbuf0_v, fnIsBackBranch(fetchbuf0_instr[0])} == {VAL, TRUE})
-									|| ({fetchbuf1_v, fnIsBackBranch(fetchbuf1_instr[0])} == {VAL, TRUE});
-
-assign backpc = ({fetchbuf0_v, fnIsBackBranch(fetchbuf0_instr[0])} == {VAL, TRUE})
-	    ? (fetchbuf0_pc + fnBranchDisp(fetchbuf0_instr[0]))
-	    : (fetchbuf1_pc + fnBranchDisp(fetchbuf1_instr[0]));
-
 //
 // BRANCH-MISS LOGIC: livetarget
 //
@@ -1486,6 +1529,7 @@ always_comb
 */
 // 
 // additional logic for handling a branch miss (STOMP logic)
+// Must also stomp on the last entry queued as a branch has a delayed effect.
 //
 reg [$clog2(QENTRIES)-1:0] n4p;
 always_comb
@@ -1497,6 +1541,10 @@ begin
 											&& head0 != n4[$clog2(QENTRIES)-1:0]
 											&& (missid == n4p || iqentry_stomp[n4p])
 											;
+	if (~lastq0[3])
+		iqentry_stomp[lastq0] = 1'b1;
+	if (~lastq1[3])
+		iqentry_stomp[lastq1] = 1'b1;
 end											
 //    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
@@ -1551,9 +1599,9 @@ address_t tgtpc;
 
 always_comb
 	if (fnIsBccR(fcu_instr))
-		tgtpc = fcu_argC + fcu_argI;
+		tgtpc = fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]};
 	else if (fnIsBranch(fcu_instr))
-		tgtpc = fcu_pc + fcu_argI;
+		tgtpc = fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]};
 	else if (fnIsCall(fcu_instr)) begin
 		if (fcu_instr[7:6]==2'd3)
 			tgtpc = fcu_argI;
@@ -1567,9 +1615,9 @@ always_comb
 
 always_comb
 	if (fnIsBccR(fcu_instr))
-		fcu_misspc = fcu_bt ? fcu_pc + 4'd4 : fcu_argC + fcu_argI;
+		fcu_misspc = fcu_bt ? fcu_pc + 4'd5 : fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]};
 	else if (fnIsBranch(fcu_instr))
-		fcu_misspc = fcu_bt ? fcu_pc + 4'd4 : fcu_pc + fcu_argI;
+		fcu_misspc = fcu_bt ? fcu_pc + 4'd5 : fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]};
 	else if (fnIsCall(fcu_instr)) begin
 		if (fcu_instr[7:6]==2'd3)
 			fcu_misspc = fcu_argI;
@@ -1628,8 +1676,9 @@ if (fcu_dataready) begin
 	else
 		fcu_branchmiss = FALSE;		
 end
-else
-	fcu_branchmiss = FALSE;		
+else begin
+	fcu_branchmiss = FALSE;
+end
 
 assign  branchmiss = fcu_branchmiss,
   misspc = fcu_misspc,
@@ -1696,7 +1745,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].out    <=   INV;
 				iq[tail0].res    <=   `ZERO;
 				iq[tail0].op    <=   fetchbuf1_instr[0]; 
-				iq[tail0].bt    <=   ((fnIsBranch(fetchbuf1_instr[0])	&& fnBranchDispSign(fetchbuf1_instr[0]))) | ptakb; 
+				iq[tail0].bt    <=   INV;//(fnIsBackBranch(fetchbuf1_instr[0])) | ptakb; 
 				iq[tail0].agen    <=   INV;
 				iq[tail0].pc    <=   fetchbuf1_pc;
 				iq[tail0].imm <= fnIsImm(fetchbuf1_instr[0]);
@@ -1724,7 +1773,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
 				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) | rf_v[ Rb1 ];
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
-				iq[tail0].a3 <= rf [ Rc1 ];
+				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], fetchbuf1_pc, Rc1, dec_imm1);
 				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) | rf_v[ Rc1 ];
 				iq[tail0].a3_s  <= rf_source [ Rc1 ];
 				iq[tail0].at <= rf [ Rt1 ];
@@ -1733,6 +1782,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], Rp1);
 				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
+				lastq0 <= {1'b0,tail0};
+				lastq1 <= {1'b1,tail0};
 				if (!fnIsPostfix(fetchbuf1_instr[0])) begin
 					atom_mask <= atom_mask >> 4'd3;
 					pred_mask <= {4'hF,pred_mask} >> 4'd4;
@@ -1748,7 +1799,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			end
     2'b10:
     	begin
-	    	if (iq[tail0].v == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
+	    	if (0 && iq[tail0].v == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
 					if (!fnIsBranch(fetchbuf0_instr[0]))		panic <= `PANIC_FETCHBUFBEQ;
 					if (!fnIsBackBranch(fetchbuf0_instr[0]))	panic <= `PANIC_FETCHBUFBEQ;
 					//
@@ -1789,7 +1840,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= rf [ Rc0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], fetchbuf0_pc, Rc0, dec_imm0);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rf [ Rt0 ];
@@ -1798,6 +1849,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
@@ -1818,7 +1871,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				//
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
-				if (fnIsBackBranch(fetchbuf0_instr[0])) begin
+				if (0 && fnIsBackBranch(fetchbuf0_instr[0])) begin
 			    iq[tail0].v    <=	VAL;
 			    iq[tail0].done    <=	INV;
 			    iq[tail0].out    <=	INV;
@@ -1852,7 +1905,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= rf [ Rc0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], fetchbuf0_pc, Rc0, dec_imm0);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rf [ Rt0 ];
@@ -1861,6 +1914,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
@@ -1894,7 +1949,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
 			    iq[tail0].op    <=   fetchbuf0_instr[0]; 
-			    iq[tail0].bt    <=   ptakb;
+			    iq[tail0].bt    <=   INV;//ptakb;
 			    iq[tail0].agen    <=   INV;
 			    iq[tail0].pc    <=   fetchbuf0_pc;
 					iq[tail0].imm <= fnIsImm(fetchbuf0_instr[0]);
@@ -1922,7 +1977,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], fetchbuf0_pc, Rb0, dec_imm0);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= rf [ Rc0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], fetchbuf0_pc, Rc0, dec_imm0);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rf [ Rt0 ];
@@ -1931,6 +1986,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], Rp0);
 					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
 					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
@@ -1953,7 +2010,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						iq[tail1].out    <=   INV;
 						iq[tail1].res    <=   `ZERO;
 						iq[tail1].op    <=   fetchbuf1_instr[0]; 
-						iq[tail1].bt    <=   (fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
+						iq[tail1].bt    <=   INV;//(fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
 						iq[tail1].agen    <=   INV;
 						iq[tail1].pc    <=   fetchbuf1_pc;
 						iq[tail1].imm <= fnIsImm(fetchbuf1_instr[0]);
@@ -1977,13 +2034,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						iq[tail1].a0 <= dec_imm1;
 						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], fetchbuf1_pc, Ra1, dec_imm1);
 						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], fetchbuf1_pc, Rb1, dec_imm1);
-						iq[tail1].a3 <= rf [ Rc1 ];
+						iq[tail1].a3 <= fnA3(fetchbuf1_instr[0], fetchbuf1_pc, Rc1, dec_imm1);
 						iq[tail1].at <= rf [ Rt1 ];
-						iq[tail1].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
-						iq[tail1].at_s  <= rf_source [ Rt1 ];
 						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], Rp1);
-						iq[tail1].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
-						iq[tail1].ap_s  <= rf_source [ Rp1 ];
+						lastq1 <= {1'b0,tail1};
 						if (!fnIsPostfix(fetchbuf1_instr[0])) begin
 							atom_mask <= atom_mask >> 4'd6;
 							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
@@ -2089,7 +2143,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					    iq[tail1].at_s <= rf_source [ Rt1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 5'd0 && Rt1 == Rt0) begin
+						else if (Rt0 != 6'd0 && Rt1 == Rt0) begin
 					    // if the previous instruction is a LW, then grab result from memq, not the iq
 					    iq[tail1].at_v <= INV;
 					    iq[tail1].at_s <= { fetchbuf0_mem, tail0 };
@@ -2181,7 +2235,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
     iq[ dram0_id[2:0] ].done <= VAL;
     iq[ dram0_id[2:0] ].out <= INV;
 	end
-	if (dram1 == 2'd1 && fnIsStore(dram1_op)) begin
+	if (dram1 == 2'd1 && dram1_store) begin
     if ((alu0_v && dram1_id[2:0] == alu0_id[2:0]) || (alu1_v && dram1_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
     iq[ dram1_id[2:0] ].done <= VAL;
     iq[ dram1_id[2:0] ].out <= INV;
@@ -2486,17 +2540,17 @@ fcu_dataready <= fcu_available
 									  iq[n1].a1_v ? iq[n1].a1
 							    : (iq[n1].a1_s == alu0_id) ? alu0_bus
 							    : (iq[n1].a1_s == alu1_id) ? alu1_bus
-							    : 32'hDEADBEEF;
+							    : {2{32'hDEADBEEF}};
 					fcu_argB	<= 
 							      (iq[n1].a2_v ? iq[n1].a2
 									: (iq[n1].a2_s == alu0_id) ? alu0_bus
 									: (iq[n1].a2_s == alu1_id) ? alu1_bus
-									: 32'hDEADBEEF);
+									: {2{32'hDEADBEEF}});
 					fcu_argC	<= 
 							      (iq[n1].a3_v ? iq[n1].a3
 									: (iq[n1].a3_s == alu0_id) ? alu0_bus
 									: (iq[n1].a3_s == alu1_id) ? alu1_bus
-									: 32'hDEADBEEF);
+									: {2{32'hDEADBEEF}});
 					fcu_argI	<= iq[n1].a0;
 		    end
 		  end
@@ -2529,7 +2583,10 @@ fcu_dataready <= fcu_available
 			if (dram0_ack)
 				dram0 <= dram0 + 2'd1;
 		default:
-			dram0 <= dram0 + 2'd1;
+			if (iq[dram0_id[2:0]].v)
+				dram0 <= dram0 + 2'd1;
+			else
+				dram0 <= `DRAMSLOT_AVAIL;
 		endcase
 
 	if (rst)
@@ -2541,7 +2598,10 @@ fcu_dataready <= fcu_available
 			if (dram1_ack)
 				dram1 <= dram1 + 2'd1;
 		default:
-			dram1 <= dram1 + 2'd1;
+			if (iq[dram1_id[2:0]].v)
+				dram1 <= dram1 + 2'd1;
+			else
+				dram1 <= `DRAMSLOT_AVAIL;
 		endcase
 /*
 	case(dram2)
@@ -2808,6 +2868,7 @@ fcu_dataready <= fcu_available
 				dram0_memsz <= fnMemsz(iq[n3].op);
 				dram0_sel <= {48'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
 				dram0_tid[2:0] <= dram0_tid[2:0] + 2'd1;
+				dram0_tid[7:3] <= {4'h1,1'b0};
 				iq[n3].out	<= VAL;
 	    end
 	    else if (dram1 == `DRAMSLOT_AVAIL) begin
@@ -2823,6 +2884,7 @@ fcu_dataready <= fcu_available
 				dram1_memsz <= fnMemsz(iq[n3].op);
 				dram1_sel <= {48'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
 				dram1_tid[2:0] <= dram1_tid[2:0] + 2'd1;
+				dram1_tid[7:3] <= {4'h2,1'b0};
 				iq[n3].out	<= VAL;
 	    end
 	    /*
@@ -2961,17 +3023,22 @@ assign int_commit = (commit0_v && fnIsIrq(iq[head0].op)) ||
 
 
 always_ff @(posedge clk) begin: clock_n_debug
-	reg [3:0] i;
+	reg [7:0] i;
 	integer j;
 
 	$display("\n\n\n\n\n\n\n\n");
 	$display("TIME %0d", $time);
 	$display("%h #", pc);
 
-	for (i=0; i<8; i=i+1)
-	    $display("%d: %h %d %o #", i, rf[i], rf_v[i], rf_source[i]);
+	for (i=0; i< AREGS; i=i+4)
+	    $display("%d: %h %d %o  %d: %h %d %o  %d: %h %d %o  %d: %h %d %o #",
+	    	i, rf[i], rf_v[i], rf_source[i],
+	    	i+1, rf[i+1], rf_v[i+1], rf_source[i+1],
+	    	i+2, rf[i+2], rf_v[i+2], rf_source[i+2],
+	    	i+3, rf[i+3], rf_v[i+3], rf_source[i+3]
+	    );
 
-	$display("%d %h #", branchback, backpc);
+	$display("%c %h #", branchback?"b":" ", backpc);
 	$display("%c%c A: %d %h,%h %h #",
 	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc);
 	$display("%c%c B: %d %h,%h %h #",
@@ -3151,6 +3218,18 @@ begin
 	alu0_dataready <= 0;
 	alu1_available <= 1;
 	alu1_dataready <= 0;
+	fcu_available <= 1;
+	fcu_dataready <= 0;
+	fcu_pc <= 'd0;
+	fcu_sourceid <= 'd0;
+	fcu_instr <= OP_NOP;
+	fcu_exc <= FLT_NONE;
+	fcu_bt <= 'd0;
+	fcu_argA <= 'd0;
+	fcu_argB <= 'd0;
+	fcu_argC <= 'd0;
+	fcu_argT <= 'd0;
+	fcu_argP <= 'd0;
 	for (n11 = 0; n11 < NDATA_PORTS; n11 = n11 + 1) begin
 		dramN[n11] <= 'd0;
 		dramN_load[n11] <= 'd0;

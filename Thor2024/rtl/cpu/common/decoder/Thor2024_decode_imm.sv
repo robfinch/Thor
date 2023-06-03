@@ -1,11 +1,12 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2024_icache_ctrl.sv
+//	Thor2024_decode_imm.sv
+//
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -32,73 +33,48 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// 41 LUTs / 358 FFs
+//                                                                          
+// 238 LUTs
 // ============================================================================
 
-import fta_bus_pkg::*;
 import Thor2024pkg::*;
-import Thor2024_cache_pkg::*;
 
-module Thor2024_icache_ctrl(rst, clk, wbm_req, wbm_resp, hit, miss_adr, miss_asid,
-	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
-parameter WAYS = 4;
-parameter CORENO = 6'd1;
-parameter CID = 6'd0;
-localparam LOG_WAYS = $clog2(WAYS);
-input rst;
-input clk;
-output fta_cmd_request128_t wbm_req;
-input fta_cmd_response128_t wbm_resp;
-input hit;
-input fta_address_t miss_adr;
-input Thor2024pkg::asid_t miss_asid;
-output wr_ic;
-output [LOG_WAYS-1:0] way;
-output ICacheLine line_o;
-input fta_address_t snoop_adr;
-input snoop_v;
-input [5:0] snoop_cid;
+module Thor2024_decode_imm(ins, imm);
+parameter WID=32;
+input instruction_t [4:0] ins;
+output reg [63:0] imm;
 
-wire Thor2024pkg::address_t [15:0] vtags;
+wire [63:0] imm32x64;
 
-// Generate memory requests to fill cache line.
+fpCvt32To64 ucvt32x64(imm[31:0], imm32x64);
 
-Thor2024_icache_req_generator
-#(
-	.CORENO(CORENO),
-	.CID(CID)
-)
-icrq1
-(
-	.rst(rst),
-	.clk(clk),
-	.hit(hit), 
-	.miss_adr(miss_adr),
-	.miss_asid(miss_asid),
-	.wbm_req(wbm_req),
-	.wbm_resp(wbm_resp),
-	.vtags(vtags),
-	.snoop_v(snoop_v),
-	.snoop_adr(snoop_adr),
-	.snoop_cid(snoop_cid)
-);
-
-// Process ACK responses coming back.
-
-Thor2024_icache_ack_processor 
-#(
-	.LOG_WAYS(LOG_WAYS)
-)
-uicap1
-(
-	.rst(rst),
-	.clk(clk),
-	.wbm_resp(wbm_resp),
-	.wr_ic(wr_ic),
-	.line_o(line_o),
-	.vtags(vtags),
-	.way(way)
-);
+always_comb
+begin
+	imm = 'd0;
+	case(ins[0].any.opcode)
+	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
+		imm = {{48{ins[0][34]}},ins[0][34:19]};
+	OP_ANDI:	imm = {48'hFFFFFFFFFFFF,ins[0][34:19]};
+	OP_ORI,OP_EORI:
+		imm = {48'h0000,ins[0][34:19]};
+	OP_RTD:	imm = {{16{ins[0][34]}},ins[0][34:19]};
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
+	OP_STB,OP_STW,OP_STT,OP_STO:
+		imm = {{50{ins[0][34]}},ins[0][34:21]};
+	default:
+		imm = 'd0;
+	endcase
+	if (ins[1].any.opcode==OP_PFX) begin
+		imm = {{32{ins[1][39]}},ins[1][39:8]};
+		if (ins[2].any.opcode==OP_PFX)
+			imm[63:32] = ins[2][39:8];
+	end
+	case(ins[0].any.opcode)
+	OP_FLT2,OP_FLT3:
+		if (ins[1].any.opcode==OP_PFX && ins[2].any.opcode!=OP_PFX)
+			imm = imm32x64;
+	default:	;
+	endcase
+end
 
 endmodule

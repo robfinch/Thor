@@ -1,11 +1,9 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
-//
-//	Thor2024_decode_imm.sv
 //
 //
 // BSD 3-Clause License
@@ -33,50 +31,30 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
-// 238 LUTs
+//
 // ============================================================================
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_imm(ins, imm);
-parameter WID=32;
-input instruction_t [4:0] ins;
-output reg [63:0] imm;
+module Thor2024_decode_Rc(instr, Rc);
+input instruction_t instr;
+output regspec_t Rc;
 
-wire [63:0] imm32x64;
-
-fpCvt32To64 ucvt32x64(imm[31:0], imm32x64);
-
-always_comb
+function regspec_t fnRc;
+input instruction_t ir;
 begin
-	imm = 'd0;
-	case(ins[0].any.opcode)
-	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
-		imm = {{48{ins[0][34]}},ins[0][34:19]};
-	OP_ANDI:	imm = {48'hFFFFFFFFFFFF,ins[0][34:19]};
-	OP_ORI,OP_EORI:
-		imm = {48'h0000,ins[0][34:19]};
-	OP_RTD:	imm = {{16{ins[0][34]}},ins[0][34:19]};
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
-	OP_STB,OP_STW,OP_STT,OP_STO:
-		imm = {{50{ins[0][34]}},ins[0][34:21]};
-	OP_ADDIPC:
-		imm = {{42{ins[0][34]}},ins[0][34:13]};
+	case(ir.any.opcode)
+	OP_RTD:
+		fnRc = 6'd56 + ir[8:7];
+	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
+		fnRc = ir[12:7];
 	default:
-		imm = 'd0;
-	endcase
-	if (ins[1].any.opcode==OP_PFX) begin
-		imm = {{32{ins[1][39]}},ins[1][39:8]};
-		if (ins[2].any.opcode==OP_PFX)
-			imm[63:32] = ins[2][39:8];
-	end
-	case(ins[0].any.opcode)
-	OP_FLT2,OP_FLT3:
-		if (ins[1].any.opcode==OP_PFX && ins[2].any.opcode!=OP_PFX)
-			imm = imm32x64;
-	default:	;
+		fnRc = ir[30:25];
 	endcase
 end
+endfunction
+
+assign Rc = fnRc(instr);
 
 endmodule
+

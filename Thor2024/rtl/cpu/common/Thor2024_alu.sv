@@ -37,7 +37,7 @@
 import const_pkg::*;
 import Thor2024pkg::*;
 
-module Thor2024_alu(rst, clk, ir, div, a, b, c, t, p, o, mul_done, div_done, div_dbz);
+module Thor2024_alu(rst, clk, ir, div, a, b, c, i, t, p, o, mul_done, div_done, div_dbz);
 input rst;
 input clk;
 input instruction_t ir;
@@ -46,6 +46,7 @@ input value_t a;
 input value_t b;
 input value_t c;
 input value_t t;
+input value_t i;
 input value_t p;
 output value_t o;
 output reg mul_done;
@@ -160,8 +161,8 @@ always_comb
 	OP_STW:		bus = a + b;
 	OP_STT:		bus = a + b;
 	OP_STO:		bus = a + b;
-	OP_LDX:	bus = a + (b);
-	OP_STX:	bus = a + (b);
+	OP_LDX:	bus = a + (b) + i;
+	OP_STX:	bus = a + (b) + i;
 	default:	bus = {2{32'hDEADBEEF}};
 	endcase
 

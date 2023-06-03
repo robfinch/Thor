@@ -5,7 +5,6 @@
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
-//	Thor2024_icache_ctrl.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -33,72 +32,22 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// 41 LUTs / 358 FFs
 // ============================================================================
 
-import fta_bus_pkg::*;
 import Thor2024pkg::*;
-import Thor2024_cache_pkg::*;
 
-module Thor2024_icache_ctrl(rst, clk, wbm_req, wbm_resp, hit, miss_adr, miss_asid,
-	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
-parameter WAYS = 4;
-parameter CORENO = 6'd1;
-parameter CID = 6'd0;
-localparam LOG_WAYS = $clog2(WAYS);
-input rst;
-input clk;
-output fta_cmd_request128_t wbm_req;
-input fta_cmd_response128_t wbm_resp;
-input hit;
-input fta_address_t miss_adr;
-input Thor2024pkg::asid_t miss_asid;
-output wr_ic;
-output [LOG_WAYS-1:0] way;
-output ICacheLine line_o;
-input fta_address_t snoop_adr;
-input snoop_v;
-input [5:0] snoop_cid;
+module Thor2024_decode_Rb(instr, Rb);
+input instruction_t instr;
+output regspec_t Rb;
 
-wire Thor2024pkg::address_t [15:0] vtags;
+function regspec_t fnRb;
+input instruction_t ir;
+begin
+	fnRb = ir[24:19];
+end
+endfunction
 
-// Generate memory requests to fill cache line.
-
-Thor2024_icache_req_generator
-#(
-	.CORENO(CORENO),
-	.CID(CID)
-)
-icrq1
-(
-	.rst(rst),
-	.clk(clk),
-	.hit(hit), 
-	.miss_adr(miss_adr),
-	.miss_asid(miss_asid),
-	.wbm_req(wbm_req),
-	.wbm_resp(wbm_resp),
-	.vtags(vtags),
-	.snoop_v(snoop_v),
-	.snoop_adr(snoop_adr),
-	.snoop_cid(snoop_cid)
-);
-
-// Process ACK responses coming back.
-
-Thor2024_icache_ack_processor 
-#(
-	.LOG_WAYS(LOG_WAYS)
-)
-uicap1
-(
-	.rst(rst),
-	.clk(clk),
-	.wbm_resp(wbm_resp),
-	.wr_ic(wr_ic),
-	.line_o(line_o),
-	.vtags(vtags),
-	.way(way)
-);
+assign Rb = fnRb(instr);
 
 endmodule
+

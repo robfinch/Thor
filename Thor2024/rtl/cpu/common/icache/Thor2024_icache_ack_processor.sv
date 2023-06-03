@@ -56,7 +56,7 @@ typedef enum logic [2:0] {
 state_t resp_state;
 
 integer n;
-reg [7:0] last_tid;
+fta_tranid_t last_tid;
 reg [3:0] v [0:3];
 wire [16:0] lfsr_o;
 
@@ -96,35 +96,35 @@ else begin
 				case(wbm_resp.adr[5:4])
 				2'b00:
 					begin
-						v[wbm_resp.tid[3:2]][0] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].v[0] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].data[127:  0] <= wbm_resp.dat;
+						v[wbm_resp.tid.tranid[3:2]][0] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].v[0] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[127:  0] <= wbm_resp.dat;
 					end
 				2'b01:
 					begin
-						v[wbm_resp.tid [3:2]][1] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].v[1] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].data[255:128] <= wbm_resp.dat;
+						v[wbm_resp.tid.tranid[3:2]][1] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].v[1] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[255:128] <= wbm_resp.dat;
 					end
 				2'b10:
 					begin
-						v[wbm_resp.tid [3:2]][2] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].v[2] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].data[383:256] <= wbm_resp.dat;
+						v[wbm_resp.tid.tranid[3:2]][2] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].v[2] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[383:256] <= wbm_resp.dat;
 					end
 				2'b11:
 					begin
-						v[wbm_resp.tid [3:2]][3] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].v[3] <= 1'b1;
-						tran_line[wbm_resp.tid[3:2]].vtag <= vtags[wbm_resp.tid & 4'hF] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid[3:2]].data[511:384] <= wbm_resp.dat;
+						v[wbm_resp.tid.tranid[3:2]][3] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].v[3] <= 1'b1;
+						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[511:384] <= wbm_resp.dat;
 					end
 				endcase
 			end

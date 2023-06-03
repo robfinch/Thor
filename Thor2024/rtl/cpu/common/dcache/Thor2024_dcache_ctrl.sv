@@ -85,7 +85,7 @@ reg [LOG_WAYS:0] iway;
 fta_cmd_response512_t cache_load_data;
 reg cache_dump;
 reg [10:0] to_cnt;
-fta_tranid_t tid_cnt;
+reg [3:0] tid_cnt;
 wire [16:0] lfsr_o;
 reg [1:0] dump_cnt;
 reg [511:0] upd_dat;
@@ -97,6 +97,7 @@ reg [15:0] cache_load_r;
 fta_cmd_request512_t cpu_req_queue [0:15];
 fta_cmd_request128_t tran_req [0:15];
 fta_cmd_response512_t tran_load_data [0:15];
+fta_tranid_t [15:0] tranids;
 reg [15:0] tran_out;
 reg [15:0] is_dump;
 reg req_load;
@@ -104,7 +105,7 @@ reg [1:0] load_cnt;
 reg [5:0] wait_cnt;
 reg [1:0] wr_cnt;
 reg cpu_request_queued;
-reg [7:0] lasttid;
+fta_tranid_t lasttid;
 reg bus_busy;
 
 always_comb
@@ -186,7 +187,6 @@ if (rst_i) begin
 	resp_state <= RESET;
 	to_cnt <= 'd0;
 	tid_cnt <= 'd0;
-	tid_cnt[7:4] <= {CORENO,1'b1};
 	lasttid <= 'd0;
 	dump_ack <= 1'd0;
 	wr <= 1'b0;
@@ -267,7 +267,8 @@ else begin
 							!non_cacheable,
 							cpu_request_i2.asid,
 							{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],load_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-							'd0
+							'd0,
+							cpu_request_i2.tid
 						);
 						load_cnt <= load_cnt + 2'd1;
 					end
@@ -289,7 +290,8 @@ else begin
 						!non_cacheable,
 						dump_i.asid,
 						{dump_i.vtag[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],dump_cnt[1:0],{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-						dump_i.data >> {dump_cnt,7'd0}
+						dump_i.data >> {dump_cnt,7'd0},
+						cpu_request_i2.tid
 					);
 					dump_cnt <= dump_cnt + 2'd1;
 				end
@@ -358,33 +360,33 @@ else begin
 		begin
 			if (ftam_resp.ack) begin
 				// Got an ack back so the tran no longer needs to be performed.
-				tran_active[ftam_resp.tid & 4'hF] <= 1'b0;
-				tran_out[ftam_resp.tid & 4'hF] <= 1'b0;
+				tran_active[ftam_resp.tid.tranid] <= 1'b0;
+				tran_out[ftam_resp.tid.tranid] <= 1'b0;
 				//tran_req[ftam_resp.tid & 4'hF].cyc <= 1'b0;
-				tran_load_data[ftam_resp.tid & 4'hF].cid <= ftam_resp.cid;
-				tran_load_data[ftam_resp.tid & 4'hF].tid <= ftam_resp.tid;
-				tran_load_data[ftam_resp.tid & 4'hF].pri <= ftam_resp.pri;
-				tran_load_data[ftam_resp.tid & 4'hF].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
+				tran_load_data[ftam_resp.tid.tranid].cid <= ftam_resp.cid;
+				tran_load_data[ftam_resp.tid.tranid].tid <= ftam_resp.tid;
+				tran_load_data[ftam_resp.tid.tranid].pri <= ftam_resp.pri;
+				tran_load_data[ftam_resp.tid.tranid].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
 				case(ftam_resp.adr[5:4])
-				2'd0: begin tran_load_data[ftam_resp.tid & 4'hF].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid & 4'hF][0] <= 1'b1; end
-				2'd1:	begin tran_load_data[ftam_resp.tid & 4'hF].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid & 4'hF][1] <= 1'b1; end
-				2'd2:	begin tran_load_data[ftam_resp.tid & 4'hF].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid & 4'hF][2] <= 1'b1; end
-				2'd3:	begin tran_load_data[ftam_resp.tid & 4'hF].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid & 4'hF][3] <= 1'b1; end
+				2'd0: begin tran_load_data[ftam_resp.tid.tranid].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid.tranid][0] <= 1'b1; end
+				2'd1:	begin tran_load_data[ftam_resp.tid.tranid].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid.tranid][1] <= 1'b1; end
+				2'd2:	begin tran_load_data[ftam_resp.tid.tranid].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid.tranid][2] <= 1'b1; end
+				2'd3:	begin tran_load_data[ftam_resp.tid.tranid].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid.tranid][3] <= 1'b1; end
 				endcase
 				we_r <= ftam_req.we;
-				tran_load_data[ftam_resp.tid & 4'hF].rty <= 1'b0;
-				tran_load_data[ftam_resp.tid & 4'hF].err <= 1'b0;
-				tran_load_data[ftam_resp.tid & 4'hF].ack <= 1'b1;
-				v[ftam_resp.tid & 4'hF][ftam_resp.adr[5:4]] <= 'd1;
+				tran_load_data[ftam_resp.tid.tranid].rty <= 1'b0;
+				tran_load_data[ftam_resp.tid.tranid].err <= 1'b0;
+				tran_load_data[ftam_resp.tid.tranid].ack <= 1'b1;
+				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd1;
 			end
 			// Retry or error (only if transaction active)
 			// Abort the memory request. Go back and try again.
 			else if ((ftam_resp.rty|ftam_resp.err) & tran_active[ftam_resp.tid]) begin
-				tran_load_data[ftam_resp.tid & 4'hF].rty <= ftam_resp.rty;
-				tran_load_data[ftam_resp.tid & 4'hF].err <= ftam_resp.err;
-				tran_load_data[ftam_resp.tid & 4'hF].ack <= 1'b0;
-				tran_out[ftam_resp.tid & 4'hF] <= 1'b0;
-				v[ftam_resp.tid & 4'hF][ftam_resp.adr[5:4]] <= 'd0;
+				tran_load_data[ftam_resp.tid.tranid].rty <= ftam_resp.rty;
+				tran_load_data[ftam_resp.tid.tranid].err <= ftam_resp.err;
+				tran_load_data[ftam_resp.tid.tranid].ack <= 1'b0;
+				tran_out[ftam_resp.tid.tranid] <= 1'b0;
+				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd0;
 			end
 			for (nn = 0; nn < 16; nn = nn + 1)
 				if (v[nn]==4'b1111) begin
@@ -392,6 +394,7 @@ else begin
 					is_dump[nn] <= 'd0;
 					iway <= lfsr_o[LOG_WAYS:0];
 					cache_load_data <= tran_load_data[nn];
+					cache_load_data.tid <= tranids[nn];
 					ndx <= nn;
 					resp_state <= STATE3;
 					// Write to cache only if response from TLB indicates a cacheable
@@ -485,8 +488,9 @@ input cache;
 input Thor2024pkg::asid_t asid;
 input Thor2024pkg::address_t adr;
 input [127:0] data;
+input fta_tranid_t tid;
 begin
-	tid_cnt[7:4] <= {CORENO,1'b1};
+	tranids[tid_cnt & 4'hF] <= tid;
 	tid_cnt[3] <= 1'b0;
 	tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
 	to_cnt <= 'd0;
@@ -495,8 +499,10 @@ begin
 		cache ? fta_bus_pkg::CMD_DCACHE_LOAD : fta_bus_pkg::CMD_LOADZ;
 	tran_req[tid_cnt & 4'hF].sz <= fta_bus_pkg::hexi;
 	tran_req[tid_cnt & 4'hF].blen <= 'd0;
-	tran_req[tid_cnt & 4'hF].cid <= 3'd7;
-	tran_req[tid_cnt & 4'hF].tid <= tid_cnt;
+	tran_req[tid_cnt & 4'hF].cid <= tid.channel;
+	tran_req[tid_cnt & 4'hF].tid.core <= tid.core;
+	tran_req[tid_cnt & 4'hF].tid.channel <= tid.channel;
+	tran_req[tid_cnt & 4'hF].tid.tranid <= tid_cnt;
 	tran_req[tid_cnt & 4'hF].bte <= fta_bus_pkg::LINEAR;
 	tran_req[tid_cnt & 4'hF].cti <= fta_bus_pkg::CLASSIC;
 	tran_req[tid_cnt & 4'hF].cyc <= 1'b1;
@@ -539,7 +545,8 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.dat[127:0]
+				cpu_request_i2.dat[127:0],
+				cpu_request_i2.tid
 			);
 			req_state <= RAND_DELAY;
 		end
@@ -552,7 +559,8 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.dat[255:128]
+				cpu_request_i2.dat[255:128],
+				cpu_request_i2.tid
 			);
 			req_state <= RAND_DELAY;
 		end
@@ -565,7 +573,8 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.dat[383:256]
+				cpu_request_i2.dat[383:256],
+				cpu_request_i2.tid
 			);
 			req_state <= RAND_DELAY;
 		end
@@ -578,7 +587,8 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.dat[511:384]
+				cpu_request_i2.dat[511:384],
+				cpu_request_i2.tid
 			);
 			req_state <= RAND_DELAY;
 		end
