@@ -60,6 +60,7 @@ double_value_t produ, produ1, produ2;
 value_t div_q, div_r;
 value_t cmpo;
 value_t bus;
+value_t blendo;
 
 // A change in arguments is used to load the divider.
 change_det #(.WID($bits(double_value_t))) uargcd0 (
@@ -106,6 +107,14 @@ Thor2024_divider udiv0(
 	.dvByZr(div_dbz),
 	.done(div_done),
 	.idle()
+);
+
+Thor2024_blend ublend0
+(
+	.a(c),
+	.c0(a),
+	.c1(b),
+	.o(blendo)
 );
 
 always_comb
@@ -163,6 +172,7 @@ always_comb
 	OP_STO:		bus = a + b;
 	OP_LDX:	bus = a + (b) + i;
 	OP_STX:	bus = a + (b) + i;
+	OP_BLEND:	bus = blendo;
 	default:	bus = {2{32'hDEADBEEF}};
 	endcase
 

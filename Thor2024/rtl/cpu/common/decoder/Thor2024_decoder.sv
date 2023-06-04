@@ -82,10 +82,22 @@ Thor2024_decode_has_imm uhi
 	.has_imm(db.has_imm)
 );
 
-Thor2024_decode_fc uhi
+Thor2024_decode_fc ufc1
 (
 	.instr(instr[0]),
 	.fc(db.fc)
+);
+
+Thor2024_decode_branch udecbr
+(
+	.instr(instr[0]),
+	.branch(db.br)
+);
+
+Thor2024_decode_backbr ubkbr1
+(
+	.instr(instr[0]),
+	.backbr(db.backbr)
 );
 
 Thor2024_decode_alu udcalu
@@ -104,6 +116,48 @@ Thor2024_decode_mulu umulu1
 (
 	.instr(instr[0]),
 	.mulu(db.mulu)
+);
+
+Thor2024_decode_div udiv1
+(
+	.instr(instr[0]),
+	.div(db.div)
+);
+
+Thor2024_decode_divu udivu1
+(
+	.instr(instr[0]),
+	.divu(db.divu)
+);
+
+Thor2024_decode_mem umem1
+(
+	.instr(instr[0]),
+	.mem(db.mem)
+);
+
+Thor2024_decode_load udecld1
+(
+	.instr(instr[0]),
+	.load(db.load)
+);
+
+Thor2024_decode_loadz udecldz1
+(
+	.instr(instr[0]),
+	.loadz(db.loadz)
+);
+
+Thor2024_decode_store udecst1
+(
+	.instr(instr[0]),
+	.store(db.store)
+);
+
+Thor2024_decode_fpu ufpu
+(
+	.instr(instr[0]),
+	.fpu(db.fpu)
 );
 
 endmodule

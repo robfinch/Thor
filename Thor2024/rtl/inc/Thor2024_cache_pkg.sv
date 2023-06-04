@@ -41,7 +41,7 @@ parameter ITAG_BIT = 14;
 parameter DCacheLineWidth = 512;
 localparam DCacheTagLoBit = $clog2((DCacheLineWidth/8));
 parameter ICacheLineWidth = 512;
-localparam ICacheTagLoBit = $clog2((ICacheLineWidth/8))-1;
+localparam ICacheTagLoBit = $clog2((ICacheLineWidth/8));
 
 `define TAG_ASID $bits(Thor2024pkg::asid_t) + $bits(Thor2024pkg::address_t)-ITAG_BIT-1:$bits(Thor2024pkg::address_t)-ITAG_BIT
 

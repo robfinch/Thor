@@ -2614,20 +2614,35 @@ static int encode_vmask(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t va
 static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, thuge* postfix, size_t* pfxsize)
 {
 	uint64_t tgt;
+	thuge hg;
 
 	if (op->type == OP_IMM) {
 		switch(i) {
-		case 1:
-			*postfix = huge_from_int(val);
-			if (postfix) {
-				*pfxsize = 2;
-			}
-			if (!is_nbit(huge_from_int(val), 16LL)) {
+		case 0:
+			hg = huge_from_int(val);
+			if (postfix)
+				*postfix = hg;
+			if (pfxsize)
 				*pfxsize = 4;
-			}
 			if (!is_nbit(huge_from_int(val), 32LL)) {
-				*pfxsize = 8;
+				if (pfxsize)
+					*pfxsize = 8;
 			}
+			if (insn)
+				*insn = *insn | RA(63);
+			break;
+		case 1:
+			hg = huge_from_int(val);
+			if (postfix)
+				*postfix = hg;
+			if (pfxsize)
+				*pfxsize = 4;
+			if (!is_nbit(huge_from_int(val), 32LL)) {
+				if (pfxsize)
+					*pfxsize = 8;
+			}
+			if (insn)
+				*insn = *insn | RB(63);
 			break;
 #ifdef BRANCH_PGREL			
 		case 2:
@@ -2647,7 +2662,9 @@ static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, thu
 #else	  	
 		case 2:
 	  	if (insn) {
-  			tgt = ((val & 0x1ffffLL) << 23LL);
+  			tgt = ((val & 3LL) << 11LL);
+  			*insn |= tgt;
+  			tgt = (((val & 0x1ffffLL) >> 2LL) << 25LL);
   			*insn |= tgt;
   		}
 			break;
@@ -2678,10 +2695,10 @@ static void encode_branch_BL2(uint64_t* insn, operand* op, int64_t val, int i)
 		  	break;
 #else
 			case 1:
-	  		tgt = ((val & 0x1ffffLL) << 23LL);
-	  		*insn |= tgt;
-	  		tgt |= (((val >> 17LL) & 0xfffLL) << 11LL);
-	  		*insn |= tgt;
+  			tgt = ((val & 3LL) << 11LL);
+  			*insn |= tgt;
+  			tgt = (((val & 0x1ffffLL) >> 2LL) << 25LL);
+  			*insn |= tgt;
 		  	break;
 #endif		  
 			}
@@ -2702,18 +2719,22 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 
 	case B:
 		encode_branch_B(insn, op, val, i, postfix, pfxsize);
+		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
 	case B2:
 		encode_branch_BL2(insn, op, val, i-1);
+		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
 	case BZ:
 		encode_branch_B(insn, op, val, i+1, postfix, pfxsize);
+		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
 	case BL2:
 		encode_branch_BL2(insn, op, val, i);
+		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
 	case J:
@@ -2903,11 +2924,11 @@ static size_t encode_scndx(
 	TRACE("Etho6:");
 	if (insn) {
 		if (i==0)
-			*insn |= (RA(op->basereg));
+			*insn |= (RT(op->basereg));
 		else if (i==1) {
-			*insn |= (RB(op->basereg));
+			*insn |= (RA(op->basereg));
 			/* *insn |= ((val & 0xffLL) << 21LL); */
-			*insn |= RC(op->ndxreg);
+			*insn |= RB(op->ndxreg);
 			*insn |= S(op->scale);
 		}
 	}
@@ -3418,8 +3439,6 @@ size_t encode_thor_instruction(instruction *ip,section *sec,taddr pc,
 			isize = encode_jscndx(ip, insn, &op, val, constexpr, postfix, pfxsize, i, db==NULL);
 	}
 	
-	if (has_vector_mask)
-		isize = 6;	// otherwise 5
 	TRACE("G");
 	return (isize);
 }

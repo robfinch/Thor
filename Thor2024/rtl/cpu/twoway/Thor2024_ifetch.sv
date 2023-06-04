@@ -1,6 +1,43 @@
+// ============================================================================
+//        __
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
+//    \  __ /    All rights reserved.
+//     \/_//     robfinch<remove>@finitron.ca
+//       ||
+//
+//	Thor2024_ifetch.sv
+//
+// BSD 3-Clause License
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// ============================================================================
+
 import Thor2024pkg::*;
 
-module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc,
+module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc, missir,
 	next_pc, takb, ptakb, pc, pc_i, stall, inst0, inst1, iq, tail0, tail1,
 	fetchbuf, fetchbuf0_instr, fetchbuf0_v, fetchbuf0_pc, 
 	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc);
@@ -9,14 +46,15 @@ input clk;
 input hit;
 input irq;
 output reg branchback;
-output address_t backpc;
+output pc_address_t backpc;
 input branchmiss;
-input address_t misspc;
-input address_t next_pc;
+input pc_address_t misspc;
+input pc_address_t next_pc;
+input instruction_t missir;
 input takb;
 output reg ptakb;
-output address_t pc;
-input address_t pc_i;
+output pc_address_t pc;
+input pc_address_t pc_i;
 output reg stall;
 input instruction_t [4:0] inst0;
 input instruction_t [4:0] inst1;
@@ -26,10 +64,10 @@ input que_ndx_t tail1;
 output reg fetchbuf;
 output instruction_t [4:0] fetchbuf0_instr;
 output reg fetchbuf0_v;
-output address_t fetchbuf0_pc;
+output pc_address_t fetchbuf0_pc;
 output instruction_t [4:0] fetchbuf1_instr;
 output reg fetchbuf1_v;
-output address_t fetchbuf1_pc;
+output pc_address_t fetchbuf1_pc;
 
 reg [3:0] panic;
 reg did_branchback;
@@ -48,19 +86,66 @@ instruction_t [4:0] fetchbufA_instr;
 instruction_t [4:0] fetchbufB_instr;
 instruction_t [4:0] fetchbufC_instr;
 instruction_t [4:0] fetchbufD_instr;
-address_t fetchbufA_pc;
-address_t fetchbufB_pc;
-address_t fetchbufC_pc;
-address_t fetchbufD_pc;
+pc_address_t fetchbufA_pc;
+pc_address_t fetchbufB_pc;
+pc_address_t fetchbufC_pc;
+pc_address_t fetchbufD_pc;
 reg buffered, consumed;
-address_t pci;
+pc_address_t pci;
 reg takb1;
 reg did_branchmiss;
+reg [11:0] micro_ip;
+instruction_t micro_ir;
+instruction_t micro_instr0, micro_instr1, micro_instr2;
+
+Thor2024_micro_code umc0
+(
+	.micro_ip(micro_ip),
+	.micro_ir(micro_ir),
+	.next_ip(),
+	.instr(micro_instr0)
+);
+Thor2024_micro_code umc1
+(
+	.micro_ip(micro_ip+1),
+	.micro_ir(micro_ir),
+	.next_ip(next_micro_ip),
+	.instr(micro_instr1)
+);
+Thor2024_micro_code umc2
+(
+	.micro_ip(micro_ip+2),
+	.micro_ir(micro_ir),
+	.next_ip(),
+	.instr(micro_instr2)
+);
+
+reg [11:0] mip0,mip1;
+
+always_comb
+	case(fetchbuf0_instr[0].any.opcode)
+	OP_ENTER:	mip0 <= 12'h001;
+	OP_LEAVE:	mip0 <= 12'h00C;
+	OP_PUSH:	mip0 <= 12'h016;
+	OP_POP:		mip0 <= 12'h020;
+	default:	mip0 <= 12'h000;
+	endcase
+always_comb
+	case(fetchbuf1_instr[0].any.opcode)
+	OP_ENTER:	mip1 <= 12'h001;
+	OP_LEAVE:	mip1 <= 12'h00C;
+	OP_PUSH:	mip1 <= 12'h016;
+	OP_POP:		mip1 <= 12'h020;
+	default:	mip1 <= 12'h000;
+	endcase
+
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-	pc <= 32'hFFFD0000;
-	ppc <= 32'hFFFD0000;
+	pc <= 44'hFFFD0000000;
+	ppc <= 44'hFFFD0000000;
+	micro_ip <= 12'h000;
+	micro_ir <= {33'd0,OP_NOP};
 	ptakb <= 'd0;
 	stall <= 1'b0;
 	hitd <= 1'b0;
@@ -92,6 +177,7 @@ else begin
 
 	if (branchmiss) begin
     pc <= misspc;
+    micro_ir <= missir;
     fetchbuf <= 1'b0;
     fetchbufA_v <= INV;
     fetchbufB_v <= INV;
@@ -101,7 +187,7 @@ else begin
 	end
 	else begin
 		consumed = 1'b0;
-		if (0 && branchback) begin
+		if (branchback) begin
 
 	    // update the fetchbuf valid bits as well as fetchbuf itself
 	    // ... this must be based on which things are backwards branches, how many things
@@ -122,7 +208,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufB_v appropriately
 			4'b0100: 
 				begin
-					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 						tFetchCD();
 						if (buffered | hit) begin
 							consumed = 1'b1;
@@ -146,16 +232,16 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b0111:
 				begin
-					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
@@ -169,7 +255,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufA_v appropriately
 			4'b1000:
 				begin
-					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 						tFetchCD();
 						if (buffered | hit) begin
 							consumed = 1'b1;
@@ -193,16 +279,16 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b1011:
 				begin
-					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
@@ -221,14 +307,14 @@ else begin
 			// if fbB has it: if pc0 == fbB_pc, then it is the former scenario, else it is the latter
 			4'b1100:
 				begin
-					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 				    // has to be first scenario
 				    pc <= backpc;
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufB_v <= INV;		// stomp on it
 				    if (~iq[tail0].v)	fetchbuf <= 1'b0;
 					end
-					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    if (did_branchback) begin
 				    	tFetchCD();
 							if (buffered | hit) begin
@@ -261,18 +347,18 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b1111:
 				begin
-					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 					end
-					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 					end
-					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
@@ -298,7 +384,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufB_v appropriately
 			4'b0100:
 				begin
-					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 						tFetchAB();
 						if (buffered | hit) begin
 							consumed = 1'b1;
@@ -322,16 +408,16 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b0111:
 				begin
-					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
@@ -345,7 +431,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufC_v appropriately
 			4'b1000:
 				begin
-					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 						tFetchAB();
 						if (buffered | hit) begin
 							 consumed = 1'b1;
@@ -369,16 +455,16 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b1011:
 				begin
-					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
-					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + ~iq[tail0].v;
@@ -397,14 +483,14 @@ else begin
 			// if fbD has it: if pc0 == fbB_pc, then it is the former scenario, else it is the latter
 			4'b1100:
 				begin
-					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
 				    // has to be first scenario
 				    pc <= backpc;
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufD_v <= INV;		// stomp on it
 				    if (~iq[tail0].v)	fetchbuf <= 1'b0;
 					end
-					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    if (did_branchback) begin
 				    	tFetchAB();
 							if (buffered | hit) begin
@@ -437,18 +523,18 @@ else begin
 			// simple solution: leave it alone and wait until we are through with the first two slots.
 			4'b1111:
 				begin
-					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr)} == {VAL, TRUE}) begin
+					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 					end
-					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
 				    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 					end
-					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr)} == {VAL, TRUE}) begin
+					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    // branchback is in later instructions ... do nothing
 				    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 				    fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
@@ -600,20 +686,43 @@ always_comb
 always_comb
 	branchback = (fetchbuf0_v & isBB0) | (fetchbuf1_v & isBB1);
 always_comb
-	backpc = (fetchbuf0_v & isBB0)
-	    ? (fetchbuf0_pc + fnBranchDisp(fetchbuf0_instr[0]))
-	    : (fetchbuf1_pc + fnBranchDisp(fetchbuf1_instr[0]));
+	if (fetchbuf0_v && isBB0) begin
+		if (fnIsMacroInstr(fetchbuf0_instr[0]))
+			backpc = {fetchbuf0_pc.pc,mip0};
+		else
+			backpc = fetchbuf0_pc + fnBranchDisp(fetchbuf0_instr[0]);
+	end
+	else begin
+		if (fnIsMacroInstr(fetchbuf1_instr[0]))
+			backpc = {fetchbuf1_pc.pc,mip1};
+		else
+			backpc = fetchbuf1_pc + fnBranchDisp(fetchbuf1_instr[0]);
+	end
 
 task tFetchAB;
 begin
-	if (buffered) begin
+	if (pc.micro_ip != 12'h000) begin
+		fetchAB <= 1'b0;
+	  fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+	  fetchbufA_pc <= pci;
+	  fetchbufB_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufB_pc <= {pci.pc,pci.micro_ip+1};
+	  buffered <= 1'b0;
+	  ptakb <= takb1;
+	  if (hit & ~irq) begin
+	  	ppc <= pc;
+		  pc <= {pc.pc,next_micro_ip};
+		  takb1 <= takb;
+		end
+	end
+	else if (buffered) begin
 		fetchAB <= 1'b0;
 	  fetchbufA_instr <= inst0a;
 	  fetchbufA_v <= !did_branchmiss;
 	  fetchbufA_pc <= pci;
 	  fetchbufB_instr <= inst1a;
 	  fetchbufB_v <= !did_branchmiss;
-	  fetchbufB_pc <= pci + INSN_LEN;
+	  fetchbufB_pc <= pci + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin
@@ -629,7 +738,7 @@ begin
 	  fetchbufA_pc <= pc_i;
 	  fetchbufB_instr <= inst1;
 	  fetchbufB_v <= !did_branchmiss;
-	  fetchbufB_pc <= pc_i + INSN_LEN;
+	  fetchbufB_pc <= pc_i + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin
@@ -645,14 +754,28 @@ endtask
 
 task tFetchCD;
 begin
-	if (buffered) begin
+	if (pc.micro_ip != 12'h0000) begin
+		fetchCD <= 1'b0;
+	  fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+	  fetchbufC_pc <= pci;
+	  fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufD_pc <= {pci.pc,pci.micro_ip+1};
+	  buffered <= 1'b0;
+	  ptakb <= takb1;
+	  if (hit & ~irq) begin
+	  	ppc <= pc;
+		  pc <= {pc.pc,next_micro_ip};
+		  takb1 <= takb;
+		end
+	end
+	else if (buffered) begin
 		fetchCD <= 1'b0;
 	  fetchbufC_instr <= inst0a;
 	  fetchbufC_v <= VAL;
 	  fetchbufC_pc <= pci;
 	  fetchbufD_instr <= inst1a;
 	  fetchbufD_v <= VAL;
-	  fetchbufD_pc <= pci + INSN_LEN;
+	  fetchbufD_pc <= pci + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin
@@ -668,7 +791,7 @@ begin
 	  fetchbufC_pc <= pc_i;
 	  fetchbufD_instr <= inst1;
 	  fetchbufD_v <= VAL;
-	  fetchbufD_pc <= pc_i + INSN_LEN;
+	  fetchbufD_pc <= pc_i + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin
