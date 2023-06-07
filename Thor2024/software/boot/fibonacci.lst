@@ -1,0 +1,110 @@
+Sections:
+00: ".bss" (0-A)
+01: ".data" (0-A)
+02: ".text" (0-100)
+
+
+Source: "fibonacci.asm"
+                                    	     1: # Fibonacci calculator Thor2023 asm
+                                    	     2: # r1 in the end will hold the Nth fibonacci number
+                                    	     3: 
+                                    	     4: 	.bss
+00:0000000000000000 00              	     5: 	.space	10
+00:0000000000000001 *
+                                    	     6: .set	ary,0xFFFC0000
+                                    	     7: .set	txtscreen,0xFD000000
+                                    	     8: .set leds,0xFD0FFF00
+                                    	     9: .set keybd,0xFD0FFE00
+                                    	    10: .set rand,0xFD0FFD00
+                                    	    11: 
+                                    	    12: 	.data
+01:0000000000000000 00              	    13: 	.space	10
+01:0000000000000001 *
+                                    	    14: 
+                                    	    15: #	.org	0xFFFFFFFFFFFD0000
+                                    	    16: 	.text
+                                    	    17: #	.align	0
+                                    	    18: start:
+02:0000000000000000 0402F8FF07      	    19: 	ldi t0,-1
+02:0000000000000005 520200E0077C00FF	    20: 	stt t0,leds
+02:000000000000000D 0FFD
+02:000000000000000F 04020001007C2000	    21: 	ldi t0,0x43FFFFE000000020
+02:0000000000000017 00007CE0FFFF43
+                                    	    22: 
+02:000000000000001E 8F03000000      	    23: 	mov t3,r0
+02:0000000000000023 0403000002      	    24: 	ldi t2,16384
+                                    	    25: .st1:
+02:0000000000000028 57023800007C0000	    26: 	sto t0,txtscreen[r0+t3]
+02:0000000000000030 00FD
+02:0000000000000032 84E3400000      	    27: 	add t3,t3,8
+02:0000000000000037 28E830F8FF      	    28: 	blt t3,t2,.st1
+                                    	    29: 
+02:000000000000003C 8F03000000      	    30: 	mov t3,r0
+02:0000000000000041 0403400100      	    31: 	ldi t2,40
+                                    	    32: .st2:
+02:0000000000000046 57003800007C0000	    33: 	sto r0,0xfffc0000[r0+t3]
+02:000000000000004E FCFF
+02:0000000000000050 84E3400000      	    34: 	add t3,t3,8
+02:0000000000000055 28E830F8FF      	    35: 	blt t3,t2,.st2
+                                    	    36: 	
+02:000000000000005A 0301088001      	    37: 	csrrd r2,r0,0x3001	# get the thread number
+02:000000000000005F 0841780000      	    38: 	and r2,r2,15				# 0 to 3
+02:0000000000000064 0402080000      	    39: 	ldi t0,1
+02:0000000000000069 2750204000      	    40: 	bne r2,t0,stall			# Allow only thread 1 to work
+                                    	    41: 
+02:000000000000006E 0401E80700      	    42: 	LDI r2,0xFD
+02:0000000000000073 0401080000      	    43: 	LDI r2,0x01					# x = 1
+02:0000000000000078 52010000007C0000	    44: 	STT r2,ary@got
+02:0000000000000080 FCFF
+                                    	    45: 
+02:0000000000000082 8401800000      	    46: 	LDI r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
+02:0000000000000087 8260000800      	    47: 	OR r1,r3,r0	# transfer y register to accumulator
+02:000000000000008C 8461E8FF07      	    48: 	ADD r3,r3,-3	# handles the algorithm iteration counting
+                                    	    49: 
+02:0000000000000091 8400100000      	    50: 	LDI r1,2		# a = 2
+02:0000000000000096 D2008000007C0400	    51: 	STT r1,0xFFFC0004		# stores a
+02:000000000000009E FCFF
+                                    	    52: 
+                                    	    53: floop: 
+02:00000000000000A0 44018000007C0400	    54: 	LDT r2,0xFFFC0004		# x = a
+02:00000000000000A8 FCFF
+02:00000000000000AA 8220102000      	    55: 	ADD r1,r1,r2					# a += x
+02:00000000000000AF D2008000007C0400	    56: 	STT r1,0xFFFC0004		# stores a
+02:00000000000000B7 FCFF
+02:00000000000000B9 52010000007C0000	    57: 	STT r2,0xFFFC0000		# stores x
+02:00000000000000C1 FCFF
+02:00000000000000C3 8461F8FF07      	    58: 	ADD r3,r3,-1					# y -= 1
+02:00000000000000C8 276000ECFF      	    59:   bnez r3,floop		# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
+02:00000000000000CD FFFFFFFFFF      	    60:   NOP
+02:00000000000000D2 FFFFFFFFFF      	    61:   NOP
+02:00000000000000D7 FFFFFFFFFF      	    62:   NOP
+02:00000000000000DC FFFFFFFFFF      	    63:   NOP
+02:00000000000000E1 FFFFFFFFFF      	    64:   NOP
+02:00000000000000E6 FFFFFFFFFF      	    65: 	NOP  
+                                    	    66: stall:
+02:00000000000000EB DB01000000      	    67: 	BRA	stall
+                                    	    68: 
+                                    	    69: 	.balign	0x100,0x0B
+                                    	    70: 
+                                    	    71: 
+
+
+Symbols by name:
+.st1                            02:0000000000000028
+.st2                            02:0000000000000046
+ary                              S:00000000FFFC0000
+floop                           02:00000000000000A0
+leds                             S:00000000FD0FFF00
+stall                           02:00000000000000EB
+start                           02:0000000000000000
+txtscreen                        S:00000000FD000000
+
+Symbols by value:
+00000000FD000000 txtscreen
+00000000FD0FFF00 leds
+00000000FFFC0000 ary
+0000000000000000 start
+0000000000000028 .st1
+0000000000000046 .st2
+00000000000000A0 floop
+00000000000000EB stall
