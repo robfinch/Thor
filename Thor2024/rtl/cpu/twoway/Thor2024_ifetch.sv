@@ -122,22 +122,44 @@ Thor2024_micro_code umc2
 
 reg [11:0] mip0,mip1;
 
-always_comb
-	case(fetchbuf0_instr[0].any.opcode)
-	OP_ENTER:	mip0 <= 12'h001;
-	OP_LEAVE:	mip0 <= 12'h00C;
-	OP_PUSH:	mip0 <= 12'h016;
-	OP_POP:		mip0 <= 12'h020;
-	default:	mip0 <= 12'h000;
+function [11:0] fnMip;
+input instruction_t ir;
+begin
+	case(ir.any.opcode)
+	OP_ENTER:	fnMip <= 12'h001;
+	OP_LEAVE:	fnMip <= 12'h00C;
+	OP_PUSH:	fnMip <= 12'h016;
+	OP_POP:		fnMip <= 12'h020;
+	OP_FLT2:
+		case(ir.f2.func)
+		FN_FLT1:
+			case(ir.f1.func)
+			FN_FRES:
+				case(ir[26:25])
+				2'd1:	fnMip <= 12'h080;
+				2'd2:	fnMip <= 12'h088;
+				2'd3: fnMip <= 12'h090;
+				endcase
+			FN_RSQRTE:
+				case(ir[26:25])
+				2'd0: fnMip <= 12'h04D;
+				2'd1:	fnMip <= 12'h059;
+				2'd2:	fnMip <= 12'h069;
+				2'd3: fnMip <= 12'h035;
+				endcase
+			default:	fnMip <= 12'h000;			
+			endcase
+		FN_FDIV:	fnMip <= 12'h028;
+		default:	fnMip <= 12'h000;
+		endcase
 	endcase
+end
+endfunction
+
 always_comb
-	case(fetchbuf1_instr[0].any.opcode)
-	OP_ENTER:	mip1 <= 12'h001;
-	OP_LEAVE:	mip1 <= 12'h00C;
-	OP_PUSH:	mip1 <= 12'h016;
-	OP_POP:		mip1 <= 12'h020;
-	default:	mip1 <= 12'h000;
-	endcase
+	mip0 = fnMip(fetchbuf0_instr[0]);
+always_comb
+	mip1 = fnMip(fetchbuf1_instr[0]);
 
 
 always_ff @(posedge clk, posedge rst)

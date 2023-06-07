@@ -51,16 +51,28 @@ output value_t o;
 output reg done;
 
 reg [11:0] cnt;
-reg sincos_done;
+reg sincos_done, scale_done, f2i_done, i2f_done, sqrt_done, fres_done;
+wire div_done;
 value_t fmao1, fmao2, fmao3, fmao4, fmao5, fmao6, fmao7;
+value_t scaleo, f2io, i2fo, signo, cmpo, divo, sqrto, freso;
+wire ce = 1'b1;
 
 // A change in arguments is used to load the divider.
 change_det #(.WID($bits(double_value_t))) uargcd0 (
 	.rst(rst),
 	.clk(clk),
-	.ce(1'b1),
+	.ce(ce),
 	.i({a,b}),
 	.cd(cd_args)
+);
+
+fpScaleb64 uscal1
+(
+	.clk(clk),
+	.ce(ce),
+	.a(a),
+	.b(b),
+	.o(scaleo)
 );
 
 value_t sino, coso;
@@ -125,7 +137,7 @@ if (rst) begin
 	fmao7 <= 'd0;
 	fmao <= 'd0;
 end
-else begin
+else if (ce) begin
 	fmao2 <= fmao1;
 	fmao3 <= fmao2;
 	fmao4 <= fmao3;
@@ -135,32 +147,147 @@ else begin
 	fmao <= fmao7;
 end
 
+/*
+fpDivide64nr udiv1
+(
+	.rst(rst),
+	.clk(clk),
+	.clk4x(clk),
+	.ce(ce),
+	.ld(cd_args),
+	.op(1'b0),			// not used
+	.a(a),
+	.b(b),
+	.o(divo),
+	.rm(rm),
+	.done(div_done),
+	.sign_exe(),
+	.inf(),
+	.overflow(),
+	.underflow()
+);
+*/
+
+f2i64 uf2i641
+(
+	.clk(clk),
+	.ce(ce), 
+	.op(1'b1),	// 1= signed, 0=unsigned
+	.i(a),
+	.o(f2io),
+	.overflow()
+);
+
+i2f64 ui2f1
+(
+	.clk(clk),
+	.ce(ce),
+	.op(1'b1),	//1=signed, 0=unsigned
+	.rm(rm),
+	.i(a),
+	.o(i2fo)
+);
+
+fpSign64 usign1
+(
+	.a(a),
+	.o(signo)
+);
+
+fpCompare64 ucmp1
+(
+	.a(a),
+	.b(b),
+	.o(cmpo),
+	.inf(),
+	.nan(),
+	.snan()
+);
+
+/*
+fpSqrt64nr usqrt1
+(
+	.rst(rst),
+	.clk(clk),
+	.ce(ce),
+	.ld(cd_args),
+	.a(a),
+	.o(sqrto),
+	.rm(rm),
+	.done(),
+	.inf(),
+	.sqrinf(),
+	.sqrneg()
+);
+*/
+
+fpRes64 ufre1
+(
+	.clk(clk),
+	.ce(ce),
+	.a(a),
+	.o(freso)
+);
+
 always_ff @(posedge clk)
 if (rst) begin
 	cnt <= 'd0;
 	sincos_done <= 1'b0;
+	fma_done <= 1'b0;
+	scale_done <= 1'b0;
+	f2i_done <= 'd0;
+	i2f_done <= 'd0;
+	sqrt_done <= 'd0;
+	fres_done <= 'd0;
 end
 else begin
 	if (cd_args)
 		cnt <= 'd0;
 	else
 		cnt <= cnt + 2'd1;
-	sincos_done <= cnt==12'd64;
-	fma_done <= cnt==12'h8;
+	sincos_done <= cnt>=12'd64;
+	fma_done <= cnt>=12'h8;
+	scale_done <= cnt>=12'h3;
+	f2i_done <= cnt>=12'h2;
+	i2f_done <= cnt>=12'h2;
+	sqrt_done <= cnt >= 12'd121;
+	fres_done <= cnt >= 12'h002;
 end
 
 always_comb
+begin
+	o = 'd0;
 	case(ir.any.opcode)
 	OP_FLT2:
 		case(ir.f2.func)
 		FN_FLT1:
 			case(ir.f1.func)
-			FN_SIN:	o = sino;
-			FN_COS:	o = coso;
+			FN_FABS:	o = {1'b0,a[$bits(value_t)-2:0]};
+			FN_FNEG:	o = {a[$bits(value_t)-1]^1'b1,a[$bits(value_t)-2:0]};
+			FN_FTOI:	o = f2io;
+			FN_ITOF:	o = i2fo;
+			FN_FSIGN:	o = signo;
+			FN_ISNAN:	o = &a[62:52] && |a[51:0];
+			FN_FINITE:	o = ~&a[62:52];
+			FN_FSIN:	o = sino;
+			FN_FCOS:	o = coso;
+//			FN_FSQRT:	o = sqrto;
+			FN_FRES:	o = freso;
 			default:	o = 'd0;
 			endcase
+		FN_FSCALEB:
+			o = scaleo;
 		FN_FADD,FN_FSUB,FN_FMUL:
 			o = fmao;
+		/*
+		FN_FDIV:
+			o = divo;
+		*/
+		FN_FSEQ:	o = cmpo[0];
+		FN_FSNE:	o = ~cmpo[0];
+		FN_FSLT:	o = cmpo[1];
+		FN_FSLE:	o = cmpo[2];
+		FN_FCMP:	o = cmpo;
 		default:	o = 'd0;
 		endcase
 	OP_FLT3:
@@ -171,19 +298,30 @@ always_comb
 		endcase
 	default:	o = 'd0;
 	endcase
-		
+end
+
 always_comb
 	case(ir.any.opcode)
 	OP_FLT2:
 		case(ir.f2.func)
 		FN_FLT1:
 			case(ir.f1.func)
-			FN_SIN:	done = sincos_done;
-			FN_COS:	done = sincos_done;
+			FN_FTOI: done = f2i_done;
+			FN_ITOF: done = i2f_done;
+			FN_FSIN:	done = sincos_done;
+			FN_FCOS:	done = sincos_done;
+//			FN_FSQRT: done = sqrt_done;
+			FN_FRES:	done = fres_done;
 			default:	done = 1'b1;
 			endcase
+		FN_FSCALEB:
+			done = scale_done;
 		FN_FADD,FN_FSUB,FN_FMUL:
 			done = fma_done;
+		/*
+		FN_FDIV:
+			done = div_done;
+		*/
 		default:	done = 1'b1;
 		endcase
 	OP_FLT3:

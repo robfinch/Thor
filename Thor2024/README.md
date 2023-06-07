@@ -17,18 +17,21 @@ Fixed length instruction set, 40-bit instructions.
 63 general purpose registers, unified integer and float register file
 63 vector registers
 Out-of-order execution of instructions
+Interruptible micro-code.
 1024 entry, five way TLB for virtual memory support
 
 ## Out-of-Order Version
 ### Status
-The Thor2024 OoO machine is currently in development. It has not yet reached the point of begin simulated.
+The Thor2024 OoO machine is currently in development. The base machine has
+had its first simulation run. A long way to go yet.
 
 ### Register File
 The register file contains 63 registers and is unified, supporting integer and floating-point operations using the same set of registers. One register code, 63, is dedicated to indicate the use of a postfix immediate for the value.
 There is a dedicated zero register, r0. There is also a register dedicated to refer to the program counter or the stack canary. The same register code serves both purposes. The register referring to the PC allows program counter relative addresses to be formed. Predicate registers are also part of the general purpose register file and the same set of instructions may be applied to them as to other registers. A register is also dedicated to the stack pointer, which is special in that it is banked for different operating modes.
+Four registers are dedicated to micro-code use.
 
 ### Instruction Length
-The author has found that in an FPGA the decode of variable length instruction length was on the critical timing path, limiting the maximum clock frequency and performance. So, he has decided to go with a fixed length instruction set for Thor2024. This is different than eariler versions which were variable length. However, while fixed length, Thor2024 supports extended length constants using postfix instructions. Postfix instructions are associated with the previous instruction and are fetched at the same time as the previous instruction. Effectively they are treated as if they were part of the instruction, but, the program counter still increments by a fixed amount so the postfix instructions end up being fetched and treated as NOPs. This is slightly better than using additional instructions to encode constants as the entire instruction word is used to hold a constant making it more memory efficient.
+The author has found that in an FPGA the decode of variable length instruction length was on the critical timing path, limiting the maximum clock frequency and performance. So, he has decided to go with a fixed length instruction set for Thor2024. This is different than earlier versions which were variable length. However, while fixed length, Thor2024 supports extended length constants using postfix instructions. Postfix instructions are associated with the previous instruction and are fetched at the same time as the previous instruction. Effectively they are treated as if they were part of the instruction, but, the program counter still increments by a fixed amount so the postfix instructions end up being fetched and treated as NOPs. This is slightly better than using additional instructions to encode constants as the entire instruction word is used to hold a constant making it more memory efficient.
 The five byte instruction length was chosen because of the number of operations supported by the processor and the use of predicates. A 32-bit instruction was just too cramped.
 
 ### Instruction alignment
@@ -51,6 +54,9 @@ Interrupts and exceptions are precise.
 
 ### Arithmetic Operations
 The ISA supports many arithmetic operations including add, sub, mulitply and divide. Multi-bit shifts and rotates are supported. And a full set of logic operations and their complements are supported.
+
+### Floating-point Operations
+Several floating-point ops have been added to the core, including fused multiply-add, reciprocal and reciprocal square root estimates and sine and cosine functions.
 
 ### Branches
 Conditional branches are a fused compare-and-branch instruction. Values of two registers are compared, then a branch is made depending on the relationship between the two.
@@ -99,4 +105,4 @@ Thor2024 will use vasm and vlink to assemble and link programs. vlink is used 'o
 Including only basic integer instructions the core is about 50,000 LUTs or 80,000 LC's in size. Not including the MPU component or MMU.
 
 # Performance
-The toolset indicates the core should be able to reach 50 MHz operation. Under absolutely ideal conditions the core may execute two instructions per clock. All stages support processing at least two instructions per clock. Realistically the core will typically execute less than one instruction per clock.
+The toolset indicates the core should be able to reach 33 MHz operation. Under absolutely ideal conditions the core may execute two instructions per clock. All stages support processing at least two instructions per clock. Realistically the core will typically execute less than one instruction per clock.
