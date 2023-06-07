@@ -51,10 +51,11 @@ output value_t o;
 output reg done;
 
 reg [11:0] cnt;
-reg sincos_done, scale_done, f2i_done, i2f_done, sqrt_done, fres_done;
+reg sincos_done, scale_done, f2i_done, i2f_done, sqrt_done, fres_done, trunc_done;
 wire div_done;
 value_t fmao1, fmao2, fmao3, fmao4, fmao5, fmao6, fmao7;
-value_t scaleo, f2io, i2fo, signo, cmpo, divo, sqrto, freso;
+value_t scaleo, f2io, i2fo, signo, cmpo, divo, sqrto, freso, trunco;
+value_t cvtS2Do;
 wire ce = 1'b1;
 
 // A change in arguments is used to load the divider.
@@ -178,14 +179,15 @@ f2i64 uf2i641
 	.overflow()
 );
 
-i2f64 ui2f1
+fpCvtI64To64 ui2f1
 (
 	.clk(clk),
 	.ce(ce),
 	.op(1'b1),	//1=signed, 0=unsigned
 	.rm(rm),
 	.i(a),
-	.o(i2fo)
+	.o(i2fo),
+	.inexact()
 );
 
 fpSign64 usign1
@@ -204,7 +206,6 @@ fpCompare64 ucmp1
 	.snan()
 );
 
-/*
 fpSqrt64nr usqrt1
 (
 	.rst(rst),
@@ -219,7 +220,6 @@ fpSqrt64nr usqrt1
 	.sqrinf(),
 	.sqrneg()
 );
-*/
 
 fpRes64 ufre1
 (
@@ -227,6 +227,20 @@ fpRes64 ufre1
 	.ce(ce),
 	.a(a),
 	.o(freso)
+);
+
+fpTrunc64 utrunc1
+(	
+	.clk(clk),
+	.ce(ce),
+	.i(a),
+	.o(trunco)
+);
+
+fpCvt32To64 ucvtS2D1
+(
+	.i(a),
+	.o(cvtS2Do)
 );
 
 always_ff @(posedge clk)
@@ -239,6 +253,7 @@ if (rst) begin
 	i2f_done <= 'd0;
 	sqrt_done <= 'd0;
 	fres_done <= 'd0;
+	trunc_done <= 'd0;
 end
 else begin
 	if (cd_args)
@@ -252,6 +267,7 @@ else begin
 	i2f_done <= cnt>=12'h2;
 	sqrt_done <= cnt >= 12'd121;
 	fres_done <= cnt >= 12'h002;
+	trunc_done <= cnt >= 12'h001;
 end
 
 always_comb
@@ -273,6 +289,8 @@ begin
 			FN_FCOS:	o = coso;
 //			FN_FSQRT:	o = sqrto;
 			FN_FRES:	o = freso;
+			FN_FTRUNC:	o = trunco;
+			FN_FCVTS2D:	o = cvtS2Do;
 			default:	o = 'd0;
 			endcase
 		FN_FSCALEB:
@@ -312,6 +330,7 @@ always_comb
 			FN_FCOS:	done = sincos_done;
 //			FN_FSQRT: done = sqrt_done;
 			FN_FRES:	done = fres_done;
+			FN_FTRUNC:	done = trunc_done;
 			default:	done = 1'b1;
 			endcase
 		FN_FSCALEB:

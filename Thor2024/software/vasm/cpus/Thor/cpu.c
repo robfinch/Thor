@@ -299,8 +299,8 @@ mnemonic mnemonics[]={
 	"modu", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,R2FUNC(7)|OPC(2)|0x300000000LL,5,SZ_INTALL,SZ_HEXI},
 	"modu", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,R2FUNC(7)|OPC(2)|0x300000000LL,5,SZ_INTALL,SZ_HEXI},
 
-	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,5, SZ_INTALL,SZ_HEXI},	
-	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x13LL,5},	
+	"mov", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,OPC(15LL),5, SZ_UNSIZED, 0},	
+	"move", {OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,OPC(15LL),5, SZ_UNSIZED, 0},	
 //	"mov",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 //	"move",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0817F00000AALL,6},
 	"movsxb",	{OP_REG,OP_REG,0,0,0}, {MV,CPU_ALL,0,0x0A120E0000AALL,6},
@@ -1915,9 +1915,9 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+				*insn = *insn| (RA(op->basereg));
 			else if (i==2)
-				*insn = *insn| (RB(op->basereg & regmask));
+				*insn = *insn| (RB(op->basereg));
 			break;
 		case RTDR:
 			if (i==0)
@@ -2069,9 +2069,9 @@ static void encode_vreg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+				*insn = *insn| (RA(op->basereg));
 			else if (i==2)
-				*insn = *insn| (RB(op->basereg & regmask));
+				*insn = *insn| (RB(op->basereg));
 			break;
 
 		case R4:

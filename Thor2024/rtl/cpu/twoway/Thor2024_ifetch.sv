@@ -152,6 +152,7 @@ begin
 		FN_FDIV:	fnMip <= 12'h028;
 		default:	fnMip <= 12'h000;
 		endcase
+	default:	fnMip <= 12'h000;
 	endcase
 end
 endfunction
@@ -711,14 +712,18 @@ always_comb
 	if (fetchbuf0_v && isBB0) begin
 		if (fnIsMacroInstr(fetchbuf0_instr[0]))
 			backpc = {fetchbuf0_pc.pc,mip0};
-		else
-			backpc = fetchbuf0_pc + fnBranchDisp(fetchbuf0_instr[0]);
+		else begin
+			backpc.pc = fetchbuf0_pc.pc + fnBranchDisp(fetchbuf0_instr[0]);
+			backpc.micro_ip = 'd0;
+		end
 	end
 	else begin
 		if (fnIsMacroInstr(fetchbuf1_instr[0]))
 			backpc = {fetchbuf1_pc.pc,mip1};
-		else
-			backpc = fetchbuf1_pc + fnBranchDisp(fetchbuf1_instr[0]);
+		else begin
+			backpc.pc = fetchbuf1_pc.pc + fnBranchDisp(fetchbuf1_instr[0]);
+			backpc.micro_ip = 'd0;
+		end
 	end
 
 task tFetchAB;

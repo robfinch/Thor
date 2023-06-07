@@ -158,6 +158,7 @@ always_comb
 	OP_ORI:		bus = a | b;
 	OP_EORI:	bus = a ^ b;
 	OP_SLTI:	bus = $signed(a) < $signed(b);
+	OP_MOV:		bus = a;
 	OP_LDB:		bus = a + b;
 	OP_LDBU:	bus = a + b;
 	OP_LDW:		bus = a + b;

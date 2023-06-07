@@ -79,6 +79,7 @@ begin
 	OP_ORI:		fnIsAlu = 1'b1;
 	OP_EORI:	fnIsAlu = 1'b1;
 	OP_SLTI:	fnIsAlu = 1'b1;
+	OP_MOV:		fnIsAlu = 1'b1;
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
 		fnIsAlu = 1'b1;
 	OP_LDX:
@@ -86,6 +87,8 @@ begin
 	OP_STB,OP_STW,OP_STT,OP_STO:
 		fnIsAlu = 1'b1;
 	OP_STX:
+		fnIsAlu = 1'b1;
+	OP_PFX,OP_NOP:
 		fnIsAlu = 1'b1;
 	default:	fnIsAlu = 1'b0;
 	endcase

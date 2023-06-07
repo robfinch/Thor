@@ -80,6 +80,8 @@ begin
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:
 		fnRp = {3'b100,ir[37:35]};
+	OP_MOV:
+		fnRp = {3'b100,ir[36:34]};
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
 	OP_LDX:
 		fnRp = {3'b100,ir[37:35]};

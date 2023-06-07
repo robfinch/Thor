@@ -80,6 +80,8 @@ begin
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:
 		fnRt = ir.ri.Rt;
+	OP_MOV:
+		fnRt = ir.r2.Rt;
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
 	OP_LDX:
 		fnRt = ir.ls.Rt;

@@ -39,6 +39,8 @@ import fta_bus_pkg::*;
 import Thor2024_cache_pkg::*;
 import Thor2024pkg::*;
 
+`define SIM 1'b1
+
 `define ZERO		32'd0
 
 // JALR and EXTENDED are synonyms
@@ -1997,10 +1999,12 @@ begin
 											&& head0 != n4[$clog2(QENTRIES)-1:0]
 											&& (missid == n4p || iqentry_stomp[n4p])
 											;
-	if (~lastq0[3])
-		iqentry_stomp[lastq0] = 1'b1;
-	if (~lastq1[3])
-		iqentry_stomp[lastq1] = 1'b1;
+	if (branchmiss|branchback) begin
+		if (~lastq0[3])
+			iqentry_stomp[lastq0] = 1'b1;
+		if (~lastq1[3])
+			iqentry_stomp[lastq1] = 1'b1;
+	end
 end											
 //    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
@@ -2091,18 +2095,27 @@ always_comb
 		tgtpc = 44'hFFFD0000000;
 
 always_comb
-	if (fnIsBccR(fcu_instr))
-		fcu_misspc = fcu_bt ? {fcu_pc + 4'd5,12'h000} : {fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]},12'h000};
-	else if (fnIsBranch(fcu_instr))
-		fcu_misspc = fcu_bt ? {fcu_pc + 4'd5,12'h000} : fcu_pc + {{{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]},12'h000};
-	else if (fnIsCall(fcu_instr)) begin
-		if (fcu_instr[7:6]==2'd3)
-			fcu_misspc = {fcu_argI,12'h000};
-		else
-			fcu_misspc = fcu_pc + {fcu_argI,12'h000};
+	if (fnIsBccR(fcu_instr)) begin
+		fcu_misspc.pc = fcu_bt ? fcu_pc.pc + 4'd5 : fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]};
+		fcu_misspc.micro_ip = 12'h000;
 	end
-	else if (fnIsRet(fcu_instr))
+	else if (fnIsBranch(fcu_instr)) begin
+		fcu_misspc.pc = fcu_bt ? fcu_pc.pc + 4'd5 : fcu_pc.pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]};
+		fcu_misspc.micro_ip = 12'h000;
+	end
+	else if (fnIsCall(fcu_instr)) begin
+		if (fcu_instr[7:6]==2'd3) begin
+			fcu_misspc.pc = fcu_argI;
+			fcu_misspc.micro_ip = 12'h000;
+		end
+		else begin
+			fcu_misspc.pc = fcu_pc.pc + fcu_argI;
+			fcu_misspc.micro_ip = 12'h000;
+		end
+	end
+	else if (fnIsRet(fcu_instr)) begin
 		fcu_misspc = {fcu_argC + fcu_instr[15:8],12'h000};
+	end
 	else
 		fcu_misspc = 44'hFFFD0000000;
 
@@ -3694,10 +3707,10 @@ always_ff @(posedge clk) begin: clock_n_debug
 `ifdef SIM
 	for (i=0; i< AREGS; i=i+4)
 	    $display("%d: %h %d %o  %d: %h %d %o  %d: %h %d %o  %d: %h %d %o #",
-	    	i, rf[i], rf_v[i], rf_source[i],
-	    	i+1, rf[i+1], rf_v[i+1], rf_source[i+1],
-	    	i+2, rf[i+2], rf_v[i+2], rf_source[i+2],
-	    	i+3, rf[i+3], rf_v[i+3], rf_source[i+3]
+	    	i+0, urf2.ab[i+1] ? urf2.urf20.mem[i+0] : urf2.urf10.mem[i+0], rf_v[i+0], rf_source[i+0],
+	    	i+1, urf2.ab[i+1] ? urf2.urf20.mem[i+1] : urf2.urf10.mem[i+1], rf_v[i+1], rf_source[i+1],
+	    	i+2, urf2.ab[i+2] ? urf2.urf20.mem[i+2] : urf2.urf10.mem[i+2], rf_v[i+2], rf_source[i+2],
+	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
 	    );
 `endif
 	$display("%c %h #", branchback?"b":" ", backpc);
