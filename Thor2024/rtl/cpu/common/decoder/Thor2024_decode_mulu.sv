@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_mulu(instr, mulu);
 input instruction_t instr;
-output regspec_t mulu;
+output mulu;
 
 function fnIsMulu;
 input instruction_t ir;

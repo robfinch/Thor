@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_div(instr, div);
 input instruction_t instr;
-output regspec_t div;
+output div;
 
 function fnIsDivs;
 input instruction_t ir;

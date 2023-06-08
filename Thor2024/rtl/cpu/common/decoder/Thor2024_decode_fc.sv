@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_fc(instr, fc);
 input instruction_t instr;
-output regspec_t fc;
+output fc;
 
 function fnIsFlowCtrl;
 input instruction_t ir;

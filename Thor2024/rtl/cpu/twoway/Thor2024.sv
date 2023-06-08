@@ -39,7 +39,7 @@ import fta_bus_pkg::*;
 import Thor2024_cache_pkg::*;
 import Thor2024pkg::*;
 
-`define SIM 1'b1
+//`define SIM 1'b1
 
 `define ZERO		32'd0
 
@@ -110,7 +110,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14;
 genvar g;
 
 wire [AREGS-1:0] rf_v;
@@ -121,8 +121,6 @@ wire rst;
 assign rst = rst_i;
 reg  [3:0] panic;		// indexes the message structure
 reg [128:0] message [0:15];	// indexed by panic
-
-typedef logic [QENTRIES-1:0] que_bitmask_t;
 
 wire [63:0] dec_imm0, dec_imm1;
 
@@ -143,9 +141,11 @@ que_bitmask_t iqentry_memopsvalid;
 que_bitmask_t iqentry_memissue;
 que_bitmask_t iqentry_stomp;
 que_bitmask_t iqentry_issue;
+que_bitmask_t iqentry_issue_reg;
+que_bitmask_t iqentry_issue2;
 que_bitmask_t iqentry_fcu_issue;
 que_bitmask_t iqentry_fpu_issue;
-reg [1:0] iqentry_islot [0:7];
+wire [1:0] iqentry_islot [0:QENTRIES-1];
 
 reg_bitmask_t livetarget;
 reg_bitmask_t [QENTRIES-1:0] iqentry_livetarget;
@@ -400,6 +400,7 @@ wire int_commit;
 
 // CSRs
 wire [2:0] im = 3'd7;
+reg [5:0] regset = 6'd0;
 
 assign clk = clk_i;
 
@@ -1268,8 +1269,8 @@ Thor2024_regfile_source urfs1
 	.tail0(tail0),
 	.tail1(tail1),
 	.branchmiss(branchmiss),
-	.fetchbuf0_instr(fetchbuf0_instr),
-	.fetchbuf1_instr(fetchbuf1_instr),
+	.fetchbuf0_instr(fetchbuf0_instr[0]),
+	.fetchbuf1_instr(fetchbuf1_instr[0]),
 	.fetchbuf0_mem(db0.mem),
 	.fetchbuf1_mem(db1.mem),
 	.fetchbuf0_v(fetchbuf0_v),
@@ -1299,8 +1300,8 @@ Thor2024_regfile_valid urfv1
 	.fetchbuf1_v(fetchbuf1_v),
 	.fetchbuf0_rfw(fetchbuf0_rfw),
 	.fetchbuf1_rfw(fetchbuf1_rfw),
-	.fetchbuf0_instr(fetchbuf0_instr),
-	.fetchbuf1_instr(fetchbuf1_instr),
+	.fetchbuf0_instr(fetchbuf0_instr[0]),
+	.fetchbuf1_instr(fetchbuf1_instr[0]),
 	.iq(iq),
 	.iqentry_source(iqentry_source),
 	.commit0_v(commit0_v),
@@ -1337,21 +1338,21 @@ Thor2024_regfile2w10r urf2
 	.wr1(commit1_v),
 	.we0(8'hFF),
 	.we1(8'hFF),
-	.wa0(commit0_tgt),
-	.wa1(commit1_tgt),
+	.wa0({regset,commit0_tgt}),
+	.wa1({regset,commit1_tgt}),
 	.i0(commit0_bus),
 	.i1(commit1_bus),
 	.rclk(~clk),
-	.ra0(Ra0),
-	.ra1(Rb0),
-	.ra2(Rc0),
-	.ra3(Rt0),
-	.ra4(Rp0),
-	.ra5(Ra1),
-	.ra6(Rb1),
-	.ra7(Rc1),
-	.ra8(Rt1),
-	.ra9(Rp1),
+	.ra0({regset,Ra0}),
+	.ra1({regset,Rb0}),
+	.ra2({regset,Rc0}),
+	.ra3({regset,Rt0}),
+	.ra4({regset,Rp0}),
+	.ra5({regset,Ra1}),
+	.ra6({regset,Rb1}),
+	.ra7({regset,Rc1}),
+	.ra8({regset,Rt1}),
+	.ra9({regset,Rp1}),
 	.o0(rfoa0),
 	.o1(rfob0),
 	.o2(rfoc0),
@@ -1419,293 +1420,30 @@ assign args_valid[g] = (iq[g].a1_v
 				    || (iq[g].ap_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].ap_s == alu1_sourceid && alu1_dataready))
 				    ;
-assign could_issue[g] = iq[g].v && !iq[g].done && !iq[g].out
+assign could_issue[g] = iq[g].v && !iq[g].done 
+												&& !iq[g].out
 												&& args_valid[g]
                         && (iq[g].mem ? !iq[g].agen : 1'b1);
 end                                 
 end
 endgenerate
 
-// FPGAs do not handle race loops very well.
-// The (old) simulator didn't handle the asynchronous race loop properly in the 
-// original code. It would issue two instructions to the same islot. So the
-// issue logic has been re-written to eliminate the asynchronous loop.
-// Can't issue to the ALU if it's busy doing a long running operation like a 
-// divide.
-// ToDo: fix the memory synchronization, see fp_issue below
-
-always_comb
-begin
-	iqentry_issue = 'h0;
-	for (n = 0; n < QENTRIES; n = n + 1)
-		iqentry_islot[n] = 2'b00;
-	
-	// aluissue is a task
-	if (alu0_idle) begin
-		if (could_issue[head0] && iq[head0].alu
-		&& !iqentry_issue[head0]) begin
-		  iqentry_issue[head0] = `TRUE;
-		  iqentry_islot[head0] = 2'b00;
-		end
-		else if (could_issue[head1] && !iqentry_issue[head1] && iq[head1].alu
-		)
-		begin
-		  iqentry_issue[head1] = `TRUE;
-		  iqentry_islot[head1] = 2'b00;
-		end
-		else if (could_issue[head2] && !iqentry_issue[head2] && iq[head2].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		)
-		begin
-			iqentry_issue[head2] = `TRUE;
-			iqentry_islot[head2] = 2'b00;
-		end
-		else if (could_issue[head3] && !iqentry_issue[head3] && iq[head3].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-			)
-		) begin
-			iqentry_issue[head3] = `TRUE;
-			iqentry_islot[head3] = 2'b00;
-		end
-		else if (could_issue[head4] && !iqentry_issue[head4] && iq[head4].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		) begin
-			iqentry_issue[head4] = `TRUE;
-			iqentry_islot[head4] = 2'b00;
-		end
-		else if (could_issue[head5] && !iqentry_issue[head5] && iq[head5].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		) begin
-			iqentry_issue[head5] = `TRUE;
-			iqentry_islot[head5] = 2'b00;
-		end
-`ifdef FULL_ISSUE_LOGIC
-		else if (could_issue[head6] && !iqentry_issue[head6] && iq[head6].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		) begin
-			iqentry_issue[head6] = `TRUE;
-			iqentry_islot[head6] = 2'b00;
-		end
-		else if (could_issue[head7] && !iqentry_issue[head7] && iq[head7].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		&& (!(iq[head6].v && iq[head6].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v)
-		 	&&   (!iq[head5].v))
-			)
-		) begin
-			iqentry_issue[head7] = `TRUE;
-			iqentry_islot[head7] = 2'b00;
-		end
-`endif
-	end
-
-	if (NALU > 1 && alu1_idle) begin
-		if (could_issue[head0] && iq[head0].alu
-		&& !iqentry_issue[head0]) begin
-		  iqentry_issue[head0] = `TRUE;
-		  iqentry_islot[head0] = 2'b01;
-		end
-		else if (could_issue[head1] && !iqentry_issue[head1] && iq[head1].alu)
-		begin
-		  iqentry_issue[head1] = `TRUE;
-		  iqentry_islot[head1] = 2'b01;
-		end
-		else if (could_issue[head2] && !iqentry_issue[head2] && iq[head2].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		)
-		begin
-			iqentry_issue[head2] = `TRUE;
-			iqentry_islot[head2] = 2'b01;
-		end
-		else if (could_issue[head3] && !iqentry_issue[head3] && iq[head3].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-			)
-		) begin
-			iqentry_issue[head3] = `TRUE;
-			iqentry_islot[head3] = 2'b01;
-		end
-		else if (could_issue[head4] && !iqentry_issue[head4] && iq[head4].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		) begin
-			iqentry_issue[head4] = `TRUE;
-			iqentry_islot[head4] = 2'b01;
-		end
-		else if (could_issue[head5] && !iqentry_issue[head5] && iq[head5].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		) begin
-			iqentry_issue[head5] = `TRUE;
-			iqentry_islot[head5] = 2'b01;
-		end
-`ifdef FULL_ISSUE_LOGIC
-		else if (could_issue[head6] && !iqentry_issue[head6] && iq[head6].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		) begin
-			iqentry_issue[head6] = `TRUE;
-			iqentry_islot[head6] = 2'b01;
-		end
-		else if (could_issue[head7] && !iqentry_issue[head7] && iq[head7].alu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		&& (!(iq[head6].v && iq[head6].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v)
-		 	&&   (!iq[head5].v))
-			)
-		) begin
-			iqentry_issue[head7] = `TRUE;
-			iqentry_islot[head7] = 2'b01;
-		end
-`endif
-	end
-end
+Thor2024_alu_issue ualuiss1
+(
+	.alu0_idle(alu0_idle),
+	.alu1_idle(alu1_idle),
+	.iqentry_islot(iqentry_islot),
+	.could_issue(could_issue), 
+	.head0(head0),
+	.head1(head1),
+	.head2(head2),
+	.head3(head3),
+	.head4(head4),
+	.head5(head5),
+	.head6(head6),
+	.head7(head7),
+	.iqentry_issue(iqentry_issue)
+);
 
 always_comb
 begin
@@ -1770,7 +1508,6 @@ begin
 		) begin
 			iqentry_fpu_issue[head5] = `TRUE;
 		end
-`ifdef FULL_ISSUE_LOGIC
 		else if (could_issue[head6] && !iqentry_fpu_issue[head6] && iq[head6].fpu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
@@ -1833,7 +1570,6 @@ begin
 		) begin
 			iqentry_fpu_issue[head7] = `TRUE;
 		end
-`endif
 	end
 end
 
@@ -1899,7 +1635,6 @@ begin
    		iqentry_fcu_issue[head5] = `TRUE;
     end
  
-`ifdef FULL_ISSUE_LOGIC
     else if (could_issue[head6] && iq[head6].fc
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
@@ -1963,9 +1698,10 @@ begin
     ) begin
    		iqentry_fcu_issue[head7] = `TRUE;
   	end
-`endif
 	end
 end
+
+assign iqentry_issue2 = iqentry_issue | iqentry_issue_reg;
 
 /*
 always_comb
@@ -1989,25 +1725,52 @@ always_comb
 // additional logic for handling a branch miss (STOMP logic)
 // Must also stomp on the last entry queued as a branch has a delayed effect.
 //
-reg [$clog2(QENTRIES)-1:0] n4p;
+//reg [$clog2(QENTRIES)-1:0] n4p;
 always_comb
 for (n4 = 0; n4 < QENTRIES; n4 = n4 + 1)
 begin
-	n4p = (n4 + (QENTRIES-1)) % QENTRIES;
+	//n4p = (n4 + (QENTRIES-1)) % QENTRIES;
+	iqentry_stomp[n4] =
+		((branchmiss||branchback)
+		&& iq[n4].sn >= iq[missid].sn
+		&& iq[n4].v
+		&& head0 != n4[$clog2(QENTRIES)-1:0])
+	;
+	/*
 	iqentry_stomp[n4] = branchmiss
 											&& iq[n4].v
 											&& head0 != n4[$clog2(QENTRIES)-1:0]
 											&& (missid == n4p || iqentry_stomp[n4p])
 											;
+	*/
+	/*
 	if (branchmiss|branchback) begin
 		if (~lastq0[3])
 			iqentry_stomp[lastq0] = 1'b1;
 		if (~lastq1[3])
 			iqentry_stomp[lastq1] = 1'b1;
 	end
+	*/
 end											
 //    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
+Thor2024_memissue umemissue1
+(
+	.rst(rst),
+	.clk(clk), 
+	.head0(head0),
+	.head1(head1),
+	.head2(head2),
+	.head3(head3),
+	.head4(head4),
+	.head5(head5),
+	.head6(head6),
+	.head7(head7),
+	.iqentry_memready(iqentry_memready),
+	.iqentry_stomp(iqentry_stomp),
+	.iq(iq),
+	.iqentry_memissue(iqentry_memissue)
+);
 
 //
 // EXECUTE
@@ -2082,12 +1845,12 @@ always_comb
 	if (fnIsBccR(fcu_instr))
 		tgtpc = {fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]},12'h000};
 	else if (fnIsBranch(fcu_instr))
-		tgtpc = {fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]},12'h000};
+		tgtpc = {fcu_pc.pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]},12'h000};
 	else if (fnIsCall(fcu_instr)) begin
 		if (fcu_instr[7:6]==2'd3)
 			tgtpc = {fcu_argI,12'h000};
 		else
-			tgtpc = {fcu_pc + fcu_argI,12'h000};
+			tgtpc = {fcu_pc.pc + fcu_argI,12'h000};
 	end
 	else if (fnIsRet(fcu_instr))
 		tgtpc = {fcu_argC + fcu_instr[15:8],12'h000};
@@ -2235,6 +1998,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
     2'b01:
     	if (iq[tail0].v == INV) begin
 				iq[tail0].v    <=   VAL;
+				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+				iq[tail0].sn <= 6'h3F;
 				iq[tail0].done    <=   INV;
 				iq[tail0].out    <=   INV;
 				iq[tail0].res    <=   `ZERO;
@@ -2308,6 +2074,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
 					//
 					iq[tail0].v	<=	VAL;
+					iq[tail0].sn <= 6'h3F;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].done <= INV;
 					iq[tail0].out	<= INV;
 					iq[tail0].res	<= `ZERO;
@@ -2379,6 +2148,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				//
 				if (db0.backbr) begin
 			    iq[tail0].v    <=	VAL;
+					iq[tail0].sn <= 6'h3F;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 			    iq[tail0].done    <=	INV;
 			    iq[tail0].out    <=	INV;
 			    iq[tail0].res    <=	`ZERO;
@@ -2457,6 +2229,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    // enqueue the first instruction ...
 			    //
 			    iq[tail0].v    <=   VAL;
+					iq[tail0].sn <= 6'h3F;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 			    iq[tail0].done    <=   INV;
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
@@ -2524,6 +2299,9 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    if (iq[tail1].v == INV) begin
 
 						iq[tail1].v    <=   VAL;
+						iq[tail1].sn <= 6'h3E;
+						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
 						iq[tail1].done    <=   INV;
 						iq[tail1].out    <=   INV;
 						iq[tail1].res    <=   `ZERO;
@@ -2717,21 +2495,26 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 	//
 	// put results into the appropriate instruction entries
 	//
+	for (n13 = 0; n13 < QENTRIES; n13 = n13 + 1)
+		if (iqentry_issue[n13])
+			iqentry_issue_reg[n13] <= 1'b1;
 	if (alu0_v) begin
     iq[ alu0_id[2:0] ].res <= alu0_bus;
     iq[ alu0_id[2:0] ].exc <= alu0_exc;
     iq[ alu0_id[2:0] ].done <= (!iq[ alu0_id[2:0] ].load && !iq[ alu0_id[2:0] ].store);
     iq[ alu0_id[2:0] ].out <= INV;
     iq[ alu0_id[2:0] ].agen <= VAL;
+    if (!iq[ alu0_id[2:0] ].load && !iq[ alu0_id[2:0] ].store)
+    	iqentry_issue_reg[alu0_id[2:0]] <= 1'b0;
 	end
-	if (alu1_v) begin
+	if (NALU > 1 && alu1_v) begin
     iq[ alu1_id[2:0] ].res <= alu1_bus;
     iq[ alu1_id[2:0] ].exc <= alu1_exc;
     iq[ alu1_id[2:0] ].done <= (!iq[ alu1_id[2:0] ].load && !iq[ alu1_id[2:0] ].store);
     iq[ alu1_id[2:0] ].out <= INV;
     iq[ alu1_id[2:0] ].agen <= VAL;
 	end
-	if (fpu_v) begin
+	if (NFPU > 0 && fpu_v) begin
     iq[ fpu_id[2:0] ].res <= fpu_bus;
     iq[ fpu_id[2:0] ].exc <= fpu_exc;
     iq[ fpu_id[2:0] ].done <= fpu_done;
@@ -3021,24 +2804,24 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 //
 
 alu0_dataready <= alu0_available 
-		&& ((iqentry_issue[0] && iqentry_islot[0] == 2'd0 && !iqentry_stomp[0] && (iq[0].div|iq[0].divu ? div0_done : 1'b1) && (iq[0].mul|iq[0].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[1] && iqentry_islot[1] == 2'd0 && !iqentry_stomp[1] && (iq[1].div|iq[1].divu ? div0_done : 1'b1) && (iq[1].mul|iq[1].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[2] && iqentry_islot[2] == 2'd0 && !iqentry_stomp[2] && (iq[2].div|iq[2].divu ? div0_done : 1'b1) && (iq[2].mul|iq[2].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[3] && iqentry_islot[3] == 2'd0 && !iqentry_stomp[3] && (iq[3].div|iq[3].divu ? div0_done : 1'b1) && (iq[3].mul|iq[3].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[4] && iqentry_islot[4] == 2'd0 && !iqentry_stomp[4] && (iq[4].div|iq[4].divu ? div0_done : 1'b1) && (iq[4].mul|iq[4].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[5] && iqentry_islot[5] == 2'd0 && !iqentry_stomp[5] && (iq[5].div|iq[5].divu ? div0_done : 1'b1) && (iq[5].mul|iq[5].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[6] && iqentry_islot[6] == 2'd0 && !iqentry_stomp[6] && (iq[6].div|iq[6].divu ? div0_done : 1'b1) && (iq[6].mul|iq[6].mulu ? mul0_done : 1'b1))
-		 || (iqentry_issue[7] && iqentry_islot[7] == 2'd0 && !iqentry_stomp[7] && (iq[7].div|iq[7].divu ? div0_done : 1'b1) && (iq[7].mul|iq[7].mulu ? mul0_done : 1'b1)));
+		&& ((iqentry_issue2[0] && iqentry_islot[0] == 2'd0 && !iqentry_stomp[0] && (iq[0].div|iq[0].divu ? div0_done : 1'b1) && (iq[0].mul|iq[0].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[1] && iqentry_islot[1] == 2'd0 && !iqentry_stomp[1] && (iq[1].div|iq[1].divu ? div0_done : 1'b1) && (iq[1].mul|iq[1].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[2] && iqentry_islot[2] == 2'd0 && !iqentry_stomp[2] && (iq[2].div|iq[2].divu ? div0_done : 1'b1) && (iq[2].mul|iq[2].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[3] && iqentry_islot[3] == 2'd0 && !iqentry_stomp[3] && (iq[3].div|iq[3].divu ? div0_done : 1'b1) && (iq[3].mul|iq[3].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[4] && iqentry_islot[4] == 2'd0 && !iqentry_stomp[4] && (iq[4].div|iq[4].divu ? div0_done : 1'b1) && (iq[4].mul|iq[4].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[5] && iqentry_islot[5] == 2'd0 && !iqentry_stomp[5] && (iq[5].div|iq[5].divu ? div0_done : 1'b1) && (iq[5].mul|iq[5].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[6] && iqentry_islot[6] == 2'd0 && !iqentry_stomp[6] && (iq[6].div|iq[6].divu ? div0_done : 1'b1) && (iq[6].mul|iq[6].mulu ? mul0_done : 1'b1))
+		 || (iqentry_issue2[7] && iqentry_islot[7] == 2'd0 && !iqentry_stomp[7] && (iq[7].div|iq[7].divu ? div0_done : 1'b1) && (iq[7].mul|iq[7].mulu ? mul0_done : 1'b1)));
 
 alu1_dataready <= alu1_available 
-		&& ((iqentry_issue[0] && iqentry_islot[0] == 2'd1 && !iqentry_stomp[0] && (iq[0].div|iq[0].divu ? div1_done : 1'b1) && (iq[0].mul|iq[0].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[1] && iqentry_islot[1] == 2'd1 && !iqentry_stomp[1] && (iq[1].div|iq[1].divu ? div1_done : 1'b1) && (iq[1].mul|iq[1].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[2] && iqentry_islot[2] == 2'd1 && !iqentry_stomp[2] && (iq[2].div|iq[2].divu ? div1_done : 1'b1) && (iq[2].mul|iq[2].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[3] && iqentry_islot[3] == 2'd1 && !iqentry_stomp[3] && (iq[3].div|iq[3].divu ? div1_done : 1'b1) && (iq[3].mul|iq[3].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[4] && iqentry_islot[4] == 2'd1 && !iqentry_stomp[4] && (iq[4].div|iq[4].divu ? div1_done : 1'b1) && (iq[4].mul|iq[4].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[5] && iqentry_islot[5] == 2'd1 && !iqentry_stomp[5] && (iq[5].div|iq[5].divu ? div1_done : 1'b1) && (iq[5].mul|iq[5].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[6] && iqentry_islot[6] == 2'd1 && !iqentry_stomp[6] && (iq[6].div|iq[6].divu ? div1_done : 1'b1) && (iq[6].mul|iq[6].mulu ? mul1_done : 1'b1))
-		 || (iqentry_issue[7] && iqentry_islot[7] == 2'd1 && !iqentry_stomp[7] && (iq[7].div|iq[7].divu ? div1_done : 1'b1) && (iq[7].mul|iq[7].mulu ? mul1_done : 1'b1)));
+		&& ((iqentry_issue2[0] && iqentry_islot[0] == 2'd1 && !iqentry_stomp[0] && (iq[0].div|iq[0].divu ? div1_done : 1'b1) && (iq[0].mul|iq[0].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[1] && iqentry_islot[1] == 2'd1 && !iqentry_stomp[1] && (iq[1].div|iq[1].divu ? div1_done : 1'b1) && (iq[1].mul|iq[1].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[2] && iqentry_islot[2] == 2'd1 && !iqentry_stomp[2] && (iq[2].div|iq[2].divu ? div1_done : 1'b1) && (iq[2].mul|iq[2].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[3] && iqentry_islot[3] == 2'd1 && !iqentry_stomp[3] && (iq[3].div|iq[3].divu ? div1_done : 1'b1) && (iq[3].mul|iq[3].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[4] && iqentry_islot[4] == 2'd1 && !iqentry_stomp[4] && (iq[4].div|iq[4].divu ? div1_done : 1'b1) && (iq[4].mul|iq[4].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[5] && iqentry_islot[5] == 2'd1 && !iqentry_stomp[5] && (iq[5].div|iq[5].divu ? div1_done : 1'b1) && (iq[5].mul|iq[5].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[6] && iqentry_islot[6] == 2'd1 && !iqentry_stomp[6] && (iq[6].div|iq[6].divu ? div1_done : 1'b1) && (iq[6].mul|iq[6].mulu ? mul1_done : 1'b1))
+		 || (iqentry_issue2[7] && iqentry_islot[7] == 2'd1 && !iqentry_stomp[7] && (iq[7].div|iq[7].divu ? div1_done : 1'b1) && (iq[7].mul|iq[7].mulu ? mul1_done : 1'b1)));
 
 fpu_dataready <= fpu_available && NFPU > 0 && fpu_done
 		&& ((iqentry_fpu_issue[0] && !iqentry_stomp[0])
@@ -3347,167 +3130,6 @@ fcu_dataready <= fcu_available
 //	endcase
 
 	//
-	// determine if the instructions ready to issue can, in fact, issue.
-	// "ready" means that the instruction has valid operands but has not gone yet
-	iqentry_memissue[ head0 ] <=	iqentry_memready[ head0 ];		// first in line ... go as soon as ready
-
-	iqentry_memissue[ head1 ] <=	~iqentry_stomp[head1] && iqentry_memready[ head1 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head1].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head1].load || !iq[head0].fc);
-
-	iqentry_memissue[ head2 ] <=	~iqentry_stomp[head2] && iqentry_memready[ head2 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head2].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
-						|| (iq[head1].a1_v && iq[head2].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head2].load ||
-					    ( !iq[head0].fc && !iq[head1].fc));
-
-	iqentry_memissue[ head3 ] <=	~iqentry_stomp[head3] && iqentry_memready[ head3 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					&& ~iqentry_memready[head2] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head3].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
-						|| (iq[head1].a1_v && iq[head3].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
-					&& (!iq[head2].mem || (iq[head2].agen & iq[head2].out) 
-						|| (iq[head2].a1_v && iq[head3].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head3].load ||
-					    ( !iq[head0].fc &&
-					      !iq[head1].fc &&
-					      !iq[head2].fc));
-
-	iqentry_memissue[ head4 ] <=	~iqentry_stomp[head4] && iqentry_memready[ head4 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					&& ~iqentry_memready[head2] 
-					&& ~iqentry_memready[head3] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
-						|| (iq[head1].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
-					&& (!iq[head2].mem || (iq[head2].agen & iq[head2].out) 
-						|| (iq[head2].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
-					&& (!iq[head3].mem || (iq[head3].agen & iq[head3].out) 
-						|| (iq[head3].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head3].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head4].load ||
-					    ( !iq[head0].fc &&
-					    	!iq[head1].fc &&
-					    	!iq[head2].fc &&
-					    	!iq[head3].fc));
-
-	iqentry_memissue[ head5 ] <=	~iqentry_stomp[head5] && iqentry_memready[ head5 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					&& ~iqentry_memready[head2] 
-					&& ~iqentry_memready[head3] 
-					&& ~iqentry_memready[head4] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
-						|| (iq[head1].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
-					&& (!iq[head2].mem || (iq[head2].agen & iq[head2].out) 
-						|| (iq[head2].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
-					&& (!iq[head3].mem || (iq[head3].agen & iq[head3].out) 
-						|| (iq[head3].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head3].a1[$bits(address_t)-1:4]))
-					&& (!iq[head4].mem || (iq[head4].agen & iq[head4].out) 
-						|| (iq[head4].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head4].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head5].load ||
-					    ( !iq[head0].fc &&
-					    	!iq[head1].fc &&
-					    	!iq[head2].fc &&
-					    	!iq[head3].fc &&
-					    	!iq[head4].fc));
-
-	iqentry_memissue[ head6 ] <=	~iqentry_stomp[head6] && iqentry_memready[ head6 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					&& ~iqentry_memready[head2] 
-					&& ~iqentry_memready[head3] 
-					&& ~iqentry_memready[head4] 
-					&& ~iqentry_memready[head5] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
-						|| (iq[head0].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
-					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
-						|| (iq[head1].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
-					&& (!iq[head2].mem || (iq[head2].agen & iq[head2].out) 
-						|| (iq[head2].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
-					&& (!iq[head3].mem || (iq[head3].agen & iq[head3].out) 
-						|| (iq[head3].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head3].a1[$bits(address_t)-1:4]))
-					&& (!iq[head4].mem || (iq[head4].agen & iq[head4].out) 
-						|| (iq[head4].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head4].a1[$bits(address_t)-1:4]))
-					&& (!iq[head5].mem || (iq[head5].agen & iq[head5].out) 
-						|| (iq[head5].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head5].a1[$bits(address_t)-1:4]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iq[head5].load ||
-					    ( !iq[head0].fc &&
-					    	!iq[head1].fc &&
-					    	!iq[head2].fc &&
-					    	!iq[head3].fc &&
-					    	!iq[head4].fc &&
-					    	!iq[head5].fc
-					    	));
-
-	iqentry_memissue [head7] <= 1'b0;
-
-/*
-	iqentry_memissue[ head7 ] <=	~iqentry_stomp[head7] && iqentry_memready[ head7 ]		// addr and data are valid
-					// ... and no preceding instruction is ready to go
-					&& ~iqentry_memready[head0]
-					&& ~iqentry_memready[head1] 
-					&& ~iqentry_memready[head2] 
-					&& ~iqentry_memready[head3] 
-					&& ~iqentry_memready[head4] 
-					&& ~iqentry_memready[head5] 
-					&& ~iqentry_memready[head6] 
-					// ... and there is no address-overlap with any preceding instruction
-					&& (!iqentry_mem[head0] || (iqentry_agen[head0] & iqentry_out[head0]) 
-						|| (iqentry_a1_v[head0] && iqentry_a1[head7] != iqentry_a1[head0]))
-					&& (!iqentry_mem[head1] || (iqentry_agen[head1] & iqentry_out[head1]) 
-						|| (iqentry_a1_v[head1] && iqentry_a1[head7] != iqentry_a1[head1]))
-					&& (!iqentry_mem[head2] || (iqentry_agen[head2] & iqentry_out[head2]) 
-						|| (iqentry_a1_v[head2] && iqentry_a1[head7] != iqentry_a1[head2]))
-					&& (!iqentry_mem[head3] || (iqentry_agen[head3] & iqentry_out[head3]) 
-						|| (iqentry_a1_v[head3] && iqentry_a1[head7] != iqentry_a1[head3]))
-					&& (!iqentry_mem[head4] || (iqentry_agen[head4] & iqentry_out[head4]) 
-						|| (iqentry_a1_v[head4] && iqentry_a1[head7] != iqentry_a1[head4]))
-					&& (!iqentry_mem[head5] || (iqentry_agen[head5] & iqentry_out[head5]) 
-						|| (iqentry_a1_v[head5] && iqentry_a1[head7] != iqentry_a1[head5]))
-					&& (!iqentry_mem[head6] || (iqentry_agen[head6] & iqentry_out[head6]) 
-						|| (iqentry_a1_v[head6] && iqentry_a1[head7] != iqentry_a1[head6]))
-					// ... and, if it is a SW, there is no chance of it being undone
-					&& (iqentry_op[head7] == `LW ||
-					    (   iqentry_op[head0] != `BEQ && iqentry_op[head0] != `JALR
-					     && iqentry_op[head1] != `BEQ && iqentry_op[head1] != `JALR
-					     && iqentry_op[head2] != `BEQ && iqentry_op[head2] != `JALR
-					     && iqentry_op[head3] != `BEQ && iqentry_op[head3] != `JALR
-					     && iqentry_op[head4] != `BEQ && iqentry_op[head4] != `JALR
-					     && iqentry_op[head5] != `BEQ && iqentry_op[head5] != `JALR
-					     && iqentry_op[head6] != `BEQ && iqentry_op[head6] != `JALR));
-*/
-	//
 	// take requests that are ready and put them into DRAM slots
 
 	if (dram0 == `DRAMSLOT_AVAIL)	dram0_exc <= FLT_NONE;
@@ -3724,9 +3346,9 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc);
 
 	for (i=0; i<8; i=i+1) 
-	    $display("%c%c %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
-		(i[2:0]==head0)?72:46, (i[2:0]==tail0)?84:46, i,
-		iq[i].v?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue[i]?"i":"-",
+	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
+		(i[2:0]==head0)?72:46, (i[2:0]==tail0)?84:46, iq[i].sn, i,
+		iq[i].v?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue2[i]?"i":"-",
 		((i==0) ? iqentry_islot[0] : (i==1) ? iqentry_islot[1] : (i==2) ? iqentry_islot[2] : (i==3) ? iqentry_islot[3] :
 		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
 		(iq[i].fc ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
@@ -3891,6 +3513,9 @@ begin
 	head6 <= 6;
 	head7 <= 7;
 	panic <= `PANIC_NONE;
+	iqentry_issue_reg <= 'd0;
+	for (n14 = 0; n14 < QENTRIES; n14 = n14 + 1)
+		iq[n14].sn <= 6'd0;
 	alu0_available <= 1;
 	alu0_dataready <= 0;
 	alu1_available <= 1;

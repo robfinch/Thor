@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_has_imm(instr, has_imm);
 input instruction_t instr;
-output regspec_t has_imm;
+output has_imm;
 
 function fnIsImm;
 input instruction_t op;

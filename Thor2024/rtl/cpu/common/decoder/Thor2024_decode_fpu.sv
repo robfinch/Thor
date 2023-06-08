@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_fpu(instr, fpu);
 input instruction_t instr;
-output regspec_t fpu;
+output fpu;
 
 function fnIsFpu;
 input instruction_t ir;

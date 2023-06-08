@@ -126,33 +126,33 @@ function [11:0] fnMip;
 input instruction_t ir;
 begin
 	case(ir.any.opcode)
-	OP_ENTER:	fnMip <= 12'h001;
-	OP_LEAVE:	fnMip <= 12'h00C;
-	OP_PUSH:	fnMip <= 12'h016;
-	OP_POP:		fnMip <= 12'h020;
+	OP_ENTER:	fnMip = 12'h001;
+	OP_LEAVE:	fnMip = 12'h00C;
+	OP_PUSH:	fnMip = 12'h016;
+	OP_POP:		fnMip = 12'h020;
 	OP_FLT2:
 		case(ir.f2.func)
 		FN_FLT1:
 			case(ir.f1.func)
 			FN_FRES:
 				case(ir[26:25])
-				2'd1:	fnMip <= 12'h080;
-				2'd2:	fnMip <= 12'h088;
-				2'd3: fnMip <= 12'h090;
+				2'd1:	fnMip = 12'h080;
+				2'd2:	fnMip = 12'h088;
+				2'd3: fnMip = 12'h090;
 				endcase
 			FN_RSQRTE:
 				case(ir[26:25])
-				2'd0: fnMip <= 12'h04D;
-				2'd1:	fnMip <= 12'h059;
-				2'd2:	fnMip <= 12'h069;
-				2'd3: fnMip <= 12'h035;
+				2'd0: fnMip = 12'h04D;
+				2'd1:	fnMip = 12'h059;
+				2'd2:	fnMip = 12'h069;
+				2'd3: fnMip = 12'h035;
 				endcase
-			default:	fnMip <= 12'h000;			
+			default:	fnMip = 12'h000;			
 			endcase
-		FN_FDIV:	fnMip <= 12'h028;
-		default:	fnMip <= 12'h000;
+		FN_FDIV:	fnMip = 12'h028;
+		default:	fnMip = 12'h000;
 		endcase
-	default:	fnMip <= 12'h000;
+	default:	fnMip = 12'h000;
 	endcase
 end
 endfunction

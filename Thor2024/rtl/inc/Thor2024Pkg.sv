@@ -152,6 +152,7 @@ typedef enum logic [6:0] {
 	/* 24 to 31 empty
 	*/
 	OP_DBcc			= 7'd29,
+	OP_MCB			= 7'd34,
 	OP_RTD			= 7'd35,
 	OP_JSR			= 7'd36,
 	OP_BEQ			= 7'd38,
@@ -182,6 +183,7 @@ typedef enum logic [6:0] {
 	OP_STT			= 7'd82,
 	OP_STO			= 7'd83,
 	OP_STX			= 7'd87,
+	OP_SHIFT		= 7'd88,
 	OP_BLEND		= 7'd89,
 	OP_FLT2			= 7'd98,
 	OP_FLT3			= 7'd99,
@@ -342,22 +344,50 @@ typedef enum logic [5:0] {
 } r1func_t;
 
 typedef enum logic [6:0] {
-	OP_FSCALEB = 7'd0,
+	FN_FSCALEB = 7'd0,
 	FN_FLT1 = 7'd1,
 	FN_FMIN = 7'd2,
 	FN_FMAX = 7'd3,
 	FN_FADD = 7'd4,
 	FN_FSUB = 7'd5,
-	FN_FCMP = 7'd13,
 	FN_FMUL = 7'd6,
 	FN_FDIV = 7'd7,
+	FN_FSEQ = 7'd8,
+	FN_FSNE = 7'd9,
+	FN_FSLT = 7'd10,
+	FN_FSLE = 7'd11,
+	FN_FCMP = 7'd13,
 	FN_FNXT = 7'd14,
 	FN_FREM = 7'd15
 } f2func_t;
 
 typedef enum logic [5:0] {
-	FN_SIN = 6'd32,
-	FN_COS = 6'd33
+	FN_FABS = 6'd0,
+	FN_FNEG = 6'd1,
+	FN_FTOI = 6'd2,
+	FN_ITOF = 6'd3,
+	FN_FCONST = 6'd4,
+	FN_FSIGN = 6'd6,
+	FN_FSIG = 6'd7,
+	FN_FSQRT = 6'd8,
+	FN_FCVTS2D = 6'd9,
+	FN_FCVTS2Q = 6'd10,
+	FN_FCVTD2Q = 6'd11,
+	FN_FCVTH2S = 6'd12,
+	FN_FCVTH2D = 6'd13,
+	FN_ISNAN = 6'd14,
+	FN_FINITE = 6'd15,
+	FN_FCVTQ2H = 6'd16,
+	FN_FCVTQ2S = 6'd17,
+	FN_FCVTQ2D = 6'd18,
+	FN_FCVTH2Q = 6'd20,
+	FN_FTRUNC = 6'd21,
+	FN_RSQRTE = 6'd22,
+	FN_FRES = 6'd23,
+	FN_FCVTD2S = 6'd25,
+	FN_FCLASS = 6'd30,
+	FN_FSIN = 6'd32,
+	FN_FCOS = 6'd33
 } f1func_t;
 
 typedef enum logic [2:0] {
@@ -542,6 +572,7 @@ typedef enum logic [1:0] {
 	memi = 2'd3
 } addr_upd_t;
 
+typedef logic [QENTRIES-1:0] que_bitmask_t;
 typedef logic [TidMSB:0] Tid;
 typedef logic [TidMSB:0] tid_t;
 typedef logic [11:0] order_tag_t;
@@ -983,6 +1014,7 @@ const address_t RSTPC	= 32'hFFFD0000;
 
 typedef struct packed {
 	logic v;
+	logic [5:0] sn;
 	logic out;
 	logic done;
 	logic bt;

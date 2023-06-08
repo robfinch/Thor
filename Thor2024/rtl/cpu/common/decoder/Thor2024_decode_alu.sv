@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_alu(instr, alu);
 input instruction_t instr;
-output regspec_t alu;
+output alu;
 
 function fnIsAlu;
 input instruction_t ir;

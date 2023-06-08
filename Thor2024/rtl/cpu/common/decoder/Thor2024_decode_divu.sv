@@ -38,7 +38,7 @@ import Thor2024pkg::*;
 
 module Thor2024_decode_divu(instr, divu);
 input instruction_t instr;
-output regspec_t divu;
+output divu;
 
 function fnIsDivu;
 input instruction_t ir;
