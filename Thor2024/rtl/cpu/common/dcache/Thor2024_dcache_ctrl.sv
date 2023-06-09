@@ -267,6 +267,7 @@ else begin
 							!non_cacheable,
 							cpu_request_i2.asid,
 							{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],load_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+							16'hFFFF,
 							'd0,
 							cpu_request_i2.tid
 						);
@@ -290,6 +291,7 @@ else begin
 						!non_cacheable,
 						dump_i.asid,
 						{dump_i.vtag[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],dump_cnt[1:0],{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+						16'hFFFF,
 						dump_i.data >> {dump_cnt,7'd0},
 						cpu_request_i2.tid
 					);
@@ -297,7 +299,7 @@ else begin
 				end
 			end
 			// It may have missed because a non-cacheable address is being accessed.
-			else if (!hit && cpu_request_i2.cyc && !cpu_request_queued && !req_load) begin
+			else if (!hit && cpu_request_i2.cyc /*&& !cpu_request_queued*/ && !req_load) begin
 				if (!(non_cacheable & cpu_request_i2.cyc) && (allocate)) begin
 					req_load <= 1'b1;
 					load_cnt <= 'd0;
@@ -305,7 +307,7 @@ else begin
 				else
 					tAccess();
 			end
-			else if (hit && !cpu_request_queued) begin
+			else if (hit /*&& !cpu_request_queued*/) begin
 				
 				// If it is not a writeback cache and a write cycle, write to memory.
 				if (!(cpu_request_i2.cache == fta_bus_pkg::WB_READ_ALLOCATE ||
@@ -314,7 +316,7 @@ else begin
 				) && cpu_request_i2.we)
 					tAccess();
 			end
-			if (cpu_request_i2.tid != lasttid && cpu_request_queued) begin
+			if (cpu_request_i2.tid != lasttid) begin // && cpu_request_queued) begin
 				lasttid <= cpu_request_i2.tid;
 				cpu_request_queued <= 1'b0;
 				wr_cnt <= 'd0;
@@ -363,28 +365,28 @@ else begin
 				tran_active[ftam_resp.tid.tranid] <= 1'b0;
 				tran_out[ftam_resp.tid.tranid] <= 1'b0;
 				//tran_req[ftam_resp.tid & 4'hF].cyc <= 1'b0;
-				tran_load_data[ftam_resp.tid.tranid].cid <= ftam_resp.cid;
-				tran_load_data[ftam_resp.tid.tranid].tid <= ftam_resp.tid;
-				tran_load_data[ftam_resp.tid.tranid].pri <= ftam_resp.pri;
-				tran_load_data[ftam_resp.tid.tranid].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
+				tran_load_data[ftam_resp.tid.tranid>>2].cid <= ftam_resp.cid;
+				tran_load_data[ftam_resp.tid.tranid>>2].tid <= ftam_resp.tid;
+				tran_load_data[ftam_resp.tid.tranid>>2].pri <= ftam_resp.pri;
+				tran_load_data[ftam_resp.tid.tranid>>2].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
 				case(ftam_resp.adr[5:4])
-				2'd0: begin tran_load_data[ftam_resp.tid.tranid].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid.tranid][0] <= 1'b1; end
-				2'd1:	begin tran_load_data[ftam_resp.tid.tranid].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid.tranid][1] <= 1'b1; end
-				2'd2:	begin tran_load_data[ftam_resp.tid.tranid].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid.tranid][2] <= 1'b1; end
-				2'd3:	begin tran_load_data[ftam_resp.tid.tranid].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid.tranid][3] <= 1'b1; end
+				2'd0: begin tran_load_data[ftam_resp.tid.tranid>>2].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid.tranid][0] <= 1'b1; end
+				2'd1:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid.tranid][1] <= 1'b1; end
+				2'd2:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid.tranid][2] <= 1'b1; end
+				2'd3:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid.tranid][3] <= 1'b1; end
 				endcase
 				we_r <= ftam_req.we;
-				tran_load_data[ftam_resp.tid.tranid].rty <= 1'b0;
-				tran_load_data[ftam_resp.tid.tranid].err <= 1'b0;
-				tran_load_data[ftam_resp.tid.tranid].ack <= 1'b1;
+				tran_load_data[ftam_resp.tid.tranid>>2].rty <= 1'b0;
+				tran_load_data[ftam_resp.tid.tranid>>2].err <= 1'b0;
+				tran_load_data[ftam_resp.tid.tranid>>2].ack <= 1'b1;
 				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd1;
 			end
 			// Retry or error (only if transaction active)
 			// Abort the memory request. Go back and try again.
 			else if ((ftam_resp.rty|ftam_resp.err) & tran_active[ftam_resp.tid]) begin
-				tran_load_data[ftam_resp.tid.tranid].rty <= ftam_resp.rty;
-				tran_load_data[ftam_resp.tid.tranid].err <= ftam_resp.err;
-				tran_load_data[ftam_resp.tid.tranid].ack <= 1'b0;
+				tran_load_data[ftam_resp.tid.tranid>>2].rty <= ftam_resp.rty;
+				tran_load_data[ftam_resp.tid.tranid>>2].err <= ftam_resp.err;
+				tran_load_data[ftam_resp.tid.tranid>>2].ack <= 1'b0;
 				tran_out[ftam_resp.tid.tranid] <= 1'b0;
 				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd0;
 			end
@@ -468,7 +470,8 @@ else begin
 		req_state <= STATE1;		
 		resp_state <= STATE1;	
 	end
-	cpu_request_i2 <= cpu_req_queue[nn2[3:0]];
+	if (cpu_req_queue[nn2[3:0]].cyc)
+		cpu_request_i2 <= cpu_req_queue[nn2[3:0]];
 	cpu_req_queue[nn2[3:0]].cyc <= 'd0;
 end
 
@@ -487,12 +490,13 @@ input wr;
 input cache;
 input Thor2024pkg::asid_t asid;
 input Thor2024pkg::address_t adr;
+input [15:0] sel;
 input [127:0] data;
 input fta_tranid_t tid;
 begin
 	tranids[tid_cnt & 4'hF] <= tid;
-	tid_cnt[3] <= 1'b0;
-	tid_cnt[2:0] <= tid_cnt[2:0] + 2'd1;
+	tid_cnt[3:2] <= tid[1:0];
+	tid_cnt[1:0] <= tid_cnt[1:0] + 2'd1;
 	to_cnt <= 'd0;
 	tran_req[tid_cnt & 4'hF].om <= om;
 	tran_req[tid_cnt & 4'hF].cmd <= wr ? fta_bus_pkg::CMD_STORE : 
@@ -507,7 +511,7 @@ begin
 	tran_req[tid_cnt & 4'hF].cti <= fta_bus_pkg::CLASSIC;
 	tran_req[tid_cnt & 4'hF].cyc <= 1'b1;
 	tran_req[tid_cnt & 4'hF].stb <= 1'b1;
-	tran_req[tid_cnt & 4'hF].sel <= 16'hFFFF;
+	tran_req[tid_cnt & 4'hF].sel <= sel;
 	tran_req[tid_cnt & 4'hF].we <= wr;
 	tran_req[tid_cnt & 4'hF].csr <= 'd0;
 	tran_req[tid_cnt & 4'hF].asid <= asid;
@@ -545,6 +549,7 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+				cpu_request_i2.sel[15:0],
 				cpu_request_i2.dat[127:0],
 				cpu_request_i2.tid
 			);
@@ -559,6 +564,7 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+				cpu_request_i2.sel[31:16],
 				cpu_request_i2.dat[255:128],
 				cpu_request_i2.tid
 			);
@@ -573,6 +579,7 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+				cpu_request_i2.sel[47:32],
 				cpu_request_i2.dat[383:256],
 				cpu_request_i2.tid
 			);
@@ -587,6 +594,7 @@ begin
 				!non_cacheable,
 				cpu_request_i2.asid,
 				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
+				cpu_request_i2.sel[63:48],
 				cpu_request_i2.dat[511:384],
 				cpu_request_i2.tid
 			);

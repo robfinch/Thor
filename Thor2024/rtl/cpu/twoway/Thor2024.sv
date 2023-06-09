@@ -39,7 +39,7 @@ import fta_bus_pkg::*;
 import Thor2024_cache_pkg::*;
 import Thor2024pkg::*;
 
-//`define SIM 1'b1
+`define SIM 1'b1
 
 `define ZERO		32'd0
 
@@ -280,6 +280,7 @@ value_t fpu_bus;
 wire  [3:0] fpu_id;
 cause_code_t fpu_exc;
 wire        fpu_v;
+wire fpu_done;
 
 reg fcu_idle = 1'b1;
 reg        fcu_available;
@@ -305,6 +306,7 @@ reg takb;
 
 
 wire branchback;
+reg did_branchback;
 pc_address_t backpc;
 wire branchmiss;
 pc_address_t misspc;
@@ -389,6 +391,7 @@ value_t commit0_bus;
 pc_address_t commit_pc0;
 reg commit_takb0;
 pc_address_t commit_brtgt0;
+instruction_t commit0_instr;
 wire commit1_v;
 wire [4:0] commit1_id;
 regspec_t commit1_tgt;
@@ -396,6 +399,7 @@ value_t commit1_bus;
 pc_address_t commit_pc1;
 reg commit_takb1;
 pc_address_t commit_brtgt1;
+instruction_t commit1_instr;
 wire int_commit;
 
 // CSRs
@@ -530,7 +534,7 @@ always_comb
 always_comb
 	{pfx0[3],pfx0[2],pfx0[1],pfx0[0],ins0} = ic_line >> {pco[5:0],3'd0};
 always_comb
-	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> {pco[5:0]+4'd5,3'd0};
+	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> {{1'b0,pco[5:0]}+4'd5,3'd0};
 
 // hirq squashes the pc increment if there's an irq.
 // Normally atom_mask is zero.
@@ -680,7 +684,13 @@ Thor2024_ifetch uif1
 	.fetchbuf0_pc(fetchbuf0_pc),
 	.fetchbuf1_instr(fetchbuf1_instr),
 	.fetchbuf1_v(fetchbuf1_v),
-	.fetchbuf1_pc(fetchbuf1_pc)
+	.fetchbuf1_pc(fetchbuf1_pc),
+	.commit0_v(commit0_v),
+	.commit0_instr(commit0_instr),	
+	.commit0_pc(commit_pc0),
+	.commit1_v(commit1_v),
+	.commit1_instr(commit1_instr),	
+	.commit1_pc(commit_pc0)
 );
 
 Thor2024_decoder udeci0
@@ -1294,6 +1304,7 @@ Thor2024_regfile_valid urfv1
 	.rst(rst),
 	.clk(clk),
 	.branchmiss(branchmiss),
+	.did_branchback(did_branchback),
 	.tail0(tail0),
 	.tail1(tail1),
 	.fetchbuf0_v(fetchbuf0_v),
@@ -1397,8 +1408,8 @@ always_comb
 
 // note that, for all intents & purposes, iqentry_done == iqentry_agen ... no need to duplicate
 
-wire [QENTRIES-1:0] args_valid;
-wire [QENTRIES-1:0] could_issue;
+que_bitmask_t args_valid;
+que_bitmask_t could_issue;
 
 generate begin : issue_logic
 for (g = 0; g < QENTRIES; g = g + 1)
@@ -1442,264 +1453,41 @@ Thor2024_alu_issue ualuiss1
 	.head5(head5),
 	.head6(head6),
 	.head7(head7),
+	.iq(iq),
 	.iqentry_issue(iqentry_issue)
 );
 
-always_comb
-begin
-	iqentry_fpu_issue = 'h0;
-	
-	if (NFPU > 0 && fpu_idle) begin
-		if (could_issue[head0] && iq[head0].fpu
-		&& !iqentry_fpu_issue[head0]) begin
-		  iqentry_fpu_issue[head0] = `TRUE;
-		end
-		else if (could_issue[head1] && !iqentry_fpu_issue[head1] && iq[head1].fpu
-		)
-		begin
-		  iqentry_fpu_issue[head1] = `TRUE;
-		end
-		else if (could_issue[head2] && !iqentry_fpu_issue[head2] && iq[head2].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		)
-		begin
-			iqentry_fpu_issue[head2] = `TRUE;
-		end
-		else if (could_issue[head3] && !iqentry_fpu_issue[head3] && iq[head3].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-			)
-		) begin
-			iqentry_fpu_issue[head3] = `TRUE;
-		end
-		else if (could_issue[head4] && !iqentry_fpu_issue[head4] && iq[head4].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		) begin
-			iqentry_fpu_issue[head4] = `TRUE;
-		end
-		else if (could_issue[head5] && !iqentry_fpu_issue[head5] && iq[head5].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		) begin
-			iqentry_fpu_issue[head5] = `TRUE;
-		end
-		else if (could_issue[head6] && !iqentry_fpu_issue[head6] && iq[head6].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		) begin
-			iqentry_fpu_issue[head6] = `TRUE;
-		end
-		else if (could_issue[head7] && !iqentry_fpu_issue[head7] && iq[head7].fpu
-		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-		&& (!(iq[head2].v && iq[head2].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v))
-		 	)
-		&& (!(iq[head3].v && iq[head3].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v))
-			)
-		&& (!(iq[head4].v && iq[head4].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v))
-			)
-		&& (!(iq[head5].v && iq[head5].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v))
-			)
-		&& (!(iq[head6].v && iq[head6].sync) ||
-		 		((!iq[head0].v)
-		 	&&   (!iq[head1].v)
-		 	&&   (!iq[head2].v)
-		 	&&   (!iq[head3].v)
-		 	&&   (!iq[head4].v)
-		 	&&   (!iq[head5].v))
-			)
-		) begin
-			iqentry_fpu_issue[head7] = `TRUE;
-		end
-	end
-end
+Thor2024_fpu_issue ufpuiss1
+(
+	.fpu_idle(fpu_idle),
+	.could_issue(could_issue), 
+	.head0(head0),
+	.head1(head1),
+	.head2(head2),
+	.head3(head3),
+	.head4(head4),
+	.head5(head5),
+	.head6(head6),
+	.head7(head7),
+	.iq(iq),
+	.iqentry_fpu_issue(iqentry_fpu_issue)
+);
 
-// Don't issue to the fcu until the following instruction is enqueued.
-// However, if the queue is full then issue anyway. A branch miss will likely occur.
-always_comb
-begin
-	iqentry_fcu_issue = 8'h00;
-	if (fcu_idle) begin
-    if (could_issue[head0] && iq[head0].fc) begin
-      iqentry_fcu_issue[head0] = `TRUE;
-    end
-    else if (could_issue[head1] && iq[head1].fc)
-    begin
-      iqentry_fcu_issue[head1] = `TRUE;
-    end
-    else if (could_issue[head2] && iq[head2].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    ) begin
-   		iqentry_fcu_issue[head2] = `TRUE;
-    end
-    else if (could_issue[head3] && iq[head3].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    && (!(iq[head2].v && iq[head2].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v))
-    	)
-    ) begin
-   		iqentry_fcu_issue[head3] = `TRUE;
-    end
-    else if (could_issue[head4] && iq[head4].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    && (!(iq[head2].v && iq[head2].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v))
-     	)
-    && (!(iq[head3].v && iq[head3].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v))
-    	)
-    ) begin
-   		iqentry_fcu_issue[head4] = `TRUE;
-    end
-    else if (could_issue[head5] && iq[head5].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    && (!(iq[head2].v && iq[head2].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v))
-     	)
-    && (!(iq[head3].v && iq[head3].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v))
-    	)
-    && (!(iq[head4].v && iq[head4].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v))
-    	)
-    ) begin
-   		iqentry_fcu_issue[head5] = `TRUE;
-    end
- 
-    else if (could_issue[head6] && iq[head6].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    && (!(iq[head2].v && iq[head2].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v))
-     	)
-    && (!(iq[head3].v && iq[head3].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v))
-    	)
-    && (!(iq[head4].v && iq[head4].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v))
-    	)
-    && (!(iq[head5].v && iq[head5].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v)
-     	&&   (!iq[head4].v))
-    	)
-    ) begin
-   		iqentry_fcu_issue[head6] = `TRUE;
-    end
-   
-    else if (could_issue[head7] && iq[head7].fc
-    && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
-    && (!(iq[head2].v && iq[head2].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v))
-     	)
-    && (!(iq[head3].v && iq[head3].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v))
-    	)
-    && (!(iq[head4].v && iq[head4].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v))
-    	)
-    && (!(iq[head5].v && iq[head5].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v)
-     	&&   (!iq[head4].v))
-    	)
-    && (!(iq[head6].v && iq[head6].sync) ||
-     		((!iq[head0].v)
-     	&&   (!iq[head1].v)
-     	&&   (!iq[head2].v)
-     	&&   (!iq[head3].v)
-     	&&   (!iq[head4].v)
-     	&&   (!iq[head5].v))
-    	)
-    ) begin
-   		iqentry_fcu_issue[head7] = `TRUE;
-  	end
-	end
-end
+Thor2024_fcu_issue ufcuiss1
+(
+	.fcu_idle(fcu_idle),
+	.could_issue(could_issue), 
+	.head0(head0),
+	.head1(head1),
+	.head2(head2),
+	.head3(head3),
+	.head4(head4),
+	.head5(head5),
+	.head6(head6),
+	.head7(head7),
+	.iq(iq),
+	.iqentry_fcu_issue(iqentry_fcu_issue)
+);
 
 assign iqentry_issue2 = iqentry_issue | iqentry_issue_reg;
 
@@ -1731,7 +1519,7 @@ for (n4 = 0; n4 < QENTRIES; n4 = n4 + 1)
 begin
 	//n4p = (n4 + (QENTRIES-1)) % QENTRIES;
 	iqentry_stomp[n4] =
-		((branchmiss||branchback)
+		(branchmiss
 		&& iq[n4].sn >= iq[missid].sn
 		&& iq[n4].v
 		&& head0 != n4[$clog2(QENTRIES)-1:0])
@@ -1743,14 +1531,17 @@ begin
 											&& (missid == n4p || iqentry_stomp[n4p])
 											;
 	*/
-	/*
-	if (branchmiss|branchback) begin
+	// Since branchback happens at queue time there will not be any other
+	// instructions coming after the branch except for the two instructions
+	// queued due to the fetch delay.
+	
+	if (did_branchback) begin
 		if (~lastq0[3])
 			iqentry_stomp[lastq0] = 1'b1;
 		if (~lastq1[3])
 			iqentry_stomp[lastq1] = 1'b1;
 	end
-	*/
+	
 end											
 //    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
@@ -1885,32 +1676,15 @@ always_comb
 always_comb
 	fcu_missir <= fcu_instr;
 
-always_comb
-	case(fcu_instr.br.cm)
-	2'd0:	// integer signed branches
-		case(fcu_instr.any.opcode)
-		OP_BEQ:	takb = fcu_argA==fcu_argB;
-		OP_BNE:	takb = fcu_argA!=fcu_argB;
-		OP_BLT:	takb = $signed(fcu_argA) < $signed(fcu_argB);
-		OP_BLE:	takb = $signed(fcu_argA) <= $signed(fcu_argB);
-		OP_BGT:	takb = $signed(fcu_argA) > $signed(fcu_argB);
-		OP_BGE:	takb = $signed(fcu_argA) >= $signed(fcu_argB);
-		OP_BBS:	takb = fcu_argA[fcu_argB[5:0]];
-		default:	takb = 1'b0;
-		endcase	
-	2'd1:	// integer usigned branches
-		case(fcu_instr.any.opcode)
-		OP_BEQ:	takb = fcu_argA==fcu_argB;
-		OP_BNE:	takb = fcu_argA!=fcu_argB;
-		OP_BLT:	takb = fcu_argA < fcu_argB;
-		OP_BLE:	takb = fcu_argA <= fcu_argB;
-		OP_BGT:	takb = fcu_argA > fcu_argB;
-		OP_BGE:	takb = fcu_argA >= fcu_argB;
-		OP_BBS:	takb = fcu_argA[fcu_argB[5:0]];
-		default:	takb = 1'b0;
-		endcase	
-	default:	takb = 1'b0;
-	endcase
+
+Thor2024_branch_eval ube1
+(
+	.instr(fcu_instr),
+	.a(fcu_argA),
+	.b(fcu_argB),
+	.takb(takb)
+);
+
 
 always_comb
 if (fcu_instr.any.opcode==OP_SYS) begin
@@ -1997,7 +1771,8 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 
     2'b01:
     	if (iq[tail0].v == INV) begin
-				iq[tail0].v    <=   VAL;
+				did_branchback <= branchback;
+				iq[tail0].v <= ~did_branchback;
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 				iq[tail0].sn <= 6'h3F;
@@ -2073,10 +1848,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
 					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
 					//
-					iq[tail0].v	<=	VAL;
-					iq[tail0].sn <= 6'h3F;
+					did_branchback <= branchback;
+					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
 					iq[tail0].done <= INV;
 					iq[tail0].out	<= INV;
 					iq[tail0].res	<= `ZERO;
@@ -2147,10 +1923,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
 				if (db0.backbr) begin
-			    iq[tail0].v    <=	VAL;
-					iq[tail0].sn <= 6'h3F;
+					did_branchback <= branchback;
+					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
 			    iq[tail0].done    <=	INV;
 			    iq[tail0].out    <=	INV;
 			    iq[tail0].res    <=	`ZERO;
@@ -2228,10 +2005,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    //
 			    // enqueue the first instruction ...
 			    //
-			    iq[tail0].v    <=   VAL;
-					iq[tail0].sn <= 6'h3F;
+					did_branchback <= branchback;
+					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
 			    iq[tail0].done    <=   INV;
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
@@ -2298,10 +2076,11 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    //
 			    if (iq[tail1].v == INV) begin
 
-						iq[tail1].v    <=   VAL;
-						iq[tail1].sn <= 6'h3E;
+						iq[tail1].v <= ~did_branchback;
 						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
+						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
+						iq[tail1].sn <= 6'h3F;
 						iq[tail1].done    <=   INV;
 						iq[tail1].out    <=   INV;
 						iq[tail1].res    <=   `ZERO;
@@ -3289,7 +3068,7 @@ fcu_dataready <= fcu_available
 	    end
 	endcase
 
-    end
+end
 
 //
 // additional COMMIT logic
@@ -3308,6 +3087,8 @@ assign commit1_tgt = iq[head1].tgt;
 assign commit0_bus = iq[head0].res;
 assign commit1_bus = iq[head1].res;
 
+assign commit0_instr = iq[head0].op;
+assign commit1_instr = iq[head1].op;
 assign commit_pc0 = iq[head0].pc;
 assign commit_pc1 = iq[head1].pc;
 assign commit_brtgt0 = iq[head0].brtgt;
@@ -3513,6 +3294,7 @@ begin
 	head6 <= 6;
 	head7 <= 7;
 	panic <= `PANIC_NONE;
+	did_branchback <= 'd0;
 	iqentry_issue_reg <= 'd0;
 	for (n14 = 0; n14 < QENTRIES; n14 = n14 + 1)
 		iq[n14].sn <= 6'd0;

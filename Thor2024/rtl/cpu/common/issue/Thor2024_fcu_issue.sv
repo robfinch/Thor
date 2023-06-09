@@ -61,16 +61,16 @@ begin
 	iqentry_fcu_issue = 8'h00;
 	if (fcu_idle) begin
     if (could_issue[head0] && iq[head0].fc) begin
-      iqentry_fcu_issue[head0] = `TRUE;
+      iqentry_fcu_issue[head0] = 1'b1;
     end
     else if (could_issue[head1] && iq[head1].fc)
     begin
-      iqentry_fcu_issue[head1] = `TRUE;
+      iqentry_fcu_issue[head1] = 1'b1;
     end
     else if (could_issue[head2] && iq[head2].fc
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     ) begin
-   		iqentry_fcu_issue[head2] = `TRUE;
+   		iqentry_fcu_issue[head2] = 1'b1;
     end
     else if (could_issue[head3] && iq[head3].fc
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
@@ -79,7 +79,7 @@ begin
      	&&   (!iq[head1].v))
     	)
     ) begin
-   		iqentry_fcu_issue[head3] = `TRUE;
+   		iqentry_fcu_issue[head3] = 1'b1;
     end
     else if (could_issue[head4] && iq[head4].fc
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
@@ -93,7 +93,7 @@ begin
      	&&   (!iq[head2].v))
     	)
     ) begin
-   		iqentry_fcu_issue[head4] = `TRUE;
+   		iqentry_fcu_issue[head4] = 1'b1;
     end
     else if (could_issue[head5] && iq[head5].fc
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
@@ -113,7 +113,7 @@ begin
      	&&   (!iq[head3].v))
     	)
     ) begin
-   		iqentry_fcu_issue[head5] = `TRUE;
+   		iqentry_fcu_issue[head5] = 1'b1;
     end
  
     else if (could_issue[head6] && iq[head6].fc
@@ -141,7 +141,7 @@ begin
      	&&   (!iq[head4].v))
     	)
     ) begin
-   		iqentry_fcu_issue[head6] = `TRUE;
+   		iqentry_fcu_issue[head6] = 1'b1;
     end
    
     else if (could_issue[head7] && iq[head7].fc
@@ -177,7 +177,7 @@ begin
      	&&   (!iq[head5].v))
     	)
     ) begin
-   		iqentry_fcu_issue[head7] = `TRUE;
+   		iqentry_fcu_issue[head7] = 1'b1;
   	end
 	end
 end

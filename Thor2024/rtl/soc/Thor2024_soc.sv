@@ -252,10 +252,10 @@ wire rst_ack;
 
 wire hSync, vSync;
 wire blank, border;
-wire [7:0] red, blue, green;
+wire [9:0] red, blue, green;
 wire [31:0] fb_rgb, tc_rgb;
-assign red = tc_rgb[30:21];
-assign green = tc_rgb[20:10];
+assign red = tc_rgb[29:20];
+assign green = tc_rgb[19:10];
 assign blue = tc_rgb[9:0];
 
 // -----------------------------------------------------------------------------
@@ -314,7 +314,7 @@ ur2d1
 	.TMDS_Data_n(TMDS_OUT_data_n),
 	.aRst(rst),
 	.aRst_n(~rst),
-	.vid_pData({red,blue,green}),
+	.vid_pData({red[9:2],blue[9:2],green[9:2]}),
 	.vid_pVDE(~blank),
 	.vid_pHSync(hSync),    // hSync is neg going for 1366x768
 	.vid_pVSync(vSync),
@@ -322,6 +322,7 @@ ur2d1
 	.SerialClk(clk200)
 );
 */
+
 wire cs_io;
 assign cs_io = ios;//ch7req.adr[31:20]==12'hFD0;
 wire cs_io2 = ch7req.padr[31:20]==12'hFD0;
@@ -334,13 +335,17 @@ assign cs_mmu = mmus;	//cpu_adr[31:16]==16'hFC00 || cpu_adr[31:16]==16'hFC01;
 wire cs_config = ch7req.padr[31:28]==4'hD;
 
 wire cs_leds = ch7req.padr[19:8]==12'hFFF && ch7req.stb && cs_io2;
-wire cs_br3_leds = br3_mreq.padr[31:8]==24'hFD0FFF && br3_mreq.stb;
+wire cs_br3_leds = br3_mreq.padr[31:8]==24'hFEDFFF && br3_mreq.stb;
 wire cs_br3_rst  = br3_adr[19:8]==12'hFFC && br3_stb && cs_io2;
 wire cs_sema = ch7req.padr[19:16]==4'h5 && ch7req.stb && cs_io2;
 wire cs_scr = ch7req.padr[31:20]==12'h001;
 wire cs_dram = ch7req.padr[31:29]==3'b001 && !cs_mmu && !cs_iobitmap && !cs_io;
 
-assign io_gate_en = ch7req.padr[31:20]==12'hFD0 || ch7req.padr[31:20]==12'hFD1;
+assign io_gate_en = ch7req.padr[31:20]==12'hFEC
+								 || ch7req.padr[31:20]==12'hFED
+								 || ch7req.padr[31:20]==12'hFEE
+								 || ch7req.padr[31:20]==12'hFEF
+								 ;
 
 
 rfFrameBuffer_fta64 uframebuf1
@@ -374,8 +379,8 @@ rfTextController_fta64 utc1
 (
 	.rst_i(rst),
 	.clk_i(node_clk),
-	.cs_config_i(cs_config),
-	.cs_io_i(cs_io2),
+	.cs_config_i(br1_mreq.padr[31:28]==4'hD),
+	.cs_io_i(br1_mreq.padr[31:20]==12'hFEC),
 	.req(br1_mreq),
 	.resp(tc_cresp),
 	.dot_clk_i(clk40),

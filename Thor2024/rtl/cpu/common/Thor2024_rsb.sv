@@ -1,10 +1,11 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
 //
+//	Thor2024_ifetch.sv
 //
 // BSD 3-Clause License
 // Redistribution and use in source and binary forms, with or without
@@ -36,28 +37,38 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_fc(instr, fc);
-input instruction_t instr;
-output fc;
+module Thor2024_rsb(rst, clk, pop, push, pc, o);
+input rst;
+input clk;
+input pop;
+input push;
+input pc_address_t pc;
+output pc_address_t o;
 
-function fnIsFlowCtrl;
-input instruction_t ir;
-begin
-	fnIsFlowCtrl = 1'b0;
-	case(ir.any.opcode)
-	OP_SYS:	fnIsFlowCtrl = 1'b1;
-	OP_JSR:
-		fnIsFlowCtrl = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
-		fnIsFlowCtrl = 1'b1;	
-	OP_BSR,OP_RTD:
-		fnIsFlowCtrl = 1'b1;	
-	default:
-		fnIsFlowCtrl = 1'b0;
-	endcase
+integer n;
+pc_address_t [63:0] rsb_stack;
+reg [5:0] rsb_sp;
+reg push1, pop1;
+
+always_ff @(posedge clk, posedge rst)
+if (rst) begin
+	rsb_sp <= 'd0;
+	for (n = 0; n < 32; n = n + 1)
+		rsb_stack[n] <= 44'hFFFD0000000;
 end
-endfunction
+else begin
+	push1 <= push;
+	pop1 <= pop;
+	if ((pop & ~pop1) & (push & ~push1))
+		;
+	else if (pop & ~pop1)
+		rsb_sp <= rsb_sp + 2'd1;
+	else if (push & ~push1)
+		rsb_sp <= rsb_sp - 2'd1;
+	if (push & ~push1)
+		rsb_stack[rsb_sp - 2'd1] <= pc;
+end
 
-assign fc = fnIsFlowCtrl(instr);
+assign o = rsb_stack[rsb_sp];
 
 endmodule

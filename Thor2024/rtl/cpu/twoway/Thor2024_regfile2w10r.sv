@@ -35,7 +35,7 @@
 //
 // ============================================================================
 //
-//`define SIM
+`define SIM
 
 module Thor2024_regfileRam_sim(clka, ena, wea, addra, dina, clkb, enb, addrb, doutb);
 parameter WID=64;
@@ -635,9 +635,10 @@ assign o2 = ra2[5:0]==6'd0 ? {WID{1'b0}} : ra2[5:0]==6'd53 ? pc0 :
 assign o3 = ra3[5:0]==6'd0 ? {WID{1'b0}} : ra3[5:0]==6'd53 ? pc0 :
 	(wr1 && (ra3==wa1)) ? i1 :
 	(wr0 && (ra3==wa0)) ? i0 :  ab[ra3] ? o13 : o03;
-assign o4 = ra4[5:0]==6'd0 ? {WID{1'b0}} : ra4[5:0]==6'd53 ? pc0 :
+assign o4 = ra4[5:0]==6'd0 ? {WID{1'b0}} : ra4[5:0]==6'd63 ? {WID{1'b1}} :
   (wr1 && (ra4==wa1)) ? i1 :
   (wr0 && (ra4==wa0)) ? i0 :  ab[ra4] ? o14 : o04;
+
 assign o5 = ra5[5:0]==6'd0 ? {WID{1'b0}} : ra5[5:0]==6'd53 ? pc1 :
   (wr1 && (ra5==wa1)) ? i1 :
   (wr0 && (ra5==wa0)) ? i0 :  ab[ra5] ? o15 : o05;
@@ -650,7 +651,7 @@ assign o7 = ra7[5:0]==6'd0 ? {WID{1'b0}} : ra7[5:0]==6'd53 ? pc1 :
 assign o8 = ra8[5:0]==6'd0 ? {WID{1'b0}} : ra8[5:0]==6'd53 ? pc1 :
   (wr1 && (ra8==wa1)) ? i1 :
   (wr0 && (ra8==wa0)) ? i0 :  ab[ra8] ? o18 : o08;
-assign o9 = ra9[5:0]==6'd0 ? {WID{1'b0}} : ra9[5:0]==6'd53 ? pc1 :
+assign o9 = ra9[5:0]==6'd0 ? {WID{1'b0}} : ra9[5:0]==6'd63 ? {WID{1'b1}} :
   (wr1 && (ra9==wa1)) ? i1 :
   (wr0 && (ra9==wa0)) ? i0 :  ab[ra9] ? o19 : o09;
 

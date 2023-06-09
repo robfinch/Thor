@@ -71,7 +71,7 @@ begin
 		FN_SLE:	fnRp = {3'b100,ir[36:34]};
 		FN_SLTU:	fnRp = {3'b100,ir[36:34]};
 		FN_SLEU:	fnRp = {3'b100,ir[36:34]};
-		default:	fnRp = 6'd46;
+		default:	fnRp = 6'd63;
 		endcase
 	OP_JSR:	fnRp = {3'b100,ir[37:35]};
 	OP_RTD:	fnRp = {3'b100,ir[37:35]};
@@ -86,7 +86,7 @@ begin
 	OP_LDX:
 		fnRp = {3'b100,ir[37:35]};
 	default:
-		fnRp = 6'd46;
+		fnRp = 6'd63;
 	endcase
 end
 endfunction

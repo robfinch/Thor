@@ -40,7 +40,10 @@ import Thor2024pkg::*;
 module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc, missir,
 	next_pc, takb, ptakb, pc, pc_i, stall, inst0, inst1, iq, tail0, tail1,
 	fetchbuf, fetchbuf0_instr, fetchbuf0_v, fetchbuf0_pc, 
-	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc);
+	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc,
+	commit0_v, commit0_instr, commit0_pc,
+	commit1_v, commit1_instr, commit1_pc
+);
 input rst;
 input clk;
 input hit;
@@ -68,6 +71,13 @@ output pc_address_t fetchbuf0_pc;
 output instruction_t [4:0] fetchbuf1_instr;
 output reg fetchbuf1_v;
 output pc_address_t fetchbuf1_pc;
+// For RSB
+input commit0_v;
+input instruction_t commit0_instr;
+input pc_address_t commit0_pc;
+input commit1_v;
+input instruction_t commit1_instr;
+input pc_address_t commit1_pc;
 
 reg [3:0] panic;
 reg did_branchback;
@@ -702,14 +712,27 @@ always_comb
 //
 // set branchback and backpc values ... ignore branches in fetchbuf slots not ready for enqueue yet
 //
+reg rsb_push;
+reg rsb_pop, rsb_popc;
+pc_address_t ret_pc;
+pc_address_t rsb_pc;
+
 always_comb
 	isBB0 = fnIsBackBranch(fetchbuf0_instr[0]);
 always_comb
 	isBB1 = fnIsBackBranch(fetchbuf1_instr[0]);
 always_comb
-	branchback = (fetchbuf0_v & isBB0) | (fetchbuf1_v & isBB1);
+	branchback = ((fetchbuf0_v & isBB0) | (fetchbuf1_v & isBB1)
+			|| (SUPPORT_RSB && fetchbuf0_v && fnIsRet(fetchbuf0_instr[0]))
+			|| (SUPPORT_RSB && fetchbuf1_v && fnIsRet(fetchbuf1_instr[0]) && fetchbuf1_v)
+			)
+			;
 always_comb
-	if (fetchbuf0_v && isBB0) begin
+	if (SUPPORT_RSB && fetchbuf0_v && fnIsRet(fetchbuf0_instr[0]))
+		backpc = ret_pc;
+	else if (SUPPORT_RSB && fetchbuf0_v && fetchbuf1_v && fnIsRet(fetchbuf1_instr[0]))
+		backpc = ret_pc;
+	else if (fetchbuf0_v && isBB0) begin
 		if (fnIsMacroInstr(fetchbuf0_instr[0]))
 			backpc = {fetchbuf0_pc.pc,mip0};
 		else begin
@@ -717,7 +740,7 @@ always_comb
 			backpc.micro_ip = 'd0;
 		end
 	end
-	else begin
+	else if (fetchbuf1_v && isBB1) begin
 		if (fnIsMacroInstr(fetchbuf1_instr[0]))
 			backpc = {fetchbuf1_pc.pc,mip1};
 		else begin
@@ -725,6 +748,60 @@ always_comb
 			backpc.micro_ip = 'd0;
 		end
 	end
+
+generate begin : gRSB
+	if (SUPPORT_RSB) begin
+		// If there was a call type instruction that did not commit, then pop the RSB
+		// to keep it in sync.
+		always_comb
+			if (~commit0_v && fnIsCallType(commit0_instr[0]))
+				rsb_popc = 1'b1;
+			else if (commit0_v & ~commit1_v && fnIsCallType(commit1_instr[0]))
+				rsb_popc = 1'b1;
+			else
+				rsb_popc = 1'b0;
+
+		// "Push" call instructions during the fetch phase. Even though the call may 
+		// eventually turn out not to be executed. It is pushed in fetch to allow a 
+		// return shortly after the call.
+		always_comb
+			if (fetchbuf0_v && fnIsCallType(fetchbuf0_instr[0])) begin
+				rsb_push = 1'b1;
+				rsb_pc.pc = fetchbuf0_pc.pc + INSN_LEN;
+				rsb_pc.micro_ip = 12'h0;
+			end
+			else if (fetchbuf0_v && fetchbuf1_v && fnIsCallType(fetchbuf1_instr[0])) begin
+				rsb_push = 1'b1;
+				rsb_pc.pc = fetchbuf1_pc.pc + INSN_LEN;
+				rsb_pc.micro_ip = 12'h0;
+			end
+			else begin
+				rsb_push = 1'b0;
+				rsb_pc.pc = fetchbuf0_pc.pc + INSN_LEN;
+				rsb_pc.micro_ip = 12'h0;
+			end
+
+		always_comb
+			if (fetchbuf0_v && fnIsRet(fetchbuf0_instr[0]))
+				rsb_pop = 1'b1;
+			else if (fetchbuf0_v && fetchbuf1_v
+				&& !fnIsFlowCtrl(fetchbuf0_instr[0]) && fnIsRet(fetchbuf1_instr[0]))
+				rsb_pop = 1'b1;
+			else
+				rsb_pop = 1'b0;
+
+		Thor2024_rsb ursb1
+		(
+			.rst(rst),
+			.clk(clk),
+			.pop(rsb_pop|rsb_popc),
+			.push(rsb_push),
+			.pc(rsb_pc),
+			.o(ret_pc)
+		);
+	end
+end
+endgenerate
 
 task tFetchAB;
 begin

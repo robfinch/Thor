@@ -53,6 +53,7 @@ output reg done;
 reg [11:0] cnt;
 reg sincos_done, scale_done, f2i_done, i2f_done, sqrt_done, fres_done, trunc_done;
 wire div_done;
+value_t bus;
 value_t fmao1, fmao2, fmao3, fmao4, fmao5, fmao6, fmao7;
 value_t scaleo, f2io, i2fo, signo, cmpo, divo, sqrto, freso, trunco;
 value_t cvtS2Do;
@@ -272,49 +273,49 @@ end
 
 always_comb
 begin
-	o = 'd0;
+	bus = 'd0;
 	case(ir.any.opcode)
 	OP_FLT2:
 		case(ir.f2.func)
 		FN_FLT1:
 			case(ir.f1.func)
-			FN_FABS:	o = {1'b0,a[$bits(value_t)-2:0]};
-			FN_FNEG:	o = {a[$bits(value_t)-1]^1'b1,a[$bits(value_t)-2:0]};
-			FN_FTOI:	o = f2io;
-			FN_ITOF:	o = i2fo;
-			FN_FSIGN:	o = signo;
-			FN_ISNAN:	o = &a[62:52] && |a[51:0];
-			FN_FINITE:	o = ~&a[62:52];
-			FN_FSIN:	o = sino;
-			FN_FCOS:	o = coso;
-//			FN_FSQRT:	o = sqrto;
-			FN_FRES:	o = freso;
-			FN_FTRUNC:	o = trunco;
-			FN_FCVTS2D:	o = cvtS2Do;
-			default:	o = 'd0;
+			FN_FABS:	bus = {1'b0,a[$bits(value_t)-2:0]};
+			FN_FNEG:	bus = {a[$bits(value_t)-1]^1'b1,a[$bits(value_t)-2:0]};
+			FN_FTOI:	bus = f2io;
+			FN_ITOF:	bus = i2fo;
+			FN_FSIGN:	bus = signo;
+			FN_ISNAN:	bus = &a[62:52] && |a[51:0];
+			FN_FINITE:	bus = ~&a[62:52];
+			FN_FSIN:	bus = sino;
+			FN_FCOS:	bus = coso;
+//			FN_FSQRT:	bus = sqrto;
+			FN_FRES:	bus = freso;
+			FN_FTRUNC:	bus = trunco;
+			FN_FCVTS2D:	bus = cvtS2Do;
+			default:	bus = 'd0;
 			endcase
 		FN_FSCALEB:
-			o = scaleo;
+			bus = scaleo;
 		FN_FADD,FN_FSUB,FN_FMUL:
-			o = fmao;
+			bus = fmao;
 		/*
 		FN_FDIV:
-			o = divo;
+			bus = divo;
 		*/
-		FN_FSEQ:	o = cmpo[0];
-		FN_FSNE:	o = ~cmpo[0];
-		FN_FSLT:	o = cmpo[1];
-		FN_FSLE:	o = cmpo[2];
-		FN_FCMP:	o = cmpo;
-		default:	o = 'd0;
+		FN_FSEQ:	bus = cmpo[0];
+		FN_FSNE:	bus = ~cmpo[0];
+		FN_FSLT:	bus = cmpo[1];
+		FN_FSLE:	bus = cmpo[2];
+		FN_FCMP:	bus = cmpo;
+		default:	bus = 'd0;
 		endcase
 	OP_FLT3:
 		case(ir.f3.func)
 		FN_FMA,FN_FMS,FN_FNMA,FN_FNMS:
-			o = fmao;
-		default:	o = 'd0;
+			bus = fmao;
+		default:	bus = 'd0;
 		endcase
-	default:	o = 'd0;
+	default:	bus = 'd0;
 	endcase
 end
 
@@ -351,5 +352,11 @@ always_comb
 		endcase
 	default:	done = 1'b1;
 	endcase
+
+always_comb
+	if (p[0])
+		o = bus;
+	else
+		o = t;
 
 endmodule

@@ -94,6 +94,8 @@ parameter NFPU = 1;
 
 parameter RAS_DEPTH	= 4;
 
+parameter SUPPORT_RSB = 1;
+
 //
 // define PANIC types
 //
@@ -152,6 +154,7 @@ typedef enum logic [6:0] {
 	/* 24 to 31 empty
 	*/
 	OP_DBcc			= 7'd29,
+	OP_BSR			= 7'd32,
 	OP_MCB			= 7'd34,
 	OP_RTD			= 7'd35,
 	OP_JSR			= 7'd36,
@@ -245,6 +248,17 @@ typedef enum logic [3:0] {
 	RA = 4'd14,
 	SR = 4'd15
 } branch_cnd_t;
+
+typedef enum logic [2:0] {
+	MCB_EQ = 3'd0,
+	MCB_NE = 3'd1,
+	MCB_LT = 3'd2,
+	MCB_GE = 3'd3,
+	MCB_LE = 3'd4,
+	MCB_GT = 3'd5,
+	MCB_BC = 3'd6,
+	MCB_BS = 3'd7
+} mcb_cond_t;
 
 typedef enum logic [3:0] {
 	FEQ = 4'd0,
@@ -771,6 +785,18 @@ typedef struct packed
 
 typedef struct packed
 {
+	logic [2:0] resv;
+	logic [11:0] tgt;
+	regspec_t Rb;
+	regspec_t	Ra;
+	mcb_cond_t cnd;
+	branch_cm_t cm;
+	logic lk;
+	opcode_t opcode;
+} mcb_inst_t;
+
+typedef struct packed
+{
 	logic [1:0] fmt;
 	logic [2:0] pr;
 	logic [15:0] immhi;
@@ -780,6 +806,13 @@ typedef struct packed
 	opcode_t opcode;
 } jsrinst_t;
 
+typedef struct packed
+{
+	logic [30:0] disp;
+	logic [1:0] lk;
+	opcode_t opcode;
+} bsrinst_t;
+
 typedef union packed
 {
 	sys_inst_t sys;
@@ -788,8 +821,10 @@ typedef union packed
 	f3inst_t	f3;
 	r2inst_t	r2;
 	brinst_t	br;
+	mcb_inst_t mcb;
 	jsrinst_t	jsr;
 	jsrinst_t	jmp;
+	bsrinst_t bsr;
 	imminst_t	imm;
 	imminst_t	ri;
 	shiftiinst_t shifti;
@@ -1113,6 +1148,20 @@ begin
 end
 endfunction
 
+function fnIsCallType;
+input instruction_t ir;
+begin
+	if (ir.any.opcode==OP_JSR && ir.jsr.lk!=2'd0)
+		fnIsCallType = 1'b1;
+	else if (fnIsBranch(ir) && ir.br.lk!=1'b0)
+		fnIsCallType = 1'b1;
+	else if (ir.any.opcode==OP_BSR && ir.bsr.lk!=2'd0)
+		fnIsCallType = 1'b1;
+	else
+		fnIsCallType = 1'b0;
+end
+endfunction
+
 function fnIsRet;
 input instruction_t ir;
 begin
@@ -1122,6 +1171,24 @@ begin
 		fnIsRet = 1'b1;	
 	default:
 		fnIsRet = 1'b0;
+	endcase
+end
+endfunction
+
+function fnIsFlowCtrl;
+input instruction_t ir;
+begin
+	fnIsFlowCtrl = 1'b0;
+	case(ir.any.opcode)
+	OP_SYS:	fnIsFlowCtrl = 1'b1;
+	OP_JSR:
+		fnIsFlowCtrl = 1'b1;
+	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+		fnIsFlowCtrl = 1'b1;	
+	OP_BSR,OP_RTD:
+		fnIsFlowCtrl = 1'b1;	
+	default:
+		fnIsFlowCtrl = 1'b0;
 	endcase
 end
 endfunction
