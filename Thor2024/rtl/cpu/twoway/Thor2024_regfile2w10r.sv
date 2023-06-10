@@ -76,11 +76,12 @@ assign doutb = mem[addrb];
 	
 endmodule
 
-module Thor2024_regfile2w10r(clk, pc0, pc1, wr0, wr1, we0, we1, wa0, wa1, i0, i1,
+module Thor2024_regfile2w10r(rst, clk, pc0, pc1, wr0, wr1, we0, we1, wa0, wa1, i0, i1,
 	rclk, ra0, ra1, ra2, ra3, ra4, ra5, ra6, ra7, ra8, ra9,
 	o0, o1, o2, o3, o4, o5, o6, o7, o8, o9);
 parameter WID=64;
 parameter RBIT = 11;
+input rst;
 input clk;
 input [WID-1:0] pc0;
 input [WID-1:0] pc1;
@@ -609,7 +610,10 @@ Thor2024_regfileRam urf29 (
 
 reg [63:0] ab;
 
-always_ff @(posedge clk)
+always_ff @(posedge clk, posedge rst)
+if (rst)
+	ab <= 'd0;
+else begin
 	if (wr0 & wr1) begin
 		if (wa0==wa1)
 			ab[wa1] <= 1'b1;
@@ -622,6 +626,7 @@ always_ff @(posedge clk)
 		ab[wa0] <= 1'b0;
 	else if (wr1)
 		ab[wa1] <= 1'b1;
+end
 
 assign o0 = ra0[5:0]==6'd0 ? {WID{1'b0}} : ra0[5:0]==6'd53 ? pc0 :
 	(wr1 && (ra0==wa1)) ? i1 :

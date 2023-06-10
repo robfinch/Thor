@@ -1554,6 +1554,8 @@ begin
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
 	OP_STB,OP_STW,OP_STT,OP_STO:
 		fnImmb = 1'b1;
+	OP_LDX,OP_STX:
+		fnImmb = &ir.lsn.Rb;
 	default:	fnImmb = 1'b0;
 	endcase
 end

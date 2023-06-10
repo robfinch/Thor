@@ -110,7 +110,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14,n15;
 genvar g;
 
 wire [AREGS-1:0] rf_v;
@@ -306,7 +306,7 @@ reg takb;
 
 
 wire branchback;
-reg did_branchback;
+reg did_branchback, did_branchback1, did_branchback2;
 pc_address_t backpc;
 wire branchmiss;
 pc_address_t misspc;
@@ -872,7 +872,7 @@ end
 endgenerate
 
 /* 
-assign fetchbuf0_mem   = (fetchbuf == 1'b0) 
+assign db0.mem   = (fetchbuf == 1'b0) 
 		? (fetchbufA_instr[`INSTRUCTION_OP] == `LW || fetchbufA_instr[`INSTRUCTION_OP] == `SW)
 		: (fetchbufC_instr[`INSTRUCTION_OP] == `LW || fetchbufC_instr[`INSTRUCTION_OP] == `SW);
 assign fetchbuf0_jmp   = (fetchbuf == 1'b0)
@@ -882,7 +882,7 @@ assign fetchbuf0_rfw   = (fetchbuf == 1'b0)
 		? (fetchbufA_instr[`INSTRUCTION_OP] != `BEQ && fetchbufA_instr[`INSTRUCTION_OP] != `SW)
 		: (fetchbufC_instr[`INSTRUCTION_OP] != `BEQ && fetchbufC_instr[`INSTRUCTION_OP] != `SW);
 
-assign fetchbuf1_mem   = (fetchbuf == 1'b0) 
+assign db1.mem   = (fetchbuf == 1'b0) 
 		? (fetchbufB_instr[`INSTRUCTION_OP] == `LW || fetchbufB_instr[`INSTRUCTION_OP] == `SW)
 		: (fetchbufD_instr[`INSTRUCTION_OP] == `LW || fetchbufD_instr[`INSTRUCTION_OP] == `SW);
 assign fetchbuf1_jmp   = (fetchbuf == 1'b0)
@@ -1272,6 +1272,7 @@ Thor2024_tail utail1
 	.tail1(tail1)
 );
 
+
 Thor2024_regfile_source urfs1
 (
 	.rst(rst),
@@ -1279,6 +1280,9 @@ Thor2024_regfile_source urfs1
 	.tail0(tail0),
 	.tail1(tail1),
 	.branchmiss(branchmiss),
+	.did_branchback(did_branchback),
+	.Rt0(Rt0),
+	.Rt1(Rt1),
 	.fetchbuf0_instr(fetchbuf0_instr[0]),
 	.fetchbuf1_instr(fetchbuf1_instr[0]),
 	.fetchbuf0_mem(db0.mem),
@@ -1305,6 +1309,8 @@ Thor2024_regfile_valid urfv1
 	.clk(clk),
 	.branchmiss(branchmiss),
 	.did_branchback(did_branchback),
+	.Rt0(Rt0),
+	.Rt1(Rt1),
 	.tail0(tail0),
 	.tail1(tail1),
 	.fetchbuf0_v(fetchbuf0_v),
@@ -1342,6 +1348,7 @@ Thor2024_regfile urf1
 
 Thor2024_regfile2w10r urf2
 (
+	.rst(rst),
 	.clk(clk),
 	.pc0(fetchbuf0_pc),
 	.pc1(fetchbuf1_pc),
@@ -1396,6 +1403,9 @@ always_comb
 	Rt1 = db1.Rt;
 always_comb
 	Rp1 = &pred_mask[7:4] ? db1.Rp : {2'b10,pred_mask[7:4]};
+
+always_comb
+	did_branchback = did_branchback1;// & ~did_branchback2;
 
 //
 // additional logic for ISSUE
@@ -1756,6 +1766,8 @@ if (fnIsAtom(fetchbuf0_instr[0]))
 if (fnIsAtom(fetchbuf1_instr[1]))
 	atom_mask <= fetchbuf1_instr[1][30:7];
 
+did_branchback2 <= did_branchback1;
+
 	//
 	// enqueue fetchbuf0 and fetchbuf1, but only if there is room, 
 	// and ignore fetchbuf1 if fetchbuf0 has a backwards branch in it.
@@ -1771,7 +1783,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 
     2'b01:
     	if (iq[tail0].v == INV) begin
-				did_branchback <= branchback;
+				did_branchback1 <= branchback & ~did_branchback;
 				iq[tail0].v <= ~did_branchback;
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
@@ -1809,19 +1821,34 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				iq[tail0].Rp <= Rp1;
 				iq[tail0].a0 <= db1.imm;
 				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
-				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) | rf_v[ Ra1 ];
+				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ]
+					|| (commit1_v && commit1_tgt==Ra1)
+					|| (commit0_v && commit0_tgt==Ra1)
+					;
 				iq[tail0].a1_s <= rf_source [ Ra1 ];
 				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
-				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) | rf_v[ Rb1 ];
+				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ] 
+					|| (commit1_v && commit1_tgt==Rb1)
+					|| (commit0_v && commit0_tgt==Rb1)
+					;
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
 				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
-				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) | rf_v[ Rc1 ];
+				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ]
+					|| (commit1_v && commit1_tgt==Rc1)
+					|| (commit0_v && commit0_tgt==Rc1)
+					;
 				iq[tail0].a3_s  <= rf_source [ Rc1 ];
 				iq[tail0].at <= rfot1;
-				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) | rf_v[ Rt1 ];
+				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) || rf_v[ Rt1 ]
+					|| (commit1_v && commit1_tgt==Rt1)
+					|| (commit0_v && commit0_tgt==Rt1)
+					;
 				iq[tail0].at_s  <= rf_source [ Rt1 ];
 				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], rfop1);
-				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) | rf_v[ Rp1 ];
+				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) || rf_v[ Rp1 ]
+					|| (commit1_v && commit1_tgt==Rp1)
+					|| (commit0_v && commit0_tgt==Rp1)
+					;
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
 				lastq0 <= {1'b0,tail0};
 				lastq1 <= {1'b1,tail0};
@@ -1848,7 +1875,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
 					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
 					//
-					did_branchback <= branchback;
+					did_branchback1 <= branchback & ~did_branchback;
 					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
@@ -1886,19 +1913,34 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].Rp <= Rp0;
 					iq[tail0].a0	<=	db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
+						|| (commit0_v && commit0_tgt==Ra0)
+						|| (commit1_v && commit1_tgt==Ra0)
+						;
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
+						|| (commit0_v && commit0_tgt==Rb0)
+						|| (commit1_v && commit1_tgt==Rb0)
+						;
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
+						|| (commit0_v && commit0_tgt==Rc0)
+						|| (commit1_v && commit1_tgt==Rc0)
+						;
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
+						|| (commit0_v && commit0_tgt==Rt0)
+						|| (commit1_v && commit1_tgt==Rt0)
+						;
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
+						|| (commit0_v && commit0_tgt==Rp0)
+						|| (commit1_v && commit1_tgt==Rp0)
+						;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -1923,7 +1965,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
 				if (db0.backbr) begin
-					did_branchback <= branchback;
+					did_branchback1 <= branchback & ~did_branchback;
 					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
@@ -1961,19 +2003,34 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].Rp <= Rp0;
 			    iq[tail0].a0 <= db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
+						|| (commit0_v && commit0_tgt==Ra0)
+						|| (commit1_v && commit1_tgt==Ra0)
+						;
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
+						|| (commit0_v && commit0_tgt==Rb0)
+						|| (commit1_v && commit1_tgt==Rb0)
+						;
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
+						|| (commit0_v && commit0_tgt==Rc0)
+						|| (commit1_v && commit1_tgt==Rc0)
+						;
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
+						|| (commit0_v && commit0_tgt==Rt0)
+						|| (commit1_v && commit1_tgt==Rt0)
+						;
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
+						|| (commit0_v && commit0_tgt==Rp0)
+						|| (commit1_v && commit1_tgt==Rp0)
+						;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -2005,7 +2062,7 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 			    //
 			    // enqueue the first instruction ...
 			    //
-					did_branchback <= branchback;
+					did_branchback1 <= branchback & ~did_branchback;
 					iq[tail0].v <= ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
@@ -2043,19 +2100,34 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 					iq[tail0].Rp <= Rp0;
 			    iq[tail0].a0 <= db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) | rf_v[ Ra0 ];
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
+						|| (commit0_v && commit0_tgt==Ra0)
+						|| (commit1_v && commit1_tgt==Ra1)
+						;
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) | rf_v[ Rb0 ];
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
+						|| (commit0_v && commit0_tgt==Rb0)
+						|| (commit1_v && commit1_tgt==Rb0)
+						;
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) | rf_v[ Rc0 ];
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
+						|| (commit0_v && commit0_tgt==Rc0)
+						|| (commit1_v && commit1_tgt==Rc0)
+						;
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) | rf_v[ Rt0 ];
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
+						|| (commit0_v && commit0_tgt==Rt0)
+						|| (commit1_v && commit1_tgt==Rt0)
+						;
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) | rf_v[ Rp0 ];
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
+						|| (commit0_v && commit0_tgt==Rp0)
+						|| (commit1_v && commit1_tgt==Rp0)
+						;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -2144,7 +2216,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ];
+					    iq[tail1].a1_v <= rf_v [ Ra1 ]
+								|| (commit1_v && commit1_tgt==Ra1)
+								|| (commit0_v && commit0_tgt==Ra1)
+								;
 					    iq[tail1].a1_s <= rf_source [ Ra1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2155,7 +2230,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ];
+					    iq[tail1].a1_v <= rf_v [ Ra1 ]
+								|| (commit1_v && commit1_tgt==Ra1)
+								|| (commit0_v && commit0_tgt==Ra1)
+								;
 					    iq[tail1].a1_s <= rf_source [ Ra1 ];
 						end
 
@@ -2170,18 +2248,24 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ];
+					    iq[tail1].a2_v <= rf_v [ Rb1 ]
+								|| (commit1_v && commit1_tgt==Rb1)
+								|| (commit0_v && commit0_tgt==Rb1)
+								;
 					    iq[tail1].a2_s <= rf_source [ Rb1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 5'd0 && Rb1 == Rt0) begin
+						else if (Rt0 != 6'd0 && Rb1 == Rt0) begin
 					    // if the previous instruction is a LW, then grab result from memq, not the iq
 					    iq[tail1].a2_v <= INV;
 					    iq[tail1].a2_s <= { db0.mem, tail0 };
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ];
+					    iq[tail1].a2_v <= rf_v [ Rb1 ]
+								|| (commit1_v && commit1_tgt==Rb1)
+								|| (commit0_v && commit0_tgt==Rb1)
+								;
 					    iq[tail1].a2_s <= rf_source [ Rb1 ];
 						end
 
@@ -2195,7 +2279,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ];
+					    iq[tail1].a3_v <= rf_v [ Rc1 ]
+								|| (commit1_v && commit1_tgt==Rc1)
+								|| (commit0_v && commit0_tgt==Rc1)
+								;
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2206,7 +2293,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ];
+					    iq[tail1].a3_v <= rf_v [ Rc1 ]
+								|| (commit1_v && commit1_tgt==Rc1)
+								|| (commit0_v && commit0_tgt==Rc1)
+								;
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
 
@@ -2220,7 +2310,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_v <= rf_v [ Rt1 ]
+								|| (commit1_v && commit1_tgt==Rt1)
+								|| (commit0_v && commit0_tgt==Rt1)
+								;
 					    iq[tail1].at_s <= rf_source [ Rt1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2231,12 +2324,15 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_v <= rf_v [ Rt1 ]
+								|| (commit1_v && commit1_tgt==Rt1)
+								|| (commit0_v && commit0_tgt==Rt1)
+								;
 					    iq[tail1].at_s <= rf_source [ Rt1 ];
 						end
 
 						//
-						// SOURCE T ... 
+						// SOURCE P ... 
 						//
 						// if the argument is an immediate or not needed, we're done
 						if (fnSourcePv(fetchbuf1_instr[0])) begin
@@ -2245,7 +2341,10 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_v <= rf_v [ Rp1 ]
+								|| (commit1_v && commit1_tgt==Rp1)
+								|| (commit0_v && commit0_tgt==Rp1)
+								;
 					    iq[tail1].ap_s <= rf_source [ Rp1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2256,12 +2355,14 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_v <= rf_v [ Rp1 ]
+								|| (commit1_v && commit1_tgt==Rp1)
+								|| (commit0_v && commit0_tgt==Rp1)
+								;
 					    iq[tail1].ap_s <= rf_source [ Rp1 ];
 						end
-
-					end	// ends the "else fetchbuf0 doesn't have a backwards branch" clause
-	    	end
+					end	
+	    	end// ends the "else fetchbuf0 doesn't have a backwards branch" clause
 	    end
 		endcase
 //
@@ -3294,7 +3395,8 @@ begin
 	head6 <= 6;
 	head7 <= 7;
 	panic <= `PANIC_NONE;
-	did_branchback <= 'd0;
+	did_branchback1 <= 'd0;
+	did_branchback2 <= 'd0;
 	iqentry_issue_reg <= 'd0;
 	for (n14 = 0; n14 < QENTRIES; n14 = n14 + 1)
 		iq[n14].sn <= 6'd0;

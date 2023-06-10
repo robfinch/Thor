@@ -1,6 +1,44 @@
+// ============================================================================
+//        __
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
+//    \  __ /    All rights reserved.
+//     \/_//     robfinch<remove>@finitron.ca
+//       ||
+//
+//
+// BSD 3-Clause License
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//                                                                          
+// ============================================================================
+
+import const_pkg::*;
 import Thor2024pkg::*;
 
-module Thor2024_regfile_valid(rst, clk, branchmiss, livetarget, tail0, tail1,
+module Thor2024_regfile_valid(rst, clk, branchmiss, did_branchback, Rt0, Rt1,
+	livetarget, tail0, tail1,
 	fetchbuf0_v, fetchbuf1_v, fetchbuf0_rfw, fetchbuf1_rfw, fetchbuf0_instr, fetchbuf1_instr,
 	iq, iqentry_source,
 	commit0_v, commit1_v, commit0_tgt, commit1_tgt, commit0_id, commit1_id,
@@ -8,6 +46,9 @@ module Thor2024_regfile_valid(rst, clk, branchmiss, livetarget, tail0, tail1,
 input rst;
 input clk;
 input branchmiss;
+input did_branchback;
+input regspec_t Rt0;
+input regspec_t Rt1;
 input [63:1] livetarget;
 input [2:0] tail0;
 input [2:0] tail1;
@@ -17,16 +58,17 @@ input fetchbuf0_rfw;
 input fetchbuf1_rfw;
 input instruction_t fetchbuf0_instr;
 input instruction_t fetchbuf1_instr;
-input iq_entry_t [7:0] iq;
-input [7:0] iqentry_source;
+input iq_entry_t [QENTRIES-1:0] iq;
+input [QENTRIES-1:0] iqentry_source;
 input commit0_v;
 input commit1_v;
-input [4:0] commit0_tgt;
-input [4:0] commit1_tgt;
+input regspec_t commit0_tgt;
+input regspec_t commit1_tgt;
 input [4:0] commit0_id;
 input [4:0] commit1_id;
 input [4:0] rf_source [0:63];
 output reg [63:0] rf_v;
+parameter LR0 = 6'd56;
 
 integer n, n1;
 
@@ -71,37 +113,41 @@ else begin
 		case ({fetchbuf0_v, fetchbuf1_v})
     2'b00: ; // do nothing
     2'b01:
-    	if (iq[tail0].v == INV) begin
+    	if (iq[tail0].v == INV && !did_branchback) begin
 				if (fetchbuf1_rfw)
-			    rf_v[ fetchbuf1_instr.r2.Rt.num ] = INV;
+			    rf_v[ Rt1 ] = INV;
     	end
     2'b10:	;
 		2'b11:
-			if (iq[tail0].v == INV) begin
+			if (iq[tail0].v == INV && !did_branchback) begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
-					if (iq[tail1].v == INV) begin
+					if (fetchbuf0_instr.br.lk != 1'b0)
+						rf_v[LR0] = INV;
+				end
+				else begin
+					if (iq[tail1].v == INV & !did_branchback) begin
 						//
 						// if the two instructions enqueued target the same register, 
 						// make sure only the second writes to rf_v and rf_source.
 						// first is allowed to update rf_v and rf_source only if the
 						// second has no target (BEQ or SW)
 						//
-						if (fetchbuf0_instr.r2.Rt.num == fetchbuf1_instr.r2.Rt.num) begin
+						if (Rt0 == Rt1) begin
 					    if (fetchbuf1_rfw)
-								rf_v[ fetchbuf1_instr.r2.Rt.num ] = INV;
+								rf_v[ Rt1 ] = INV;
 					    else if (fetchbuf0_rfw)
-								rf_v[ fetchbuf0_instr.r2.Rt.num ] = INV;
+								rf_v[ Rt0 ] = INV;
 						end
 						else begin
 					    if (fetchbuf0_rfw)
-								rf_v[ fetchbuf0_instr.r2.Rt.num ] = INV;
+								rf_v[ Rt0 ] = INV;
 					    if (fetchbuf1_rfw)
-								rf_v[ fetchbuf1_instr.r2.Rt.num ] = INV;
+								rf_v[ Rt1 ] = INV;
 						end
 			    end	// ends the "if IQ[tail1] is available" clause
 		    	else begin	// only first instruction was enqueued
 						if (fetchbuf0_rfw)
-					    rf_v[ fetchbuf0_instr.r2.Rt.num ] = INV;
+					    rf_v[ Rt0 ] = INV;
 			    end
 				end		
 			end
