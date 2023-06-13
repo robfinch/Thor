@@ -68,9 +68,6 @@ import Thor2024pkg::*;
 
 `define FORW_BRANCH	1'b0
 
-`define DRAMSLOT_AVAIL	2'b00
-`define DRAMREQ_READY	2'b11
-
 //
 // define PANIC types
 //
@@ -89,13 +86,17 @@ import Thor2024pkg::*;
 
 //`define FULL_ISSUE_LOGIC	1'b1
 
-module Thor2024(rst_i, clk_i, irq_i, vect_i, wr_o, adr_o, dat_i, dat_o,
+module Thor2024(rst_i, clk_i, clk2x_i, irq_i, vect_i, wr_o, adr_o, dat_i, dat_o,
 	ftaim_req, ftaim_resp, ftadm_req, ftadm_resp,
 	snoop_adr, snoop_v, snoop_cid);
 parameter CORENO = 6'd1;
 parameter CID = 6'd1;
+parameter DRAMSLOT_AVAIL = 3'd0;
+parameter DRAMSLOT_READY = 3'd3;
+parameter DRAMSLOT_ACTIVE = 3'd4;
 input rst_i;
 input clk_i;
+input clk2x_i;
 input [2:0] irq_i;
 input [8:0] vect_i;
 output reg wr_o;
@@ -238,6 +239,7 @@ reg [3:0] mul0_cnt;
 reg mul0_done;
 value_t div0_q,div0_r;
 wire div0_done,div0_dbz;
+reg alu0_ld;
 
 reg alu1_idle = 1'b1;
 reg        alu1_available;
@@ -263,6 +265,7 @@ reg [3:0] mul1_cnt;
 reg mul1_done;
 value_t div1_q,div1_r;
 wire div1_done,div1_dbz;
+reg alu1_ld;
 
 reg fpu_idle = 1'b1;
 reg        fpu_available;
@@ -313,8 +316,8 @@ pc_address_t misspc;
 instruction_t missir;
 
 wire dram_avail;
-reg	[1:0] dram0;	// state of the DRAM request (latency = 4; can have three in pipeline)
-reg	[1:0] dram1;	// state of the DRAM request (latency = 4; can have three in pipeline)
+reg	[2:0] dram0,dram0p;	// state of the DRAM request (latency = 4; can have three in pipeline)
+reg	[2:0] dram1,dram1p;	// state of the DRAM request (latency = 4; can have three in pipeline)
 //reg	 [1:0] dram2;	// state of the DRAM request (latency = 4; can have three in pipeline)
 
 reg [639:0] dram0_data;
@@ -359,7 +362,7 @@ cause_code_t dram2_exc;
 reg dram2_ack;
 */
 
-reg [1:0] dramN [0:NDATA_PORTS-1];
+reg [2:0] dramN [0:NDATA_PORTS-1];
 reg [511:0] dramN_data [0:NDATA_PORTS-1];
 reg [63:0] dramN_sel [0:NDATA_PORTS-1];
 address_t dramN_addr [0:NDATA_PORTS-1];
@@ -385,9 +388,12 @@ wire        outstanding_stores;
 reg [63:0] I;	// instruction count
 
 wire commit0_v;
+reg commit0a_v, commit1a_v;
 wire [4:0] commit0_id;
+reg [4:0] commit0a_id, commit1a_id;
 regspec_t commit0_tgt;
 value_t commit0_bus;
+value_t commit0a_bus, commit1a_bus;
 pc_address_t commit_pc0;
 reg commit_takb0;
 pc_address_t commit_brtgt0;
@@ -764,17 +770,20 @@ begin
 	dramN_memsz[0] = dram0_memsz;
 	dramN_tid[0] = dram0_tid;
 	dram0_ack = dramN_ack[0];
-	
-	dramN[1] = dram1;
-	dramN_addr[1] = dram1_addr;
-	dramN_data[1] = dram1_data[511:0];
-	dramN_sel[1] = dram1_sel[63:0];
-	dramN_store[1] = dram1_store;
-	dramN_load[1] = dram1_load;
-	dramN_loadz[1] = dram1_loadz;
-	dramN_memsz[1] = dram1_memsz;
-	dramN_tid[1] = dram1_tid;
-	dram1_ack = dramN_ack[1];
+
+	if (NDATA_PORTS > 1) begin
+		dramN[1] = dram1;
+		dramN_addr[1] = dram1_addr;
+		dramN_data[1] = dram1_data[511:0];
+		dramN_sel[1] = dram1_sel[63:0];
+		dramN_store[1] = dram1_store;
+		dramN_load[1] = dram1_load;
+		dramN_loadz[1] = dram1_loadz;
+		dramN_memsz[1] = dram1_memsz;
+		dramN_tid[1] = dram1_tid;
+		dram1_ack = dramN_ack[1];
+	end
+
 /*
 	dramN[2] = dram2;
 	dramN_addr[2] = dram2_addr;
@@ -798,8 +807,8 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		cpu_request_i[g].blen = 'd0;
 		cpu_request_i[g].seg = fta_bus_pkg::DATA;
 		cpu_request_i[g].asid = ip_asid;
-		cpu_request_i[g].cyc = dramN[g]==`DRAMREQ_READY;
-		cpu_request_i[g].stb = dramN[g]==`DRAMREQ_READY;
+		cpu_request_i[g].cyc = dramN[g]==DRAMSLOT_READY;
+		cpu_request_i[g].stb = dramN[g]==DRAMSLOT_READY;
 		cpu_request_i[g].we = dramN_store[g];
 		cpu_request_i[g].vadr = dramN_addr[g];
 		cpu_request_i[g].padr = 'd0;
@@ -1360,7 +1369,7 @@ Thor2024_regfile2w10r urf2
 	.wa1({regset,commit1_tgt}),
 	.i0(commit0_bus),
 	.i1(commit1_bus),
-	.rclk(~clk),
+	.rclk(clk2x_i),
 	.ra0({regset,Ra0}),
 	.ra1({regset,Rb0}),
 	.ra2({regset,Rc0}),
@@ -1428,10 +1437,10 @@ assign args_valid[g] = (iq[g].a1_v
 				    || (iq[g].a1_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].a1_s == alu1_sourceid && alu1_dataready))
 				    && (iq[g].a2_v
-				    || (iq[g].mem & ~iq[g].agen)
 				    || (iq[g].a2_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].a2_s == alu1_sourceid && alu1_dataready))
 				    && (iq[g].a3_v
+				    || (iq[g].mem & ~iq[g].agen)
 				    || (iq[g].a3_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].a3_s == alu1_sourceid && alu1_dataready))
 				    && (iq[g].at_v
@@ -1544,14 +1553,14 @@ begin
 	// Since branchback happens at queue time there will not be any other
 	// instructions coming after the branch except for the two instructions
 	// queued due to the fetch delay.
-	
+	/*
 	if (did_branchback) begin
 		if (~lastq0[3])
-			iqentry_stomp[lastq0] = 1'b1;
+			iqentry_stomp[lastq0] = iq[lastq0].pc != backpc;
 		if (~lastq1[3])
-			iqentry_stomp[lastq1] = 1'b1;
+			iqentry_stomp[lastq1] = iq[lastq0].pc != backpc;
 	end
-	
+	*/
 end											
 //    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
@@ -1580,6 +1589,8 @@ Thor2024_alu ualu0
 (
 	.rst(rst),
 	.clk(clk),
+	.clk2x(clk2x_i),
+	.ld(alu0_ld),
 	.ir(alu0_instr),
 	.div(alu0_div),
 	.a(alu0_argA),
@@ -1594,23 +1605,30 @@ Thor2024_alu ualu0
 	.div_dbz()
 );
 
-Thor2024_alu ualu1
-(
-	.rst(rst),
-	.clk(clk),
-	.ir(alu1_instr),
-	.div(alu1_div),
-	.a(alu1_argA),
-	.b(alu1_argB),
-	.c(alu1_argC),
-	.i(alu1_argI),
-	.t(alu1_argT),
-	.p(alu1_argP),
-	.o(alu1_bus),
-	.mul_done(mul1_done),
-	.div_done(div1_done),
-	.div_dbz()
-);
+generate begin : gAlu1
+if (NALU > 1) begin
+	Thor2024_alu ualu1
+	(
+		.rst(rst),
+		.clk(clk),
+		.clk2x(clk2x_i),
+		.ld(alu1_ld),
+		.ir(alu1_instr),
+		.div(alu1_div),
+		.a(alu1_argA),
+		.b(alu1_argB),
+		.c(alu1_argC),
+		.i(alu1_argI),
+		.t(alu1_argT),
+		.p(alu1_argP),
+		.o(alu1_bus),
+		.mul_done(mul1_done),
+		.div_done(div1_done),
+		.div_dbz()
+	);
+end
+end
+endgenerate
 
     assign  alu0_v = alu0_dataready,
 	    alu1_v = alu1_dataready;
@@ -1621,21 +1639,26 @@ Thor2024_alu ualu1
     assign  fcu_v = fcu_dataready;
     assign  fcu_id = fcu_sourceid;
 
-Thor2024_fpu ufpu1
-(
-	.rst(rst),
-	.clk(clk),
-	.ir(fpu_instr),
-	.rm('d0),
-	.a(fpu_argA),
-	.b(fpu_argB),
-	.c(fpu_argC),
-	.t(fpu_argT),
-	.i(fpu_argI),
-	.p(fpu_argP),
-	.o(fpu_bus),
-	.done(fpu_done)
-);
+generate begin : gFpu
+if (NFPU > 0) begin
+	Thor2024_fpu ufpu1
+	(
+		.rst(rst),
+		.clk(clk),
+		.ir(fpu_instr),
+		.rm('d0),
+		.a(fpu_argA),
+		.b(fpu_argB),
+		.c(fpu_argC),
+		.t(fpu_argT),
+		.i(fpu_argI),
+		.p(fpu_argP),
+		.o(fpu_bus),
+		.done(fpu_done)
+	);
+end
+end
+endgenerate
 
 assign fpu_v = fpu_dataready;
 assign fpu_id = fpu_sourceid;
@@ -1695,6 +1718,8 @@ Thor2024_branch_eval ube1
 	.takb(takb)
 );
 
+always_comb
+	fcu_bus = fcu_pc + 16'h5000;
 
 always_comb
 if (fcu_instr.any.opcode==OP_SYS) begin
@@ -1728,7 +1753,7 @@ assign  branchmiss = fcu_branchmiss,
 //
 // additional DRAM-enqueue logic
 
-assign dram_avail = (dram0 == `DRAMSLOT_AVAIL);// || dram1 == `DRAMSLOT_AVAIL);// || dram2 == `DRAMSLOT_AVAIL);
+assign dram_avail = (dram0 == DRAMSLOT_AVAIL);// || dram1 == DRAMSLOT_AVAIL);// || dram2 == DRAMSLOT_AVAIL);
 
 always_comb
 for (n9 = 0; n9 < QENTRIES; n9 = n9 + 1)
@@ -1761,6 +1786,17 @@ always_ff @(posedge clk) begin
 if (rst)
 	tReset();
 
+alu0_ld <= 1'b0;
+alu1_ld <= 1'b0;
+dram0p <= dram0;
+dram1p <= dram1;
+commit0a_v <= commit0_v;
+commit0a_id <= commit0_id;
+commit0a_bus <= commit0_bus;
+commit1a_v <= commit1_v;
+commit1a_id <= commit1_id;
+commit1a_bus <= commit1_bus;
+
 if (fnIsAtom(fetchbuf0_instr[0]))
 	atom_mask <= fetchbuf0_instr[0][30:7];
 if (fnIsAtom(fetchbuf1_instr[1]))
@@ -1784,7 +1820,7 @@ did_branchback2 <= did_branchback1;
     2'b01:
     	if (iq[tail0].v == INV) begin
 				did_branchback1 <= branchback & ~did_branchback;
-				iq[tail0].v <= ~did_branchback;
+				iq[tail0].v <= VAL;
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 				iq[tail0].sn <= 6'h3F;
@@ -1821,34 +1857,19 @@ did_branchback2 <= did_branchback1;
 				iq[tail0].Rp <= Rp1;
 				iq[tail0].a0 <= db1.imm;
 				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
-				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ]
-					|| (commit1_v && commit1_tgt==Ra1)
-					|| (commit0_v && commit0_tgt==Ra1)
-					;
+				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ];
 				iq[tail0].a1_s <= rf_source [ Ra1 ];
 				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
-				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ] 
-					|| (commit1_v && commit1_tgt==Rb1)
-					|| (commit0_v && commit0_tgt==Rb1)
-					;
+				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ];
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
 				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
-				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ]
-					|| (commit1_v && commit1_tgt==Rc1)
-					|| (commit0_v && commit0_tgt==Rc1)
-					;
+				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ];
 				iq[tail0].a3_s  <= rf_source [ Rc1 ];
 				iq[tail0].at <= rfot1;
-				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) || rf_v[ Rt1 ]
-					|| (commit1_v && commit1_tgt==Rt1)
-					|| (commit0_v && commit0_tgt==Rt1)
-					;
+				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) || rf_v[ Rt1 ];
 				iq[tail0].at_s  <= rf_source [ Rt1 ];
 				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], rfop1);
-				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) || rf_v[ Rp1 ]
-					|| (commit1_v && commit1_tgt==Rp1)
-					|| (commit0_v && commit0_tgt==Rp1)
-					;
+				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) || rf_v[ Rp1 ];
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
 				lastq0 <= {1'b0,tail0};
 				lastq1 <= {1'b1,tail0};
@@ -1876,7 +1897,7 @@ did_branchback2 <= did_branchback1;
 					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
 					//
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= ~did_branchback;
+					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -1913,34 +1934,19 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].Rp <= Rp0;
 					iq[tail0].a0	<=	db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
-						|| (commit0_v && commit0_tgt==Ra0)
-						|| (commit1_v && commit1_tgt==Ra0)
-						;
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
-						|| (commit0_v && commit0_tgt==Rb0)
-						|| (commit1_v && commit1_tgt==Rb0)
-						;
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
-						|| (commit0_v && commit0_tgt==Rc0)
-						|| (commit1_v && commit1_tgt==Rc0)
-						;
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
-						|| (commit0_v && commit0_tgt==Rt0)
-						|| (commit1_v && commit1_tgt==Rt0)
-						;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
-						|| (commit0_v && commit0_tgt==Rp0)
-						|| (commit1_v && commit1_tgt==Rp0)
-						;
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -1966,7 +1972,7 @@ did_branchback2 <= did_branchback1;
 				//
 				if (db0.backbr) begin
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= ~did_branchback;
+					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -2003,34 +2009,19 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].Rp <= Rp0;
 			    iq[tail0].a0 <= db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
-						|| (commit0_v && commit0_tgt==Ra0)
-						|| (commit1_v && commit1_tgt==Ra0)
-						;
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
-						|| (commit0_v && commit0_tgt==Rb0)
-						|| (commit1_v && commit1_tgt==Rb0)
-						;
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
-						|| (commit0_v && commit0_tgt==Rc0)
-						|| (commit1_v && commit1_tgt==Rc0)
-						;
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
-						|| (commit0_v && commit0_tgt==Rt0)
-						|| (commit1_v && commit1_tgt==Rt0)
-						;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
-						|| (commit0_v && commit0_tgt==Rp0)
-						|| (commit1_v && commit1_tgt==Rp0)
-						;
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -2063,7 +2054,7 @@ did_branchback2 <= did_branchback1;
 			    // enqueue the first instruction ...
 			    //
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= ~did_branchback;
+					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -2100,34 +2091,19 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].Rp <= Rp0;
 			    iq[tail0].a0 <= db0.imm;
 					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ]
-						|| (commit0_v && commit0_tgt==Ra0)
-						|| (commit1_v && commit1_tgt==Ra1)
-						;
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
 					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ]
-						|| (commit0_v && commit0_tgt==Rb0)
-						|| (commit1_v && commit1_tgt==Rb0)
-						;
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
 					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ]
-						|| (commit0_v && commit0_tgt==Rc0)
-						|| (commit1_v && commit1_tgt==Rc0)
-						;
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ]
-						|| (commit0_v && commit0_tgt==Rt0)
-						|| (commit1_v && commit1_tgt==Rt0)
-						;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
 					iq[tail0].at_s  <= rf_source [ Rt0 ];
 					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ]
-						|| (commit0_v && commit0_tgt==Rp0)
-						|| (commit1_v && commit1_tgt==Rp0)
-						;
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
@@ -2148,7 +2124,7 @@ did_branchback2 <= did_branchback1;
 			    //
 			    if (iq[tail1].v == INV) begin
 
-						iq[tail1].v <= ~did_branchback;
+						iq[tail1].v <= VAL;
 						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
 						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
@@ -2216,10 +2192,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ]
-								|| (commit1_v && commit1_tgt==Ra1)
-								|| (commit0_v && commit0_tgt==Ra1)
-								;
+					    iq[tail1].a1_v <= rf_v [ Ra1 ];
 					    iq[tail1].a1_s <= rf_source [ Ra1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2230,10 +2203,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ]
-								|| (commit1_v && commit1_tgt==Ra1)
-								|| (commit0_v && commit0_tgt==Ra1)
-								;
+					    iq[tail1].a1_v <= rf_v [ Ra1 ];
 					    iq[tail1].a1_s <= rf_source [ Ra1 ];
 						end
 
@@ -2248,10 +2218,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ]
-								|| (commit1_v && commit1_tgt==Rb1)
-								|| (commit0_v && commit0_tgt==Rb1)
-								;
+					    iq[tail1].a2_v <= rf_v [ Rb1 ];
 					    iq[tail1].a2_s <= rf_source [ Rb1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2262,10 +2229,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ]
-								|| (commit1_v && commit1_tgt==Rb1)
-								|| (commit0_v && commit0_tgt==Rb1)
-								;
+					    iq[tail1].a2_v <= rf_v [ Rb1 ];
 					    iq[tail1].a2_s <= rf_source [ Rb1 ];
 						end
 
@@ -2279,10 +2243,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ]
-								|| (commit1_v && commit1_tgt==Rc1)
-								|| (commit0_v && commit0_tgt==Rc1)
-								;
+					    iq[tail1].a3_v <= rf_v [ Rc1 ];
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2293,10 +2254,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ]
-								|| (commit1_v && commit1_tgt==Rc1)
-								|| (commit0_v && commit0_tgt==Rc1)
-								;
+					    iq[tail1].a3_v <= rf_v [ Rc1 ];
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
 
@@ -2310,10 +2268,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ]
-								|| (commit1_v && commit1_tgt==Rt1)
-								|| (commit0_v && commit0_tgt==Rt1)
-								;
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
 					    iq[tail1].at_s <= rf_source [ Rt1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2324,10 +2279,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ]
-								|| (commit1_v && commit1_tgt==Rt1)
-								|| (commit0_v && commit0_tgt==Rt1)
-								;
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
 					    iq[tail1].at_s <= rf_source [ Rt1 ];
 						end
 
@@ -2341,10 +2293,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
 						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ]
-								|| (commit1_v && commit1_tgt==Rp1)
-								|| (commit0_v && commit0_tgt==Rp1)
-								;
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
 					    iq[tail1].ap_s <= rf_source [ Rp1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
@@ -2355,10 +2304,7 @@ did_branchback2 <= did_branchback1;
 						end
 						// if no overlap, get info from rf_v and rf_source
 						else begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ]
-								|| (commit1_v && commit1_tgt==Rp1)
-								|| (commit0_v && commit0_tgt==Rp1)
-								;
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
 					    iq[tail1].ap_s <= rf_source [ Rp1 ];
 						end
 					end	
@@ -2426,18 +2372,20 @@ did_branchback2 <= did_branchback1;
 	//
 	// set the IQ entry == DONE as soon as the SW is let loose to the memory system
 	//
-	if (dram0 == 2'd1 && dram0_store) begin
+	
+	if (dram0 == DRAMSLOT_ACTIVE && dram0p==DRAMSLOT_READY && dram0_store) begin
     if ((alu0_v && dram0_id[2:0] == alu0_id[2:0]) || (alu1_v && dram0_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
     iq[ dram0_id[2:0] ].done <= VAL;
     iq[ dram0_id[2:0] ].out <= INV;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram1 == 2'd1 && dram1_store) begin
+		if (dram1 == DRAMSLOT_ACTIVE && dram0p==DRAMSLOT_READY && dram1_store) begin
 	    if ((alu0_v && dram1_id[2:0] == alu0_id[2:0]) || (alu1_v && dram1_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
 	    iq[ dram1_id[2:0] ].done <= VAL;
 	    iq[ dram1_id[2:0] ].out <= INV;
 		end
 	end
+	
 	/*
 	if (dram2 == 2'd1 && fnIsStore(dram2_op)) begin
     if ((alu0_v && dram2_id[2:0] == alu0_id[2:0]) || (alu1_v && dram2_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
@@ -2632,6 +2580,48 @@ did_branchback2 <= did_branchback1;
 			end
 		end
 		
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+	    iq[nn].a1 <= commit0a_bus;
+	    iq[nn].a1_v <= VAL;
+		end
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+	    iq[nn].a2 <= commit0a_bus;
+	    iq[nn].a2_v <= VAL;
+		end
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+	    iq[nn].a3 <= commit0a_bus;
+	    iq[nn].a3_v <= VAL;
+		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+	    iq[nn].at <= commit0a_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+	    iq[nn].ap <= commit0a_bus;
+	    iq[nn].ap_v <= VAL;
+		end
+		
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+	    iq[nn].a1 <= commit1a_bus;
+	    iq[nn].a1_v <= VAL;
+		end
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+	    iq[nn].a2 <= commit1a_bus;
+	    iq[nn].a2_v <= VAL;
+		end
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+	    iq[nn].a3 <= commit1a_bus;
+	    iq[nn].a3_v <= VAL;
+		end
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+	    iq[nn].at <= commit1a_bus;
+	    iq[nn].at_v <= VAL;
+		end
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+	    iq[nn].ap <= commit1a_bus;
+	    iq[nn].ap_v <= VAL;
+		end
+
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
 	    iq[nn].a1 <= commit0_bus;
 	    iq[nn].a1_v <= VAL;
@@ -2726,8 +2716,8 @@ fcu_dataready <= fcu_available
 	for (n1 = 0; n1 < QENTRIES; n1 = n1 + 1) begin
 		if (iq[n1].v && iqentry_stomp[n1]) begin
 	    iq[n1].v <= INV;
-	    if (dram0_id[2:0] == n1[2:0])	dram0 <= `DRAMSLOT_AVAIL;
-	    if (dram1_id[2:0] == n1[2:0])	dram1 <= `DRAMSLOT_AVAIL;
+	    if (dram0_id[2:0] == n1[2:0])	dram0 <= DRAMSLOT_AVAIL;
+	    if (dram1_id[2:0] == n1[2:0])	dram1 <= DRAMSLOT_AVAIL;
 //	    if (dram2_id[2:0] == n1[2:0])	dram2 <= `DRAMSLOT_AVAIL;
 		end
 		else begin
@@ -2765,6 +2755,7 @@ fcu_dataready <= fcu_available
 										: (iq[n1].ap_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
 						alu0_argI	<= iq[n1].a0;
+						alu0_ld <= 1'b1;
 			    end
 				2'd1:
 					if (NALU > 1 && alu1_available) begin
@@ -2798,6 +2789,7 @@ fcu_dataready <= fcu_available
 										: (iq[n1].ap_s == alu1_id) ? alu1_bus
 										: 32'hDEADBEEF);
 						alu1_argI	<= iq[n1].a0;
+						alu1_ld <= 1'b1;
 			    end
 				default: panic <= `PANIC_INVALIDISLOT;
 		    endcase
@@ -2881,44 +2873,64 @@ fcu_dataready <= fcu_available
 	//
 
 	if (rst)
-		dram0 <= `DRAMSLOT_AVAIL;
+		dram0 <= DRAMSLOT_AVAIL;
 	else
 		case(dram0)
-		`DRAMSLOT_AVAIL:	;
-		`DRAMREQ_READY:
-			if (dram0_ack) begin
+		DRAMSLOT_AVAIL:	;
+		DRAMSLOT_READY:
+			begin
 				dram0 <= dram0 + 2'd1;
 				if (|dram0_sel[79:64]) begin
 					dram0_more <= 1'b1;
+				end
+			end
+		DRAMSLOT_ACTIVE:
+			if (dram0_ack) begin
+				iq[dram0_id[2:0]].out <= INV;
+				/*
+				if (dram0_store && !dram0_more) begin
+					iq[dram0_id[2:0]].done <= VAL;
 					iq[dram0_id[2:0]].out <= INV;
 				end
+				*/
+				dram0 <= DRAMSLOT_AVAIL;
 			end
 		default:
 			if (iq[dram0_id[2:0]].v)
 				dram0 <= dram0 + 2'd1;
 			else
-				dram0 <= `DRAMSLOT_AVAIL;
+				dram0 <= DRAMSLOT_AVAIL;
 		endcase
 
 	if (NDATA_PORTS > 1) begin
 		if (rst)
-			dram1 <= `DRAMSLOT_AVAIL;
+			dram1 <= DRAMSLOT_AVAIL;
 		else
 			case(dram1)
-			`DRAMSLOT_AVAIL:	;
-			`DRAMREQ_READY:
-				if (dram1_ack) begin
+			DRAMSLOT_AVAIL:	;
+			DRAMSLOT_READY:
+				begin
 					dram1 <= dram1 + 2'd1;
 					if (|dram1_sel[79:64]) begin
 						dram1_more <= 1'b1;
+					end
+				end
+			DRAMSLOT_ACTIVE:
+				if (dram1_ack) begin
+					iq[dram1_id[2:0]].out <= INV;
+					/*
+					if (dram1_store && !dram1_more) begin
+						iq[dram1_id[2:0]].done <= VAL;
 						iq[dram1_id[2:0]].out <= INV;
 					end
+					*/
+					dram1 <= DRAMSLOT_AVAIL;
 				end
 			default:
 				if (iq[dram1_id[2:0]].v)
 					dram1 <= dram1 + 2'd1;
 				else
-					dram1 <= `DRAMSLOT_AVAIL;
+					dram1 <= DRAMSLOT_AVAIL;
 			endcase
 	end
 /*
@@ -2944,15 +2956,17 @@ fcu_dataready <= fcu_available
 	    
 		//
 		// grab requests that have finished and put them on the dram_bus
-		if (dram0 == `DRAMREQ_READY && dram0_ack && ~|dram0_sel[79:64]) begin
+		if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && ~|dram0_sel[79:64]) begin
 	    dram_v0 <= dram0_load;
 	    dram_id0 <= dram0_id;
 	    dram_tgt0 <= dram0_tgt;
 	    dram_exc0 <= dram0_exc;
 	    if (dram0_load)
 	    	dram_bus0 <= fnDati(dram0_op,dram0_addr,cpu_resp_o[0] >> {dram0_addr[5:0],3'd0});
-	    else if (dram0_store)
-	    	;
+	    else if (dram0_store) begin
+	    	dram0_store <= 'd0;
+	    	dram0_sel <= 'd0;
+	  	end
 	    else			panic <= `PANIC_INVALIDMEMOP;
 	    if (dram0_store)
 	    	$display("m[%h] <- %h", dram0_addr, dram0_data);
@@ -2960,15 +2974,17 @@ fcu_dataready <= fcu_available
 		else
 			dram_v0 <= INV;
 		if (NDATA_PORTS > 1) begin
-			if (dram1 == `DRAMREQ_READY && dram1_ack && ~|dram1_sel[79:64]) begin
-		    dram_v1 <= (dram1_load);
+			if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && ~|dram1_sel[79:64]) begin
+		    dram_v1 <= dram1_load;
 		    dram_id1 <= dram1_id;
 		    dram_tgt1 <= dram1_tgt;
 		    dram_exc1 <= dram1_exc;
 		    if (dram1_load) 	
 		    	dram_bus1 <= fnDati(dram1_op,dram1_addr,cpu_resp_o[1] >> {dram1_addr[5:0],3'd0});	
-		    else if (dram1_store)
-		    	;
+		    else if (dram1_store) begin
+		    	dram1_store <= 1'b0;
+		    	dram1_sel <= 'd0;
+		  	end
 		    else			panic <= `PANIC_INVALIDMEMOP;
 		    if (dram1_store)
 		     	$display("m[%h] <- %h", dram1_addr, dram1_data);
@@ -3012,13 +3028,13 @@ fcu_dataready <= fcu_available
 	//
 	// take requests that are ready and put them into DRAM slots
 
-	if (dram0 == `DRAMSLOT_AVAIL)	dram0_exc <= FLT_NONE;
-	if (dram1 == `DRAMSLOT_AVAIL)	dram1_exc <= FLT_NONE;
+	if (dram0 == DRAMSLOT_AVAIL)	dram0_exc <= FLT_NONE;
+	if (dram1 == DRAMSLOT_AVAIL)	dram1_exc <= FLT_NONE;
 //	if (dram2 == `DRAMSLOT_AVAIL)	dram2_exc <= FLT_NONE;
 
 	for (n3 = 0; n3 < QENTRIES; n3 = n3 + 1) begin
 		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out) begin
-	    if (dram0 == `DRAMSLOT_AVAIL) begin
+	    if (dram0 == DRAMSLOT_AVAIL) begin
 				dram0 		<= 2'd1;
 				dram0_id 	<= { 1'b1, n3[2:0] };
 				dram0_op 	<= iq[n3].op;
@@ -3039,9 +3055,9 @@ fcu_dataready <= fcu_available
 				dram0_memsz <= fnMemsz(iq[n3].op);
 				dram0_tid[2:0] <= dram0_tid[2:0] + 2'd1;
 				dram0_tid[7:3] <= {4'h1,1'b0};
-				iq[n3].out	<= VAL;
+				iq[n3].out <= VAL;
 	    end
-	    else if (dram1 == `DRAMSLOT_AVAIL && NDATA_PORTS > 1) begin
+	    else if (dram1 == DRAMSLOT_AVAIL && NDATA_PORTS > 1) begin
 				dram1 		<= 2'd1;
 				dram1_id 	<= { 1'b1, n3[2:0] };
 				dram1_op 	<= iq[n3].op;
@@ -3228,14 +3244,14 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc);
 
 	for (i=0; i<8; i=i+1) 
-	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h #",
+	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h %d %o %h #",
 		(i[2:0]==head0)?72:46, (i[2:0]==tail0)?84:46, iq[i].sn, i,
 		iq[i].v?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue2[i]?"i":"-",
 		((i==0) ? iqentry_islot[0] : (i==1) ? iqentry_islot[1] : (i==2) ? iqentry_islot[2] : (i==3) ? iqentry_islot[3] :
 		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
 		(iq[i].fc ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
 		iq[i].op.any.opcode, iq[i].tgt, iq[i].exc, iq[i].res, iq[i].a0, iq[i].a1, iq[i].a1_v,
-		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].pc);
+		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].a3, iq[i].a3_v, iq[i].a3_s, iq[i].pc);
 
 	$display("%d %h %h %c%d %o #",
 	    dram0, dram0_addr, dram0_data, ((dram0_load || dram0_store) ? 109 : 97), 
@@ -3370,7 +3386,8 @@ begin
 	postfix_mask <= 'd0;
 	pred_mask <= 28'hFFFFFFF;
 	pred_val <= 1'b1;
-	dram0 <= `DRAMSLOT_AVAIL;
+	dram0 <= DRAMSLOT_AVAIL;
+	dram0p <= DRAMSLOT_AVAIL;
 	dram0_addr <= 'd0;
 	dram0_data <= 'd0;
 	dram0_exc <= FLT_NONE;
@@ -3381,7 +3398,8 @@ begin
 	dram0_tgt <= 'd0;
 	dram0_tid <= 'd0;
 	dram0_more <= 'd0;
-	dram1 <= 'd0;
+	dram1 <= DRAMSLOT_AVAIL;
+	dram1p <= DRAMSLOT_AVAIL;
 	dram1_tid <= 8'h08;
 	dram1_more <= 'd0;
 	dram_v0 <= 'd0;
@@ -3404,6 +3422,8 @@ begin
 	alu0_dataready <= 0;
 	alu1_available <= 1;
 	alu1_dataready <= 0;
+	alu0_ld <= 1'b0;
+	alu1_ld <= 1'b0;
 	fcu_available <= 1;
 	fcu_dataready <= 0;
 	fcu_pc <= 'd0;

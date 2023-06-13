@@ -71,22 +71,24 @@ output reg [63:0] rf_v;
 parameter LR0 = 6'd56;
 
 integer n, n1;
+reg [63:0] rf_vr;
 
 initial begin
-	for (n = 0; n < AREGS; n = n + 1)
-	  rf_v[n] = 1'b1;
+	for (n = 0; n < AREGS; n = n + 1) begin
+	  rf_vr[n] = 1'b1;
+	end
 end
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	for (n1 = 0; n1 < AREGS; n1 = n1 + 1)
-	  rf_v[n1] = 1'b1;
+	  rf_vr[n1] <= 1'b1;
 end
 else begin
-
+	rf_vr <= rf_v;
 	if (branchmiss) begin
 		for (n1 = 1; n1 < AREGS; n1 = n1 + 1)
-		  if (rf_v[n1] == INV && ~livetarget[n1])	rf_v[n1] = VAL;
+		  if (rf_vr[n1] == INV && ~livetarget[n1])	rf_vr[n1] <= VAL;
 	end
 	//
 	// COMMIT PHASE (register-file update only ... dequeue is elsewhere)
@@ -99,15 +101,13 @@ else begin
 	// requires BLOCKING assignments, so that we can read from rf[i] later.
 	//
 	if (commit0_v) begin
-    if (!rf_v[ commit0_tgt ]) 
-			rf_v[ commit0_tgt ] = rf_source[ commit0_tgt ] == commit0_id || (branchmiss && iqentry_source[ commit0_id[2:0] ]);
+    if (!rf_vr[ commit0_tgt ]) 
+			rf_vr[ commit0_tgt ] <= rf_source[ commit0_tgt ] == commit0_id || (branchmiss && iqentry_source[ commit0_id[2:0] ]);
 	end
 	if (commit1_v) begin
-    if (!rf_v[ commit1_tgt ]) 
-			rf_v[ commit1_tgt ] = rf_source[ commit1_tgt ] == commit1_id || (branchmiss && iqentry_source[ commit1_id[2:0] ]);
+    if (!rf_vr[ commit1_tgt ]) 
+			rf_vr[ commit1_tgt ] <= rf_source[ commit1_tgt ] == commit1_id || (branchmiss && iqentry_source[ commit1_id[2:0] ]);
 	end
-
-	rf_v[0] = 1;
 
 	if (!branchmiss) begin	
 		case ({fetchbuf0_v, fetchbuf1_v})
@@ -115,14 +115,14 @@ else begin
     2'b01:
     	if (iq[tail0].v == INV && !did_branchback) begin
 				if (fetchbuf1_rfw)
-			    rf_v[ Rt1 ] = INV;
+			    rf_vr[ Rt1 ] <= INV;
     	end
     2'b10:	;
 		2'b11:
 			if (iq[tail0].v == INV && !did_branchback) begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
 					if (fetchbuf0_instr.br.lk != 1'b0)
-						rf_v[LR0] = INV;
+						rf_vr[LR0] <= INV;
 				end
 				else begin
 					if (iq[tail1].v == INV & !did_branchback) begin
@@ -134,25 +134,33 @@ else begin
 						//
 						if (Rt0 == Rt1) begin
 					    if (fetchbuf1_rfw)
-								rf_v[ Rt1 ] = INV;
+								rf_vr[ Rt1 ] <= INV;
 					    else if (fetchbuf0_rfw)
-								rf_v[ Rt0 ] = INV;
+								rf_vr[ Rt0 ] <= INV;
 						end
 						else begin
 					    if (fetchbuf0_rfw)
-								rf_v[ Rt0 ] = INV;
+								rf_vr[ Rt0 ] <= INV;
 					    if (fetchbuf1_rfw)
-								rf_v[ Rt1 ] = INV;
+								rf_vr[ Rt1 ] <= INV;
 						end
 			    end	// ends the "if IQ[tail1] is available" clause
 		    	else begin	// only first instruction was enqueued
 						if (fetchbuf0_rfw)
-					    rf_v[ Rt0 ] = INV;
+					    rf_vr[ Rt0 ] <= INV;
 			    end
 				end		
 			end
   	endcase
   end
+end
+
+always_comb
+begin
+
+	rf_v = rf_vr;
+	rf_v[0] = 1;
+
 	rf_v[0] = 1;
 end
 

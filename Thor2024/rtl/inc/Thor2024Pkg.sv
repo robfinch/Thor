@@ -131,6 +131,7 @@ typedef enum logic [3:0] {
 
 typedef enum logic [6:0] {
 	OP_SYS			= 7'd00,
+	OP_R1				= 7'd01,
 	OP_R2				= 7'd02,
 	OP_SLTI			= 7'd03,
 	OP_ADDI			= 7'd04,
@@ -296,6 +297,12 @@ typedef enum logic [6:0] {
 	FN_MODU			= 7'd28,
 	FN_MULSUH		= 7'd29,
 	FN_MODSU		= 7'd30,
+	NNA_MTWT		= 7'd40,
+	NNA_MTIN		= 7'd41,
+	NNA_MTBIAS	= 7'd42,
+	NNA_MTFB		= 7'd43,
+	NNA_MTMC		= 7'd44,
+	NNA_MTBC		= 7'd45,
 	FN_SEQ			= 7'd80,
 	FN_SNE			= 7'd81,
 	FN_SLT			= 7'd82,
@@ -303,6 +310,15 @@ typedef enum logic [6:0] {
 	FN_SLTU			= 7'd84,
 	FN_SLEU			= 7'd85
 } r2func_t;
+
+typedef enum logic [2:0] {
+	RND_NE = 3'd0,		// nearest ties to even
+	RND_ZR = 3'd1,		// round to zero (truncate)
+	RND_PL = 3'd2,		// round to plus infinity
+	RND_MI = 3'd3,		// round to minus infinity
+	RND_MM = 3'd4,		// round to maxumum magnitude (nearest ties away from zero)
+	RND_FL = 3'd7			// round according to flags register
+} fround_t;
 
 typedef enum logic [5:0] {
 	FN_LDBX = 6'd0,
@@ -338,6 +354,9 @@ typedef enum logic [6:0]
 
 // R1 ops
 typedef enum logic [5:0] {
+	NNA_TRIG 		=	6'd8,
+	NNA_STAT 		= 6'd9,
+	NNA_MFACT 	= 6'd10,
 	OP_RTI			= 6'h19,
 	OP_REX			= 6'h1A,
 	OP_FFINITE 	= 6'h20,
@@ -357,22 +376,25 @@ typedef enum logic [5:0] {
 	OP_SEXTW		= 6'h39
 } r1func_t;
 
-typedef enum logic [6:0] {
-	FN_FSCALEB = 7'd0,
-	FN_FLT1 = 7'd1,
-	FN_FMIN = 7'd2,
-	FN_FMAX = 7'd3,
-	FN_FADD = 7'd4,
-	FN_FSUB = 7'd5,
-	FN_FMUL = 7'd6,
-	FN_FDIV = 7'd7,
-	FN_FSEQ = 7'd8,
-	FN_FSNE = 7'd9,
-	FN_FSLT = 7'd10,
-	FN_FSLE = 7'd11,
-	FN_FCMP = 7'd13,
-	FN_FNXT = 7'd14,
-	FN_FREM = 7'd15
+typedef enum logic [4:0] {
+	FN_FSCALEB = 5'd0,
+	FN_FLT1 = 5'd1,
+	FN_FMIN = 5'd2,
+	FN_FMAX = 5'd3,
+	FN_FADD = 5'd4,
+	FN_FSUB = 5'd5,
+	FN_FMUL = 5'd6,
+	FN_FDIV = 5'd7,
+	FN_FSEQ = 5'd8,
+	FN_FSNE = 5'd9,
+	FN_FSLT = 5'd10,
+	FN_FSLE = 5'd11,
+	FN_FCMP = 5'd13,
+	FN_FNXT = 5'd14,
+	FN_FREM = 5'd15,
+	FN_SGNJ = 5'd16,
+	FN_SGNJN = 5'd17,
+	FN_SGNJX = 5'd18
 } f2func_t;
 
 typedef enum logic [5:0] {
@@ -668,7 +690,8 @@ typedef struct packed
 	logic [2:0] fmt;
 	logic [2:0] pr;
 	f2func_t func;
-	logic [1:0] im;
+	fround_t rnd;
+	logic resv;
 	regspec_t Rb;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -680,7 +703,8 @@ typedef struct packed
 	logic [2:0] fmt;
 	logic [2:0] pr;
 	f2func_t func2;
-	logic [1:0] im;
+	fround_t rnd;
+	logic resv;
 	f1func_t func;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -698,6 +722,18 @@ typedef struct packed
 	regspec_t Rt;
 	opcode_t opcode;
 } r2inst_t;
+
+typedef struct packed
+{
+	logic [2:0] fmt;
+	logic [2:0] pr;
+	r2func_t func2;
+	logic [1:0] im;
+	r1func_t func;
+	regspec_t Ra;
+	regspec_t Rt;
+	opcode_t opcode;
+} r1inst_t;
 
 typedef struct packed
 {
@@ -819,6 +855,7 @@ typedef union packed
 	f1inst_t	f1;
 	f2inst_t	f2;
 	f3inst_t	f3;
+	r1inst_t	r1;
 	r2inst_t	r2;
 	brinst_t	br;
 	mcb_inst_t mcb;

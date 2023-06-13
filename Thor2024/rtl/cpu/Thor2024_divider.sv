@@ -59,7 +59,8 @@ typedef enum logic [2:0] {
 	DIV1 = 3'd1,
 	DIV2 = 3'd2,
 	SGN = 3'd3,
-	DONE = 3'd4
+	DONE = 3'd4,
+	DONE2 = 3'd5
 } div_state_t;
 div_state_t state;
 
@@ -67,30 +68,29 @@ reg [WID-1:0] bb;
 reg so;
 reg [7:0] cnt;
 wire cnt_done = cnt==8'd0;
-assign done = state==DONE;//||(state==IDLE && !ld);
+assign done = state==DONE||state==DONE2;//||(state==IDLE && !ld);
 assign idle = state==IDLE;
 reg ce1;
 reg [WID-1:0] q;
 reg [WID:0] r;
 reg b0;
 wire [WID-1:0] r1 = b0 ? r - bb : r;
+reg a2, b2;
 
 reg ld1;
 reg sgn1,sgnus1;
+reg sgn2,sgnus2;
 value_t a1, b1;
-
-// register inputs
-always_ff @(posedge clk)
-begin
-	ld1 <= ld;
-	a1 <= a;
-	b1 <= b;
-	sgn1 <= sgn;
-	sgnus1 <= sgnus;
-end
 
 always_ff @(posedge clk)
 if (rst) begin
+	a1 <= 'd0;
+	b1 <= 'd0;
+	a2 <= 'd0;
+	b2 <= 'd0;
+	ld1 <= 'd0;
+	sgn1 <= 'd0;
+	sgnus1 <= 'd0;
 	bb <= {WID{1'b0}};
 	q <= {WID{1'b0}};
 	r <= {WID{1'b0}};
@@ -102,6 +102,22 @@ if (rst) begin
 end
 else
 begin
+
+	// register inputs
+	ld1 <= 1'b0;
+	if (ld && (a != a2 || b != b2 || sgn != sgn2 || sgnus != sgnus2)) begin
+		ld1 <= 1'b1;
+		a2 <= a;
+		b2 <= b;
+	end
+	a1 <= a;
+	b1 <= b;
+	sgn1 <= sgn;
+	sgnus1 <= sgnus;
+	sgn2 <= sgn;
+	sgnus2 <= sgnus;
+	if (ld && !ld1 && a==a2 && b==b2 && sgn==sgn2 && sgnus==sgnus2)
+		state <= DONE;
 
 case(state)
 IDLE:	;
@@ -141,6 +157,8 @@ SGN:
 		state <= DONE;
 	end
 DONE:
+	state <= DONE2;
+DONE2:
 	state <= IDLE;
 default: state <= IDLE;
 endcase

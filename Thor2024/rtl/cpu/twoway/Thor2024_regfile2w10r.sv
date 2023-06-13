@@ -627,7 +627,7 @@ else begin
 	else if (wr1)
 		ab[wa1] <= 1'b1;
 end
-
+/*
 assign o0 = ra0[5:0]==6'd0 ? {WID{1'b0}} : ra0[5:0]==6'd53 ? pc0 :
 	(wr1 && (ra0==wa1)) ? i1 :
 	(wr0 && (ra0==wa0)) ? i0 : ab[ra0] ? o10 : o00;
@@ -659,6 +659,18 @@ assign o8 = ra8[5:0]==6'd0 ? {WID{1'b0}} : ra8[5:0]==6'd53 ? pc1 :
 assign o9 = ra9[5:0]==6'd0 ? {WID{1'b0}} : ra9[5:0]==6'd63 ? {WID{1'b1}} :
   (wr1 && (ra9==wa1)) ? i1 :
   (wr0 && (ra9==wa0)) ? i0 :  ab[ra9] ? o19 : o09;
+*/
+assign o0 = ra0[5:0]==6'd0 ? {WID{1'b0}} : ra0[5:0]==6'd53 ? pc0 : ab[ra0] ? o10 : o00;
+assign o1 = ra1[5:0]==6'd0 ? {WID{1'b0}} : ra1[5:0]==6'd53 ? pc0 : ab[ra1] ? o11 : o01;
+assign o2 = ra2[5:0]==6'd0 ? {WID{1'b0}} : ra2[5:0]==6'd53 ? pc0 : ab[ra2] ? o12 : o02;
+assign o3 = ra3[5:0]==6'd0 ? {WID{1'b0}} : ra3[5:0]==6'd53 ? pc0 : ab[ra3] ? o13 : o03;
+assign o4 = ra4[5:0]==6'd0 ? {WID{1'b0}} : ra4[5:0]==6'd63 ? {WID{1'b1}} : ab[ra4] ? o14 : o04;
+
+assign o5 = ra5[5:0]==6'd0 ? {WID{1'b0}} : ra5[5:0]==6'd53 ? pc1 : ab[ra5] ? o15 : o05;
+assign o6 = ra6[5:0]==6'd0 ? {WID{1'b0}} : ra6[5:0]==6'd53 ? pc1 : ab[ra6] ? o16 : o06;
+assign o7 = ra7[5:0]==6'd0 ? {WID{1'b0}} : ra7[5:0]==6'd53 ? pc1 : ab[ra7] ? o17 : o07;
+assign o8 = ra8[5:0]==6'd0 ? {WID{1'b0}} : ra8[5:0]==6'd53 ? pc1 : ab[ra8] ? o18 : o08;
+assign o9 = ra9[5:0]==6'd0 ? {WID{1'b0}} : ra9[5:0]==6'd63 ? {WID{1'b1}} : ab[ra9] ? o19 : o09;
 
 endmodule
 

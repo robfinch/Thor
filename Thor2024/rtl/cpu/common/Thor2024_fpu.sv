@@ -307,6 +307,9 @@ begin
 		FN_FSLT:	bus = cmpo[1];
 		FN_FSLE:	bus = cmpo[2];
 		FN_FCMP:	bus = cmpo;
+		FN_SGNJ:	bus = {a[63],b[62:0]};
+		FN_SGNJN:	bus = {~a[63],b[62:0]};
+		FN_SGNJX:	bus = {a[63]^b[63],b[62:0]};
 		default:	bus = 'd0;
 		endcase
 	OP_FLT3:

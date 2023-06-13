@@ -277,6 +277,7 @@ ucpu1
 (
 	.rst_i(rst_i),
 	.clk_i(clk_i),
+	.clk2x_i(clk2x_i),
 	.wr_o(),
 	.adr_o(),
 	.dat_i('d0),
@@ -342,7 +343,7 @@ always_comb wbn_req[0] = cpu1_ireq;
 always_comb cpu1_iresp = wbn_resp[0];
 always_comb wbn_req[1] = cpu1_dreq[0];
 always_comb cpu1_dresp[0] = wbn_resp[1];
-always_comb wbn_req[2] = cpu1_dreq[1];
+always_comb wbn_req[2] = NDATA_PORTS > 1 ? cpu1_dreq[1] : 'd0;
 always_comb cpu1_dresp[1] = wbn_resp[2];
 //always_comb wbn_req[3] = cpu1_dreq[2];
 //always_comb cpu1_dresp[2] = wbn_resp[3];

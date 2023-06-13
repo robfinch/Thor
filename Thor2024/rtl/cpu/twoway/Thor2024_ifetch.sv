@@ -107,6 +107,7 @@ reg did_branchmiss;
 reg [11:0] micro_ip;
 instruction_t micro_ir;
 instruction_t micro_instr0, micro_instr1, micro_instr2;
+reg fetch_valid;
 
 Thor2024_micro_code umc0
 (
@@ -117,14 +118,14 @@ Thor2024_micro_code umc0
 );
 Thor2024_micro_code umc1
 (
-	.micro_ip(micro_ip+1),
+	.micro_ip(micro_ip+12'd1),
 	.micro_ir(micro_ir),
 	.next_ip(next_micro_ip),
 	.instr(micro_instr1)
 );
 Thor2024_micro_code umc2
 (
-	.micro_ip(micro_ip+2),
+	.micro_ip(micro_ip+12'd2),
 	.micro_ir(micro_ir),
 	.next_ip(),
 	.instr(micro_instr2)
@@ -172,6 +173,8 @@ always_comb
 always_comb
 	mip1 = fnMip(fetchbuf1_instr[0]);
 
+always_comb
+	fetch_valid = buffered | hit | pc.micro_ip != 12'h000;
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
@@ -219,7 +222,7 @@ else begin
     buffered <= 1'b0;
 	end
 	else begin
-		consumed = 1'b0;
+		consumed <= 1'b0;
 		if (branchback) begin
 
 	    // update the fetchbuf valid bits as well as fetchbuf itself
@@ -242,12 +245,11 @@ else begin
 			4'b0100: 
 				begin
 					if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
-						tFetchCD();
-						if (buffered | hit) begin
-							consumed = 1'b1;
-				    	fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
-				    	fetchbuf <= fetchbuf + ~iq[tail0].v;
-				    end
+						tFetchCD(0);
+						if (fetch_valid)
+							consumed <= 1'b1;
+		    		fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
+		    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
 					else panic <= PANIC_BRANCHBACK;
 			  end
@@ -289,12 +291,11 @@ else begin
 			4'b1000:
 				begin
 					if ({fetchbufA_v, fnIsBackBranch(fetchbufA_instr[0])} == {VAL, TRUE}) begin
-						tFetchCD();
-						if (buffered | hit) begin
-							consumed = 1'b1;
-				    	fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-				    	fetchbuf <= fetchbuf + ~iq[tail0].v;
-				    end
+						tFetchCD(0);
+						if (fetch_valid)
+							consumed <= 1'b1;
+		    		fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
+		    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
 					else panic <= PANIC_BRANCHBACK;
 		    end
@@ -349,13 +350,12 @@ else begin
 					end
 					else if ({fetchbufB_v, fnIsBackBranch(fetchbufB_instr[0])} == {VAL, TRUE}) begin
 				    if (did_branchback) begin
-				    	tFetchCD();
-							if (buffered | hit) begin
-								consumed = 1'b1;
-								fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-								fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-								fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
-							end
+				    	tFetchCD(0);
+				    	if (fetch_valid)
+				    		consumed <= 1'b1;
+							fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
+							fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
+							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 				    end
 				    else begin
 							pc <= backpc;
@@ -418,12 +418,11 @@ else begin
 			4'b0100:
 				begin
 					if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
-						tFetchAB();
-						if (buffered | hit) begin
-							consumed = 1'b1;
-				    	fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
-				    	fetchbuf <= fetchbuf + ~iq[tail0].v;
-				    end
+						tFetchAB(0);
+						if (fetch_valid)
+							consumed <= 1'b1;
+		    		fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
+		    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
 					else panic <= PANIC_BRANCHBACK;
 		    end
@@ -465,12 +464,11 @@ else begin
 			4'b1000:
 				begin
 					if ({fetchbufC_v, fnIsBackBranch(fetchbufC_instr[0])} == {VAL, TRUE}) begin
-						tFetchAB();
-						if (buffered | hit) begin
-							 consumed = 1'b1;
-				    	fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-				    	fetchbuf <= fetchbuf + ~iq[tail0].v;
-				    end
+						tFetchAB(0);
+						if (fetch_valid)
+							consumed <= 1'b1;
+			    	fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
+			    	fetchbuf <= fetchbuf + ~iq[tail0].v;
 					end
 					else panic <= PANIC_BRANCHBACK;
 		    end
@@ -525,13 +523,12 @@ else begin
 					end
 					else if ({fetchbufD_v, fnIsBackBranch(fetchbufD_instr[0])} == {VAL, TRUE}) begin
 				    if (did_branchback) begin
-				    	tFetchAB();
-							if (buffered | hit) begin
-								consumed = 1'b1;
-								fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-								fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-								fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
-							end
+				    	tFetchAB(0);
+				    	if (fetch_valid)
+				    		consumed <= 1'b1;
+							fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
+							fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
+							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
 				    end
 				    else begin
 							pc <= backpc;
@@ -668,31 +665,25 @@ else begin
 		    //
 		   
 		  if (fetchbufA_v == INV && fetchbufB_v == INV) begin
-		  	tFetchAB();
-				if (buffered | hit) consumed = 1'b1;
+		  	tFetchAB(1);
+				if (fetch_valid)
+					consumed <= 1'b1;
 	      // fetchbuf steering logic correction
 	      if (fetchbufC_v==INV && fetchbufD_v==INV)
 	        fetchbuf <= 1'b0;
 	    end
 	    else if (fetchbufC_v == INV && fetchbufD_v == INV) begin
-	    	tFetchCD();
-				if (buffered | hit) consumed = 1'b1;
+	    	tFetchCD(1);
+				if (fetch_valid)
+					consumed <= 1'b1;
 			end
 		end
-		if (!consumed && !buffered) begin
-			inst0a <= inst0;
-			inst1a <= inst1;
-			pci <= pc_i;
-			buffered <= 1'b1;
-		end
-		if (branchback)
-			buffered <= 1'b0;
 	end
 	if (0) begin
 		if (fetchAB)
-			tFetchAB();
+			tFetchAB(1);
 		else if (fetchCD)
-			tFetchCD();
+			tFetchCD(1);
 	end
 end
 
@@ -804,12 +795,15 @@ end
 endgenerate
 
 task tFetchAB;
+input flag;
 begin
 	if (pc.micro_ip != 12'h000) begin
 		fetchAB <= 1'b0;
 	  fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+	  fetchbufA_v <= VAL;
 	  fetchbufA_pc <= pci;
 	  fetchbufB_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufB_v <= VAL;
 	  fetchbufB_pc <= {pci.pc,pci.micro_ip+1};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
@@ -819,29 +813,13 @@ begin
 		  takb1 <= takb;
 		end
 	end
-	else if (buffered) begin
-		fetchAB <= 1'b0;
-	  fetchbufA_instr <= inst0a;
-	  fetchbufA_v <= !did_branchmiss;
-	  fetchbufA_pc <= pci;
-	  fetchbufB_instr <= inst1a;
-	  fetchbufB_v <= !did_branchmiss;
-	  fetchbufB_pc <= pci + {INSN_LEN,12'h000};
-	  buffered <= 1'b0;
-	  ptakb <= takb1;
-	  if (hit & ~irq) begin
-	  	ppc <= pc;
-		  pc <= next_pc;
-		  takb1 <= takb;
-		end
-	end
 	else if (hit) begin
 		fetchAB <= 1'b0;
 	  fetchbufA_instr <= inst0;
-	  fetchbufA_v <= !did_branchmiss;
+	  fetchbufA_v <= VAL;
 	  fetchbufA_pc <= pc_i;
 	  fetchbufB_instr <= inst1;
-	  fetchbufB_v <= !did_branchmiss;
+	  fetchbufB_v <= VAL;
 	  fetchbufB_pc <= pc_i + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
@@ -857,12 +835,15 @@ end
 endtask
 
 task tFetchCD;
+input flag;
 begin
 	if (pc.micro_ip != 12'h0000) begin
 		fetchCD <= 1'b0;
 	  fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+	  fetchbufC_v <= VAL;
 	  fetchbufC_pc <= pci;
 	  fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufD_v <= VAL;
 	  fetchbufD_pc <= {pci.pc,pci.micro_ip+1};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
@@ -871,22 +852,6 @@ begin
 		  pc <= {pc.pc,next_micro_ip};
 		  takb1 <= takb;
 		end
-	end
-	else if (buffered) begin
-		fetchCD <= 1'b0;
-	  fetchbufC_instr <= inst0a;
-	  fetchbufC_v <= VAL;
-	  fetchbufC_pc <= pci;
-	  fetchbufD_instr <= inst1a;
-	  fetchbufD_v <= VAL;
-	  fetchbufD_pc <= pci + {INSN_LEN,12'h000};
-	  buffered <= 1'b0;
-	  ptakb <= takb1;
-	  if (hit & ~irq) begin
-	  	ppc <= pc;
-		  pc <= next_pc;
-		  takb1 <= takb;
-	  end
 	end
 	else if (hit) begin
 		fetchCD <= 1'b0;

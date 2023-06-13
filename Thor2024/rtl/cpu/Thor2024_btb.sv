@@ -40,20 +40,20 @@ module Thor2024_btb(rst, clk, rclk, pc, next_pc, takb, commit_pc0, commit_brtgt0
 input rst;
 input clk;
 input rclk;
-input address_t pc;
-output address_t next_pc;
+input pc_address_t pc;
+output pc_address_t next_pc;
 output reg takb;
-input address_t commit_pc0;
-input address_t commit_brtgt0;
+input pc_address_t commit_pc0;
+input pc_address_t commit_brtgt0;
 input commit_takb0;
-input address_t commit_pc1;
-input address_t commit_brtgt1;
+input pc_address_t commit_pc1;
+input pc_address_t commit_brtgt1;
 input commit_takb1;
 
 typedef struct packed {
 	logic takb;
-	address_t pc;
-	address_t tgt;
+	pc_address_t pc;
+	pc_address_t tgt;
 } btb_entry_t;
 
 
@@ -232,7 +232,7 @@ btb_entry_t tmp;
 always_ff @(posedge rclk)
 	addrb0 <= pc;
 always_ff @(posedge rclk)
-	addrb1 <= pc + 4'd5;
+	addrb1 <= pc + {4'd5,12'h00};
 
 always_comb
 begin
@@ -240,14 +240,17 @@ begin
 		next_pc <= doutb0.tgt;
 		takb <= 1'b1;
 	end
-	else if (pc+4'd5==doutb1.pc && doutb1.takb) begin
+	else if (pc+{4'd5,12'h00}==doutb1.pc && doutb1.takb) begin
 		next_pc <= doutb1.tgt;
 		takb <= 1'b1;
 	end
 	else begin
-		next_pc <= pc + 4'd10;
+		next_pc <= pc + {4'd10,12'h00};
 		takb <= 1'b0;
 	end
+	// For now, to disable BTB
+	next_pc <= pc + {4'd10,12'h00};
+	takb <= 1'b0;
 end
 
 always_ff @(posedge clk)

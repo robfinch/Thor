@@ -37,9 +37,11 @@
 import const_pkg::*;
 import Thor2024pkg::*;
 
-module Thor2024_alu(rst, clk, ir, div, a, b, c, i, t, p, o, mul_done, div_done, div_dbz);
+module Thor2024_alu(rst, clk, clk2x, ld, ir, div, a, b, c, i, t, p, o, mul_done, div_done, div_dbz);
 input rst;
 input clk;
+input clk2x;
+input ld;
 input instruction_t ir;
 input div;
 input value_t a;
@@ -62,15 +64,6 @@ value_t cmpo;
 value_t bus;
 value_t blendo;
 
-// A change in arguments is used to load the divider.
-change_det #(.WID($bits(double_value_t))) uargcd0 (
-	.rst(rst),
-	.clk(clk),
-	.ce(1'b1),
-	.i({a,b}),
-	.cd(cd_args)
-);
-
 always_ff @(posedge clk)
 begin
 	prod2 <= $signed(a) * $signed(b);
@@ -87,7 +80,7 @@ end
 always_ff @(posedge clk)
 begin
 	mul_cnt <= {mul_cnt[2:0],1'b1};
-	if (cd_args)
+	if (ld)
 		mul_cnt <= 'd0;
 	mul_done <= mul_cnt[3];
 end
@@ -96,8 +89,8 @@ Thor2024_cmp ualu_cmp(a, b, cmpo);
 
 Thor2024_divider udiv0(
 	.rst(rst),
-	.clk(clk),
-	.ld(cd_args),
+	.clk(clk2x),
+	.ld(ld),
 	.sgn(div),
 	.sgnus(1'b0),
 	.a(a),
@@ -174,6 +167,7 @@ always_comb
 	OP_LDX:	bus = a + (b) + i;
 	OP_STX:	bus = a + (b) + i;
 	OP_BLEND:	bus = blendo;
+	OP_PFX:		bus = 0;
 	default:	bus = {2{32'hDEADBEEF}};
 	endcase
 
