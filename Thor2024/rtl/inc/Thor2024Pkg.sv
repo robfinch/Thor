@@ -504,6 +504,7 @@ parameter CSR_KEYTBL= 16'h1024;
 parameter CSR_SCRATCH=16'h?041;
 parameter CSR_MCR0	= 16'h3000;
 parameter CSR_MHARTID = 16'h3001;
+parameter CSR_MCORENO = 16'h3001;
 parameter CSR_TICK	= 16'h3002;
 parameter CSR_MBADADDR	= 16'h3007;
 parameter CSR_MTVEC = 16'b00110000001100??;
@@ -924,9 +925,11 @@ typedef struct packed
 	logic csrrw;
 	logic csrrs;
 	logic csrrc;
+	logic nop;				// NOP semantics
 	logic fc;					// flow control op
 	logic backbr;			// backwards target branch
 	logic alu;				// true if instruction must use alu (alu or mem)
+	logic alu0;				// true if instruction must use alu #0
 	logic fpu;				// FPU op
 	logic mul;
 	logic mulu;
@@ -1093,6 +1096,7 @@ typedef struct packed {
 	logic agen;
 	logic fc;
 	logic alu;
+	logic alu0;
 	logic fpu;
 	logic mul;
 	logic mulu;
@@ -1669,107 +1673,40 @@ begin
 end
 endfunction
 
+// Sign or zero extend data as needed according to op.
 function [63:0] fnDati;
 input instruction_t ins;
 input address_t adr;
 input value_t dat;
 case(ins.any.opcode)
 OP_LDB:
-  case(adr[2:0])
-  3'd0:   fnDati = {{56{dat[7]}},dat[7:0]};
-  3'd1:   fnDati = {{56{dat[15]}},dat[15:8]};
-  3'd2:   fnDati = {{56{dat[23]}},dat[23:16]};
-  3'd3:   fnDati = {{56{dat[31]}},dat[31:24]};
-  3'd4:		fnDati = {{56{dat[39]}},dat[39:32]};
-  3'd5:		fnDati = {{56{dat[47]}},dat[47:40]};
-  3'd6:		fnDati = {{56{dat[55]}},dat[55:48]};
-  3'd7:		fnDati = {{56{dat[63]}},dat[63:56]};
-  endcase
+  fnDati = {{56{dat[7]}},dat[7:0]};
 OP_LDBU:
-  case(adr[2:0])
-  3'd0:   fnDati = {{56{1'b0}},dat[7:0]};
-  3'd1:   fnDati = {{56{1'b0}},dat[15:8]};
-  3'd2:   fnDati = {{56{1'b0}},dat[23:16]};
-  3'd3:   fnDati = {{56{1'b0}},dat[31:24]};
-  3'd4:   fnDati = {{56{1'b0}},dat[39:32]};
-  3'd5:   fnDati = {{56{1'b0}},dat[47:40]};
-  3'd6:   fnDati = {{56{1'b0}},dat[55:48]};
-  3'd7:   fnDati = {{56{1'b0}},dat[63:56]};
-  endcase
+  fnDati = {{56{1'b0}},dat[7:0]};
 OP_LDW:
-  case(adr[2:1])
-  3'd0:   fnDati = {{48{dat[15]}},dat[15:0]};
-  3'd1:   fnDati = {{48{dat[31]}},dat[31:16]};
-  3'd2:   fnDati = {{48{dat[47]}},dat[47:32]};
-  3'd3:   fnDati = {{48{dat[63]}},dat[63:48]};
-  endcase
+  fnDati = {{48{dat[15]}},dat[15:0]};
 OP_LDWU:
-  case(adr[2:1])
-  3'd0:   fnDati = {{48{1'b0}},dat[15:0]};
-  3'd1:   fnDati = {{48{1'b0}},dat[31:16]};
-  3'd2:   fnDati = {{48{1'b0}},dat[47:32]};
-  3'd3:   fnDati = {{48{1'b0}},dat[63:48]};
-  endcase
+  fnDati = {{48{1'b0}},dat[15:0]};
 OP_LDT:
-	case(adr[2])
-	1'b0:	fnDati = {{32{dat[31]}},dat[31:0]};
-	1'b1:	fnDati = {{32{dat[63]}},dat[63:32]};
-	endcase
+	fnDati = {{32{dat[31]}},dat[31:0]};
 OP_LDTU:
-	case(adr[2])
-	1'b0:	fnDati = {{32{1'b0}},dat[31:0]};
-	1'b1:	fnDati = {{32{1'b0}},dat[63:32]};
-	endcase
+	fnDati = {{32{1'b0}},dat[31:0]};
 OP_LDO:
   fnDati = dat;
 OP_LDX:
 	case(ins.lsn.func.ldn)
 	FN_LDBX:
-	  case(adr[2:0])
-	  3'd0:   fnDati = {{56{dat[7]}},dat[7:0]};
-	  3'd1:   fnDati = {{56{dat[15]}},dat[15:8]};
-	  3'd2:   fnDati = {{56{dat[23]}},dat[23:16]};
-	  3'd3:   fnDati = {{56{dat[31]}},dat[31:24]};
-	  3'd4:		fnDati = {{56{dat[39]}},dat[39:32]};
-	  3'd5:		fnDati = {{56{dat[47]}},dat[47:40]};
-	  3'd6:		fnDati = {{56{dat[55]}},dat[55:48]};
-	  3'd7:		fnDati = {{56{dat[63]}},dat[63:56]};
-	  endcase
+	  fnDati = {{56{dat[7]}},dat[7:0]};
 	FN_LDBUX:
-	  case(adr[2:0])
-	  3'd0:   fnDati = {{56{1'b0}},dat[7:0]};
-	  3'd1:   fnDati = {{56{1'b0}},dat[15:8]};
-	  3'd2:   fnDati = {{56{1'b0}},dat[23:16]};
-	  3'd3:   fnDati = {{56{1'b0}},dat[31:24]};
-	  3'd4:   fnDati = {{56{1'b0}},dat[39:32]};
-	  3'd5:   fnDati = {{56{1'b0}},dat[47:40]};
-	  3'd6:   fnDati = {{56{1'b0}},dat[55:48]};
-	  3'd7:   fnDati = {{56{1'b0}},dat[63:56]};
-	  endcase
+	  fnDati = {{56{1'b0}},dat[7:0]};
 	FN_LDWX:
-	  case(adr[2:1])
-	  3'd0:   fnDati = {{48{dat[15]}},dat[15:0]};
-	  3'd1:   fnDati = {{48{dat[31]}},dat[31:16]};
-	  3'd2:   fnDati = {{48{dat[47]}},dat[47:32]};
-	  3'd3:   fnDati = {{48{dat[63]}},dat[63:48]};
-	  endcase
+	  fnDati = {{48{dat[15]}},dat[15:0]};
 	FN_LDWUX:
-	  case(adr[2:1])
-	  3'd0:   fnDati = {{48{1'b0}},dat[15:0]};
-	  3'd1:   fnDati = {{48{1'b0}},dat[31:16]};
-	  3'd2:   fnDati = {{48{1'b0}},dat[47:32]};
-	  3'd3:   fnDati = {{48{1'b0}},dat[63:48]};
-	  endcase
+	  fnDati = {{48{1'b0}},dat[15:0]};
 	FN_LDTX:
-		case(adr[2])
-		1'b0:	fnDati = {{32{dat[31]}},dat[31:0]};
-		1'b1:	fnDati = {{32{dat[63]}},dat[63:32]};
-		endcase
+		fnDati = {{32{dat[31]}},dat[31:0]};
 	FN_LDTUX:
-		case(adr[2])
-		1'b0:	fnDati = {{32{1'b0}},dat[31:0]};
-		1'b1:	fnDati = {{32{1'b0}},dat[63:32]};
-		endcase
+		fnDati = {{32{1'b0}},dat[31:0]};
 	FN_LDOX:
 	  fnDati = dat;
 	default:	fnDati = dat;
@@ -1872,6 +1809,24 @@ function fnIsBackBranch;
 input instruction_t ir;
 begin
 	fnIsBackBranch = (fnIsBranch(ir) && fnBranchDispSign(ir))|fnIsMacroInstr(ir);
+end
+endfunction
+
+function pc_address_t fnPCInc;
+input pc_address_t pc;
+begin
+	if (0) begin	//ICacheBundleWidth==120) begin
+		case(pc.pc[3:0])
+		4'h0:	fnPCInc = pc + 16'h5000;
+		4'h5:	fnPCInc = pc + 16'h5000;
+		4'hA:	fnPCInc = pc + 16'h6000;
+		default:	fnPCInc = pc + 16'h5000;
+		endcase
+	end
+	else begin
+		fnPCInc.pc = pc.pc + INSN_LEN;
+		fnPCInc.micro_ip = pc.micro_ip;
+	end
 end
 endfunction
 

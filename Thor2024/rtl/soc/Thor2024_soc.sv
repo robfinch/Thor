@@ -141,7 +141,7 @@ output [0:0] ddr3_odt;
 wire rst, rstn;
 wire xrst = ~cpu_resetn;
 wire locked;
-wire clk10, clk20, clk40, clk50, clk100, clk200;
+wire clk10, clk20, clk40, clk50, clk67, clk100, clk200;
 wire xclk_bufg;
 wire node_clk = clk50;
 fta_cmd_request128_t cpu_req;
@@ -203,6 +203,9 @@ wire [31:0] br3_dato;
 wire [3:0] br3_cido;
 wire [7:0] br3_tido;
 wire br3_cack;
+fta_cmd_response128_t br4_resp;
+fta_cmd_request32_t br4_mreq;
+
 fta_cmd_response64_t fb_cresp;
 fta_cmd_response64_t tc_cresp;
 fta_cmd_response64_t leds_cresp;
@@ -290,6 +293,7 @@ NexysVideoClkgen ucg1
   .clk40(clk40),		// cpu 4x
   .clk20(clk20),		// cpu
   .clk10(clk10),
+  .clk67(clk67),
 //  .clk14(clk14),		// 16x baud clock
   // Status and control signals
   .reset(xrst), 
@@ -299,6 +303,25 @@ NexysVideoClkgen ucg1
 );
 
 assign rst = !locked;
+
+/*
+rgb2dvi ur2d1
+(
+	.rst(rst),
+	.PixelClk(clk40),
+	.SerialClk(clk200),
+	.red(red[9:2]),
+	.green(green[9:2]),
+	.blue(blue[9:2]),
+	.de(~blank),
+	.hSync(hSync),
+	.vSync(vSync),
+	.TMDS_Clk_p(TMDS_OUT_clk_p),
+	.TMDS_Clk_n(TMDS_OUT_clk_n),
+	.TMDS_Data_p(TMDS_OUT_data_p),
+	.TMDS_Data_n(TMDS_OUT_data_n)
+);
+*/
 /*
 rgb2dvi #(
 	.kGenerateSerialClk(1'b0),
@@ -352,8 +375,8 @@ rfFrameBuffer_fta64 uframebuf1
 (
 	.rst_i(rst),
 	.irq_o(fb_irq),
-	.cs_config_i(cs_config),
-	.cs_io_i(cs_io),
+	.cs_config_i(br1_mreq.padr[31:28]==4'hD),
+	.cs_io_i(br1_mreq.padr[31:20]==12'hFEC),
 	.s_clk_i(node_clk),
 	.s_req(br1_mreq),
 	.s_resp(fb_cresp),
@@ -416,21 +439,19 @@ IOBridge128to64fta ubridge1
 	.ch1resp(fb_cresp)
 );
 
-PS2kbd #(.pClkFreq(40000000)) ukbd1
+fta_cmd_response32_t [3:0] br4_chresp;
+assign br4_chresp[1] = 'd0;
+assign br4_chresp[2] = 'd0;
+assign br4_chresp[3] = 'd0;
+
+PS2kbd_fta32 #(.pClkFreq(33333333)) ukbd1
 (
-	// WISHBONE/SoC bus interface 
 	.rst_i(rst),
 	.clk_i(node_clk),	// system clock
-	.cs_config_i(cs_config),
-	.cs_io_i(cs_io),
-	.cyc_i(br3_cyc),
-	.stb_i(br3_stb),	// core select (active high)
-	.ack_o(kbd_ack),	// bus transfer acknowledged
-	.we_i(br3_we),	// I/O write taking place (active high)
-	.sel_i(br3_sel),
-	.adr_i(br3_adr),	// address
-	.dat_i(br3_dato),	// data in
-	.dat_o(kbd_dato),	// data out
+	.cs_config_i(br4_mreq.padr[31:28]==4'hD),
+	.cs_io_i(br4_mreq.padr[31:20]==12'hFED),
+	.req(br4_mreq),
+	.resp(br4_chresp[0]),
 	//-------------
 	.irq_o(kbd_irq),	// interrupt request (active high)
 	.kclk_i(kclk),	// keyboard clock from keyboard
@@ -536,6 +557,16 @@ IOBridge128to64fta ubridge3
 	.ch1resp('d0)
 );
 
+IOBridge128to32fta #(.CHANNELS(4)) ubridge4
+(
+	.rst_i(rst),
+	.clk_i(node_clk),
+	.s1_req(br3_req),
+	.s1_resp(br4_resp),
+	.m_req(br4_mreq),
+	.chresp(br4_chresp)
+);
+
 /*
 IOBridge128wb ubridge3wb
 (
@@ -563,7 +594,7 @@ IOBridge128wb ubridge3wb
 always_ff @(posedge node_clk)
 	casez(cs_br3_leds)
 	1'b1:	br3_dati <= led;
-	1'b0:	br3_dati <= kbd_dato|rand_dato|acia_dato|i2c2_dato;
+	1'b0:	br3_dati <= rand_dato|acia_dato|i2c2_dato;
 	default:	br3_dati <= 'd0;
 	endcase
 
@@ -571,7 +602,7 @@ always_ff @(posedge node_clk, posedge rst)
 if (rst)
 	br3_ack <= 'd0;
 else
-	br3_ack <= kbd_ack|rand_ack|acia_ack|i2c2_ack;
+	br3_ack <= rand_ack|acia_ack|i2c2_ack;
 
 ledport_fta64 uleds1
 (
@@ -915,6 +946,16 @@ nic_ager uager1
 	.rpacket_o(rpacket[4])
 );
 */
+ila_0 uila1 (
+	.clk(clk100), // input wire clk
+	.probe0(umpu1.ucpu1.pc), // input wire [15:0]  probe0  
+	.probe1(umpu1.ucpu1.inst0[0]), // input wire [31:0]  probe1 
+	.probe2(cpu_req.padr),
+	.probe3({leds_cresp.ack,leds_cresp.adr[23:0]}),
+	.probe4(io_gate_en),
+	.probe5(umpu1.ucpu1.dramN_addr[0])
+);
+
 /*
 ila_0 your_instance_name (
 	.clk(clk100), // input wire clk
@@ -940,9 +981,9 @@ config_timout_ctr ucfgtoctr1
 	.o(config_to)
 );
 
-fta_cmd_response128_t [4:0] resps;
+fta_cmd_response128_t [5:0] resps;
 
-fta_respbuf #(5) urspbuf1
+fta_respbuf #(6) urspbuf1
 (
 	.rst(rst),
 	.clk(node_clk),
@@ -966,6 +1007,7 @@ assign resps[4].err = 1'b0;
 assign resps[4].dat = scr_dato;
 assign resps[4].adr = scr_adro;
 assign resps[4].pri = 4'd7;
+assign resps[5] = fta_cmd_response128_t'(br4_resp);
 
 //assign ch7req.sel = ch7req.we ? sel << {ch7req.padr[3:2],2'b0} : 16'hFFFF;
 //assign ch7req.data1 = {4{dato}};
@@ -1027,7 +1069,7 @@ Thor2024_mpu umpu1
 (
 	.rst_i(rst),
 	.clk_i(node_clk),
-	.clk2x_i(clk100),
+	.clk2x_i(clk67),
 	.ftam_req(cpu_req),
 	.ftam_resp(cpu_resp),
 	.irq_bus(irq_bus),

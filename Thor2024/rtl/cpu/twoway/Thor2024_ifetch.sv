@@ -820,7 +820,7 @@ begin
 	  fetchbufA_pc <= pc_i;
 	  fetchbufB_instr <= inst1;
 	  fetchbufB_v <= VAL;
-	  fetchbufB_pc <= pc_i + {INSN_LEN,12'h000};
+	  fetchbufB_pc <= fnPCInc(pc_i);// + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin
@@ -860,7 +860,7 @@ begin
 	  fetchbufC_pc <= pc_i;
 	  fetchbufD_instr <= inst1;
 	  fetchbufD_v <= VAL;
-	  fetchbufD_pc <= pc_i + {INSN_LEN,12'h000};
+	  fetchbufD_pc <= fnPCInc(pc_i);// + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
 	  if (hit & ~irq) begin

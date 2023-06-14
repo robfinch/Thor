@@ -57,6 +57,7 @@ begin
 	OP_ANDI:	imm = {48'hFFFFFFFFFFFF,ins[0][34:19]};
 	OP_ORI,OP_EORI:
 		imm = {48'h0000,ins[0][34:19]};
+	OP_CSR:	imm = {50'd0,ins[0][32:19]};
 	OP_RTD:	imm = {{16{ins[0][34]}},ins[0][34:19]};
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
 	OP_STB,OP_STW,OP_STT,OP_STO:

@@ -113,19 +113,19 @@ else begin
 		case ({fetchbuf0_v, fetchbuf1_v})
     2'b00: ; // do nothing
     2'b01:
-    	if (iq[tail0].v == INV && !did_branchback) begin
+    	if (iq[tail0].v == INV) begin
 				if (fetchbuf1_rfw)
 			    rf_vr[ Rt1 ] <= INV;
     	end
     2'b10:	;
 		2'b11:
-			if (iq[tail0].v == INV && !did_branchback) begin
+			if (iq[tail0].v == INV) begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
 					if (fetchbuf0_instr.br.lk != 1'b0)
 						rf_vr[LR0] <= INV;
 				end
 				else begin
-					if (iq[tail1].v == INV & !did_branchback) begin
+					if (iq[tail1].v == INV) begin
 						//
 						// if the two instructions enqueued target the same register, 
 						// make sure only the second writes to rf_v and rf_source.

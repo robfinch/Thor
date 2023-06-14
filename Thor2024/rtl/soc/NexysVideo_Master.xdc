@@ -14,23 +14,38 @@ set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets -of_objects [get_ports xcl
 #create_generated_clock -name clk80 -source [get_pins ucg1/clk_in1] -divide_by 10 -multiply_by 8 [get_pins ucg1/clk80]
 # CLKOUT0 = clk200
 # CLKOUT1 = clk100
-# CLKOUT2 = clk40
-# CLKOUT3 = clk33
+# CLKOUT3 = clk40
+# CLKOUT2 = clk33
 # CLKOUT4 = clk20
+
+#set_clock_groups -asynchronous \
+#-group { \
+#clk_pll_i \
+#clk200_NexysVideoClkgen \
+#clk100_NexysVideoClkgen \
+#clk20_NexysVideoClkgen \
+#} \
+#-group { \
+#clk40_NexysVideoClkgen \
+#} \
+#-group { \
+#clk50_NexysVideoClkgen \
+#clk67_NexysVideoClkgen \
+#clk33_NexysVideoClkgen \
+#}
 
 set_clock_groups -asynchronous \
 -group { \
-clk_pll_i \
-clk200_NexysVideoClkgen \
-clk100_NexysVideoClkgen \
-clk20_NexysVideoClkgen \
+uddr3/u_mig_7series_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1 \
+ucg1/inst/mmcm_adv_inst/CLKOUT0 \
+ucg1/inst/mmcm_adv_inst/CLKOUT1 \
 } \
 -group { \
-clk40_NexysVideoClkgen \
+ucg1/inst/mmcm_adv_inst/CLKOUT3 \
 } \
 -group { \
-clk50_NexysVideoClkgen \
-clk33_NexysVideoClkgen \
+ucg1/inst/mmcm_adv_inst/CLKOUT2 \
+ucg1/inst/mmcm_adv_inst/CLKOUT6 \
 }
 
 #-group { \

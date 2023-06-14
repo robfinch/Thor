@@ -36,140 +36,21 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_decoder(instr, db);
-input instruction_t [4:0] instr;
-output decode_bus_t db;
+module Thor2024_decode_nop(instr, nop);
+input instruction_t instr;
+output nop;
 
-Thor2024_decode_imm udcimm
-(
-	.ins(instr),
-	.imm(db.imm)
-);
+function fnIsNop;
+input instruction_t ir;
+begin
+	case(ir.r2.opcode)
+	OP_PFX,OP_NOP:
+		fnIsNop = 1'b1;
+	default:	fnIsNop = 1'b0;
+	endcase
+end
+endfunction
 
-Thor2024_decode_Ra udcra
-(
-	.instr(instr[0]),
-	.Ra(db.Ra)
-);
-
-Thor2024_decode_Rb udcrb
-(
-	.instr(instr[0]),
-	.Rb(db.Rb)
-);
-
-Thor2024_decode_Rc udcrc
-(
-	.instr(instr[0]),
-	.Rc(db.Rc)
-);
-
-Thor2024_decode_Rt udcrt
-(
-	.instr(instr[0]),
-	.Rt(db.Rt)
-);
-
-Thor2024_decode_Rp udcrp
-(
-	.instr(instr[0]),
-	.Rp(db.Rp)
-);
-
-Thor2024_decode_has_imm uhi
-(
-	.instr(instr[0]),
-	.has_imm(db.has_imm)
-);
-
-Thor2024_decode_nop unop1
-(
-	.instr(instr[0]),
-	.nop(db.nop)
-);
-
-Thor2024_decode_fc ufc1
-(
-	.instr(instr[0]),
-	.fc(db.fc)
-);
-
-Thor2024_decode_branch udecbr
-(
-	.instr(instr[0]),
-	.branch(db.br)
-);
-
-Thor2024_decode_backbr ubkbr1
-(
-	.instr(instr[0]),
-	.backbr(db.backbr)
-);
-
-Thor2024_decode_alu udcalu
-(
-	.instr(instr[0]),
-	.alu(db.alu)
-);
-
-Thor2024_decode_alu0 udcalu0
-(
-	.instr(instr[0]),
-	.alu0(db.alu0)
-);
-
-Thor2024_decode_mul umul1
-(
-	.instr(instr[0]),
-	.mul(db.mul)
-);
-
-Thor2024_decode_mulu umulu1
-(
-	.instr(instr[0]),
-	.mulu(db.mulu)
-);
-
-Thor2024_decode_div udiv1
-(
-	.instr(instr[0]),
-	.div(db.div)
-);
-
-Thor2024_decode_divu udivu1
-(
-	.instr(instr[0]),
-	.divu(db.divu)
-);
-
-Thor2024_decode_mem umem1
-(
-	.instr(instr[0]),
-	.mem(db.mem)
-);
-
-Thor2024_decode_load udecld1
-(
-	.instr(instr[0]),
-	.load(db.load)
-);
-
-Thor2024_decode_loadz udecldz1
-(
-	.instr(instr[0]),
-	.loadz(db.loadz)
-);
-
-Thor2024_decode_store udecst1
-(
-	.instr(instr[0]),
-	.store(db.store)
-);
-
-Thor2024_decode_fpu ufpu
-(
-	.instr(instr[0]),
-	.fpu(db.fpu)
-);
+assign nop = fnIsNop(instr);
 
 endmodule

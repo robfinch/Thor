@@ -100,7 +100,7 @@ else begin
 						tran_line[wbm_resp.tid.tranid[3:2]].v[0] <= 1'b1;
 						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
 						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid.tranid[3:2]].data[127:  0] <= wbm_resp.dat;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[ICacheBundleWidth*1-1:ICacheBundleWidth*0] <= wbm_resp.dat[ICacheBundleWidth-1:0];
 					end
 				2'b01:
 					begin
@@ -108,7 +108,7 @@ else begin
 						tran_line[wbm_resp.tid.tranid[3:2]].v[1] <= 1'b1;
 						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
 						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid.tranid[3:2]].data[255:128] <= wbm_resp.dat;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[ICacheBundleWidth*2-1:ICacheBundleWidth*1] <= wbm_resp.dat[ICacheBundleWidth-1:0];
 					end
 				2'b10:
 					begin
@@ -116,7 +116,7 @@ else begin
 						tran_line[wbm_resp.tid.tranid[3:2]].v[2] <= 1'b1;
 						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
 						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid.tranid[3:2]].data[383:256] <= wbm_resp.dat;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[ICacheBundleWidth*3-1:ICacheBundleWidth*2] <= wbm_resp.dat[ICacheBundleWidth-1:0];
 					end
 				2'b11:
 					begin
@@ -124,7 +124,7 @@ else begin
 						tran_line[wbm_resp.tid.tranid[3:2]].v[3] <= 1'b1;
 						tran_line[wbm_resp.tid.tranid[3:2]].vtag <= vtags[wbm_resp.tid.tranid] & ~64'h30;
 						tran_line[wbm_resp.tid.tranid[3:2]].ptag <= wbm_resp.adr[$bits(Thor2024pkg::address_t)-1:0] & ~64'h30;
-						tran_line[wbm_resp.tid.tranid[3:2]].data[511:384] <= wbm_resp.dat;
+						tran_line[wbm_resp.tid.tranid[3:2]].data[ICacheBundleWidth*4-1:ICacheBundleWidth*3] <= wbm_resp.dat[ICacheBundleWidth-1:0];
 					end
 				endcase
 			end

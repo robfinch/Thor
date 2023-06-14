@@ -118,13 +118,13 @@ else begin
 		case ({fetchbuf0_v, fetchbuf1_v})
 		2'b00:	;
 		2'b01:
-			if (iq[tail0].v == 1'b0 && !did_branchback) begin
+			if (iq[tail0].v == 1'b0) begin
 				if (fetchbuf1_rfw)
 			    rf_source[ Rt1 ] <= { fetchbuf1_mem, tail0 };	// top bit indicates ALU/MEM bus
 			end
 		2'b10:	;
 		2'b11:
-			if (iq[tail0].v == 1'b0 && !did_branchback) begin
+			if (iq[tail0].v == 1'b0) begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
 				end
 				else begin

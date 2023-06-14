@@ -13,6 +13,7 @@ char *cpuname="Thor";
 int bitsperbyte=8;
 int bytespertaddr=8;
 int abits=32;
+static int bundleWidth = 128;
 static taddr sdreg = 61;
 static taddr sd2reg = 60;
 static taddr sd3reg = 59;
@@ -158,16 +159,11 @@ mnemonic mnemonics[]={
 
 	"cpuid", {OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x41LL,4},
 	
-	"csrrc", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(0)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrc", {OP_REG,OP_IMM,OP_IMM,0,0}, {CSRI,CPU_ALL,0,FUNC2(1)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrd", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(0)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrd", {OP_REG,OP_IMM,OP_IMM,0,0}, {CSRI,CPU_ALL,0,FUNC2(1)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrs", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(0)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrs", {OP_REG,OP_IMM,OP_IMM,0,0}, {CSRI,CPU_ALL,0,FUNC2(1)|OPC(3),5,SZ_UNSIZED,0},
-	"csrrw", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,OPC(3),5,SZ_UNSIZED,0},
-	"csrrw", {OP_REG,OP_IMM,OP_IMM,0,0}, {CSRI,CPU_ALL,0,FUNC2(1)|OPC(3),5,SZ_UNSIZED,0},
-	"csrwr", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,OPC(3),5,SZ_UNSIZED,0},
-	"csrwr", {OP_REG,OP_IMM,OP_IMM,0,0}, {CSRI,CPU_ALL,0,FUNC2(1)|OPC(3),5,SZ_UNSIZED,0},
+	"csrrc", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(3)|OPC(7),5,SZ_UNSIZED,0},
+	"csrrd", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(0)|OPC(7),5,SZ_UNSIZED,0},
+	"csrrs", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(2)|OPC(7),5,SZ_UNSIZED,0},
+	"csrrw", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(1)|OPC(7),5,SZ_UNSIZED,0},
+	"csrwr", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FUNC2(1)|OPC(7),5,SZ_UNSIZED,0},
 
 	"dbra",	{OP_IMM,0,0,0,0},{B,CPU_ALL,0,0x00001F000021LL,5,SZ_UNSIZED,0},
 
@@ -3490,7 +3486,9 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
   uint64_t modifier1, modifier2;
   thuge postfix;
   uint64_t insn;
-  size_t sz, pfxsize;
+  size_t sz, pfxsize, szd;
+  size_t final_sz;
+  taddr pcd;
 
 	TRACE("ei ");
 	modifier1 = 0;
@@ -3502,45 +3500,110 @@ dblock *eval_instruction(instruction *ip,section *sec,taddr pc)
 
 //	if (sz != ip->ext.size)
 //		printf("sizediff2\n");
+	if (bundleWidth != 128) {
+		final_sz = 0;
+		for (pcd = pc, szd = sz; szd > 0; szd -= 5) {
+			if ((pcd & 15)==15) {
+				pcd++;
+				final_sz++;
+			}
+			pcd += 5;
+			final_sz += 5;
+		}
+	}
+	else {
+		final_sz = sz;
+	}
+
 	insn_sizes2[sz2ndx] = sz;
   if (db) {
-    unsigned char *d = db->data = mymalloc(sz);
+    unsigned char *d = db->data = mymalloc(final_sz);
     int i;
     
-    db->size = sz;
+    db->size = final_sz;
 
 		if (modifier1 >> 48LL) {
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 	    d = setval(0,d,5,modifier1 & 0xffffffffffLL);
+	    pc += 5;
 	    insn_count++;
 	  }
 		if (modifier2 >> 48LL) {
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 	    d = setval(0,d,5,modifier2 & 0xffffffffffLL);
+	    pc += 5;
 	    insn_count++;
 	  }
+		if ((pc & 15)==15 && bundleWidth==120) {
+			pc++;
+	    d = setval(0,d,1,0xffL);
+	  }
     d = setval(0,d,5,insn);
+    pc += 5;
     insn_count++;
 		switch(pfxsize) {
 		case 4:	
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.lo & 0xffffffffLL);
+	    pc += 5;
 			insn_count++;
 			break;
 		case 8:	
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.lo & 0xffffffffLL);
+	    pc += 5;
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.lo >> 32LL);
+	    pc += 5;
 			insn_count+=2;
 			break;
 		case 16:
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.lo & 0xffffffffLL);
+	    pc += 5;
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.lo >> 32LL);
+	    pc += 5;
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.hi & 0xffffffffLL);
+	    pc += 5;
+			if ((pc & 15)==15 && bundleWidth==120) {
+				pc++;
+		    d = setval(0,d,1,0xffL);
+		  }
 			d = setval(0,d,1,124);
 			d = setval(0,d,4,postfix.hi >> 32LL);
+	    pc += 5;
 			insn_count+=4;
 			break;
 		}

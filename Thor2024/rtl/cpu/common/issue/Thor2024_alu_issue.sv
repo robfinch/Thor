@@ -72,25 +72,22 @@ begin
 	
 	// aluissue is a task
 	if (alu0_idle) begin
-		if (could_issue[head0] && iq[head0].alu
-		&& !iqentry_issue[head0]) begin
+		if (could_issue[head0] && iq[head0].alu) begin
 		  iqentry_issue[head0] = 1'b1;
 		  iqentry_islot[head0] = 2'b00;
 		end
-		else if (could_issue[head1] && !iqentry_issue[head1] && iq[head1].alu
-		)
-		begin
+		else if (could_issue[head1] && iq[head1].alu)	begin
 		  iqentry_issue[head1] = 1'b1;
 		  iqentry_islot[head1] = 2'b00;
 		end
-		else if (could_issue[head2] && !iqentry_issue[head2] && iq[head2].alu
+		else if (could_issue[head2] && iq[head2].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		)
 		begin
 			iqentry_issue[head2] = 1'b1;
 			iqentry_islot[head2] = 2'b00;
 		end
-		else if (could_issue[head3] && !iqentry_issue[head3] && iq[head3].alu
+		else if (could_issue[head3] && iq[head3].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -100,7 +97,7 @@ begin
 			iqentry_issue[head3] = 1'b1;
 			iqentry_islot[head3] = 2'b00;
 		end
-		else if (could_issue[head4] && !iqentry_issue[head4] && iq[head4].alu
+		else if (could_issue[head4] && iq[head4].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -115,7 +112,7 @@ begin
 			iqentry_issue[head4] = 1'b1;
 			iqentry_islot[head4] = 2'b00;
 		end
-		else if (could_issue[head5] && !iqentry_issue[head5] && iq[head5].alu
+		else if (could_issue[head5] && iq[head5].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -136,7 +133,7 @@ begin
 			iqentry_issue[head5] = 1'b1;
 			iqentry_islot[head5] = 2'b00;
 		end
-		else if (could_issue[head6] && !iqentry_issue[head6] && iq[head6].alu
+		else if (could_issue[head6] && iq[head6].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -164,7 +161,7 @@ begin
 			iqentry_issue[head6] = 1'b1;
 			iqentry_islot[head6] = 2'b00;
 		end
-		else if (could_issue[head7] && !iqentry_issue[head7] && iq[head7].alu
+		else if (could_issue[head7] && iq[head7].alu
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -203,17 +200,18 @@ begin
 	end
 
 	if (NALU > 1 && alu1_idle) begin
-		if (could_issue[head0] && iq[head0].alu
+		if (could_issue[head0] && iq[head0].alu && !iq[head0].alu0
 		&& !iqentry_issue[head0]) begin
 		  iqentry_issue[head0] = 1'b1;
 		  iqentry_islot[head0] = 2'b01;
 		end
-		else if (could_issue[head1] && !iqentry_issue[head1] && iq[head1].alu)
+		else if (could_issue[head1] && !iqentry_issue[head1] && iq[head1].alu && !iq[head1].alu0)
 		begin
 		  iqentry_issue[head1] = 1'b1;
 		  iqentry_islot[head1] = 2'b01;
 		end
 		else if (could_issue[head2] && !iqentry_issue[head2] && iq[head2].alu
+		&& !iq[head2].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		)
 		begin
@@ -221,6 +219,7 @@ begin
 			iqentry_islot[head2] = 2'b01;
 		end
 		else if (could_issue[head3] && !iqentry_issue[head3] && iq[head3].alu
+		&& !iq[head3].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -231,6 +230,7 @@ begin
 			iqentry_islot[head3] = 2'b01;
 		end
 		else if (could_issue[head4] && !iqentry_issue[head4] && iq[head4].alu
+		&& !iq[head4].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -246,6 +246,7 @@ begin
 			iqentry_islot[head4] = 2'b01;
 		end
 		else if (could_issue[head5] && !iqentry_issue[head5] && iq[head5].alu
+		&& !iq[head5].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -267,6 +268,7 @@ begin
 			iqentry_islot[head5] = 2'b01;
 		end
 		else if (could_issue[head6] && !iqentry_issue[head6] && iq[head6].alu
+		&& !iq[head6].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)
@@ -295,6 +297,7 @@ begin
 			iqentry_islot[head6] = 2'b01;
 		end
 		else if (could_issue[head7] && !iqentry_issue[head7] && iq[head7].alu
+		&& !iq[head7].alu0
 		&& (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
 		&& (!(iq[head2].v && iq[head2].sync) ||
 		 		((!iq[head0].v)

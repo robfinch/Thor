@@ -275,6 +275,7 @@ Thor2024
 )
 ucpu1
 (
+	.coreno_i(64'd1),
 	.rst_i(rst_i),
 	.clk_i(clk_i),
 	.clk2x_i(clk2x_i),

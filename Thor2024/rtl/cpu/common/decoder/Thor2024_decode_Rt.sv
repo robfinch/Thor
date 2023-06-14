@@ -73,6 +73,8 @@ begin
 		FN_SLEU:	fnRt = ir.r2.Rt;
 		default:	fnRt = 'd0;
 		endcase
+	OP_FLT2:	fnRt = ir.f2.Rt;
+	OP_FLT3:	fnRt = ir.f3.Rt;
 	OP_JSR:	fnRt = 6'd56 + ir[8:7];
 	OP_RTD:	fnRt = 6'd62;
 	OP_JSR,
@@ -80,6 +82,8 @@ begin
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:
 		fnRt = ir.ri.Rt;
+	OP_CSR:
+		fnRt = ir.csr.Rt;
 	OP_MOV:
 		fnRt = ir.r2.Rt;
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,

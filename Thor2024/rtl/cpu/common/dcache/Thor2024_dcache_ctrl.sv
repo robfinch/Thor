@@ -496,9 +496,9 @@ else begin
 		req_state <= STATE1;		
 		resp_state <= STATE1;	
 	end
-	if (nn2 < 16 && cpu_req_queue[nn2[3:0]].cyc) begin
-		cpu_request_i2 <= cpu_req_queue[nn2[3:0]];
-		cpu_req_queue[nn2[3:0]].cyc <= 'd0;
+	if (nn2 < 16 && cpu_req_queue[nn2[1:0]].cyc) begin
+		cpu_request_i2 <= cpu_req_queue[nn2[1:0]];
+		cpu_req_queue[nn2[1:0]].cyc <= 'd0;
 	end
 end
 

@@ -232,7 +232,7 @@ btb_entry_t tmp;
 always_ff @(posedge rclk)
 	addrb0 <= pc;
 always_ff @(posedge rclk)
-	addrb1 <= pc + {4'd5,12'h00};
+	addrb1 <= fnPCInc(pc);// + {4'd5,12'h00};
 
 always_comb
 begin
@@ -240,16 +240,16 @@ begin
 		next_pc <= doutb0.tgt;
 		takb <= 1'b1;
 	end
-	else if (pc+{4'd5,12'h00}==doutb1.pc && doutb1.takb) begin
+	else if (fnPCInc(pc)==doutb1.pc && doutb1.takb) begin
 		next_pc <= doutb1.tgt;
 		takb <= 1'b1;
 	end
 	else begin
-		next_pc <= pc + {4'd10,12'h00};
+		next_pc <= fnPCInc(fnPCInc(pc));// + {4'd10,12'h00};
 		takb <= 1'b0;
 	end
 	// For now, to disable BTB
-	next_pc <= pc + {4'd10,12'h00};
+	next_pc <= fnPCInc(fnPCInc(pc));//pc + {4'd10,12'h00};
 	takb <= 1'b0;
 end
 

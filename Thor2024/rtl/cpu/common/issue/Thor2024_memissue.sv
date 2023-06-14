@@ -70,6 +70,8 @@ else begin
 					// ... and there is no address-overlap with any preceding instruction
 					&& (!iq[head0].mem || (iq[head0].agen & iq[head0].out) 
 						|| (iq[head0].a1_v && iq[head1].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head1].store ? !iq[head0].store : 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head1].load || !iq[head0].fc);
 
@@ -82,6 +84,8 @@ else begin
 						|| (iq[head0].a1_v && iq[head2].a1[$bits(address_t)-1:4] != iq[head0].a1[$bits(address_t)-1:4]))
 					&& (!iq[head1].mem || (iq[head1].agen & iq[head1].out) 
 						|| (iq[head1].a1_v && iq[head2].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head2].store ? !iq[head0].store && !iq[head1].store : 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head2].load ||
 					    ( !iq[head0].fc && !iq[head1].fc));
@@ -98,6 +102,12 @@ else begin
 						|| (iq[head1].a1_v && iq[head3].a1[$bits(address_t)-1:4] != iq[head1].a1[$bits(address_t)-1:4]))
 					&& (!iq[head2].mem || (iq[head2].agen & iq[head2].out) 
 						|| (iq[head2].a1_v && iq[head3].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head3].store ? 
+								!iq[head0].store
+							&& !iq[head1].store 
+							&& !iq[head2].store 
+							: 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head3].load ||
 					    ( !iq[head0].fc &&
@@ -119,6 +129,13 @@ else begin
 						|| (iq[head2].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head2].a1[$bits(address_t)-1:4]))
 					&& (!iq[head3].mem || (iq[head3].agen & iq[head3].out) 
 						|| (iq[head3].a1_v && iq[head4].a1[$bits(address_t)-1:4] != iq[head3].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head4].store ? 
+								!iq[head0].store
+							&& !iq[head1].store 
+							&& !iq[head2].store 
+							&& !iq[head3].store 
+							: 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head4].load ||
 					    ( !iq[head0].fc &&
@@ -144,6 +161,14 @@ else begin
 						|| (iq[head3].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head3].a1[$bits(address_t)-1:4]))
 					&& (!iq[head4].mem || (iq[head4].agen & iq[head4].out) 
 						|| (iq[head4].a1_v && iq[head5].a1[$bits(address_t)-1:4] != iq[head4].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head5].store ? 
+								!iq[head0].store
+							&& !iq[head1].store 
+							&& !iq[head2].store 
+							&& !iq[head3].store 
+							&& !iq[head4].store 
+							: 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head5].load ||
 					    ( !iq[head0].fc &&
@@ -173,6 +198,15 @@ else begin
 						|| (iq[head4].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head4].a1[$bits(address_t)-1:4]))
 					&& (!iq[head5].mem || (iq[head5].agen & iq[head5].out) 
 						|| (iq[head5].a1_v && iq[head6].a1[$bits(address_t)-1:4] != iq[head5].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head6].store ? 
+								!iq[head0].store
+							&& !iq[head1].store 
+							&& !iq[head2].store 
+							&& !iq[head3].store 
+							&& !iq[head4].store 
+							&& !iq[head5].store 
+							: 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head5].load ||
 					    ( !iq[head0].fc &&
@@ -207,6 +241,16 @@ else begin
 						|| (iq[head5].a1_v && iq[head7].a1[$bits(address_t)-1:4] != iq[head5].a1[$bits(address_t)-1:4]))
 					&& (!iq[head6].mem || (iq[head6].agen & iq[head6].out) 
 						|| (iq[head6].a1_v && iq[head7].a1[$bits(address_t)-1:4] != iq[head6].a1[$bits(address_t)-1:4]))
+					// ... and if a store, there is no preceding store
+					&& (iq[head7].store ? 
+								!iq[head0].store
+							&& !iq[head1].store 
+							&& !iq[head2].store 
+							&& !iq[head3].store 
+							&& !iq[head4].store 
+							&& !iq[head5].store 
+							&& !iq[head6].store 
+							: 1'b1)
 					// ... and, if it is a SW, there is no chance of it being undone
 					&& (iq[head7].load ||
 					    ( !iq[head0].fc &&

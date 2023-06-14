@@ -53,7 +53,7 @@ parameter CORENO = 6'd1;
 parameter CID = 6'd0;
 parameter FALSE = 1'b0;
 parameter WAYS = 4;
-parameter LINES = 128;
+parameter LINES = 64;
 parameter LOBIT = 7;
 parameter NVICTIM = 0;
 localparam HIBIT=$clog2(LINES)-1+LOBIT;
@@ -122,13 +122,13 @@ reg ihit2e, ihit2o;
 wire ihit2;
 wire valid2e, valid2o;
 
-always_ff @(posedge clk)
+always_comb	//ff @(posedge clk)
 	ip2 <= ip;
 always_comb
 	ihit = ihit1e&ihit1o;
-always_ff @(posedge clk)
+always_comb	//ff @(posedge clk)
 	ihit2e <= ihit1e;
-always_ff @(posedge clk)
+always_comb	//ff @(posedge clk)
 	ihit2o <= ihit1o;
 always_comb
 	// *** The following causes the hit to tend to oscillate between hit
@@ -142,7 +142,7 @@ always_comb
 
 assign ip_o = ip2;
 
-always_ff @(posedge clk)
+always_comb	//ff @(posedge clk)
 	// If cannot cross cache line can match on either odd or even.
 	if (FALSE && ip2[5:0] < 6'd54)
 		ic_valid <= ip2[LOBIT-1] ? valid2o : valid2e;
@@ -177,7 +177,7 @@ sram_512x256_1rw1r uicmo
 );
 end
 else begin
-sram_1r1w
+icache_sram_1r1w
 #(
 	.WID(Thor2024_cache_pkg::ICacheLineWidth),
 	.DEP(LINES*WAYS)
@@ -193,7 +193,7 @@ uicme
 	.o(ic_eline.data)
 );
 
-sram_1r1w
+icache_sram_1r1w
 #(
 	.WID(Thor2024_cache_pkg::ICacheLineWidth),
 	.DEP(LINES*WAYS)
@@ -254,13 +254,13 @@ begin
 			vcno = n;
 	end
 end
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 	vce <= vcne < NVICTIM;
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 	vco <= vcno < NVICTIM;
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 	victim_cache_eline <= victim_cache[vce];
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 	victim_cache_oline <= victim_cache[vco];
 always_comb
 	iel <= ip[LOBIT-1];
