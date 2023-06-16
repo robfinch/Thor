@@ -65,6 +65,7 @@ parameter CHANNELS = 8;
 
 fta_cmd_request128_t [CHANNELS-1:0] wbn_req;
 fta_cmd_response128_t [CHANNELS-1:0] wbn_resp;
+wire [CHANNELS-1:0] ftam_fifo_full;
 
 wire cs_config, cs_io;
 assign cs_config = ftam_req.padr[31:28]==4'hD;
@@ -118,7 +119,7 @@ Thor2024_ptable_walker uwalker1
 
 Thor2024_stlb
 #(
-	.CHANNELS(CHANNELS)	// +1 for TLB itself
+	.CHANNELS(5)	// +1 for TLB itself
 )
 ustlb
 (
@@ -134,7 +135,13 @@ ustlb
 	.fta_resp_i(wb128_resp),
 	.snoop_v(snoop_v),
 	.snoop_adr(snoop_adr),
-	.snoop_cid(snoop_cid)
+	.snoop_cid(snoop_cid),
+	.input_fifo_empty(),
+	.input_fifo_full(ftam_fifo_full),
+	.input_fifo_overflow(),
+	.input_fifo_underflow(),
+	.input_fifo_rd_data_count(),
+	.input_fifo_wr_data_count()
 );
 
 fta_bridge128to64 ubridge1
@@ -279,15 +286,13 @@ ucpu1
 	.rst_i(rst_i),
 	.clk_i(clk_i),
 	.clk2x_i(clk2x_i),
-	.wr_o(),
-	.adr_o(),
-	.dat_i('d0),
-	.dat_o(),
 	.irq_i(pic_irq[2:0]),
 	.ftaim_req(cpu1_ireq),
 	.ftaim_resp(cpu1_iresp),
+	.ftaim_full(ftam_fifo_full[0]),
 	.ftadm_req(cpu1_dreq),
 	.ftadm_resp(cpu1_dresp),
+	.ftadm_full(ftam_fifo_full[1]),
 	.snoop_v(snoop_v),
 	.snoop_adr(snoop_adr),
 	.snoop_cid(snoop_cid)

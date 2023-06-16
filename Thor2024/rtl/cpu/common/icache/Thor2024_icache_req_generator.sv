@@ -41,7 +41,7 @@ import Thor2024pkg::*;
 import Thor2024_cache_pkg::*;
 
 module Thor2024_icache_req_generator(rst, clk, hit, miss_adr, miss_asid,
-	wbm_req, wbm_resp, vtags, snoop_v, snoop_adr, snoop_cid);
+	wbm_req, full, vtags, snoop_v, snoop_adr, snoop_cid);
 parameter CORENO = 6'd1;
 parameter CID = 6'd0;
 parameter WAIT = 6'd6;
@@ -51,7 +51,7 @@ input hit;
 input fta_address_t miss_adr;
 input Thor2024pkg::asid_t miss_asid;
 output fta_cmd_request128_t wbm_req;
-input fta_cmd_response128_t wbm_resp;
+input full;
 output Thor2024pkg::address_t [15:0] vtags;
 input snoop_v;
 input fta_address_t snoop_adr;
@@ -60,7 +60,7 @@ input [5:0] snoop_cid;
 
 typedef enum logic [3:0] {
 	RESET = 0,
-	WAIT4MISS,STATE2,STATE3,STATE4,STATE5,DELAY1,RAND_DELAY
+	WAIT4MISS,STATE2,STATE3,STATE3a,STATE4,STATE4a,STATE5,STATE5a,DELAY1,RAND_DELAY
 } state_t;
 state_t req_state;
 
@@ -129,22 +129,30 @@ else begin
 			vtags[tid_cnt] <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			vadr <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			madr <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
-			if (!wbm_resp.rty) begin
+			if (!full) begin
 				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
 				req_state <= STATE3;
 			end
 		end
+		else
+			tBusClear();
 	STATE3:
+		begin
+			wbm_req.cyc <= 1'b0;
+			req_state <= STATE3a;
+		end
+	STATE3a:
 		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
 			wbm_req.tid.tranid <= tid_cnt;
 			wbm_req.cti <= fta_bus_pkg::FIXED;
+			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
 			vtags[tid_cnt] <= madr + 5'd16;
-			if (!wbm_resp.rty) begin
+			if (!full) begin
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;
 				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
@@ -153,15 +161,21 @@ else begin
 		end
 	STATE4:
 		begin
+			wbm_req.cyc <= 1'b0;
+			req_state <= STATE4a;
+		end
+	STATE4a:
+		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
 			wbm_req.tid.tranid <= tid_cnt;
 			wbm_req.cti <= fta_bus_pkg::FIXED;
+			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
 			vtags[tid_cnt] <= madr + 5'd16;
-			if (!wbm_resp.rty) begin
+			if (!full) begin
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;
 				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
@@ -170,15 +184,21 @@ else begin
 		end
 	STATE5:
 		begin
+			wbm_req.cyc <= 1'b0;
+			req_state <= STATE5a;
+		end
+	STATE5a:
+		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
 			wbm_req.tid.tranid <= tid_cnt;
 			wbm_req.cti <= fta_bus_pkg::EOB;
+			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
 			vtags[tid_cnt] <= madr + 5'd16;
-			if (!wbm_resp.rty) begin
+			if (!full) begin
 				wait_cnt <= 'd0;
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;

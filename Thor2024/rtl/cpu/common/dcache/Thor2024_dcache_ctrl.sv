@@ -40,20 +40,21 @@ import fta_bus_pkg::*;
 import Thor2024pkg::*;
 import Thor2024_cache_pkg::*;
 
-module Thor2024_dcache_ctrl(rst_i, clk_i, dce, ftam_req, ftam_resp, acr, hit, modified,
+module Thor2024_dcache_ctrl(rst_i, clk_i, dce, ftam_req, ftam_resp, ftam_full, acr, hit, modified,
 	cache_load, cpu_request_i, cpu_request_i2, data_to_cache_o, response_from_cache_i, wr, uway, way,
 	dump, dump_i, dump_ack, snoop_adr, snoop_v, snoop_cid);
 parameter CID = 2;
 parameter CORENO = 6'd1;
 parameter WAYS = 4;
 parameter NSEL = 32;
-parameter WAIT = 6'd6;
+parameter WAIT = 6'd0;
 localparam LOG_WAYS = $clog2(WAYS)-1;
 input rst_i;
 input clk_i;
 input dce;
 output fta_cmd_request128_t ftam_req;
 input fta_cmd_response128_t ftam_resp;
+input ftam_full;
 input [3:0] acr;
 input hit;
 input modified;
@@ -73,7 +74,7 @@ input snoop_v;
 input [5:0] snoop_cid;
 
 genvar g;
-integer nn,nn1,nn2,nn3,nn4;
+integer nn,nn1,nn2,nn3,nn4,nn5;
 
 typedef enum logic [2:0] {
 	RESET = 0,
@@ -91,7 +92,7 @@ reg [1:0] dump_cnt;
 reg [511:0] upd_dat;
 reg we_r;
 reg [15:0] tran_active, tran_done;
-reg [3:0] ndx;
+reg [7:0] ndx;
 reg [3:0] v [0:15];
 reg [15:0] cache_load_r;
 fta_cmd_request512_t cpu_req_queue [0:3];
@@ -99,6 +100,7 @@ fta_cmd_request128_t tran_req [0:15];
 fta_cmd_response512_t tran_load_data [0:3];
 fta_tranid_t [15:0] tranids;
 reg [15:0] tran_out;
+reg [4:0] last_out;
 reg [15:0] is_dump;
 reg req_load;
 reg [1:0] load_cnt;
@@ -195,6 +197,18 @@ begin
 	end
 end
 
+// Get index of completed transaction.
+always_comb
+begin
+	ndx = 8'd16;
+	for (nn5 = 0; nn5 < 4; nn5 = nn5 + 1)
+		if (tran_done[{nn5[1:0],2'b00}]
+			&& tran_done[{nn5[1:0],2'b01}]
+			&& tran_done[{nn5[1:0],2'b10}]
+			&& tran_done[{nn5[1:0],2'b11}])
+			ndx = nn;
+end
+
 always_ff @(posedge clk_i, posedge rst_i)
 if (rst_i) begin
 	req_state <= RESET;
@@ -225,10 +239,10 @@ if (rst_i) begin
 	load_cnt <= 'd0;
 	wait_cnt <= 'd0;
 	wr_cnt <= 'd0;
-	ndx <= 'd0;
 	is_dump <= 'd0;
 	cpu_request_queued <= 'd1;
 	cpu_request_i2 <= 'd0;
+	last_out <= 'd16;
 end
 else begin
 	dump_ack <= 1'd0;
@@ -237,6 +251,9 @@ else begin
 	cache_load_data.ack <= 1'b0;
 	cache_load_data.pri <= 4'd7;
 	wr <= 1'b0;
+	// Grab the bus for only 1 clock.
+	if (ftam_req.cyc)
+		tBusClear();
 	// Ack pulses for only 1 clock.
 	for (nn = 0; nn < 4; nn = nn + 1)
 		tran_load_data[nn].ack <= 1'b0;
@@ -329,12 +346,15 @@ else begin
 					tAccess();
 			end
 			// Look for outstanding transactions to execute.
-			else if (!bus_busy) begin
+			else begin
 				if (nn4 < 'd16) begin
-					tran_out[nn4] <= 1'b1;
-					ftam_req <= tran_req[nn4];
-					wait_cnt <= 'd0;
-					req_state <= RAND_DELAY;
+					if (!ftam_full) begin
+						last_out <= nn4;
+						tran_out[nn4] <= 1'b1;
+						ftam_req <= tran_req[nn4];
+						wait_cnt <= 'd0;
+						req_state <= RAND_DELAY;
+					end
 				end
 			end
 			if (cpu_request_i2.tid != lasttid) begin // && cpu_request_queued) begin
@@ -363,13 +383,92 @@ else begin
 	RAND_DELAY:
 		begin
 			tBusClear();
-			if (wait_cnt==WAIT && lfsr_o[2:1]==2'b11)
+			if (lfsr_o[1:0]==2'b11)
 				req_state <= STATE1;
-			else if (wait_cnt != WAIT)
-				wait_cnt <= wait_cnt + 2'd1;
 		end
 	default:	req_state <= RESET;
 	endcase
+
+	// Process responses.
+	// Could have a string of ack's coming back due to a string of requests.
+	if (ftam_resp.ack) begin
+		// Got an ack back so the tran no longer needs to be performed.
+		tran_active[ftam_resp.tid.tranid] <= 1'b0;
+		tran_out[ftam_resp.tid.tranid] <= 1'b0;
+		tran_done[ftam_resp.tid.tranid] <= 1'b1;
+		//tran_req[ftam_resp.tid & 4'hF].cyc <= 1'b0;
+		tran_load_data[ftam_resp.tid.tranid>>2].cid <= ftam_resp.cid;
+		tran_load_data[ftam_resp.tid.tranid>>2].tid <= ftam_resp.tid;
+		tran_load_data[ftam_resp.tid.tranid>>2].pri <= ftam_resp.pri;
+		tran_load_data[ftam_resp.tid.tranid>>2].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
+		case(ftam_resp.adr[5:4])
+		2'd0: begin tran_load_data[ftam_resp.tid.tranid>>2].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid.tranid][0] <= 1'b1; end
+		2'd1:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid.tranid][1] <= 1'b1; end
+		2'd2:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid.tranid][2] <= 1'b1; end
+		2'd3:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid.tranid][3] <= 1'b1; end
+		endcase
+		we_r <= ftam_req.we;
+		tran_load_data[ftam_resp.tid.tranid>>2].rty <= 1'b0;
+		tran_load_data[ftam_resp.tid.tranid>>2].err <= 1'b0;
+		v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd1;
+	end
+	// Retry or error (only if transaction active)
+	// Abort the memory request. Go back and try again.
+	else if ((ftam_resp.rty|ftam_resp.err) && ftam_resp.tid.tranid[3:0]==last_out[3:0]) begin
+		tran_load_data[last_out[3:2]].rty <= ftam_resp.rty;
+		tran_load_data[last_out[3:2]].err <= ftam_resp.err;
+		tran_load_data[last_out[3:2]].ack <= 1'b0;
+		tran_out[last_out[3:0]] <= 1'b0;
+		v[last_out[3:0]][ftam_resp.adr[5:4]] <= 'd0;
+	end
+	// Acknowledge completed transactions.
+	for (nn = 0; nn < 4; nn = nn + 1)
+		if (tran_done[{nn[1:0],2'b00}]
+			&& tran_done[{nn[1:0],2'b01}]
+			&& tran_done[{nn[1:0],2'b10}]
+			&& tran_done[{nn[1:0],2'b11}]) begin
+			tran_load_data[nn[1:0]].ack <= 1'b1;
+			tran_done[{nn[1:0],2'b00}] <= 1'b0;
+			tran_done[{nn[1:0],2'b01}] <= 1'b0;
+			tran_done[{nn[1:0],2'b10}] <= 1'b0;
+			tran_done[{nn[1:0],2'b11}] <= 1'b0;
+			dump_ack <= is_dump[nn];
+			is_dump[nn] <= 'd0;
+			iway <= lfsr_o[LOG_WAYS:0];
+			cache_load_data <= tran_load_data[nn];
+			cache_load_data.tid <= tranids[nn];
+//			resp_state <= STATE3;
+			// Write to cache only if response from TLB indicates a cacheable
+			// address.
+		end
+
+	// We want to update the cache, but if its allocate on write the
+	// cache needs to be loaded with data from RAM first before its
+	// updated. Request a cache load.
+	if (ndx < 8'd16) begin
+		if (!hit & (~non_cacheable & dce & cpu_request_i.we & allocate) & !cache_load_r[ndx[1:0]]) begin
+			cache_load_r[ndx[1:0]] <= 1'b1;
+			req_load <= 1'b1;
+			load_cnt <= 'd0;
+		end
+		// If we have a hit on the cache line, write the data to the cache if
+		// it is a writeable cacheable transaction.
+		else if (hit) begin
+			wr <= (~non_cacheable & dce & cpu_request_i.we & allocate);
+			cache_load_data.ack <= !cache_dump;
+			cache_dump <= 'd0;
+			cache_load <= 'd0;
+			cache_load_r[ndx[1:0]] <= 'd0;
+	//		resp_state <= STATE1;
+		end
+		// No hit on the cache line and not allocating, we're done.
+		else begin
+			cache_load_data.ack <= !cache_dump;
+			cache_load <= 'd0;
+			cache_load_r[ndx[1:0]] <= 'd0;
+	//		resp_state <= STATE1;
+		end
+	end
 
 	// Process responses.
 	case(resp_state)
@@ -381,57 +480,6 @@ else begin
 		end
 	STATE1:
 		begin
-			if (ftam_resp.ack) begin
-				// Got an ack back so the tran no longer needs to be performed.
-				tran_active[ftam_resp.tid.tranid] <= 1'b0;
-				tran_out[ftam_resp.tid.tranid] <= 1'b0;
-				tran_done[ftam_resp.tid.tranid] <= 1'b1;
-				//tran_req[ftam_resp.tid & 4'hF].cyc <= 1'b0;
-				tran_load_data[ftam_resp.tid.tranid>>2].cid <= ftam_resp.cid;
-				tran_load_data[ftam_resp.tid.tranid>>2].tid <= ftam_resp.tid;
-				tran_load_data[ftam_resp.tid.tranid>>2].pri <= ftam_resp.pri;
-				tran_load_data[ftam_resp.tid.tranid>>2].adr <= {ftam_resp.adr[$bits(fta_address_t)-1:6],6'd0};
-				case(ftam_resp.adr[5:4])
-				2'd0: begin tran_load_data[ftam_resp.tid.tranid>>2].dat[127:  0] <= ftam_resp.dat; v[ftam_resp.tid.tranid][0] <= 1'b1; end
-				2'd1:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[255:128] <= ftam_resp.dat; v[ftam_resp.tid.tranid][1] <= 1'b1; end
-				2'd2:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[383:256] <= ftam_resp.dat; v[ftam_resp.tid.tranid][2] <= 1'b1; end
-				2'd3:	begin tran_load_data[ftam_resp.tid.tranid>>2].dat[511:384] <= ftam_resp.dat; v[ftam_resp.tid.tranid][3] <= 1'b1; end
-				endcase
-				we_r <= ftam_req.we;
-				tran_load_data[ftam_resp.tid.tranid>>2].rty <= 1'b0;
-				tran_load_data[ftam_resp.tid.tranid>>2].err <= 1'b0;
-				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd1;
-			end
-			// Retry or error (only if transaction active)
-			// Abort the memory request. Go back and try again.
-			else if ((ftam_resp.rty|ftam_resp.err) & tran_active[ftam_resp.tid]) begin
-				tran_load_data[ftam_resp.tid.tranid>>2].rty <= ftam_resp.rty;
-				tran_load_data[ftam_resp.tid.tranid>>2].err <= ftam_resp.err;
-				tran_load_data[ftam_resp.tid.tranid>>2].ack <= 1'b0;
-				tran_out[ftam_resp.tid.tranid] <= 1'b0;
-				v[ftam_resp.tid.tranid][ftam_resp.adr[5:4]] <= 'd0;
-			end
-			// Acknowledge completed transactions.
-			for (nn = 0; nn < 4; nn = nn + 1)
-				if (tran_done[{nn[1:0],2'b00}]
-					&& tran_done[{nn[1:0],2'b01}]
-					&& tran_done[{nn[1:0],2'b10}]
-					&& tran_done[{nn[1:0],2'b11}]) begin
-					tran_load_data[nn[1:0]].ack <= 1'b1;
-					tran_done[{nn[1:0],2'b00}] <= 1'b0;
-					tran_done[{nn[1:0],2'b01}] <= 1'b0;
-					tran_done[{nn[1:0],2'b10}] <= 1'b0;
-					tran_done[{nn[1:0],2'b11}] <= 1'b0;
-					dump_ack <= is_dump[nn];
-					is_dump[nn] <= 'd0;
-					iway <= lfsr_o[LOG_WAYS:0];
-					cache_load_data <= tran_load_data[nn];
-					cache_load_data.tid <= tranids[nn];
-					ndx <= nn;
-					resp_state <= STATE3;
-					// Write to cache only if response from TLB indicates a cacheable
-					// address.
-				end
 		end
 	STATE3:
 		resp_state <= STATE4;
@@ -440,31 +488,6 @@ else begin
 	STATE4:
 		begin
 			if (!ftam_resp.ack) begin
-				// We want to update the cache, but if its allocate on write the
-				// cache needs to be loaded with data from RAM first before its
-				// updated. Request a cache load.
-				if (!hit & (~non_cacheable & dce & cpu_request_i.we & allocate) & !cache_load_r[ndx]) begin
-					cache_load_r[ndx] <= 1'b1;
-					req_load <= 1'b1;
-					load_cnt <= 'd0;
-				end
-				// If we have a hit on the cache line, write the data to the cache if
-				// it is a writeable cacheable transaction.
-				else if (hit) begin
-					wr <= (~non_cacheable & dce & cpu_request_i.we & allocate);
-					cache_load_data.ack <= !cache_dump;
-					cache_dump <= 'd0;
-					cache_load <= 'd0;
-					cache_load_r[ndx] <= 'd0;
-					resp_state <= STATE1;
-				end
-				// No hit on the cache line and not allocating, we're done.
-				else begin
-					cache_load_data.ack <= !cache_dump;
-					cache_load <= 'd0;
-					cache_load_r[ndx] <= 'd0;
-					resp_state <= STATE1;
-				end
 			end
 			else
 				resp_state <= STATE1;
@@ -562,85 +585,213 @@ begin
 		cpu_request_queued <= 1'b1;
 		wr_cnt <= 'd0;
 	end
-	else
-		wr_cnt <= wr_cnt + 2'd1;
 	// Access only the strip of memory requested. It could be an I/O device.
 	if (wr_cnt==2'd0)
 		v[tid_cnt & 4'hF] <= 4'b1111;
 	ta = {cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}};
 	case(wr_cnt)
 	2'd0:	
-		if (|cpu_request_i2.sel[15: 0]) begin
-			v[tid_cnt & 4'hF][0] <= 1'b0;
-			tAddr(
-				cpu_request_i2.om,
-				cpu_request_i2.we,
-				!non_cacheable,
-				cpu_request_i2.asid,
-				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.sel[15:0],
-				cpu_request_i2.dat[127:0],
-				cpu_request_i2.tid,
-				wr_cnt
-			);
-			req_state <= RAND_DELAY;
+		begin
+			wr_cnt <= 2'd1;
+			if (|cpu_request_i2.sel[15: 0]) begin
+				v[tid_cnt & 4'hF][0] <= 1'b0;
+				tAddr(
+					cpu_request_i2.om,
+					cpu_request_i2.we,
+					!non_cacheable,
+					cpu_request_i2.asid,
+					{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd0,4'h0},
+					cpu_request_i2.sel[15:0],
+					cpu_request_i2.dat[127:0],
+					cpu_request_i2.tid,
+					2'd0
+				);
+				req_state <= RAND_DELAY;
+			end
+			else begin
+				tran_done[{cpu_request_i2.tid[1:0],2'b00}] <= 1'b1;
+				wr_cnt <= 2'd2;
+				if (|cpu_request_i2.sel[31:16]) begin
+					v[tid_cnt & 4'hF][1] <= 1'b0;
+					tAddr(
+						cpu_request_i2.om,
+						cpu_request_i2.we,
+						!non_cacheable,
+						cpu_request_i2.asid,
+						{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd1,4'h0},
+						cpu_request_i2.sel[31:16],
+						cpu_request_i2.dat[255:128],
+						cpu_request_i2.tid,
+						2'd1
+					);
+					req_state <= RAND_DELAY;
+				end
+				else begin
+					tran_done[{cpu_request_i2.tid[1:0],2'b01}] <= 1'b1;
+					wr_cnt <= 2'd3;
+					if (|cpu_request_i2.sel[47:32]) begin
+						v[tid_cnt & 4'hF][2] <= 1'b0;
+						tAddr(
+							cpu_request_i2.om,
+							cpu_request_i2.we,
+							!non_cacheable,
+							cpu_request_i2.asid,
+							{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd2,4'h0},
+							cpu_request_i2.sel[47:32],
+							cpu_request_i2.dat[383:256],
+							cpu_request_i2.tid,
+							2'd2
+						);
+						req_state <= RAND_DELAY;
+					end
+					else begin
+						tran_done[{cpu_request_i2.tid[1:0],2'b10}] <= 1'b1;
+						wr_cnt <= 2'd0;
+						cpu_request_queued <= 1'b1;
+						if (|cpu_request_i2.sel[63:48]) begin
+							v[tid_cnt & 4'hF][3] <= 1'b0;
+							tAddr(
+								cpu_request_i2.om,
+								cpu_request_i2.we,
+								!non_cacheable,
+								cpu_request_i2.asid,
+								{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd3,4'h0},
+								cpu_request_i2.sel[63:48],
+								cpu_request_i2.dat[511:384],
+								cpu_request_i2.tid,
+								2'd3
+							);
+							req_state <= RAND_DELAY;
+						end
+						else
+							tran_done[{cpu_request_i2.tid[1:0],2'b11}] <= 1'b1;
+					end
+				end
+			end
 		end
-		else
-			tran_done[{cpu_request_i2.tid[1:0],wr_cnt}] <= 1'b1;
 	2'd1:	
-		if (|cpu_request_i2.sel[31:16]) begin
-			v[tid_cnt & 4'hF][1] <= 1'b0;
-			tAddr(
-				cpu_request_i2.om,
-				cpu_request_i2.we,
-				!non_cacheable,
-				cpu_request_i2.asid,
-				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.sel[31:16],
-				cpu_request_i2.dat[255:128],
-				cpu_request_i2.tid,
-				wr_cnt
-			);
-			req_state <= RAND_DELAY;
+		begin
+			wr_cnt <= 2'd2;
+			if (|cpu_request_i2.sel[31:16]) begin
+				v[tid_cnt & 4'hF][1] <= 1'b0;
+				tAddr(
+					cpu_request_i2.om,
+					cpu_request_i2.we,
+					!non_cacheable,
+					cpu_request_i2.asid,
+					{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd1,4'h0},
+					cpu_request_i2.sel[31:16],
+					cpu_request_i2.dat[255:128],
+					cpu_request_i2.tid,
+					2'd1
+				);
+				req_state <= RAND_DELAY;
+			end
+			else begin
+				tran_done[{cpu_request_i2.tid[1:0],2'b01}] <= 1'b1;
+				wr_cnt <= 2'd3;
+				if (|cpu_request_i2.sel[47:32]) begin
+					v[tid_cnt & 4'hF][2] <= 1'b0;
+					tAddr(
+						cpu_request_i2.om,
+						cpu_request_i2.we,
+						!non_cacheable,
+						cpu_request_i2.asid,
+						{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd2,4'h0},
+						cpu_request_i2.sel[47:32],
+						cpu_request_i2.dat[383:256],
+						cpu_request_i2.tid,
+						2'd2
+					);
+					req_state <= RAND_DELAY;
+				end
+				else begin
+					tran_done[{cpu_request_i2.tid[1:0],2'b10}] <= 1'b1;
+					wr_cnt <= 2'd0;
+					cpu_request_queued <= 1'b1;
+					if (|cpu_request_i2.sel[63:48]) begin
+						v[tid_cnt & 4'hF][3] <= 1'b0;
+						tAddr(
+							cpu_request_i2.om,
+							cpu_request_i2.we,
+							!non_cacheable,
+							cpu_request_i2.asid,
+							{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd3,4'h0},
+							cpu_request_i2.sel[63:48],
+							cpu_request_i2.dat[511:384],
+							cpu_request_i2.tid,
+							2'd3
+						);
+						req_state <= RAND_DELAY;
+					end
+					else
+						tran_done[{cpu_request_i2.tid[1:0],2'b11}] <= 1'b1;
+				end
+			end
 		end
-		else
-			tran_done[{cpu_request_i2.tid[1:0],wr_cnt}] <= 1'b1;
 	2'd2:
-		if (|cpu_request_i2.sel[47:32]) begin
-			v[tid_cnt & 4'hF][2] <= 1'b0;
-			tAddr(
-				cpu_request_i2.om,
-				cpu_request_i2.we,
-				!non_cacheable,
-				cpu_request_i2.asid,
-				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.sel[47:32],
-				cpu_request_i2.dat[383:256],
-				cpu_request_i2.tid,
-				wr_cnt
-			);
-			req_state <= RAND_DELAY;
+		begin
+			wr_cnt <= 2'd3;
+			if (|cpu_request_i2.sel[47:32]) begin
+				v[tid_cnt & 4'hF][2] <= 1'b0;
+				tAddr(
+					cpu_request_i2.om,
+					cpu_request_i2.we,
+					!non_cacheable,
+					cpu_request_i2.asid,
+					{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd2,4'h0},
+					cpu_request_i2.sel[47:32],
+					cpu_request_i2.dat[383:256],
+					cpu_request_i2.tid,
+					2'd2
+				);
+				req_state <= RAND_DELAY;
+			end
+			else begin
+				tran_done[{cpu_request_i2.tid[1:0],2'b10}] <= 1'b1;
+				wr_cnt <= 2'd0;
+				cpu_request_queued <= 1'b1;
+				if (|cpu_request_i2.sel[63:48]) begin
+					v[tid_cnt & 4'hF][3] <= 1'b0;
+					tAddr(
+						cpu_request_i2.om,
+						cpu_request_i2.we,
+						!non_cacheable,
+						cpu_request_i2.asid,
+						{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd3,4'h0},
+						cpu_request_i2.sel[63:48],
+						cpu_request_i2.dat[511:384],
+						cpu_request_i2.tid,
+						2'd3
+					);
+					req_state <= RAND_DELAY;
+				end
+				else
+					tran_done[{cpu_request_i2.tid[1:0],2'b11}] <= 1'b1;
+			end
 		end
-		else
-			tran_done[{cpu_request_i2.tid[1:0],wr_cnt}] <= 1'b1;
 	2'd3: 
-		if (|cpu_request_i2.sel[63:48]) begin
-			v[tid_cnt & 4'hF][3] <= 1'b0;
-			tAddr(
-				cpu_request_i2.om,
-				cpu_request_i2.we,
-				!non_cacheable,
-				cpu_request_i2.asid,
-				{cpu_request_i2.vadr[$bits(fta_address_t)-1:Thor2024_cache_pkg::DCacheTagLoBit],wr_cnt,{Thor2024_cache_pkg::DCacheTagLoBit-2{1'h0}}},
-				cpu_request_i2.sel[63:48],
-				cpu_request_i2.dat[511:384],
-				cpu_request_i2.tid,
-				wr_cnt
-			);
-			req_state <= RAND_DELAY;
+		begin
+			wr_cnt <= 2'd0;
+			cpu_request_queued <= 1'b1;
+			if (|cpu_request_i2.sel[63:48]) begin
+				v[tid_cnt & 4'hF][3] <= 1'b0;
+				tAddr(
+					cpu_request_i2.om,
+					cpu_request_i2.we,
+					!non_cacheable,
+					cpu_request_i2.asid,
+					{cpu_request_i2.vadr[$bits(fta_address_t)-1:6],2'd3,4'h0},
+					cpu_request_i2.sel[63:48],
+					cpu_request_i2.dat[511:384],
+					cpu_request_i2.tid,
+					2'd3
+				);
+				req_state <= RAND_DELAY;
+			end
+			else
+				tran_done[{cpu_request_i2.tid[1:0],2'b11}] <= 1'b1;
 		end
-		else
-			tran_done[{cpu_request_i2.tid[1:0],wr_cnt}] <= 1'b1;
 	endcase
 end
 endtask

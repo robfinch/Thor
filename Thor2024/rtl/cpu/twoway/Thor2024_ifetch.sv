@@ -104,28 +104,28 @@ reg buffered, consumed;
 pc_address_t pci;
 reg takb1;
 reg did_branchmiss;
-reg [11:0] micro_ip;
 instruction_t micro_ir;
 instruction_t micro_instr0, micro_instr1, micro_instr2;
 reg fetch_valid;
+wire [11:0] next_micro_ip;
 
 Thor2024_micro_code umc0
 (
-	.micro_ip(micro_ip),
+	.micro_ip(pc.micro_ip),
 	.micro_ir(micro_ir),
 	.next_ip(),
 	.instr(micro_instr0)
 );
 Thor2024_micro_code umc1
 (
-	.micro_ip(micro_ip+12'd1),
+	.micro_ip(pc.micro_ip+12'd1),
 	.micro_ir(micro_ir),
 	.next_ip(next_micro_ip),
 	.instr(micro_instr1)
 );
 Thor2024_micro_code umc2
 (
-	.micro_ip(micro_ip+12'd2),
+	.micro_ip(pc.micro_ip+12'd2),
 	.micro_ir(micro_ir),
 	.next_ip(),
 	.instr(micro_instr2)
@@ -160,7 +160,7 @@ begin
 				endcase
 			default:	fnMip = 12'h000;			
 			endcase
-		FN_FDIV:	fnMip = 12'h028;
+		FN_FDIV:	fnMip = 12'h027;
 		default:	fnMip = 12'h000;
 		endcase
 	default:	fnMip = 12'h000;
@@ -178,9 +178,8 @@ always_comb
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-	pc <= 44'hFFFD0000000;
-	ppc <= 44'hFFFD0000000;
-	micro_ip <= 12'h000;
+	pc <= RSTPC;
+	ppc <= RSTPC;
 	micro_ir <= {33'd0,OP_NOP};
 	ptakb <= 'd0;
 	stall <= 1'b0;
@@ -193,13 +192,13 @@ if (rst) begin
 	fetchbufC_v <= INV;
 	fetchbufD_v <= INV;
 	fetchbufA_pc <= 'd0;
-	fetchbufA_instr <= 'd0;
+	fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
 	fetchbufB_pc <= 'd0;
-	fetchbufB_instr <= 'd0;
+	fetchbufB_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
 	fetchbufC_pc <= 'd0;
-	fetchbufC_instr <= 'd0;
+	fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
 	fetchbufD_pc <= 'd0;
-	fetchbufD_instr <= 'd0;
+	fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
 	fetchAB <= 1'b0;
 	fetchCD <= 1'b0;
 	buffered <= 1'b0;
@@ -724,16 +723,20 @@ always_comb
 	else if (SUPPORT_RSB && fetchbuf0_v && fetchbuf1_v && fnIsRet(fetchbuf1_instr[0]))
 		backpc = ret_pc;
 	else if (fetchbuf0_v && isBB0) begin
-		if (fnIsMacroInstr(fetchbuf0_instr[0]))
-			backpc = {fetchbuf0_pc.pc,mip0};
+		if (fnIsMacroInstr(fetchbuf0_instr[0])) begin
+			backpc.pc = fetchbuf0_pc.pc;
+			backpc.micro_ip = mip0;
+		end
 		else begin
 			backpc.pc = fetchbuf0_pc.pc + fnBranchDisp(fetchbuf0_instr[0]);
 			backpc.micro_ip = 'd0;
 		end
 	end
 	else if (fetchbuf1_v && isBB1) begin
-		if (fnIsMacroInstr(fetchbuf1_instr[0]))
-			backpc = {fetchbuf1_pc.pc,mip1};
+		if (fnIsMacroInstr(fetchbuf1_instr[0])) begin
+			backpc.pc = fetchbuf1_pc.pc;
+			backpc.micro_ip = mip1;
+		end
 		else begin
 			backpc.pc = fetchbuf1_pc.pc + fnBranchDisp(fetchbuf1_instr[0]);
 			backpc.micro_ip = 'd0;
@@ -798,27 +801,31 @@ task tFetchAB;
 input flag;
 begin
 	if (pc.micro_ip != 12'h000) begin
-		fetchAB <= 1'b0;
-	  fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
-	  fetchbufA_v <= VAL;
-	  fetchbufA_pc <= pci;
+		fetchAB <= 1'b1;
+  	fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
 	  fetchbufB_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufA_v <= VAL;
+	  fetchbufA_pc <= pc;
 	  fetchbufB_v <= VAL;
-	  fetchbufB_pc <= {pci.pc,pci.micro_ip+1};
+	  fetchbufB_pc.pc <= pc.pc;
+	  fetchbufB_pc.micro_ip <= pc.micro_ip+1;
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
-	  if (hit & ~irq) begin
+	  if (~irq) begin
 	  	ppc <= pc;
-		  pc <= {pc.pc,next_micro_ip};
+	  	if (next_micro_ip=='d0)
+	  		pc <= {pc.pc + 4'd5,12'h000};
+	  	else
+		  	pc <= {pc.pc,next_micro_ip};
 		  takb1 <= takb;
 		end
 	end
 	else if (hit) begin
 		fetchAB <= 1'b0;
 	  fetchbufA_instr <= inst0;
+	  fetchbufB_instr <= inst1;
 	  fetchbufA_v <= VAL;
 	  fetchbufA_pc <= pc_i;
-	  fetchbufB_instr <= inst1;
 	  fetchbufB_v <= VAL;
 	  fetchbufB_pc <= fnPCInc(pc_i);// + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
@@ -829,36 +836,45 @@ begin
 		  takb1 <= takb;
 		end
 	end
-	else
+	else begin
+	  fetchbufA_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
+	  fetchbufB_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
+	  fetchbufA_v <= INV;
+	  fetchbufB_v <= INV;
 		fetchAB <= 1'b1;
+	end
 end
 endtask
 
 task tFetchCD;
 input flag;
 begin
-	if (pc.micro_ip != 12'h0000) begin
-		fetchCD <= 1'b0;
-	  fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+	if (pc.micro_ip != 12'h000) begin
+		fetchCD <= 1'b1;
+  	fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr1,micro_instr0};
+  	fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
 	  fetchbufC_v <= VAL;
-	  fetchbufC_pc <= pci;
-	  fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,micro_instr2,micro_instr1};
+	  fetchbufC_pc <= pc;
 	  fetchbufD_v <= VAL;
-	  fetchbufD_pc <= {pci.pc,pci.micro_ip+1};
+	  fetchbufD_pc.pc <= pc.pc;
+	  fetchbufD_pc.micro_ip <= pc.micro_ip+1;
 	  buffered <= 1'b0;
 	  ptakb <= takb1;
-	  if (hit & ~irq) begin
+	  if (~irq) begin
 	  	ppc <= pc;
-		  pc <= {pc.pc,next_micro_ip};
+	  	if (next_micro_ip=='d0)
+	  		pc <= {pc.pc + 4'd5,12'h000};
+	  	else
+		  	pc <= {pc.pc,next_micro_ip};
 		  takb1 <= takb;
 		end
 	end
 	else if (hit) begin
 		fetchCD <= 1'b0;
 	  fetchbufC_instr <= inst0;
+	  fetchbufD_instr <= inst1;
 	  fetchbufC_v <= VAL;
 	  fetchbufC_pc <= pc_i;
-	  fetchbufD_instr <= inst1;
 	  fetchbufD_v <= VAL;
 	  fetchbufD_pc <= fnPCInc(pc_i);// + {INSN_LEN,12'h000};
 	  buffered <= 1'b0;
@@ -869,8 +885,13 @@ begin
 		  takb1 <= takb;
 	  end
 	end
-	else
+	else begin
+	  fetchbufC_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
+	  fetchbufD_instr <= {NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN,NOP_INSN};
+	  fetchbufC_v <= INV;
+	  fetchbufD_v <= INV;
 		fetchCD <= 1'b1;
+	end
 end
 endtask
 

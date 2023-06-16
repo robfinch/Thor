@@ -40,7 +40,8 @@ import fta_bus_pkg::*;
 import Thor2024pkg::*;
 import Thor2024_cache_pkg::*;
 
-module Thor2024_icache_ctrl(rst, clk, wbm_req, wbm_resp, hit, miss_adr, miss_asid,
+module Thor2024_icache_ctrl(rst, clk, wbm_req, wbm_resp, ftam_full,
+	hit, miss_adr, miss_asid,
 	wr_ic, way, line_o, snoop_adr, snoop_v, snoop_cid);
 parameter WAYS = 4;
 parameter CORENO = 6'd1;
@@ -50,6 +51,7 @@ input rst;
 input clk;
 output fta_cmd_request128_t wbm_req;
 input fta_cmd_response128_t wbm_resp;
+input ftam_full;
 input hit;
 input fta_address_t miss_adr;
 input Thor2024pkg::asid_t miss_asid;
@@ -77,7 +79,7 @@ icrq1
 	.miss_adr(miss_adr),
 	.miss_asid(miss_asid),
 	.wbm_req(wbm_req),
-	.wbm_resp(wbm_resp),
+	.full(ftam_full),
 	.vtags(vtags),
 	.snoop_v(snoop_v),
 	.snoop_adr(snoop_adr),

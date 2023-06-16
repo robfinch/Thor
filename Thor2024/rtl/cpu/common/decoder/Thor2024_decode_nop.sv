@@ -44,7 +44,7 @@ function fnIsNop;
 input instruction_t ir;
 begin
 	case(ir.r2.opcode)
-	OP_PFX,OP_NOP:
+	OP_PFX,OP_NOP,OP_ENTER:
 		fnIsNop = 1'b1;
 	default:	fnIsNop = 1'b0;
 	endcase
