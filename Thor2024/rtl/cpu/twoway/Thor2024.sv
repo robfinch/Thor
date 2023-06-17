@@ -39,7 +39,7 @@ import fta_bus_pkg::*;
 import Thor2024_cache_pkg::*;
 import Thor2024pkg::*;
 
-`define SIM 1'b1
+//`define SIM 1'b1
 
 `define ZERO		64'd0
 
@@ -104,7 +104,7 @@ input Thor2024pkg::address_t snoop_adr;
 input snoop_v;
 input [5:0] snoop_cid;
 
-integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14,n15;
+integer n,nn,n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14,n15,n16;
 genvar g;
 
 wire [AREGS-1:0] rf_v;
@@ -114,6 +114,7 @@ wire clk;
 wire rst;
 assign rst = rst_i;
 reg  [3:0] panic;		// indexes the message structure
+wire [3:0] head_panic;
 reg [128:0] message [0:15];	// indexed by panic
 
 wire [63:0] dec_imm0, dec_imm1;
@@ -124,9 +125,9 @@ reg [27:0] pred_mask;
 reg [1:0] pred_val;
 
 // instruction queue (ROB)
-iq_entry_t [7:0] iq;
+iq_entry_t [QENTRIES-1:0] iq;
 
-que_bitmask_t iq_v;
+que_bitmask_t iq_v;							// current valid state
 que_bitmask_t iqentry_source;
 que_bitmask_t iqentry_imm;
 que_bitmask_t iqentry_memready;
@@ -163,14 +164,8 @@ reg_bitmask_t [QENTRIES-1:0] iq_out;
 
 que_ndx_t tail0;
 que_ndx_t tail1;
-que_ndx_t head0;
-que_ndx_t head1;
-que_ndx_t head2;	// used only to determine memory-access ordering
-que_ndx_t head3;	// used only to determine memory-access ordering
-que_ndx_t head4;	// used only to determine memory-access ordering
-que_ndx_t head5;	// used only to determine memory-access ordering
-que_ndx_t head6;	// used only to determine memory-access ordering
-que_ndx_t head7;	// used only to determine memory-access ordering
+// heads 2 to 7 used only to determine memory-access ordering
+que_ndx_t [QENTRIES-1:0] heads;
 que_ndx_t lastq0;
 que_ndx_t lastq1;
 reg fetch0,fetch1;
@@ -382,7 +377,7 @@ cause_code_t dram_exc1;
 reg        dram_v1;
 
 wire        outstanding_stores;
-reg [63:0] I;	// instruction count
+wire [39:0] I;	// instruction count
 
 wire commit0_v, commit2_v, commit3_v;
 reg commit0a_v, commit1a_v;
@@ -493,8 +488,8 @@ endgenerate
 
 // Get the valid slice.
 initial begin
-for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
-	iq_v[n5] = iq[n5].v;
+//for (n5 = 0; n5 < QENTRIES; n5 = n5 + 1)
+//	iq_v[n5] = iq[n5].v & iq_inv[n5];
 end
 /*
 initial begin: stop_at
@@ -741,9 +736,9 @@ assign fetchbuf1_rfw = Rt1 != 'd0;
 
 /* under construction */
 always_comb
-	q1open = ~iq[tail0].v;
+	q1open = ~iq_v[tail0];
 always_comb
-	q2open = ~iq[tail0].v & ~iq[tail1].v;
+	q2open = ~iq_v[tail0] & ~iq_v[tail1];
 always_comb
 begin
 	canq1 = FALSE;
@@ -948,7 +943,7 @@ for (n7 = 1; n7 < AREGS; n7 = n7 + 1)
 
 always_comb
 for (n6 = 0; n6 < QENTRIES; n6 = n6 + 1)
-	iqentry_livetarget[n6] = {63 {iq[n6].v}} & {63 {~iqentry_stomp[n6]}} & iq_out[n6];
+	iqentry_livetarget[n6] = {63 {iq_v[n6]}} & {63 {~iqentry_stomp[n6]}} & iq_out[n6];
 
 assign iqentry_0_cumulative = (missid==3'd0) ? iqentry_livetarget[0] :
                               (missid==3'd1) ? iqentry_livetarget[0] |
@@ -1295,6 +1290,19 @@ assign
   iqentry_source[6] = | iqentry_6_latestID,
   iqentry_source[7] = | iqentry_7_latestID;
 
+Thor2024_head uhead1
+(
+	.rst(rst),
+	.clk(clk),
+	.heads(heads),
+	.tail0(tail0),
+	.tail1(tail1),
+	.iq(iq),
+	.panic_i(panic),
+	.panic_o(head_panic),
+	.I(I)
+);
+
 Thor2024_tail utail1
 (
 	.rst(rst),
@@ -1477,7 +1485,7 @@ assign args_valid[g] = (iq[g].a1_v
 				    || (iq[g].ap_s == alu0_sourceid && alu0_dataready)
 				    || (iq[g].ap_s == alu1_sourceid && alu1_dataready))
 				    ;
-assign could_issue[g] = iq[g].v && !iq[g].done 
+assign could_issue[g] = iq_v[g] && !iq[g].done 
 												&& !iq[g].out
 												&& args_valid[g]
                         && (iq[g].mem ? !iq[g].agen : 1'b1);
@@ -1491,14 +1499,14 @@ Thor2024_alu_issue ualuiss1
 	.alu1_idle(alu1_idle),
 	.iqentry_islot(iqentry_islot),
 	.could_issue(could_issue), 
-	.head0(head0),
-	.head1(head1),
-	.head2(head2),
-	.head3(head3),
-	.head4(head4),
-	.head5(head5),
-	.head6(head6),
-	.head7(head7),
+	.head0(heads[0]),
+	.head1(heads[1]),
+	.head2(heads[2]),
+	.head3(heads[3]),
+	.head4(heads[4]),
+	.head5(heads[5]),
+	.head6(heads[6]),
+	.head7(heads[7]),
 	.iq(iq),
 	.iqentry_issue(iqentry_issue)
 );
@@ -1507,14 +1515,14 @@ Thor2024_fpu_issue ufpuiss1
 (
 	.fpu_idle(fpu_idle),
 	.could_issue(could_issue), 
-	.head0(head0),
-	.head1(head1),
-	.head2(head2),
-	.head3(head3),
-	.head4(head4),
-	.head5(head5),
-	.head6(head6),
-	.head7(head7),
+	.head0(heads[0]),
+	.head1(heads[1]),
+	.head2(heads[2]),
+	.head3(heads[3]),
+	.head4(heads[4]),
+	.head5(heads[5]),
+	.head6(heads[6]),
+	.head7(heads[7]),
 	.iq(iq),
 	.iqentry_fpu_issue(iqentry_fpu_issue)
 );
@@ -1523,14 +1531,14 @@ Thor2024_fcu_issue ufcuiss1
 (
 	.fcu_idle(fcu_idle),
 	.could_issue(could_issue), 
-	.head0(head0),
-	.head1(head1),
-	.head2(head2),
-	.head3(head3),
-	.head4(head4),
-	.head5(head5),
-	.head6(head6),
-	.head7(head7),
+	.head0(heads[0]),
+	.head1(heads[1]),
+	.head2(heads[2]),
+	.head3(heads[3]),
+	.head4(heads[4]),
+	.head5(heads[5]),
+	.head6(heads[6]),
+	.head7(heads[7]),
 	.iq(iq),
 	.iqentry_fcu_issue(iqentry_fcu_issue)
 );
@@ -1541,7 +1549,7 @@ assign iqentry_issue2 = iqentry_issue | iqentry_issue_reg;
 always_comb
 	for (n2 = 0; n2 < 8; n2 = n2 + 1) begin
     iqentry_issue[n2] = (iq[n2].v && !iq[n2].out && !iq[n2].agen
-				&& (head0 == n2[2:0] || ~|iqentry_islot[(n2+7)&7] || (iqentry_islot[(n2+7)&7] == 2'b01 && ~iqentry_issue[(n2+7)&7]))
+				&& (heads[0] == n2[2:0] || ~|iqentry_islot[(n2+7)&7] || (iqentry_islot[(n2+7)&7] == 2'b01 && ~iqentry_issue[(n2+7)&7]))
 				&& (iq[n2].a1_v 
 				    || (iq[n2].a1_s == alu0_sourceid && alu0_dataready)
 				    || (iq[n2].a1_s == alu1_sourceid && alu1_dataready))
@@ -1550,7 +1558,7 @@ always_comb
 				    || (iq[n2].a2_s == alu0_sourceid && alu0_dataready)
 				    || (iq[n2].a2_s == alu1_sourceid && alu1_dataready)));
 				    
-    iqentry_islot[n2] = (head0 == n2[2:0]) ? 2'b00
+    iqentry_islot[n2] = (heads[0] == n2[2:0]) ? 2'b00
 				: (iqentry_islot[(n2+7)&7] == 2'b11) ? 2'b11
 				: (iqentry_islot[(n2+7)&7] + {1'b0, iqentry_issue[(n2+7)&7]});
 	end
@@ -1567,13 +1575,13 @@ begin
 	iqentry_stomp[n4] =
 		(branchmiss
 		&& iq[n4].sn >= iq[missid].sn
-		&& iq[n4].v
-		&& head0 != n4[$clog2(QENTRIES)-1:0])
+		&& iq_v[n4]
+		&& heads[0] != n4[$clog2(QENTRIES)-1:0])
 	;
 	/*
 	iqentry_stomp[n4] = branchmiss
 											&& iq[n4].v
-											&& head0 != n4[$clog2(QENTRIES)-1:0]
+											&& heads[0] != n4[$clog2(QENTRIES)-1:0]
 											&& (missid == n4p || iqentry_stomp[n4p])
 											;
 	*/
@@ -1589,20 +1597,20 @@ begin
 	end
 	*/
 end											
-//    	iqentry_stomp[0] = branchmiss && iq[0].v && head0 != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
+//    	iqentry_stomp[0] = branchmiss && iq[0].v && heads[0] != 3'd0 && (missid == 3'd7 || iqentry_stomp[7]),
 
 Thor2024_memissue umemissue1
 (
 	.rst(rst),
 	.clk(clk), 
-	.head0(head0),
-	.head1(head1),
-	.head2(head2),
-	.head3(head3),
-	.head4(head4),
-	.head5(head5),
-	.head6(head6),
-	.head7(head7),
+	.head0(heads[0]),
+	.head1(heads[1]),
+	.head2(heads[2]),
+	.head3(heads[3]),
+	.head4(heads[4]),
+	.head5(heads[5]),
+	.head6(heads[6]),
+	.head7(heads[7]),
 	.iqentry_memready(iqentry_memready),
 	.iqentry_stomp(iqentry_stomp),
 	.iq(iq),
@@ -1797,7 +1805,7 @@ for (n9 = 0; n9 < QENTRIES; n9 = n9 + 1)
 
 always_comb
 for (n10 = 0; n10 < QENTRIES; n10 = n10 + 1)
-  iqentry_memready[n10] = (iq[n10].v
+  iqentry_memready[n10] = (iq_v[n10]
   		& iqentry_memopsvalid[n10] 
   		& ~iqentry_memissue[n10] 
   		& ~iq[n10].done 
@@ -1861,9 +1869,8 @@ did_branchback2 <= did_branchback1;
     2'b00: ; // do nothing
 
     2'b01:
-    	if (iq[tail0].v == INV) begin
+    	if (iq_v[tail0] == INV) begin
 				did_branchback1 <= branchback & ~did_branchback;
-				iq[tail0].v <= VAL;
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 				iq[tail0].sn <= 6'h3F;
@@ -1933,7 +1940,7 @@ did_branchback2 <= did_branchback1;
 			end
     2'b10:
     	begin
-	    	if (iq[tail0].v == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
+	    	if (iq_v[tail0] == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
 					if (!db0.br)		panic <= `PANIC_FETCHBUFBEQ;
 					if (!db0.backbr)	panic <= `PANIC_FETCHBUFBEQ;
 					//
@@ -1942,7 +1949,6 @@ did_branchback2 <= did_branchback1;
 					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
 					//
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -2012,14 +2018,13 @@ did_branchback2 <= did_branchback1;
 	  	end
 
     2'b11:
-    	if (iq[tail0].v == INV) begin
+    	if (iq_v[tail0] == INV) begin
 
 				//
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
 				if (db0.backbr) begin
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -2103,7 +2108,6 @@ did_branchback2 <= did_branchback1;
 			    // enqueue the first instruction ...
 			    //
 					did_branchback1 <= branchback & ~did_branchback;
-					iq[tail0].v <= VAL;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
@@ -2173,9 +2177,8 @@ did_branchback2 <= did_branchback1;
 			    //
 			    // if there is room for a second instruction, enqueue it
 			    //
-			    if (iq[tail1].v == INV) begin
+			    if (iq_v[tail1] == INV) begin
 
-						iq[tail1].v <= VAL;
 						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
 						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
@@ -2409,13 +2412,13 @@ did_branchback2 <= did_branchback1;
     iq[ fcu_id[2:0] ].takb <= takb;
     iq[ fcu_id[2:0] ].brtgt <= tgtpc;
 	end
-	if (dram_v0 && iq[ dram_id0[2:0] ].v && iq[ dram_id0[2:0] ].mem ) begin	// if data for stomped instruction, ignore
+	if (dram_v0 && iq_v[ dram_id0[2:0] ] && iq[ dram_id0[2:0] ].mem ) begin	// if data for stomped instruction, ignore
     iq[ dram_id0[2:0] ].res <= dram_bus0;
     iq[ dram_id0[2:0] ].exc <= dram_exc0;
     iq[ dram_id0[2:0] ].done <= VAL;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram_v1 && iq[ dram_id1[2:0] ].v && iq[ dram_id1[2:0] ].mem ) begin	// if data for stomped instruction, ignore
+		if (dram_v1 && iq_v[ dram_id1[2:0] ] && iq[ dram_id1[2:0] ].mem ) begin	// if data for stomped instruction, ignore
 	    iq[ dram_id1[2:0] ].res <= dram_bus1;
 	    iq[ dram_id1[2:0] ].exc <= dram_exc1;
 	    iq[ dram_id1[2:0] ].done <= VAL;
@@ -2501,263 +2504,263 @@ did_branchback2 <= did_branchback1;
 	    iq[nn].ap_v <= VAL;
 		end
 		*/
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == alu0_id && iq_v[nn] == VAL && alu0_v == VAL) begin
 	    iq[nn].a1 <= alu0_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == alu0_id && iq_v[nn] == VAL && alu0_v == VAL) begin
 	    iq[nn].a2 <= alu0_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == alu0_id && iq_v[nn] == VAL && alu0_v == VAL) begin
 	    iq[nn].a3 <= alu0_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == alu0_id && iq_v[nn] == VAL && alu0_v == VAL) begin
 	    iq[nn].at <= alu0_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == alu0_id && iq[nn].v == VAL && alu0_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == alu0_id && iq_v[nn] == VAL && alu0_v == VAL) begin
 	    iq[nn].ap <= alu0_bus;
 	    iq[nn].ap_v <= VAL;
 		end
 
 		if (NALU > 1) begin
-			if (iq[nn].a1_v == INV && iq[nn].a1_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+			if (iq[nn].a1_v == INV && iq[nn].a1_s == alu1_id && iq_v[nn] == VAL && alu1_v == VAL) begin
 		    iq[nn].a1 <= alu1_bus;
 		    iq[nn].a1_v <= VAL;
 			end
-			if (iq[nn].a2_v == INV && iq[nn].a2_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+			if (iq[nn].a2_v == INV && iq[nn].a2_s == alu1_id && iq_v[nn] == VAL && alu1_v == VAL) begin
 		    iq[nn].a2 <= alu1_bus;
 		    iq[nn].a2_v <= VAL;
 			end
-			if (iq[nn].a3_v == INV && iq[nn].a3_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+			if (iq[nn].a3_v == INV && iq[nn].a3_s == alu1_id && iq_v[nn] == VAL && alu1_v == VAL) begin
 		    iq[nn].a3 <= alu1_bus;
 		    iq[nn].a3_v <= VAL;
 			end
-			if (iq[nn].at_v == INV && iq[nn].at_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+			if (iq[nn].at_v == INV && iq[nn].at_s == alu1_id && iq_v[nn] == VAL && alu1_v == VAL) begin
 		    iq[nn].at <= alu1_bus;
 		    iq[nn].at_v <= VAL;
 			end
-			if (iq[nn].ap_v == INV && iq[nn].ap_s == alu1_id && iq[nn].v == VAL && alu1_v == VAL) begin
+			if (iq[nn].ap_v == INV && iq[nn].ap_s == alu1_id && iq_v[nn] == VAL && alu1_v == VAL) begin
 		    iq[nn].ap <= alu1_bus;
 		    iq[nn].ap_v <= VAL;
 			end
 		end
 
 		if (NFPU > 0) begin
-			if (iq[nn].a1_v == INV && iq[nn].a1_s == fpu_id && iq[nn].v == VAL && fpu_v == VAL) begin
+			if (iq[nn].a1_v == INV && iq[nn].a1_s == fpu_id && iq_v[nn] == VAL && fpu_v == VAL) begin
 		    iq[nn].a1 <= fpu_bus;
 		    iq[nn].a1_v <= VAL;
 			end
-			if (iq[nn].a2_v == INV && iq[nn].a2_s == fpu_id && iq[nn].v == VAL && fpu_v == VAL) begin
+			if (iq[nn].a2_v == INV && iq[nn].a2_s == fpu_id && iq_v[nn] == VAL && fpu_v == VAL) begin
 		    iq[nn].a2 <= fpu_bus;
 		    iq[nn].a2_v <= VAL;
 			end
-			if (iq[nn].a3_v == INV && iq[nn].a3_s == fpu_id && iq[nn].v == VAL && fpu_v == VAL) begin
+			if (iq[nn].a3_v == INV && iq[nn].a3_s == fpu_id && iq_v[nn] == VAL && fpu_v == VAL) begin
 		    iq[nn].a3 <= fpu_bus;
 		    iq[nn].a3_v <= VAL;
 			end
-			if (iq[nn].at_v == INV && iq[nn].at_s == fpu_id && iq[nn].v == VAL && fpu_v == VAL) begin
+			if (iq[nn].at_v == INV && iq[nn].at_s == fpu_id && iq_v[nn] == VAL && fpu_v == VAL) begin
 		    iq[nn].at <= fpu_bus;
 		    iq[nn].at_v <= VAL;
 			end
-			if (iq[nn].ap_v == INV && iq[nn].ap_s == fpu_id && iq[nn].v == VAL && fpu_v == VAL) begin
+			if (iq[nn].ap_v == INV && iq[nn].ap_s == fpu_id && iq_v[nn] == VAL && fpu_v == VAL) begin
 		    iq[nn].ap <= fpu_bus;
 		    iq[nn].ap_v <= VAL;
 			end
 		end
 
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == fcu_id && iq_v[nn] == VAL && fcu_v == VAL) begin
 	    iq[nn].a1 <= fcu_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == fcu_id && iq_v[nn] == VAL && fcu_v == VAL) begin
 	    iq[nn].a2 <= fcu_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == fcu_id && iq_v[nn] == VAL && fcu_v == VAL) begin
 	    iq[nn].a3 <= fcu_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == fcu_id && iq_v[nn] == VAL && fcu_v == VAL) begin
 	    iq[nn].at <= fcu_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == fcu_id && iq[nn].v == VAL && fcu_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == fcu_id && iq_v[nn] == VAL && fcu_v == VAL) begin
 	    iq[nn].ap <= fcu_bus;
 	    iq[nn].ap_v <= VAL;
 		end
 		
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id0 && iq_v[nn] == VAL && dram_v0 == VAL) begin
 	    iq[nn].a1 <= dram_bus0;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == dram_id0 && iq_v[nn] == VAL && dram_v0 == VAL) begin
 	    iq[nn].a2 <= dram_bus0;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == dram_id0 && iq_v[nn] == VAL && dram_v0 == VAL) begin
 	    iq[nn].a3 <= dram_bus0;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == dram_id0 && iq_v[nn] == VAL && dram_v0 == VAL) begin
 	    iq[nn].at <= dram_bus0;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id0 && iq[nn].v == VAL && dram_v0 == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id0 && iq_v[nn] == VAL && dram_v0 == VAL) begin
 	    iq[nn].ap <= dram_bus0;
 	    iq[nn].ap_v <= VAL;
 		end
 		
 		if (NDATA_PORTS > 1) begin
-			if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+			if (iq[nn].a1_v == INV && iq[nn].a1_s == dram_id1 && iq_v[nn] == VAL && dram_v1 == VAL) begin
 		    iq[nn].a1 <= dram_bus1;
 		    iq[nn].a1_v <= VAL;
 			end
-			if (iq[nn].a2_v == INV && iq[nn].a2_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+			if (iq[nn].a2_v == INV && iq[nn].a2_s == dram_id1 && iq_v[nn] == VAL && dram_v1 == VAL) begin
 		    iq[nn].a2 <= dram_bus1;
 		    iq[nn].a2_v <= VAL;
 			end
-			if (iq[nn].a3_v == INV && iq[nn].a3_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+			if (iq[nn].a3_v == INV && iq[nn].a3_s == dram_id1 && iq_v[nn] == VAL && dram_v1 == VAL) begin
 		    iq[nn].a3 <= dram_bus1;
 		    iq[nn].a3_v <= VAL;
 			end
-			if (iq[nn].at_v == INV && iq[nn].at_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+			if (iq[nn].at_v == INV && iq[nn].at_s == dram_id1 && iq_v[nn] == VAL && dram_v1 == VAL) begin
 		    iq[nn].at <= dram_bus1;
 		    iq[nn].at_v <= VAL;
 			end
-			if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id1 && iq[nn].v == VAL && dram_v1 == VAL) begin
+			if (iq[nn].ap_v == INV && iq[nn].ap_s == dram_id1 && iq_v[nn] == VAL && dram_v1 == VAL) begin
 		    iq[nn].ap <= dram_bus1;
 		    iq[nn].ap_v <= VAL;
 			end
 		end
 		
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].a1 <= commit0a_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].a2 <= commit0a_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].a3 <= commit0a_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].at <= commit0a_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0a_id && iq[nn].v == VAL && commit0a_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].ap <= commit0a_bus;
 	    iq[nn].ap_v <= VAL;
 		end
 		
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1a_id && iq_v[nn] == VAL && commit1a_v == VAL) begin
 	    iq[nn].a1 <= commit1a_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit1a_id && iq_v[nn] == VAL && commit1a_v == VAL) begin
 	    iq[nn].a2 <= commit1a_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1a_id && iq_v[nn] == VAL && commit1a_v == VAL) begin
 	    iq[nn].a3 <= commit1a_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit1a_id && iq_v[nn] == VAL && commit1a_v == VAL) begin
 	    iq[nn].at <= commit1a_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1a_id && iq[nn].v == VAL && commit1a_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1a_id && iq_v[nn] == VAL && commit1a_v == VAL) begin
 	    iq[nn].ap <= commit1a_bus;
 	    iq[nn].ap_v <= VAL;
 		end
 
 		// These may be overridden by commit0 / commit1
 		if (SUPPORT_COMMIT23) begin
-			if (iq[nn].a1_v == INV && iq[nn].a1_s == commit2_id && iq[nn].v == VAL && commit2_v == VAL) begin
+			if (iq[nn].a1_v == INV && iq[nn].a1_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
 		    iq[nn].a1 <= commit2_bus;
 		    iq[nn].a1_v <= VAL;
 			end
-			if (iq[nn].a2_v == INV && iq[nn].a2_s == commit2_id && iq[nn].v == VAL && commit2_v == VAL) begin
+			if (iq[nn].a2_v == INV && iq[nn].a2_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
 		    iq[nn].a2 <= commit2_bus;
 		    iq[nn].a2_v <= VAL;
 			end
-			if (iq[nn].a3_v == INV && iq[nn].a3_s == commit2_id && iq[nn].v == VAL && commit2_v == VAL) begin
+			if (iq[nn].a3_v == INV && iq[nn].a3_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
 		    iq[nn].a3 <= commit2_bus;
 		    iq[nn].a3_v <= VAL;
 			end
-			if (iq[nn].at_v == INV && iq[nn].at_s == commit2_id && iq[nn].v == VAL && commit2_v == VAL) begin
+			if (iq[nn].at_v == INV && iq[nn].at_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
 		    iq[nn].at <= commit2_bus;
 		    iq[nn].at_v <= VAL;
 			end
-			if (iq[nn].ap_v == INV && iq[nn].ap_s == commit2_id && iq[nn].v == VAL && commit2_v == VAL) begin
+			if (iq[nn].ap_v == INV && iq[nn].ap_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
 		    iq[nn].ap <= commit2_bus;
 		    iq[nn].ap_v <= VAL;
 			end
 
-			if (iq[nn].a1_v == INV && iq[nn].a1_s == commit3_id && iq[nn].v == VAL && commit3_v == VAL) begin
+			if (iq[nn].a1_v == INV && iq[nn].a1_s == commit3_id && iq_v[nn] == VAL && commit3_v == VAL) begin
 		    iq[nn].a1 <= commit3_bus;
 		    iq[nn].a1_v <= VAL;
 			end
-			if (iq[nn].a2_v == INV && iq[nn].a2_s == commit3_id && iq[nn].v == VAL && commit3_v == VAL) begin
+			if (iq[nn].a2_v == INV && iq[nn].a2_s == commit3_id && iq_v[nn] == VAL && commit3_v == VAL) begin
 		    iq[nn].a2 <= commit3_bus;
 		    iq[nn].a2_v <= VAL;
 			end
-			if (iq[nn].a3_v == INV && iq[nn].a3_s == commit3_id && iq[nn].v == VAL && commit3_v == VAL) begin
+			if (iq[nn].a3_v == INV && iq[nn].a3_s == commit3_id && iq_v[nn] == VAL && commit3_v == VAL) begin
 		    iq[nn].a3 <= commit3_bus;
 		    iq[nn].a3_v <= VAL;
 			end
-			if (iq[nn].at_v == INV && iq[nn].at_s == commit3_id && iq[nn].v == VAL && commit3_v == VAL) begin
+			if (iq[nn].at_v == INV && iq[nn].at_s == commit3_id && iq_v[nn] == VAL && commit3_v == VAL) begin
 		    iq[nn].at <= commit3_bus;
 		    iq[nn].at_v <= VAL;
 			end
-			if (iq[nn].ap_v == INV && iq[nn].ap_s == commit3_id && iq[nn].v == VAL && commit3_v == VAL) begin
+			if (iq[nn].ap_v == INV && iq[nn].ap_s == commit3_id && iq_v[nn] == VAL && commit3_v == VAL) begin
 		    iq[nn].ap <= commit3_bus;
 		    iq[nn].ap_v <= VAL;
 			end
 		end
 
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0_id && iq_v[nn] == VAL && commit0_v == VAL) begin
 	    iq[nn].a1 <= commit0_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit0_id && iq_v[nn] == VAL && commit0_v == VAL) begin
 	    iq[nn].a2 <= commit0_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit0_id && iq_v[nn] == VAL && commit0_v == VAL) begin
 	    iq[nn].a3 <= commit0_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit0_id && iq_v[nn] == VAL && commit0_v == VAL) begin
 	    iq[nn].at <= commit0_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0_id && iq[nn].v == VAL && commit0_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit0_id && iq_v[nn] == VAL && commit0_v == VAL) begin
 	    iq[nn].ap <= commit0_bus;
 	    iq[nn].ap_v <= VAL;
 		end
 		
-		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit1_id && iq_v[nn] == VAL && commit1_v == VAL) begin
 	    iq[nn].a1 <= commit1_bus;
 	    iq[nn].a1_v <= VAL;
 		end
-		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+		if (iq[nn].a2_v == INV && iq[nn].a2_s == commit1_id && iq_v[nn] == VAL && commit1_v == VAL) begin
 	    iq[nn].a2 <= commit1_bus;
 	    iq[nn].a2_v <= VAL;
 		end
-		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+		if (iq[nn].a3_v == INV && iq[nn].a3_s == commit1_id && iq_v[nn] == VAL && commit1_v == VAL) begin
 	    iq[nn].a3 <= commit1_bus;
 	    iq[nn].a3_v <= VAL;
 		end
-		if (iq[nn].at_v == INV && iq[nn].at_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+		if (iq[nn].at_v == INV && iq[nn].at_s == commit1_id && iq_v[nn] == VAL && commit1_v == VAL) begin
 	    iq[nn].at <= commit1_bus;
 	    iq[nn].at_v <= VAL;
 		end
-		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1_id && iq[nn].v == VAL && commit1_v == VAL) begin
+		if (iq[nn].ap_v == INV && iq[nn].ap_s == commit1_id && iq_v[nn] == VAL && commit1_v == VAL) begin
 	    iq[nn].ap <= commit1_bus;
 	    iq[nn].ap_v <= VAL;
 		end
@@ -2813,8 +2816,7 @@ fcu_dataready <= fcu_available
 		 || (iqentry_fcu_issue[7] && !iqentry_stomp[7]));
 
 	for (n1 = 0; n1 < QENTRIES; n1 = n1 + 1) begin
-		if (iq[n1].v && iqentry_stomp[n1]) begin
-	    iq[n1].v <= INV;
+		if (iq_v[n1] && iqentry_stomp[n1]) begin
 	    if (dram0_id[2:0] == n1[2:0])	dram0 <= DRAMSLOT_AVAIL;
 	    if (dram1_id[2:0] == n1[2:0])	dram1 <= DRAMSLOT_AVAIL;
 //	    if (dram2_id[2:0] == n1[2:0])	dram2 <= `DRAMSLOT_AVAIL;
@@ -2997,7 +2999,7 @@ fcu_dataready <= fcu_available
 				dram0 <= DRAMSLOT_AVAIL;
 			end
 		default:
-			if (iq[dram0_id[2:0]].v)
+			if (iq_v[dram0_id[2:0]])
 				dram0 <= dram0 + 2'd1;
 			else
 				dram0 <= DRAMSLOT_AVAIL;
@@ -3028,7 +3030,7 @@ fcu_dataready <= fcu_available
 					dram1 <= DRAMSLOT_AVAIL;
 				end
 			default:
-				if (iq[dram1_id[2:0]].v)
+				if (iq_v[dram1_id[2:0]])
 					dram1 <= dram1 + 2'd1;
 				else
 					dram1 <= DRAMSLOT_AVAIL;
@@ -3200,506 +3202,76 @@ fcu_dataready <= fcu_available
 //
 // COMMIT PHASE (dequeue only ... not register-file update)
 //
-// look at head0 and head1 and let 'em write to the register file if they are ready
+// look at heads[0] and heads[1] and let 'em write to the register file if they are ready
 //
-	if (~|panic) begin
-		if (SUPPORT_3COMMIT)
-		casez ({ iq[head0].v,
-			iq[head0].done,
-			iq[head1].v,
-			iq[head1].done,iq[head2].v,iq[head2].done })
-
-	  // 4'b00_00	- neither valid; skip both
-	  // 4'b00_01	- neither valid; skip both
-	  // 4'b00_10	- skip head0, wait on head1
-	  // 4'b00_11	- skip head0, commit head1
-	  // 4'b01_00	- neither valid; skip both
-	  // 4'b01_01	- neither valid; skip both
-	  // 4'b01_10	- skip head0, wait on head1
-	  // 4'b01_11	- skip head0, commit head1
-	  // 4'b10_00	- wait on head0
-	  // 4'b10_01	- wait on head0
-	  // 4'b10_10	- wait on head0
-	  // 4'b10_11	- wait on head0
-	  // 4'b11_00	- commit head0, skip head1
-	  // 4'b11_01	- commit head0, skip head1
-	  // 4'b11_10	- commit head0, wait on head1
-	  // 4'b11_11	- commit head0, commit head1
-
-	  //
-	  // retire 0 - blocked at the first instruction
-	  // 16 cases
-	  6'b10_??_??:	;
-	  // retire 1 - blocked at the second instruction
-	  // 12 cases
-		6'b0?_10_??:
-			if (head0 != tail0) begin
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    I <= I + 1;
-			end
-		6'b11_10_??:
-			begin
-		    iq[head0].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 1;
-			end
-	  // retire 2 - blocked at third instruction
-	  // 7 cases
-		6'b0?_0?_10:
-			if (head0 != tail0 && head1 != tail0) begin
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    I <= I + 2;
-			end
-			else if (head0 != tail0) begin
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    I <= I + 1;
-			end
-		6'b11_0?_10:
-			if (head1 != tail0) begin
-		    iq[head0].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-			else begin
-		    iq[head0].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 1;
-			end
-		6'b11_11_10:
-			begin
-		    iq[head0].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    iq[head1].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-		// retire 3
-		// 27 cases
-		6'b0?_0?_0?:
-			if (head0 != tail0 && head1 != tail0 && head2 != tail0) begin
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    I <= I + 3;
-			end
-			else if (head0 != tail0 && head1 != tail0) begin
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    I <= I + 2;
-			end
-			else if (head0 != tail0) begin
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    I <= I + 1;
-			end
-		6'b0?_0?_11:
-			if (iq[head2].tgt=='d0) begin
-		    iq[head2].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head2].v && iq[head2].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-		6'b0?_11_0?:
-			if (head2 != tail0) begin
-				iq[head1].v <= INV;
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else begin
-				iq[head1].v <= INV;
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-		6'b0?_11_11:
-			if (iq[head2].tgt=='d0) begin
-				iq[head1].v <= INV;
-		    iq[head2].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head2].v && iq[head2].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else begin
-				iq[head1].v <= INV;
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-		6'b11_0?_11:
-			if (head1 != tail0) begin
-				iq[head0].v <= INV;
-				iq[head2].v <= INV;
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head2].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else begin
-				iq[head0].v <= INV;
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    if (iq[head0].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 1;
-			end
-		6'b11_11_0?:
-			if (head2 != tail0) begin
-				iq[head0].v <= INV;
-				iq[head1].v <= INV;
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else begin
-				iq[head0].v <= INV;
-				iq[head1].v <= INV;
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head0].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-		6'b11_11_11:
-			if (iq[head2].tgt=='d0) begin
-				iq[head0].v <= INV;
-				iq[head1].v <= INV;
-		    iq[head2].v <= INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head2].v && iq[head2].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else begin
-				iq[head0].v <= INV;
-				iq[head1].v <= INV;
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-		6'b11_0?_0?:
-			if (head1 != tail0 && head2 != tail0) begin
-				iq[head0].v <= INV;
-		    head0 <= head0 + 3;
-		    head1 <= head1 + 3;
-		    head2 <= head2 + 3;
-		    head3 <= head3 + 3;
-		    head4 <= head4 + 3;
-		    head5 <= head5 + 3;
-		    head6 <= head6 + 3;
-		    head7 <= head7 + 3;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 3;
-			end
-			else if (head1 != tail0) begin
-				iq[head0].v <= INV;
-		    head0 <= head0 + 2;
-		    head1 <= head1 + 2;
-		    head2 <= head2 + 2;
-		    head3 <= head3 + 2;
-		    head4 <= head4 + 2;
-		    head5 <= head5 + 2;
-		    head6 <= head6 + 2;
-		    head7 <= head7 + 2;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 2;
-			end
-			else begin
-				iq[head0].v <= INV;
-		    head0 <= head0 + 1;
-		    head1 <= head1 + 1;
-		    head2 <= head2 + 1;
-		    head3 <= head3 + 1;
-		    head4 <= head4 + 1;
-		    head5 <= head5 + 1;
-		    head6 <= head6 + 1;
-		    head7 <= head7 + 1;
-		    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-		    I <= I + 1;
-			end
-			
-		default:
-			begin
-				panic <= `PANIC_COMMIT;
-				$stop;
-			end
-		endcase
-	else
-		case ({ iq[head0].v,
-			iq[head0].done,
-			iq[head1].v,
-			iq[head1].done })
-
-    // 4'b00_00	- neither valid; skip both
-    // 4'b00_01	- neither valid; skip both
-    // 4'b00_10	- skip head0, wait on head1
-    // 4'b00_11	- skip head0, commit head1
-    // 4'b01_00	- neither valid; skip both
-    // 4'b01_01	- neither valid; skip both
-    // 4'b01_10	- skip head0, wait on head1
-    // 4'b01_11	- skip head0, commit head1
-    // 4'b10_00	- wait on head0
-    // 4'b10_01	- wait on head0
-    // 4'b10_10	- wait on head0
-    // 4'b10_11	- wait on head0
-    // 4'b11_00	- commit head0, skip head1
-    // 4'b11_01	- commit head0, skip head1
-    // 4'b11_10	- commit head0, wait on head1
-    // 4'b11_11	- commit head0, commit head1
-
-    //
-    // retire 0
-    4'b10_00,
-    4'b10_01,
-    4'b10_10,
-    4'b10_11: ;
-
-    //
-    // retire 1
-    4'b00_10,
-    4'b01_10,
-    4'b11_10:
-    	begin
-				if (iq[head0].v || head0 != tail0) begin
-			    iq[head0].v <= `INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			    head0 <= head0 + 1;
-			    head1 <= head1 + 1;
-			    head2 <= head2 + 1;
-			    head3 <= head3 + 1;
-			    head4 <= head4 + 1;
-			    head5 <= head5 + 1;
-			    head6 <= head6 + 1;
-			    head7 <= head7 + 1;
-			    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-			    I <= I + 1;
-				end
-	    end
-
-		    //
-		    // retire 2
-    default: 
-    	begin
-				if ((iq[head0].v && iq[head1].v) || (head0 != tail0 && head1 != tail0)) begin
-			    iq[head0].v <= `INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			    iq[head1].v <= `INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			    head0 <= head0 + 2;
-			    head1 <= head1 + 2;
-			    head2 <= head2 + 2;
-			    head3 <= head3 + 2;
-			    head4 <= head4 + 2;
-			    head5 <= head5 + 2;
-			    head6 <= head6 + 2;
-			    head7 <= head7 + 2;
-			    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-			    if (iq[head1].v && iq[head1].exc)	panic <= `PANIC_HALTINSTRUCTION;
-			    I <= I + 2;
-				end
-				else if (iq[head0].v || head0 != tail0) begin
-			    iq[head0].v <= `INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			    head0 <= head0 + 1;
-			    head1 <= head1 + 1;
-			    head2 <= head2 + 1;
-			    head3 <= head3 + 1;
-			    head4 <= head4 + 1;
-			    head5 <= head5 + 1;
-			    head6 <= head6 + 1;
-			    head7 <= head7 + 1;
-			    if (iq[head0].v && iq[head0].exc)	panic <= `PANIC_HALTINSTRUCTION;
-			    I <= I + 1;
-				end
-	    end
-		endcase
-	end
 	
-  tOddball_commit(commit0_v, head0);
-  tOddball_commit(commit1_v, head1);
-
+  tOddball_commit(commit0_v, heads[0]);
+  tOddball_commit(commit1_v, heads[1]);
+  
+  if (|head_panic)
+  	panic <= head_panic;
 end
+
+Thor2024_que_valid uiqv1
+(
+	.rst(rst),
+	.clk(clk),
+	.stomp(iqentry_stomp),
+	.iq(iq),
+	.panic(panic),
+	.heads(heads),
+	.tail0(tail0), 
+	.tail1(tail1), 
+	.branchmiss(branchmiss),
+	.backbr(db0.backbr),
+	.fetchbuf0_v(fetchbuf0_v),
+	.fetchbuf1_v(fetchbuf1_v),
+	.pred_mask(pred_mask[1:0]),
+	.pred_val(pred_val),
+	.iq_v(iq_v)
+);
+
+always_comb
+	for (n16 = 0; n16 < QENTRIES; n16 = n16 + 1)
+		iq[n16].v = iq_v[n16];
+
 
 //
 // additional COMMIT logic
 //
 
-assign commit0_v = ({iq[head0].v, iq[head0].done} == 2'b11 && ~|panic);
-assign commit1_v = (   {iq[head0].v, iq[head0].done} != 2'b10 
-	&& {iq[head1].v, iq[head1].done} == 2'b11 && ~|panic);
+assign commit0_v = ({iq_v[heads[0]], iq[heads[0]].done} == 2'b11 && ~|panic);
+assign commit1_v = (   {iq_v[heads[0]], iq[heads[0]].done} != 2'b10 
+	&& {iq_v[heads[1]], iq[heads[1]].done} == 2'b11 && ~|panic);
 
 // These two are not really committing results, they act more as result forwarding.
-assign commit2_v =  (iq[head2].v & iq[head2].done);
-assign commit3_v =  (iq[head3].v & iq[head3].done);
+assign commit2_v =  (iq_v[heads[2]] & iq[heads[2]].done);
+assign commit3_v =  (iq_v[heads[3]] & iq[heads[3]].done);
 
-assign commit0_id = {iq[head0].mem, head0};	// if a memory op, it has a DRAM-bus id
-assign commit1_id = {iq[head1].mem, head1};	// if a memory op, it has a DRAM-bus id
-assign commit2_id = {iq[head2].mem, head2};	// if a memory op, it has a DRAM-bus id
-assign commit3_id = {iq[head3].mem, head3};	// if a memory op, it has a DRAM-bus id
+assign commit0_id = {iq[heads[0]].mem, heads[0]};	// if a memory op, it has a DRAM-bus id
+assign commit1_id = {iq[heads[1]].mem, heads[1]};	// if a memory op, it has a DRAM-bus id
+assign commit2_id = {iq[heads[2]].mem, heads[2]};	// if a memory op, it has a DRAM-bus id
+assign commit3_id = {iq[heads[3]].mem, heads[3]};	// if a memory op, it has a DRAM-bus id
 
-assign commit0_tgt = iq[head0].tgt;
-assign commit1_tgt = iq[head1].tgt;
+assign commit0_tgt = iq[heads[0]].tgt;
+assign commit1_tgt = iq[heads[1]].tgt;
 
-assign commit0_bus = iq[head0].res;
-assign commit1_bus = iq[head1].res;
-assign commit2_bus = iq[head2].res;
-assign commit3_bus = iq[head3].res;
+assign commit0_bus = iq[heads[0]].res;
+assign commit1_bus = iq[heads[1]].res;
+assign commit2_bus = iq[heads[2]].res;
+assign commit3_bus = iq[heads[3]].res;
 
-assign commit0_instr = iq[head0].op;
-assign commit1_instr = iq[head1].op;
-assign commit_pc0 = iq[head0].pc;
-assign commit_pc1 = iq[head1].pc;
-assign commit_brtgt0 = iq[head0].brtgt;
-assign commit_brtgt1 = iq[head1].brtgt;
-assign commit_takb0 =iq[head0].takb;
-assign commit_takb1 =iq[head1].takb;
+assign commit0_instr = iq[heads[0]].op;
+assign commit1_instr = iq[heads[1]].op;
+assign commit_pc0 = iq[heads[0]].pc;
+assign commit_pc1 = iq[heads[1]].pc;
+assign commit_brtgt0 = iq[heads[0]].brtgt;
+assign commit_brtgt1 = iq[heads[1]].brtgt;
+assign commit_takb0 =iq[heads[0]].takb;
+assign commit_takb1 =iq[heads[1]].takb;
 
-assign int_commit = (commit0_v && fnIsIrq(iq[head0].op)) ||
-                    (commit0_v && commit1_v && fnIsIrq(iq[head1].op));
+assign int_commit = (commit0_v && fnIsIrq(iq[heads[0]].op)) ||
+                    (commit0_v && commit1_v && fnIsIrq(iq[heads[1]].op));
 
 
 always_ff @(posedge clk) begin: clock_n_debug
@@ -3730,8 +3302,8 @@ always_ff @(posedge clk) begin: clock_n_debug
 
 	for (i=0; i<8; i=i+1) 
 	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h %d %o %h #",
-		(i[2:0]==head0)?72:46, (i[2:0]==tail0)?84:46, iq[i].sn, i,
-		iq[i].v?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue2[i]?"i":"-",
+		(i[2:0]==heads[0])?72:46, (i[2:0]==tail0)?84:46, iq[i].sn, i,
+		iq_v[i]?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue2[i]?"i":"-",
 		((i==0) ? iqentry_islot[0] : (i==1) ? iqentry_islot[1] : (i==2) ? iqentry_islot[2] : (i==3) ? iqentry_islot[3] :
 		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
 		(iq[i].fc ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
@@ -3796,7 +3368,7 @@ always_ff @(posedge clk) begin: clock_n_debug
 	$display("Instruction Queue:");
 	for (i=0; i<8; i=i+1) 
 	    $display(" %c%c%d: v=%d done=%d out=%d agen=%d res=%h op=%d bt=%d tgt=%d a1=%h (v=%d/s=%o) a2=%h (v=%d/s=%o) im=%h pc=%h exc=%h",
-		(i[2:0]==head0)?72:32, (i[2:0]==tail0)?84:32, i,
+		(i[2:0]==heads[0])?72:32, (i[2:0]==tail0)?84:32, i,
 		iqentry_v[i], iqentry_done[i], iqentry_out[i], iqentry_agen[i], iqentry_res[i], iqentry_op[i], 
 		iqentry_bt[i], iqentry_tgt[i], iqentry_a1[i], iqentry_a1_v[i], iqentry_a1_s[i], iqentry_a2[i], iqentry_a2_v[i], 
 		iqentry_a2_s[i], iqentry_a0[i], iqentry_pc[i], iqentry_exc[i]);
@@ -3901,14 +3473,6 @@ begin
 	dram1_more <= 'd0;
 	dram_v0 <= 'd0;
 	dram_v1 <= 'd0;
-	head0 <= 'd0;
-	head1 <= 1;
-	head2 <= 2;
-	head3 <= 3;
-	head4 <= 4;
-	head5 <= 5;
-	head6 <= 6;
-	head7 <= 7;
 	panic <= `PANIC_NONE;
 	did_branchback1 <= 'd0;
 	did_branchback2 <= 'd0;
@@ -3947,7 +3511,6 @@ begin
 		dramN_tid[n11] = {4'd0,n11[0],3'd0};
 	end
 	*/
-	I <= 0;
 end
 endtask
 
