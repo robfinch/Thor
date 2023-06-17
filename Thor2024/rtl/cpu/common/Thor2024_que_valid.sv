@@ -75,13 +75,11 @@ else begin
 				iq_v[tail0] <= VAL;
     2'b11:
     	if (iq_v[tail0] == INV) begin
+				iq_v[tail0] <= VAL;
 				//
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
-				if (backbr)
-					iq_v[tail0] <= VAL;
-				else begin	// fetchbuf0 doesn't contain a backwards branch
-					iq_v[tail0] <= VAL;
+				if (!backbr) begin
 			    //
 			    // if there is room for a second instruction, enqueue it
 			    //
@@ -102,136 +100,129 @@ else begin
 //
 	if (~|panic) begin
 		if (SUPPORT_3COMMIT)
-		casez ({ iq_v[heads[0]],
-			iq[heads[0]].done,
-			iq_v[heads[1]],
-			iq[heads[1]].done,iq_v[heads[2]],iq[heads[2]].done })
+			casez ({ iq_v[heads[0]],
+				iq[heads[0]].done,
+				iq_v[heads[1]],
+				iq[heads[1]].done,iq_v[heads[2]],iq[heads[2]].done })
 
-	  // retire 0 - blocked at the first instruction
-	  // 16 cases
-	  6'b10_??_??:	;
-	  // retire 1 - blocked at the second instruction
-	  // 12 cases
-		6'b0?_10_??:	;
-		6'b11_10_??:  iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-	  // retire 2 - blocked at third instruction
-	  // 7 cases
-		6'b0?_0?_10:	;
-		6'b11_0?_10:
-			if (heads[1] != tail0)
-		    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			else
-		    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		6'b11_11_10:
-			begin
-		    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		    iq_v[heads[1]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			end
-		// retire 3
-		// 27 cases
-		6'b0?_0?_0?:	;
-		6'b0?_0?_11:
-			if (iq[heads[2]].tgt=='d0)
-		    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-		6'b0?_11_0?:
-			if (heads[2] != tail0)
-				iq_v[heads[1]] = INV;
-			else
-				iq_v[heads[1]] = INV;
-		6'b0?_11_11:
-			if (iq[heads[2]].tgt=='d0) begin
-				iq_v[heads[1]] = INV;
-		    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			end
-			else
-				iq_v[heads[1]] = INV;
-		6'b11_0?_11:
-			if (heads[1] != tail0) begin
-				iq_v[heads[0]] = INV;
-				iq_v[heads[2]] = INV;
-			end
-			else
-				iq_v[heads[0]] = INV;
-		6'b11_11_0?:
-			if (heads[2] != tail0) begin
-				iq_v[heads[0]] = INV;
-				iq_v[heads[1]] = INV;
-			end
-			else begin
-				iq_v[heads[0]] = INV;
-				iq_v[heads[1]] = INV;
-			end
-		6'b11_11_11:
-			if (iq[heads[2]].tgt=='d0) begin
-				iq_v[heads[0]] = INV;
-				iq_v[heads[1]] = INV;
-		    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-			end
-			else begin
-				iq_v[heads[0]] = INV;
-				iq_v[heads[1]] = INV;
-			end
-		6'b11_0?_0?:
-			if (heads[1] != tail0 && heads[2] != tail0)
-				iq_v[heads[0]] = INV;
-			else if (heads[1] != tail0)
-				iq_v[heads[0]] = INV;
-			else
-				iq_v[heads[0]] = INV;
-			
-		default:	;
-		endcase
-	else
-		case ({ iq[heads[0]].v,
-			iq[heads[0]].done,
-			iq[heads[1]].v,
-			iq[heads[1]].done })
-
-    // 4'b00_00	- neither valid; skip both
-    // 4'b00_01	- neither valid; skip both
-    // 4'b00_10	- skip heads[0], wait on heads[1]
-    // 4'b00_11	- skip heads[0], commit heads[1]
-    // 4'b01_00	- neither valid; skip both
-    // 4'b01_01	- neither valid; skip both
-    // 4'b01_10	- skip heads[0], wait on heads[1]
-    // 4'b01_11	- skip heads[0], commit heads[1]
-    // 4'b10_00	- wait on heads[0]
-    // 4'b10_01	- wait on heads[0]
-    // 4'b10_10	- wait on heads[0]
-    // 4'b10_11	- wait on heads[0]
-    // 4'b11_00	- commit heads[0], skip heads[1]
-    // 4'b11_01	- commit heads[0], skip heads[1]
-    // 4'b11_10	- commit heads[0], wait on heads[1]
-    // 4'b11_11	- commit heads[0], commit heads[1]
-
-    //
-    // retire 0
-    4'b10_00,
-    4'b10_01,
-    4'b10_10,
-    4'b10_11: ;
-
-    //
-    // retire 1
-    4'b00_10,
-    4'b01_10,
-    4'b11_10:
-    	begin
-				if (iq[heads[0]].v || heads[0] != tail0)
+		  // retire 0 - blocked at the first instruction
+		  // 16 cases
+		  6'b10_??_??:	;
+		  // retire 1 - blocked at the second instruction
+		  // 12 cases
+			6'b0?_10_??:	;
+			6'b11_10_??:  iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+		  // retire 2 - blocked at third instruction
+		  // 7 cases
+			6'b0?_0?_10:	;
+			6'b11_0?_10:
+				if (heads[1] != tail0)
 			    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-	    end
-
-    // retire 2
-    default: 
-    	begin
-				if ((iq[heads[0]].v && iq[heads[1]].v) || (heads[0] != tail0 && heads[1] != tail0)) begin
+				else
+			    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+			6'b11_11_10:
+				begin
 			    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
 			    iq_v[heads[1]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
 				end
-				else if (iq[heads[0]].v || heads[0] != tail0)
+			// retire 3
+			// 27 cases
+			6'b0?_0?_0?:	;
+			6'b0?_0?_11:
+				if (iq[heads[2]].tgt=='d0)
+			    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+			6'b0?_11_0?:
+				if (heads[2] != tail0)
+					iq_v[heads[1]] = INV;
+				else
+					iq_v[heads[1]] = INV;
+			6'b0?_11_11:
+				if (iq[heads[2]].tgt=='d0) begin
+					iq_v[heads[1]] = INV;
+			    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+				end
+				else
+					iq_v[heads[1]] = INV;
+			6'b11_0?_11:
+				if (heads[1] != tail0) begin
+					iq_v[heads[0]] = INV;
+					iq_v[heads[2]] = INV;
+				end
+				else
+					iq_v[heads[0]] = INV;
+			6'b11_11_0?:
+				if (heads[2] != tail0) begin
+					iq_v[heads[0]] = INV;
+					iq_v[heads[1]] = INV;
+				end
+				else begin
+					iq_v[heads[0]] = INV;
+					iq_v[heads[1]] = INV;
+				end
+			6'b11_11_11:
+				if (iq[heads[2]].tgt=='d0) begin
+					iq_v[heads[0]] = INV;
+					iq_v[heads[1]] = INV;
+			    iq_v[heads[2]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+				end
+				else begin
+					iq_v[heads[0]] = INV;
+					iq_v[heads[1]] = INV;
+				end
+			6'b11_0?_0?:
+				if (heads[1] != tail0 && heads[2] != tail0)
+					iq_v[heads[0]] = INV;
+				else if (heads[1] != tail0)
+					iq_v[heads[0]] = INV;
+				else
+					iq_v[heads[0]] = INV;
+				
+			default:	;
+			endcase
+		else
+			casez ({ iq_v[heads[0]],
+				iq[heads[0]].done,
+				iq_v[heads[1]],
+				iq[heads[1]].done })
+
+	    // 4'b00_00	- neither valid; skip both
+	    // 4'b00_01	- neither valid; skip both
+	    // 4'b00_10	- skip heads[0], wait on heads[1]
+	    // 4'b00_11	- skip heads[0], commit heads[1]
+	    // 4'b01_00	- neither valid; skip both
+	    // 4'b01_01	- neither valid; skip both
+	    // 4'b01_10	- skip heads[0], wait on heads[1]
+	    // 4'b01_11	- skip heads[0], commit heads[1]
+	    // 4'b10_00	- wait on heads[0]
+	    // 4'b10_01	- wait on heads[0]
+	    // 4'b10_10	- wait on heads[0]
+	    // 4'b10_11	- wait on heads[0]
+	    // 4'b11_00	- commit heads[0], skip heads[1]
+	    // 4'b11_01	- commit heads[0], skip heads[1]
+	    // 4'b11_10	- commit heads[0], wait on heads[1]
+	    // 4'b11_11	- commit heads[0], commit heads[1]
+
+	    //
+	    // retire 0
+	    4'b10_??:	;
+
+	    // retire 1
+	    4'b0?_10,
+	    4'b11_10:
+				if (iq_v[heads[0]] || heads[0] != tail0)
 			    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
-	    end
-		endcase
+
+	    // retire 2
+	    default: 
+	    	begin
+					if ((iq_v[heads[0]] && iq_v[heads[1]]) || (heads[0] != tail0 && heads[1] != tail0)) begin
+				    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+				    iq_v[heads[1]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+					end
+					else if (iq_v[heads[0]] || heads[0] != tail0)
+				    iq_v[heads[0]] = INV;	// may conflict with STOMP, but since both are setting to 0, it is okay
+		    end
+			endcase
 	end
 
 end

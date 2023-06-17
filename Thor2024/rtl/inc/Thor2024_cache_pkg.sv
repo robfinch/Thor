@@ -40,7 +40,8 @@ package Thor2024_cache_pkg;
 parameter ITAG_BIT = 14;
 parameter DCacheLineWidth = 512;
 localparam DCacheTagLoBit = $clog2((DCacheLineWidth/8));
-parameter ICacheLineWidth = 512;
+parameter ICacheBundleWidth = 128;
+parameter ICacheLineWidth = ICacheBundleWidth*4;
 localparam ICacheTagLoBit = $clog2((ICacheLineWidth/8));
 
 `define TAG_ASID $bits(Thor2024pkg::asid_t) + $bits(Thor2024pkg::address_t)-ITAG_BIT-1:$bits(Thor2024pkg::address_t)-ITAG_BIT
@@ -60,7 +61,7 @@ typedef struct packed
 
 typedef struct packed
 {
-	logic [ICacheLineWidth/128-1:0] v;	// 1 valid bit per 128 bits data
+	logic [ICacheLineWidth/ICacheBundleWidth-1:0] v;	// 1 valid bit per 128 bits data
 	logic m;		// modified indicator
 	Thor2024pkg::asid_t asid;
 	logic [$bits(Thor2024pkg::address_t)-1:0] vtag;	// virtual tag

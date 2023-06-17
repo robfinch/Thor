@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // ============================================================================
 //        __
 //   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
@@ -34,25 +35,57 @@
 //
 // ============================================================================
 
+import Thor2024pkg::SIM;
+
 module Thor2024_regfileRam(clka, ena, wea, addra, dina, clkb, enb, addrb, doutb);
 parameter WID=64;
+parameter DEP=256;
+localparam RBIT=$clog2(DEP)-1;
 input clka;
 input ena;
-input [7:0] wea;
-input [7:0] addra;
+input [WID/8-1:0] wea;
+input [RBIT:0] addra;
 input [WID-1:0] dina;
 input clkb;
 input enb;
-input [7:0] addrb;
+input [RBIT:0] addrb;
 output [WID-1:0] doutb;
 
+integer n;
+// The following outside of generate to make it easier to reference in SIM code.
+// It should be stripped out for synthesis as it would not be referenced.
+(* RAM_STYLE="distributed" *)
+reg [WID-1:0] mem [0:DEP-1];
+reg [RBIT:0] raddrb;
+initial begin
+	for (n = 0; n < 4096; n = n + 1)
+		mem[n] = 0;
+end
 
+generate begin : gRegfileRam
+if (SIM) begin
+
+	always_ff @(posedge clka) if (ena & wea[0]) mem[addra][7:0] <= dina[7:0];
+	always_ff @(posedge clka) if (ena & wea[1]) mem[addra][15:8] <= dina[15:8];
+	always_ff @(posedge clka) if (ena & wea[2]) mem[addra][23:16] <= dina[23:16];
+	always_ff @(posedge clka) if (ena & wea[3]) mem[addra][31:24] <= dina[31:24];
+	always_ff @(posedge clka) if (ena & wea[4]) mem[addra][39:32] <= dina[39:32];
+	always_ff @(posedge clka) if (ena & wea[5]) mem[addra][47:40] <= dina[47:40];
+	always_ff @(posedge clka) if (ena & wea[6]) mem[addra][55:48] <= dina[55:48];
+	always_ff @(posedge clka) if (ena & wea[7]) mem[addra][63:56] <= dina[63:56];
+
+	always_ff @(posedge clkb)
+		raddrb <= addrb;
+	assign doutb = mem[addrb];
+
+end
+else begin
    // xpm_memory_sdpram: Simple Dual Port RAM
    // Xilinx Parameterized Macro, version 2022.2
 
    xpm_memory_sdpram #(
-      .ADDR_WIDTH_A(8),               // DECIMAL
-      .ADDR_WIDTH_B(8),               // DECIMAL
+      .ADDR_WIDTH_A($clog2(DEP)),               // DECIMAL
+      .ADDR_WIDTH_B($clog2(DEP)),               // DECIMAL
       .AUTO_SLEEP_TIME(0),            // DECIMAL
       .BYTE_WRITE_WIDTH_A(8),        // DECIMAL
       .CASCADE_HEIGHT(0),             // DECIMAL
@@ -62,7 +95,7 @@ output [WID-1:0] doutb;
       .MEMORY_INIT_PARAM("0"),        // String
       .MEMORY_OPTIMIZATION("true"),   // String
       .MEMORY_PRIMITIVE("auto"),      // String
-      .MEMORY_SIZE(256*WID),             // DECIMAL
+      .MEMORY_SIZE(DEP*WID),             // DECIMAL
       .MESSAGE_CONTROL(0),            // DECIMAL
       .READ_DATA_WIDTH_B(WID),         // DECIMAL
       .READ_LATENCY_B(1),             // DECIMAL
@@ -128,6 +161,9 @@ output [WID-1:0] doutb;
    );
 
    // End of xpm_memory_sdpram_inst instantiation
+end
+end
+endgenerate
 								
 endmodule
 

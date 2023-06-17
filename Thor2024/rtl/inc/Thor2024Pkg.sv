@@ -38,6 +38,8 @@
 package Thor2024pkg;
 
 `undef IS_SIM
+parameter SIM = 1'b1;
+
 //`define IS_SIM	1
 // Comment out to remove the sigmoid approximate function
 //`define SIGMOID	1
@@ -58,11 +60,18 @@ package Thor2024pkg;
 
 `define L1DCacheWays 4
 
+// The following adds support for committing a third result if there is no
+// target register. It takes more hardware.
+parameter SUPPORT_3COMMIT = 1'b0;
+// The following adds two forwarding busses which may improve performance, but
+// cost additional logic.
+parameter SUPPORT_COMMIT23 = 1'b0;
+
 parameter SUPPORT_PGREL	= 1'b0;	// Page relative branching
 parameter SUPPORT_REP = 1'b1;
 parameter REP_BIT = 31;
 
-parameter QENTRIES = 8;
+parameter QENTRIES = 8;	// currently must be 8
 
 // Uncomment to have page relative branches.
 //`define PGREL 1
@@ -111,6 +120,7 @@ parameter PANIC_INVALIDFBSTATE = 4'd8;
 parameter PANIC_INVALIDIQSTATE = 4'd9;
 parameter PANIC_BRANCHBACK = 4'd10;
 parameter PANIC_BADTARGETID	 = 4'd12;
+parameter PANIC_COMMIT = 4'd13;
 
 
 typedef logic [$clog2(QENTRIES)-1:0] que_ndx_t;
@@ -191,6 +201,7 @@ typedef enum logic [6:0] {
 	OP_BLEND		= 7'd89,
 	OP_FLT2			= 7'd98,
 	OP_FLT3			= 7'd99,
+	OP_IRQ			= 7'd112,
 	OP_REP			= 7'd120,
 	OP_PRED			= 7'd121,
 	OP_ATOM			= 7'd122,
@@ -536,6 +547,7 @@ parameter CSR_MLDT	= 16'h3052;
 parameter CSR_MTCB	= 16'h3054;
 parameter CSR_MBVEC	= 16'b0011000001011???;
 parameter CSR_MSP		= 16'h3060;
+parameter CSR_MEPC	= 16'h3108;
 parameter CSR_TIME	= 16'h?FE0;
 parameter CSR_MTIME	= 16'h3FE0;
 parameter CSR_MTIMECMP	= 16'h3FE1;
@@ -1085,7 +1097,8 @@ typedef struct packed
 } writeback_info_t;
 */
 
-const address_t RSTPC	= 32'hFFFD0000;
+const pc_address_t RSTPC	= 44'hFFFD00000A0;
+const address_t RSTSP = 32'hFFFFFFF0;
 
 typedef struct packed {
 	logic v;
@@ -1213,6 +1226,13 @@ begin
 	default:
 		fnIsRet = 1'b0;
 	endcase
+end
+endfunction
+
+function fnIsRti;
+input instruction_t ir;
+begin
+	fnIsRti = (fnIsRet(ir) && ir[10:9]==2'd1);
 end
 endfunction
 

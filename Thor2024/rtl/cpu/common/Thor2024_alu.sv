@@ -37,7 +37,8 @@
 import const_pkg::*;
 import Thor2024pkg::*;
 
-module Thor2024_alu(rst, clk, clk2x, ld, ir, div, a, b, c, i, t, p, o, mul_done, div_done, div_dbz);
+module Thor2024_alu(rst, clk, clk2x, ld, ir, div, a, b, c, i, t, p, csr,
+	o, mul_done, div_done, div_dbz);
 input rst;
 input clk;
 input clk2x;
@@ -50,6 +51,7 @@ input value_t c;
 input value_t t;
 input value_t i;
 input value_t p;
+input value_t csr;
 output value_t o;
 output reg mul_done;
 output div_done;
@@ -141,6 +143,7 @@ always_comb
 		FN_SLEU:	bus = a <= b;
 		default:	bus = {2{32'hDEADBEEF}};
 		endcase
+	OP_CSR:		bus = csr;
 	OP_ADDI:	bus = a + b;
 	OP_CMPI:	bus = cmpo;
 	OP_MULI:	bus = prod[63:0];

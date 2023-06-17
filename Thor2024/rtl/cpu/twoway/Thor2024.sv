@@ -39,8 +39,6 @@ import fta_bus_pkg::*;
 import Thor2024_cache_pkg::*;
 import Thor2024pkg::*;
 
-//`define SIM 1'b1
-
 `define ZERO		64'd0
 
 // JALR and EXTENDED are synonyms
@@ -55,13 +53,6 @@ import Thor2024pkg::*;
 `define SYS_RFU2	3'd5
 `define SYS_RFU3	3'd6
 `define SYS_EXC		3'd7	// doesn't need to be last, but what the heck
-
-// exception types:
-`define EXC_NONE	4'd0
-`define EXC_HALT	4'd1
-`define EXC_TLBMISS	4'd2
-`define EXC_SIGSEGV	4'd3
-`define EXC_INVALID	4'd4
 
 //
 // define PANIC types
@@ -3274,14 +3265,15 @@ assign int_commit = (commit0_v && fnIsIrq(iq[heads[0]].op)) ||
                     (commit0_v && commit1_v && fnIsIrq(iq[heads[1]].op));
 
 
+generate begin : gDisplay
+if (SIM) begin
 always_ff @(posedge clk) begin: clock_n_debug
 	reg [7:0] i;
 	integer j;
 
 	$display("\n\n\n\n\n\n\n\n");
 	$display("TIME %0d", $time);
-	$display("%h #", pc.pc);
-`ifdef SIM
+	$display("%h.%h #", pc.pc, pc.micro_ip);
 	for (i=0; i< AREGS; i=i+4)
 	    $display("%d: %h %d %o  %d: %h %d %o  %d: %h %d %o  %d: %h %d %o #",
 	    	i+0, urf2.ab[i+1] ? urf2.urf20.mem[i+0] : urf2.urf10.mem[i+0], rf_v[i+0], rf_source[i+0],
@@ -3289,26 +3281,25 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    	i+2, urf2.ab[i+2] ? urf2.urf20.mem[i+2] : urf2.urf10.mem[i+2], rf_v[i+2], rf_source[i+2],
 	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
 	    );
-`endif
 	$display("%c %h #", branchback?"b":" ", backpc);
-	$display("%c%c A: %d %h,%h %h #",
-	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc.pc);
-	$display("%c%c B: %d %h,%h %h #",
-	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr[1], uif1.fetchbufB_instr[0], uif1.fetchbufB_pc.pc);
-	$display("%c%c C: %d %h,%h %h #",
-	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr[1], uif1.fetchbufC_instr[0], uif1.fetchbufC_pc.pc);
-	$display("%c%c D: %d %h,%h %h #",
-	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc.pc);
+	$display("%c%c A: %d %h,%h %h.%h #",
+	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc.pc, uif1.fetchbufA_pc.micro_ip);
+	$display("%c%c B: %d %h,%h %h.%h #",
+	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr[1], uif1.fetchbufB_instr[0], uif1.fetchbufB_pc.pc, uif1.fetchbufB_pc.micro_ip);
+	$display("%c%c C: %d %h,%h %h.%h #",
+	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr[1], uif1.fetchbufC_instr[0], uif1.fetchbufC_pc.pc, uif1.fetchbufC_pc.micro_ip);
+	$display("%c%c D: %d %h,%h %h.%h #",
+	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc.pc, uif1.fetchbufD_pc.micro_ip);
 
-	for (i=0; i<8; i=i+1) 
-	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h %d %o %h #",
+	for (i=0; i<QENTRIES; i=i+1) 
+	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h %d %o %h.%h #",
 		(i[2:0]==heads[0])?72:46, (i[2:0]==tail0)?84:46, iq[i].sn, i,
 		iq_v[i]?"v":"-", iq[i].done?"d":"-", iq[i].out?"o":"-", iq[i].bt?"t":"-", iqentry_memissue[i], iq[i].agen?"a":"-", iqentry_issue2[i]?"i":"-",
 		((i==0) ? iqentry_islot[0] : (i==1) ? iqentry_islot[1] : (i==2) ? iqentry_islot[2] : (i==3) ? iqentry_islot[3] :
 		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
 		(iq[i].fc ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
 		iq[i].op.any.opcode, iq[i].tgt, iq[i].exc, iq[i].res, iq[i].a0, iq[i].a1, iq[i].a1_v,
-		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].a3, iq[i].a3_v, iq[i].a3_s, iq[i].pc.pc);
+		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].a3, iq[i].a3_v, iq[i].a3_s, iq[i].pc.pc, iq[i].pc.micro_ip);
 
 	$display("DRAM");
 	$display("%d%c %h %h %c%d %o #",
@@ -3429,15 +3420,18 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    $display("-----------------------------------------------------------------");
 	    $display("-----------------------------------------------------------------");
 	    $display("");
-	    $display("instructions committed: %d", I);
-	    $display("total execution cycles: %d", $time / 10);
 	    $display("");
 	end
+  $display("instructions committed: %d", I);
+  $display("total execution cycles: %d", $time / 30);
 	if (|panic && ~outstanding_stores) begin
 	    $finish;
 	end
 
-    end
+end
+end
+end
+endgenerate
 
 task tReset;
 begin

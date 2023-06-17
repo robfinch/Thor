@@ -52,9 +52,12 @@ output reg [39:0] I;
 integer nn;
 
 reg [2:0] inc;
-que_ndx_t head0 = heads[0];
-que_ndx_t head1 = heads[1];
-que_ndx_t head2 = heads[2];
+que_ndx_t head0;
+que_ndx_t head1;
+que_ndx_t head2;
+always_comb head0 = heads[0];
+always_comb head1 = heads[1];
+always_comb head2 = heads[2];
 
 //
 // COMMIT PHASE (dequeue only ... not register-file update)
@@ -253,7 +256,7 @@ else begin
 			end
 		endcase
 	else
-		case ({ iq[head0].v,
+		casez ({ iq[head0].v,
 			iq[head0].done,
 			iq[head1].v,
 			iq[head1].done })
@@ -275,29 +278,20 @@ else begin
     // 4'b11_10	- commit head0, wait on head1
     // 4'b11_11	- commit head0, commit head1
 
-    //
     // retire 0
-    4'b10_00,
-    4'b10_01,
-    4'b10_10,
-    4'b10_11: ;
+    4'b10_??:	;
 
-    //
     // retire 1
-    4'b00_10,
-    4'b01_10,
+    4'b0?_10,
     4'b11_10:
-    	begin
-				if (iq[head0].v || head0 != tail0) begin
-					for (nn = 0; nn < QENTRIES; nn = nn + 1)
-						heads[nn] <= heads[nn] + 1;
-			    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
-			    inc <= 1;
-				end
-	    end
+			if (iq[head0].v || head0 != tail0) begin
+				for (nn = 0; nn < QENTRIES; nn = nn + 1)
+					heads[nn] <= heads[nn] + 1;
+		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
+		    inc <= 1;
+			end
 
-		    //
-		    // retire 2
+    // retire 2
     default: 
     	begin
 				if ((iq[head0].v && iq[head1].v) || (head0 != tail0 && head1 != tail0)) begin
