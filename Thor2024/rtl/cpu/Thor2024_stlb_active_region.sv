@@ -88,6 +88,7 @@ initial begin
 	pma_regions[7].at[1].rwx = 4'hD;
 	pma_regions[7].at[2].rwx = 4'hD;
 	pma_regions[7].at[3].rwx = 4'hD;
+	pma_regions[7].at[3].cache = fta_bus_pkg::WT_READ_ALLOCATE;
 	pma_regions[7].lock = "LOCK";
 
 	// IO
@@ -119,6 +120,7 @@ initial begin
 	pma_regions[4].at[1].rwx = 4'hF;
 	pma_regions[4].at[2].rwx = 4'hF;
 	pma_regions[4].at[3].rwx = 4'hF;
+	pma_regions[4].at[3].cache = fta_bus_pkg::WT_READ_ALLOCATE;
 //	pma_regions[4].at = 20'h0020F;		// byte address table, read-write-execute cacheable
 	pma_regions[4].lock = "LOCK";
 
@@ -155,6 +157,7 @@ initial begin
 	pma_regions[1].at[1].dev_type = 8'h01;		// no access
 	pma_regions[1].at[2].dev_type = 8'h01;		// no access
 	pma_regions[1].at[3].dev_type = 8'h01;		// no access
+	pma_regions[1].at[3].cache = fta_bus_pkg::WT_READ_ALLOCATE;
 //	pma_regions[1].at = 20'h0010F;	// ram, byte address table, cache-read-write-execute
 	pma_regions[1].lock = "LOCK";
 

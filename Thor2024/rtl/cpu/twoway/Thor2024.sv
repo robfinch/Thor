@@ -3281,7 +3281,7 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    	i+2, urf2.ab[i+2] ? urf2.urf20.mem[i+2] : urf2.urf10.mem[i+2], rf_v[i+2], rf_source[i+2],
 	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
 	    );
-	$display("%c %h #", branchback?"b":" ", backpc);
+	$display("%c %h #", branchback?"b":" ", backpc.pc);
 	$display("%c%c A: %d %h,%h %h.%h #",
 	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc.pc, uif1.fetchbufA_pc.micro_ip);
 	$display("%c%c B: %d %h,%h %h.%h #",

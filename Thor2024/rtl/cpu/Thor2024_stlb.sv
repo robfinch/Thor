@@ -1150,44 +1150,36 @@ ST_RST:
 		master_count <= 6'd1;
 		tlbeni <= 1'b1;
 		tlbwrr <= 'd0;
-		case(count[7])
-//		13'b000: begin tlbwr0r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h0,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
-//		13'b001: begin tlbwr1r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h1,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
-//		13'b010: begin tlbwr2r <= 1'b1; tlbdat_rst <= {8'h00,8'hEF,14'h2,count[11:10],12'h000,8'h00,count[11:0]};	end // Map 16MB RAM area
-		1'b0:
-			begin
-				tlbwrr[ASSOC-1] <= 1'b1; 
-				tlbdat_rst <= 'd0;
-				tlbdat_rst.count <= 6'd1;
-				//tlbdat_rst.pte.g <= 1'b1;
-				tlbdat_rst.pte.v <= 1'b1;
-				tlbdat_rst.pte.m <= 1'b1;
-				tlbdat_rst.pte.g <= 1'b1;
-				tlbdat_rst.pte.urwx <= 3'd7;
-				tlbdat_rst.pte.srwx <= 3'd7;
-				tlbdat_rst.pte.hrwx <= 3'd7;
-				//tlbdat_rst.pte.c <= 1'b1;
-				// FFFC0000
-				// 1111_1111_1111_1100_00 00_0000_0000_0000
-				tlbdat_rst.vpn.asid <= 'd0;
-				// ROM / scratchpad mapped into last 4MB
-				if (count[6]) begin
-					tlbdat_rst.vpn <= 8'h3F;
-					tlbdat_rst.pte.ppn <= 16'hFFC0 + count[5:0];
-					rcount <= {4'hF,count[5:0]};
-				end
-				// IO mapped at $FECxxxxx
-				else begin
-					tlbdat_rst.vpn <= 8'h3F;
-					tlbdat_rst.pte.ppn <= 16'hFEC0 + count[5:0];
-					rcount <= {4'hB,count[5:0]};
-				end
-				tlbdat_rst.pte.cache <= 'd0;//fta_bus_pkg::CACHEABLE;
+		tlbwrr[ASSOC-1] <= 1'b1; 
+		tlbdat_rst <= 'd0;
+		tlbdat_rst.count <= 6'd1;
+		//tlbdat_rst.pte.g <= 1'b1;
+		tlbdat_rst.pte.v <= 1'b1;
+		tlbdat_rst.pte.m <= 1'b1;
+		tlbdat_rst.pte.g <= 1'b1;
+		tlbdat_rst.pte.urwx <= 3'd7;
+		tlbdat_rst.pte.srwx <= 3'd7;
+		tlbdat_rst.pte.hrwx <= 3'd7;
+		//tlbdat_rst.pte.c <= 1'b1;
+		// FFFC0000
+		// 1111_1111_1111_1100_00 00_0000_0000_0000
+		tlbdat_rst.vpn.asid <= 'd0;
+		// ROM / scratchpad mapped into last 4MB
+		if (count[6]) begin
+			tlbdat_rst.vpn <= 8'h3F;
+			tlbdat_rst.pte.ppn <= 16'hFFC0 + count[5:0];
+			rcount <= {4'hF,count[5:0]};
+		end
+		// IO mapped at $FECxxxxx
+		else begin
+			tlbdat_rst.vpn <= 8'h3F;
+			tlbdat_rst.pte.ppn <= 16'hFEC0 + count[5:0];
+			rcount <= {4'hB,count[5:0]};
+		end
+		tlbdat_rst.pte.cache <= 'd0;//fta_bus_pkg::CACHEABLE;
 				//tlbdat_rst.ppnx <= 12'h000;
-			end // Map 16MB ROM/IO area
-		1'b1: begin state <= ST_RUN; tlbwrr[ASSOC-1] <= 1'd1; end
-		default:	;
-		endcase
+		if (count==8'h81)
+			state <= ST_RUN;
 		count <= count + 2'd1;
 		invall <= 'd0;
 		inv_count <= ENTRIES-1;
@@ -1358,7 +1350,7 @@ for (g = 0; g < ASSOC; g = g + 1) begin : gLvls
 	  .dina(tlbdati),
 	  .douta(tlbdato[g]),
 	  .clkb(clk_g),
-	  .enb(xlaten_i),
+	  .enb(1'b1),
 	  .web(wr[g]),
 	  .addrb(adr_i_slice[g]),
 	  .dinb(tentryi[g]),
@@ -1457,7 +1449,6 @@ modAMask uam1
 
 modHit uhit1
 (
-	.xlaten(xlatend),
 	.req(req1),
 	.tentryo(tentryo),
 	.master_count(master_count),
@@ -1579,9 +1570,8 @@ end
 endmodule
 
 // hit is the way containing the translation.
-module modHit(xlaten, req, tentryo, master_count, asid, hitr, hit);
+module modHit(req, tentryo, master_count, asid, hitr, hit);
 parameter ASSOC = 6;
-input xlaten;
 input fta_cmd_request128_t req;
 input tlb_count_t master_count;
 input fta_asid_t asid;
