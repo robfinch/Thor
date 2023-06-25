@@ -79,7 +79,7 @@ lfsr17 #(.WID(17)) ulfsr1
 	.o(lfsr_o)
 );
 
-always_ff @(posedge clk, posedge rst)
+always_ff @(posedge clk)
 if (rst) begin
 	req_state <= RESET;
 	tid_cnt <= {CORENO,1'b0,4'h0};

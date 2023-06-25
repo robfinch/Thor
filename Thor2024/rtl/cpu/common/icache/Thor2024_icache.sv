@@ -264,7 +264,7 @@ always_comb//ff @(posedge clk)
 	victim_cache_oline <= victim_cache[vco];
 always_comb
 	iel <= ip[LOBIT-1];
-always_ff @(posedge clk)
+always_comb//ff @(posedge clk)
 	iel2 <= iel;
 
 always_comb
@@ -412,7 +412,7 @@ for (m = 0; m < WAYS; m = m + 1) begin
 end
 end
 
-always_ff @(posedge clk, posedge rst)
+always_ff @(posedge clk)
 if (rst) begin
 	victim_count <= 'd0;
 	for (g = 0; g < WAYS; g = g + 1) begin

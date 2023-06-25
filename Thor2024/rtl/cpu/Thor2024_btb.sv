@@ -60,6 +60,8 @@ typedef struct packed {
 reg [9:0] addrb0, addrb1;
 reg [9:0] addra;
 btb_entry_t doutb0, doutb1;
+reg w;
+btb_entry_t tmp;
 
    // xpm_memory_sdpram: Simple Dual Port RAM
    // Xilinx Parameterized Macro, version 2022.2
@@ -226,13 +228,11 @@ btb_entry_t [1023:0] btb_tbl;
 
 btb_entry_t [7:0] btb_buf;
 reg [2:0] bp, rbp;
-reg w;
-btb_entry_t tmp;
 
 always_ff @(posedge rclk)
 	addrb0 <= pc;
 always_ff @(posedge rclk)
-	addrb1 <= fnPCInc(pc);// + {4'd5,12'h00};
+	addrb1 <= pc + 16'h5000;
 
 always_comb
 begin
@@ -245,11 +245,13 @@ begin
 		takb <= 1'b1;
 	end
 	else begin
-		next_pc <= fnPCInc(fnPCInc(pc));// + {4'd10,12'h00};
+		next_pc <= pc + 16'hA000;// + {4'd10,12'h00};
+		next_pc[11:0] <= 'd0;
 		takb <= 1'b0;
 	end
 	// For now, to disable BTB
-	next_pc <= fnPCInc(fnPCInc(pc));//pc + {4'd10,12'h00};
+	next_pc <= pc + 16'hA000;
+	next_pc[11:0] <= 'd0;
 	takb <= 1'b0;
 end
 

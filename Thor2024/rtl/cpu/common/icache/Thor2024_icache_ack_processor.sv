@@ -71,7 +71,7 @@ lfsr17 #(.WID(17)) ulfsr1
 	.o(lfsr_o)
 );
 
-always_ff @(posedge clk, posedge rst)
+always_ff @(posedge clk)
 if (rst) begin
 	resp_state <= WAIT;
 	wr_ic <= 1'd0;

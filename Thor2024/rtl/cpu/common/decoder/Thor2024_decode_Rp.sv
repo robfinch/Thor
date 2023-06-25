@@ -75,7 +75,6 @@ begin
 		endcase
 	OP_JSR:	fnRp = {3'b100,ir[37:35]};
 	OP_RTD:	fnRp = {3'b100,ir[37:35]};
-	OP_JSR,
 	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:

@@ -36,6 +36,8 @@
 
 import fta_bus_pkg::*;
 import wishbone_pkg::*;
+import Thor2024pkg::SIM;
+
 //import nic_pkg::*;
 
 //`define USE_GATED_CLOCK	1'b1
@@ -150,7 +152,9 @@ fta_cmd_request128_t ch7req;
 fta_cmd_request128_t ch7dreq;	// DRAM request
 fta_cmd_response128_t ch7resp;
 fta_cmd_request128_t fb_req;
-fta_cmd_response128_t fb_resp;
+fta_cmd_response128_t fb_resp, fb_resp1;
+fta_cmd_request128_t fba_req;
+fta_cmd_response128_t fba_resp;
 reg [31:0] irq_bus;
 fta_cycle_type_t cpu_cti;	// cycle type indicator
 wire [3:0] cpu_cid;
@@ -304,7 +308,7 @@ NexysVideoClkgen ucg1
 
 assign rst = !locked;
 
-/*
+
 rgb2dvi ur2d1
 (
 	.rst(rst),
@@ -321,8 +325,10 @@ rgb2dvi ur2d1
 	.TMDS_Data_p(TMDS_OUT_data_p),
 	.TMDS_Data_n(TMDS_OUT_data_n)
 );
-*/
+
 /*
+generate begin : gRgb2dvi
+if (!SIM) begin	
 rgb2dvi #(
 	.kGenerateSerialClk(1'b0),
 	.kClkPrimitive("MMCM"),
@@ -344,8 +350,10 @@ ur2d1
 	.PixelClk(clk40),
 	.SerialClk(clk200)
 );
+end
+end
+endgenerate
 */
-
 wire cs_io;
 assign cs_io = ios;//ch7req.adr[31:20]==12'hFD0;
 wire cs_io2 = ch7req.padr[31:20]==12'hFD0;
@@ -376,16 +384,17 @@ rfFrameBuffer_fta64 uframebuf1
 	.rst_i(rst),
 	.irq_o(fb_irq),
 	.cs_config_i(br1_mreq.padr[31:28]==4'hD),
-	.cs_io_i(br1_mreq.padr[31:20]==12'hFEC),
+	.cs_io_i(br1_mreq.padr[31:20]==12'hFED),
 	.s_clk_i(node_clk),
 	.s_req(br1_mreq),
 	.s_resp(fb_cresp),
 	.m_clk_i(clk40),
 	.m_fst_o(), 
-	.wbm_req(fb_req),
-	.wbm_resp(fb_resp),
+	.m_req(fb_req),
+	.m_resp(sw[2] ? fb_resp1 : fb_resp),
 	.dot_clk_i(clk40),
-	.zrgb_o(fb_rgb),
+	.rgb_i('d0),
+	.rgb_o(fb_rgb),
 	.xonoff_i(sw[0]),
 	.xal_o(),
 	.hsync_o(hSync),
@@ -396,6 +405,27 @@ rfFrameBuffer_fta64 uframebuf1
 	.vctr_o(),
 	.fctr_o(),
 	.vblank_o()
+);
+
+VideoTPG uvtpg1
+(
+	.rst(rst),
+	.clk(clk40),
+	.en(sw[2]),
+	.vSync(vSync),
+	.req(fb_req),
+	.resp(fb_resp1),
+	.ex_resp()
+);
+
+fta_asynch2sync128 usas1
+(
+	.rst(rst),
+	.clk(clk40),
+	.req_i(fb_req),
+	.resp_o(fb_resp),
+	.req_o(fba_req),
+	.resp_i(fba_resp)
 );
 
 rfTextController_fta64 utc1
@@ -440,7 +470,6 @@ IOBridge128to64fta ubridge1
 );
 
 fta_cmd_response32_t [3:0] br4_chresp;
-assign br4_chresp[1] = 'd0;
 assign br4_chresp[2] = 'd0;
 assign br4_chresp[3] = 'd0;
 
@@ -463,6 +492,16 @@ PS2kbd_fta32 #(.pClkFreq(33333333)) ukbd1
 assign kclk = kclk_en ? 1'b0 : 'bz;
 assign kd = kdat_en ? 1'b0 : 'bz;
 
+random_fta32 urnd2
+(
+	.rst_i(rst),
+	.clk_i(node_clk),
+	.cs_config_i(br4_mreq.padr[31:28]==4'hD),
+	.cs_io_i(br4_mreq.padr[31:20]==12'hFEE),
+	.req(br4_mreq),
+	.resp(br4_chresp[1])
+);
+/*
 random urnd1
 (
 	.rst_i(rst),
@@ -477,7 +516,7 @@ random urnd1
 	.dat_i(br3_dato),
 	.dat_o(rand_dato)
 );
-
+*/
 uart6551pci #(.pClkFreq(100), .pClkDiv(24'd130)) uuart
 (
 	.rst_i(rst),
@@ -594,7 +633,7 @@ IOBridge128wb ubridge3wb
 always_ff @(posedge node_clk)
 	casez(cs_br3_leds)
 	1'b1:	br3_dati <= led;
-	1'b0:	br3_dati <= rand_dato|acia_dato|i2c2_dato;
+	1'b0:	br3_dati <= acia_dato|i2c2_dato;
 	default:	br3_dati <= 'd0;
 	endcase
 
@@ -602,7 +641,7 @@ always_ff @(posedge node_clk, posedge rst)
 if (rst)
 	br3_ack <= 'd0;
 else
-	br3_ack <= rand_ack|acia_ack|i2c2_ack;
+	br3_ack <= acia_ack|i2c2_ack;
 
 ledport_fta64 uleds1
 (
@@ -686,7 +725,17 @@ begin
 	ch7dreq.stb <= ch7req.stb & cs_dram;
 end
 
-mpmc10_wb umpmc1
+fta_cmd_request128_t mr_req = 'd0;
+/*
+MemoryRandomizer umr1
+(
+	.rst(rst),
+	.clk(node_clk),
+	.req(mr_req)
+);
+*/
+
+mpmc10_fta umpmc1
 (
 	.rst(rst),
 	.clk100MHz(clk100),
@@ -715,9 +764,9 @@ mpmc10_wb umpmc1
 	.ch5clk(1'b0),
 	.ch6clk(1'b0),
 	.ch7clk(node_clk),
-	.ch0i(fb_req),
-	.ch0o(fb_resp),
-	.ch1i('d0),
+	.ch0i(fba_req),
+	.ch0o(fba_resp),
+	.ch1i(mr_req),
 	.ch1o(),
 	.ch2i('d0),
 	.ch2o(),
@@ -949,11 +998,14 @@ nic_ager uager1
 ila_0 uila1 (
 	.clk(clk100), // input wire clk
 	.probe0(umpu1.ucpu1.pc), // input wire [15:0]  probe0  
-	.probe1(umpu1.ucpu1.inst0[0]), // input wire [31:0]  probe1 
+	.probe1('d0), // input wire [31:0]  probe1 
 	.probe2(cpu_req.padr),
-	.probe3({leds_cresp.ack,leds_cresp.adr[23:0]}),
-	.probe4(io_gate_en),
-	.probe5(umpu1.ucpu1.dramN_addr[0])
+	.probe3('d0),
+	.probe4({
+		io_gate_en}
+	),
+	.probe5('d0),
+	.probe6('d0)
 );
 
 /*
@@ -997,6 +1049,7 @@ assign resps[2] = fta_cmd_response128_t'(br3_resp);
 assign resps[3].cid = cpu_cid;
 assign resps[3].tid = cpu_tid;
 assign resps[3].ack = sema_ack;
+assign resps[3].next = 1'b0;
 assign resps[3].dat = {4{sema_dato}};
 assign resps[3].adr = cpu_adr;
 assign resps[4].cid = scr_cido;
@@ -1004,6 +1057,7 @@ assign resps[4].tid = scr_tido;
 assign resps[4].ack = scr_ack;
 assign resps[4].rty = 1'b0;
 assign resps[4].err = 1'b0;
+assign resps[4].next = 1'b0;
 assign resps[4].dat = scr_dato;
 assign resps[4].adr = scr_adro;
 assign resps[4].pri = 4'd7;

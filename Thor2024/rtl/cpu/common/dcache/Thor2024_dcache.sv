@@ -187,7 +187,8 @@ for (g = 0; g < WAYS; g = g + 1) begin : gFor
 	sram_1r1w_bw 
 	#(
 		.WID(CACHE_LINE_WIDTH),
-		.DEP(LINES)
+		.DEP(LINES),
+		.RL(2)		// read latency
 	)
 	udcme
 	(

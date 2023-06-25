@@ -77,7 +77,6 @@ begin
 	OP_FLT3:	fnRt = ir.f3.Rt;
 	OP_JSR:	fnRt = 6'd56 + ir[8:7];
 	OP_RTD:	fnRt = 6'd62;
-	OP_JSR,
 	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:

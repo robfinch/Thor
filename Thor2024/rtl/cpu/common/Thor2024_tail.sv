@@ -48,7 +48,7 @@ input iq_entry_t [7:0] iq;
 output reg [2:0] tail0;
 output reg [2:0] tail1;
 
-always_ff @(posedge clk, posedge rst)
+always_ff @(posedge clk)
 if (rst) begin
 	tail0 <= 3'd0;
 	tail1 <= 3'd1;

@@ -39,6 +39,7 @@
 module sram_1r1w(rst, clk, wr, wadr, radr, i, o);
 parameter WID=512;
 parameter DEP=256;
+parameter RL=1;
 input rst;
 input clk;
 input wr;
@@ -80,7 +81,7 @@ reg [WID:1] o1;
       .MEMORY_SIZE(WID*DEP),           // DECIMAL
       .MESSAGE_CONTROL(0),            // DECIMAL
       .READ_DATA_WIDTH_B(WID),        // DECIMAL
-      .READ_LATENCY_B(1),             // DECIMAL
+      .READ_LATENCY_B(RL),            // DECIMAL
       .READ_RESET_VALUE_B("0"),       // String
       .RST_MODE_A("SYNC"),            // String
       .RST_MODE_B("SYNC"),            // String

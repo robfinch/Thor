@@ -64,7 +64,7 @@ always_comb head2 = heads[2];
 //
 // look at head0 and head1 and let 'em write to the register file if they are ready
 //
-always_ff @(posedge clk, posedge rst)
+always_ff @(posedge clk)
 if (rst) begin
 	I <= 0;
 	inc <= 0;
@@ -73,6 +73,7 @@ if (rst) begin
 	panic_o <= 'd0;
 end
 else begin
+	inc <= 0;
 	if (~|panic_i) begin
 		if (SUPPORT_3COMMIT)
 		casez ({ iq[head0].v,

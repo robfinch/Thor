@@ -239,7 +239,7 @@ case(micro_ip)
 12'h0A1:	begin next_ip = 12'h0A2; instr = {2'd0,3'd0,16'hFFF0,2'd0,6'd0,MC0,OP_LDO};	end			// PC = Mem[FFFFFFF0]
 12'h0A2:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,MC0,6'd0,OP_JSR};	end
 12'h0A3:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,6'd0,6'd0,OP_NOP};	end
-default:	begin next_ip = 12'h000; end
+default:	begin next_ip = 12'h000; instr = 40'hFFFFFFFFFF; end	// NOP
 endcase
 
 endmodule

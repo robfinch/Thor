@@ -209,7 +209,7 @@ begin
 			ndx = nn;
 end
 
-always_ff @(posedge clk_i, posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i) begin
 	req_state <= RESET;
 	resp_state <= RESET;

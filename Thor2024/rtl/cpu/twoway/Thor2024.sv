@@ -172,7 +172,6 @@ regspec_t Ra0, Rb0, Rc0, Rt0, Rp0;
 regspec_t Ra1, Rb1, Rc1, Rt1, Rp1;
 
 wire        fetchbuf;	// determines which pair to read from & write to
-wire istall;
 
 instruction_t [4:0] fetchbuf0_instr;
 instruction_t fetchbuf0_postfixes [0:3];	
@@ -210,7 +209,7 @@ value_t alu0_cmpo;
 pc_address_t alu0_pc;
 value_t alu0_bus;
 wire  [3:0] alu0_id;
-cause_code_t alu0_exc;
+cause_code_t alu0_exc = FLT_NONE;
 wire        alu0_v;
 double_value_t alu0_prod,alu0_prod1,alu0_prod2;
 double_value_t alu0_produ,alu0_produ1,alu0_produ2;
@@ -260,7 +259,7 @@ value_t fpu_argI;	// only used by BEQ
 pc_address_t fpu_pc;
 value_t fpu_bus;
 wire  [3:0] fpu_id;
-cause_code_t fpu_exc;
+cause_code_t fpu_exc = FLT_NONE;
 wire        fpu_v;
 wire fpu_done;
 
@@ -623,7 +622,7 @@ uic1
 	.invall(ic_invall),
 	.invline(ic_invline),
 	.ip_asid(ip_asid),
-	.ip(pc.pc),
+	.ip(pc[43:12]),
 	.ip_o(pco),
 	.ihit_o(ihito),
 	.ihit(ihit),
@@ -688,8 +687,6 @@ Thor2024_ifetch uif1
 	.takb(ntakb),
 	.ptakb(ptakb),
 	.pc(pc),
-	.pc_i({pco,12'h000}),
-	.stall(istall),
 	.inst0(inst0),
 	.inst1(inst1),
 	.iq(iq),
@@ -726,6 +723,7 @@ assign fetchbuf0_rfw = Rt0 != 'd0;
 assign fetchbuf1_rfw = Rt1 != 'd0;
 
 /* under construction */
+/*
 always_comb
 	q1open = ~iq_v[tail0];
 always_comb
@@ -754,6 +752,7 @@ begin
 		end
 	end
 end
+*/
 
 wire [NDATA_PORTS-1:0] dcache_load;
 wire [NDATA_PORTS-1:0] dhit;
@@ -1698,42 +1697,50 @@ assign fpu_id = fpu_sourceid;
 pc_address_t tgtpc;
 
 always_comb
-	if (fnIsBccR(fcu_instr))
-		tgtpc = {fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]},12'h000};
-	else if (fnIsBranch(fcu_instr))
-		tgtpc = {fcu_pc.pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]},12'h000};
-	else if (fnIsCall(fcu_instr))
-		tgtpc = {fcu_argA + fcu_argI,12'h000};
+	if (fnIsBccR(fcu_instr)) begin
+		tgtpc = fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11],12'h000};
+		tgtpc[11:0] = 'd0;
+	end
+	else if (fnIsBranch(fcu_instr)) begin
+		tgtpc = fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
+		tgtpc[11:0] = 'd0;
+	end
+	else if (fnIsCall(fcu_instr)) begin
+		tgtpc = fcu_argA + {fcu_argI,12'h000};
+		tgtpc[11:0] = 'd0;
+	end
 	else if (fnIsRti(fcu_instr))
 		tgtpc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
-	else if (fnIsRet(fcu_instr))
-		tgtpc = {fcu_argC + fcu_instr[15:8],12'h000};
+	else if (fnIsRet(fcu_instr)) begin
+		tgtpc = fcu_argC + {fcu_instr[15:8],12'h000};
+		tgtpc[11:0] = 'd0;
+	end
 	else
 		tgtpc = RSTPC;
 
 pc_address_t tpc;
 always_comb
-	tpc = fnPCInc(fcu_pc);
+	tpc = fcu_pc + 16'h5000;
 
 always_comb
 	if (fnIsBccR(fcu_instr)) begin
-		fcu_misspc.pc = fcu_bt ? tpc.pc : fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11]};
-		fcu_misspc.micro_ip = 12'h000;
+		fcu_misspc = fcu_bt ? tpc : fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11],12'h000};
+		fcu_misspc[11:0] = 'd0;
 	end
 	else if (fnIsBranch(fcu_instr)) begin
-		fcu_misspc.pc = fcu_bt ? tpc.pc : fcu_pc.pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]};
-		fcu_misspc.micro_ip = 12'h000;
+		fcu_misspc = fcu_bt ? tpc : fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
+		fcu_misspc[11:0] = 'd0;
 	end
 	else if (fnIsCall(fcu_instr)) begin
-		fcu_misspc.pc = fcu_argA + fcu_argI;
-		fcu_misspc.micro_ip = 12'h000;
+		fcu_misspc = fcu_argA + {fcu_argI,12'h000};
+		fcu_misspc[11:0] = 'd0;
 	end
 	// Must be tested before Ret
-	else if (fnIsRti(fcu_instr)) begin
+	else if (fnIsRti(fcu_instr))
 		fcu_misspc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
-	end
 	else if (fnIsRet(fcu_instr)) begin
-		fcu_misspc = {fcu_argC + fcu_instr[15:8],12'h000};
+		fcu_misspc = fcu_argC + {fcu_instr[15:8],12'h000};
+		fcu_misspc[11:0] = 'd0;
 	end
 	else
 		fcu_misspc = RSTPC;
@@ -1751,18 +1758,18 @@ Thor2024_branch_eval ube1
 );
 
 always_comb
-	if (fnIsCallType(fcu_instr))
-		fcu_bus = fcu_pc.pc + 4'd5;
-	else
-		fcu_bus = tpc;
+	fcu_bus = tpc;
 
 always_comb
-if (fcu_instr.any.opcode==OP_SYS) begin
-	case(fcu_instr.sys.func)
-	FN_BRK:	fcu_exc = FLT_DBG;
-	FN_SYS:	fcu_exc = cause_code_t'(fcu_instr[24:16]);
-	default:	fcu_exc = FLT_NONE;
-	endcase
+begin
+	fcu_exc = FLT_NONE;
+	if (fcu_instr.any.opcode==OP_SYS) begin
+		case(fcu_instr.sys.func)
+		FN_BRK:	fcu_exc = FLT_DBG;
+		FN_SYS:	fcu_exc = cause_code_t'(fcu_instr[24:16]);
+		default:	fcu_exc = FLT_NONE;
+		endcase
+	end
 end
 
 always_comb
@@ -1780,10 +1787,10 @@ else begin
 	fcu_branchmiss = FALSE;
 end
 
-assign  branchmiss = excmiss | fcu_branchmiss,
-  misspc = excmiss ? excmisspc : fcu_misspc,
-  missir = excmiss ? excir : fcu_missir,
-  missid = excmiss ? excid : fcu_sourceid;
+assign branchmiss = excmiss | fcu_branchmiss;
+assign misspc = excmiss ? excmisspc : fcu_misspc;
+assign missir = excmiss ? excir : fcu_missir;
+assign missid = excmiss ? excid : fcu_sourceid;
 
 //
 // additional DRAM-enqueue logic
@@ -3273,7 +3280,7 @@ always_ff @(posedge clk) begin: clock_n_debug
 
 	$display("\n\n\n\n\n\n\n\n");
 	$display("TIME %0d", $time);
-	$display("%h.%h #", pc.pc, pc.micro_ip);
+	$display("%h #", pc);
 	for (i=0; i< AREGS; i=i+4)
 	    $display("%d: %h %d %o  %d: %h %d %o  %d: %h %d %o  %d: %h %d %o #",
 	    	i+0, urf2.ab[i+1] ? urf2.urf20.mem[i+0] : urf2.urf10.mem[i+0], rf_v[i+0], rf_source[i+0],
@@ -3281,15 +3288,15 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    	i+2, urf2.ab[i+2] ? urf2.urf20.mem[i+2] : urf2.urf10.mem[i+2], rf_v[i+2], rf_source[i+2],
 	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
 	    );
-	$display("%c %h #", branchback?"b":" ", backpc.pc);
+	$display("%c %h.%h #", branchback?"b":" ", backpc[$bits(pc_address_t)-1:12], backpc[11:0]);
 	$display("%c%c A: %d %h,%h %h.%h #",
-	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc.pc, uif1.fetchbufA_pc.micro_ip);
+	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc[$bits(pc_address_t)-1:12], uif1.fetchbufA_pc[11:0]);
 	$display("%c%c B: %d %h,%h %h.%h #",
-	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr[1], uif1.fetchbufB_instr[0], uif1.fetchbufB_pc.pc, uif1.fetchbufB_pc.micro_ip);
+	    45, fetchbuf?45:62, uif1.fetchbufB_v, uif1.fetchbufB_instr[1], uif1.fetchbufB_instr[0], uif1.fetchbufB_pc[$bits(pc_address_t)-1:12], uif1.fetchbufB_pc[11:0]);
 	$display("%c%c C: %d %h,%h %h.%h #",
-	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr[1], uif1.fetchbufC_instr[0], uif1.fetchbufC_pc.pc, uif1.fetchbufC_pc.micro_ip);
+	    45, fetchbuf?62:45, uif1.fetchbufC_v, uif1.fetchbufC_instr[1], uif1.fetchbufC_instr[0], uif1.fetchbufC_pc[$bits(pc_address_t)-1:12], uif1.fetchbufC_pc[11:0]);
 	$display("%c%c D: %d %h,%h %h.%h #",
-	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc.pc, uif1.fetchbufD_pc.micro_ip);
+	    45, fetchbuf?62:45, uif1.fetchbufD_v, uif1.fetchbufD_instr[1], uif1.fetchbufD_instr[0], uif1.fetchbufD_pc[$bits(pc_address_t)-1:12], uif1.fetchbufD_pc[11:0]);
 
 	for (i=0; i<QENTRIES; i=i+1) 
 	    $display("%c%c %h %d: %c%c%c%c %d %c%c %d %c %c%d 0%d %o %h %h %h %d %o %h %d %o %h %d %o %h.%h #",
@@ -3299,7 +3306,7 @@ always_ff @(posedge clk) begin: clock_n_debug
 		 (i==4) ? iqentry_islot[4] : (i==5) ? iqentry_islot[5] : (i==6) ? iqentry_islot[6] : iqentry_islot[7]), iqentry_stomp[i]?"s":"-",
 		(iq[i].fc ? "b" : (iq[i].load || iq[i].store) ? "m" : "a"), 
 		iq[i].op.any.opcode, iq[i].tgt, iq[i].exc, iq[i].res, iq[i].a0, iq[i].a1, iq[i].a1_v,
-		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].a3, iq[i].a3_v, iq[i].a3_s, iq[i].pc.pc, iq[i].pc.micro_ip);
+		iq[i].a1_s, iq[i].a2, iq[i].a2_v, iq[i].a2_s, iq[i].a3, iq[i].a3_v, iq[i].a3_s, iq[i].pc[$bits(pc_address_t)-1:12], iq[i].pc[11:0]);
 
 	$display("DRAM");
 	$display("%d%c %h %h %c%d %o #",
@@ -3436,10 +3443,12 @@ endgenerate
 task tReset;
 begin
 	for (n14 = 0; n14 < 4; n14 = n14 + 1) begin
-		kvec[n14] <= RSTPC;
-		avec[n14] <= RSTPC;
+		kvec[n14] <= RSTPC >> 12;
+		avec[n14] <= RSTPC >> 12;
 	end
 	excir <= {33'd0,OP_NOP};
+	excmiss <= 1'b0;
+	excmisspc <= RSTPC;
 	sr <= 'd0;
 	sr.om <= OM_MACHINE;
 	sr.ipl <= 3'd7;				// non-maskable interrupts only
@@ -3449,6 +3458,8 @@ begin
 	postfix_mask <= 'd0;
 	pred_mask <= 28'hFFFFFFF;
 	pred_val <= 1'b1;
+	dram_exc0 <= FLT_NONE;
+	dram_exc1 <= FLT_NONE;
 	dram0 <= DRAMSLOT_AVAIL;
 	dram0p <= DRAMSLOT_AVAIL;
 	dram0_addr <= 'd0;
@@ -3517,28 +3528,30 @@ task tOddball_commit;
 input v;
 input que_ndx_t head;
 begin
-	if (iq[head].exc != FLT_NONE)
-		tProcessExc(head,iq[head].pc);
-	case(iq[head].op.any.opcode)
-	OP_SYS:
-		tProcessExc(head,fnPCInc(iq[head].pc));
-	OP_CSR:	
-		case(iq[head].op[34:33])
-		2'd0:	;	// readCSR
-		2'd1:	tWriteCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
-		2'd2:	tSetbitCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
-		2'd3:	tClrbitCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
-		endcase
-	OP_RTD:
-		if (iq[head].op[10:9]==2'd1) // RTI
-			tProcessRti(iq[head].op[8:7]==2'd1);
-	OP_IRQ:
-		case(iq[head].op[25:22])
-		4'h7:	tRex(head,iq[head].op);
+	if (v) begin
+		if (iq[head].exc != FLT_NONE)
+			tProcessExc(head,iq[head].pc);
+		case(iq[head].op.any.opcode)
+		OP_SYS:
+			tProcessExc(head,fnPCInc(iq[head].pc));
+		OP_CSR:	
+			case(iq[head].op[34:33])
+			2'd0:	;	// readCSR
+			2'd1:	tWriteCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
+			2'd2:	tSetbitCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
+			2'd3:	tClrbitCSR(iq[head].a2,{2'b0,iq[head].op[32:19]});
+			endcase
+		OP_RTD:
+			if (iq[head].op[10:9]==2'd1) // RTI
+				tProcessRti(iq[head].op[8:7]==2'd1);
+		OP_IRQ:
+			case(iq[head].op[25:22])
+			4'h7:	tRex(head,iq[head].op);
+			default:	;
+			endcase
 		default:	;
 		endcase
-	default:	;
-	endcase
+	end
 end
 endtask
 
