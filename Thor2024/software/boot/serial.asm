@@ -1,0 +1,227 @@
+# ============================================================================
+#        __
+#   \\__/ o\    (C) 2022-2023  Robert Finch, Waterloo
+#    \  __ /    All rights reserved.
+#     \/_//     robfinch<remove>@finitron.ca
+#       ||
+#  
+#
+# Serial port routines for a WDC6551 compatible circuit.
+#
+# ============================================================================
+#
+	.bss
+	.space	10
+.set XON,0x11
+.set XOFF,0x13
+.set ACIA_RX,0xFED00000
+.set ACIA_TX,0xFED00000
+.set ACIA_STAT,0xFED00004
+.set ACIA_CMD,0xFED00008
+.set ACIA_CTRL,0xFED0000C
+.set SerTailRcv,0xFFFC0000
+.set SerHeadRcv,0xFFFC0004
+.set SerTailXmit,0xFFFC0008
+.set SerHeadXmit,0xFFFC000C
+.set SerRcvXon,0xFFFC0010
+.set SerRcvXoff,0xFFFC0011
+.set SerRcvBuf,0xFFFC1000
+.set uart,0xFED00000
+
+	.data
+	.space	10
+
+
+#------------------------------------------------------------------------------
+# Initialize serial port.
+#
+# Clear buffer indexes. Two bytes are used for the buffer index even though
+# only a single byte is needed. This is for convenience in calculating the
+# number of characters in the buffer, done later. The upper byte remains at
+# zero.
+# The port is initialized for 9600 baud, 1 stop bit and 8 bits data sent.
+# The internal baud rate generator is used.
+#
+# Stack Space:
+#		2 words
+# Parameters:
+#		none
+# Modifies:
+#		d
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+InitSerial:
+SerialInit:
+	stt		r0,SerHeadRcv
+	stt		r0,SerTailRcv
+	stt		r0,SerHeadXmit
+	stt		r0,SerTailXmit
+	stb		r0,SerRcvXon
+	stb		r0,SerRcvXoff
+#	lda		COREID
+#sini1:
+#	cmpa	IOFocusID
+#	bne		sini1
+#	orcc	#$290						; mask off interrupts
+#	ldd		#ACIA_MMU				; map ACIA into address space
+#	std		MMU
+	ldi		a0,0x09					# dtr,rts active, rxint enabled (bit 1=0), no parity
+	stt		a0,ACIA_CMD
+	ldi		a0,0x6001E			# baud 9600, 1 stop bit, 8 bit, internal baud gen
+	stt		a0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
+#	ldd		#$000F00				; map out ACIA
+#	std		MMU
+	ret
+
+#------------------------------------------------------------------------------
+# Calculate number of character in input buffer.
+#
+# Parameters:
+#		none
+# Returns:
+#		d = number of bytes in buffer.
+#------------------------------------------------------------------------------
+
+SerialRcvCount:
+	mov		a0,0
+	ldtu	a1,SerTailRcv
+	ldtu	a2,SerHeadRcv
+	sub		a0,a1,a2
+	bge		a0,r0,.srcXit
+	mov		a0,0x1000
+	ldtu	a2,SerHeadRcv
+	ldtu	a1,SerTailRcv
+	sub		a0,a0,a2
+	add		a0,a0,a1
+.srcXit:
+	ret
+
+#------------------------------------------------------------------------------
+# SerialGetChar
+#
+# Check the serial port buffer to see if there's a char available. If there's
+# a char available then return it. If the buffer is almost empty then send an
+# XON.
+#
+# Stack Space:
+#		4 words
+# Parameters:
+#		none
+# Modifies:
+#		none
+# Returns:
+#		a0 = character or -1
+#------------------------------------------------------------------------------
+
+SerialGetChar:
+#	orcc	#$290						; mask off interrupts
+	bsr		SerialRcvCount			# check number of chars in receive buffer
+	bgt		a0,8,.sgc2
+	ldb		a0,SerRcvXon		# skip sending XON if already sent
+	bnez	a0,.sgc2        # XON already sent?
+	ldi		a0,XON					# if <8 send an XON
+	stb		r0,SerRcvXoff		# clear XOFF status
+	stb		a0,SerRcvXon		# flag so we don't send it multiple times
+	bsr		SerialPutChar
+.sgc2:
+	ldbu	a0,SerHeadRcv		# check if anything is in buffer
+	ldbu	a1,SerTailRcv
+	beq		a0,a1,.sgcNoChars
+	mov		a1,a0
+	ldbu	a0,SerRcvBuf[a1]	# get byte from buffer
+	add		a1,a1,1
+	and		a1,a1,0xfff			# 4k wrap around
+	stt		a1,SerHeadRcv
+	ret
+.sgcNoChars:
+	ldi		a0,-1						#-1
+	ret
+
+#------------------------------------------------------------------------------
+# SerialPeekChar
+#
+# Check the serial port buffer to see if there's a char available. If there's
+# a char available then return it. But don't update the buffer indexes. No need
+# to send an XON here.
+#
+# Stack Space:
+#		3 words
+# Parameters:
+#		none
+# Modifies:
+#		none
+# Returns:
+#		a0 = character or -1
+#------------------------------------------------------------------------------
+
+SerialPeekChar:
+#	orcc	#$290							; mask off interrupts
+	ldtu	a0,SerHeadRcv			# check if anything is in buffer
+	ldtu	a1,SerTailRcv
+	beq		a0,a1,.spcNoChars	# no?
+	ldbu	a0,SerRcvBuf[a0]	# get byte from buffer
+	ret
+.spcNoChars:
+	ldi		a0,-1
+	ret
+
+#------------------------------------------------------------------------------
+# SerialPeekChar
+#		Get a character directly from the I/O port. This bypasses the input
+# buffer.
+#
+# Stack Space:
+#		3 words
+# Parameters:
+#		none
+# Modifies:
+#		a0
+# Returns:
+#		a0 = character or -1
+#------------------------------------------------------------------------------
+
+SerialPeekCharDirect:
+#	lda		COREID					; Ensure we have the IO Focus
+#	cmpa	IOFocusID
+#	bne		spcd0001
+# Disallow interrupts between status read and rx read.
+#	orcc	#$290						; mask off interrupts
+	ldbu	a0,ACIA_STAT
+	and		a0,a0,8					# look for Rx not empty
+	beq		a0,r0,.spcd0001
+	ldbu	a0,ACIA_RX
+	ret
+.spcd0001:
+	ldi		a0,-1
+	ret
+
+#------------------------------------------------------------------------------
+# SerialPutChar
+#    Put a character to the serial transmitter. This routine blocks until the
+# transmitter is empty. 
+#
+# Stack Space
+#		4 words
+# Parameters:
+#		a1 = character to put
+# Modifies:
+#		none
+#------------------------------------------------------------------------------
+
+SerialPutChar:
+.spc0001:
+#	lda		COREID					; Ensure we have the IO Focus
+#	cmpa	IOFocusID
+#	bne		spc0001
+#	andcc	#$D6F						; provide a window for an interrupt to occur
+#	ldu		#ACIA_MMU
+#	orcc	#$290						; mask off interrupts
+	# Between the status read and the transmit do not allow an
+	# intervening interrupt.
+	ldbu	a0,ACIA_STAT		# wait until the uart indicates tx empty
+	and		a0,a0,16				# bit #4 of the status reg
+	beq		a0,r0,.spc0001	# branch if transmitter is not empty
+	stb		a1,ACIA_TX			# send the byte
+	ret

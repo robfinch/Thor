@@ -1,0 +1,140 @@
+Sections:
+00: ".bss" (0-A)
+01: ".data" (0-A)
+02: ".text" (0-200)
+03: ".rodata" (0-10000)
+
+
+Source: "boot.asm"
+                                    	     1: # boot.asm Thor2024 assembly language
+                                    	     2: 
+                                    	     3: 	.bss
+00:0000000000000000 00              	     4: 	.space	10
+00:0000000000000001 *
+                                    	     5: .set ary,0xFFFC0000
+                                    	     6: .set txtscreen,0xFEC00000
+                                    	     7: .set leds,0xFEDFFF00
+                                    	     8: .set keybd,0xFEDCFE00
+                                    	     9: .set rand,0xFEE1FD00
+                                    	    10: 
+                                    	    11: 	.data
+01:0000000000000000 00              	    12: 	.space	10
+01:0000000000000001 *
+                                    	    13: 
+                                    	    14: #	.org	0xFFFFFFFFFFFD0000
+                                    	    15: 	.text
+                                    	    16: #	.align	0
+                                    	    17: start:
+02:0000000000000000 0402F8FF07      	    18: 	ldi t0,-1
+02:0000000000000005 520200E0077C00FF	    19: 	stt t0,leds
+02:000000000000000D DFFE
+                                    	    20: 
+                                    	    21: 	# clearscreen
+02:000000000000000F 04020001007C2000	    22: 	ldi t0,0x43FFFFE0003F0020
+02:0000000000000017 3F007CE0FFFF43
+02:000000000000001E 8F03000000      	    23: 	mov t3,r0
+02:0000000000000023 0403000002      	    24: 	ldi t2,16384
+                                    	    25: .st1:
+02:0000000000000028 53023800007C0000	    26: 	sto t0,txtscreen[t3]
+02:0000000000000030 C0FE7C00000000
+02:0000000000000037 84E3400000      	    27: 	add t3,t3,8
+02:000000000000003C 28E030F6FF      	    28: 	blt t3,t2,.st1
+                                    	    29: 
+02:0000000000000041 2072010000      	    30: 	bsr	Delay3s
+                                    	    31: 
+02:0000000000000046 8F03000000      	    32: 	mov t3,r0
+02:000000000000004B 0403400100      	    33: 	ldi t2,40
+                                    	    34: .st2:
+02:0000000000000050 570038C0007C0000	    35: 	sto r0,0xfffc0000[r0+t3]
+02:0000000000000058 FCFF
+02:000000000000005A 84E3400000      	    36: 	add t3,t3,8
+02:000000000000005F 28E830F8FF      	    37: 	blt t3,t2,.st2
+                                    	    38: 	
+02:0000000000000064 0701088001      	    39: 	csrrd r2,r0,0x3001	# get the thread number
+02:0000000000000069 0841780000      	    40: 	and r2,r2,15				# 0 to 3
+02:000000000000006E 0402080000      	    41: 	ldi t0,1
+02:0000000000000073 2750204000      	    42: 	bne r2,t0,stall			# Allow only thread 1 to work
+                                    	    43: 
+02:0000000000000078 0401E80700      	    44: 	ldi r2,0xFD
+02:000000000000007D 0401080000      	    45: 	ldi r2,0x01					# x = 1
+02:0000000000000082 52010000007C0000	    46: 	stt r2,ary@got
+02:000000000000008A FCFF
+                                    	    47: 
+02:000000000000008C 8401800000      	    48: 	ldi r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
+02:0000000000000091 8260000800      	    49: 	or r1,r3,r0	# transfer y register to accumulator
+02:0000000000000096 8461E8FF07      	    50: 	add r3,r3,-3	# handles the algorithm iteration counting
+                                    	    51: 
+02:000000000000009B 8400100000      	    52: 	ldi r1,2		# a = 2
+02:00000000000000A0 D2008000007C0400	    53: 	stt r1,0xFFFC0004		# stores a
+02:00000000000000A8 FCFF
+                                    	    54: 
+                                    	    55: floop: 
+02:00000000000000AA 44018000007C0400	    56: 	LDT r2,0xFFFC0004		# x = a
+02:00000000000000B2 FCFF
+02:00000000000000B4 8220102000      	    57: 	ADD r1,r1,r2					# a += x
+02:00000000000000B9 D2008000007C0400	    58: 	STT r1,0xFFFC0004		# stores a
+02:00000000000000C1 FCFF
+02:00000000000000C3 52010000007C0000	    59: 	STT r2,0xFFFC0000		# stores x
+02:00000000000000CB FCFF
+02:00000000000000CD 8461F8FF07      	    60: 	ADD r3,r3,-1					# y -= 1
+02:00000000000000D2 276000ECFF      	    61:   bnez r3,floop		# jumps back to loop if Z bit != 0 (y's decremention isn't zero yet)
+02:00000000000000D7 FFFFFFFFFF      	    62:   NOP
+02:00000000000000DC FFFFFFFFFF      	    63:   NOP
+02:00000000000000E1 FFFFFFFFFF      	    64:   NOP
+02:00000000000000E6 FFFFFFFFFF      	    65:   NOP
+02:00000000000000EB FFFFFFFFFF      	    66:   NOP
+02:00000000000000F0 FFFFFFFFFF      	    67: 	NOP  
+                                    	    68: 	
+                                    	    69: stall:
+02:00000000000000F5 DB01000000      	    70: 	BRA	stall
+                                    	    71: 
+                                    	    72: # ------------------------------------------------------------------------------
+                                    	    73: # Delay for a few seconds at startup.
+                                    	    74: # ------------------------------------------------------------------------------
+                                    	    75: 
+                                    	    76: Delay3s:
+02:00000000000000FA 8400009F047CE093	    77: 	ldi		a0,300000
+02:0000000000000102 0400
+                                    	    78: .0001:
+02:0000000000000104 5800000C01      	    79: 	lsr		a1,a0,16
+02:0000000000000109 520100E0077C00FF	    80: 	stt		a1,leds
+02:0000000000000111 DFFE
+02:0000000000000113 0200802C00      	    81: 	sub		a0,a0,1
+02:0000000000000118 2B2000F6FF      	    82: 	bgt		a0,r0,.0001	
+02:000000000000011D 2304000000      	    83: 	ret
+                                    	    84: 
+                                    	    85: 	.balign	0x100,0x0B
+                                    	    86: 	
+                                    	    87: 	.rodata
+03:0000000000000000 00              	    88: 	.org 0xffe0
+03:0000000000000001 *
+03:000000000000FFE0 F0FFFCFFFFFFFFFF	    89: 	.8byte	0xFFFFFFFFFFFCFFF0
+03:000000000000FFE8 FFFFFFFFFFFFFFFF	    90: 	.8byte	0xFFFFFFFFFFFFFFFF
+03:000000000000FFF0 000000D0FFFFFFFF	    91: 	.8byte	0xFFFFFFFFD0000000
+03:000000000000FFF8 FFFFFFFFFFFFFFFF	    92: 	.8byte	0xFFFFFFFFFFFFFFFF
+                                    	    93: 
+                                    	    94: 
+                                    	    95: 
+
+
+Symbols by name:
+.st1                            02:0000000000000028
+.st2                            02:0000000000000050
+Delay3s                         02:00000000000000FA
+ary                              S:00000000FFFC0000
+floop                           02:00000000000000AA
+leds                             S:00000000FEDFFF00
+stall                           02:00000000000000F5
+start                           02:0000000000000000
+txtscreen                        S:00000000FEC00000
+
+Symbols by value:
+00000000FEC00000 txtscreen
+00000000FEDFFF00 leds
+00000000FFFC0000 ary
+0000000000000000 start
+0000000000000028 .st1
+0000000000000050 .st2
+00000000000000AA floop
+00000000000000F5 stall
+00000000000000FA Delay3s
