@@ -1,11 +1,9 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
-//
-//	Thor2024_decode_imm.sv
 //
 //
 // BSD 3-Clause License
@@ -33,53 +31,27 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//                                                                          
-// 238 LUTs
+//
 // ============================================================================
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_imm(ins, imm);
-parameter WID=32;
-input instruction_t [4:0] ins;
-output reg [63:0] imm;
+module Thor2024_decode_erc(instr, erc);
+input instruction_t instr;
+output erc;
 
-wire [63:0] imm32x64;
-reg [63:0] imm1;
-
-fpCvt32To64 ucvt32x64(imm1[31:0], imm32x64);
-
-always_comb
+function fnIsErc;
+input instruction_t op;
 begin
-	imm = 'd0;
-	imm1 = 'd0;
-	case(ins[0].any.opcode)
-	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
-		imm1 = {{48{ins[0][34]}},ins[0][34:19]};
-	OP_ANDI:	imm1 = {48'hFFFFFFFFFFFF,ins[0][34:19]};
-	OP_ORI,OP_EORI:
-		imm1 = {48'h0000,ins[0][34:19]};
-	OP_CSR:	imm1 = {50'd0,ins[0][32:19]};
-	OP_RTD:	imm1 = {{16{ins[0][34]}},ins[0][34:19]};
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
-	OP_STB,OP_STW,OP_STT,OP_STO:
-		imm1 = {{50{ins[0][34]}},ins[0][34:21]};
+	case(op.any.opcode)
+	OP_STX:
+		fnIsErc = op.lsn.func[5];
 	default:
-		imm1 = 'd0;
-	endcase
-	if (ins[1].any.opcode==OP_PFX) begin
-		imm1 = {{32{ins[1][39]}},ins[1][39:8]};
-		if (ins[2].any.opcode==OP_PFX)
-			imm1[63:32] = ins[2][39:8];
-	end
-	case(ins[0].any.opcode)
-	OP_FLT2,OP_FLT3:
-		if (ins[1].any.opcode==OP_PFX && ins[2].any.opcode!=OP_PFX)
-			imm = imm32x64;
-		else
-			imm = imm1;
-	default:	imm = imm1;
+		fnIsErc = 1'b0;
 	endcase
 end
+endfunction
+
+assign erc = fnIsErc(instr);
 
 endmodule

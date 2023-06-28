@@ -175,7 +175,6 @@ reg [LOG_ENTRIES-1:0] rcount;
 SHPTE pte_reg;
 SVPN vpn_reg;
 reg [31:0] ctrl_req;
-reg [7:0] selected_channel;
 reg [CHANNELS-1:0] ch_active;
 reg htable_lookup,htable_update;
 wire htable_ack,htable_exc;
@@ -362,7 +361,7 @@ end
 Thor2024_stlb_active_region urgn
 (
 	.rst(rst_i),
-	.clk(clk_i),
+	.clk(clk_g),
 	.cs_rgn(cs_rgnq),
 	.rgn(rgn),
 	.wbs_req(fta_req_o),
@@ -377,7 +376,6 @@ Thor2024_stlb_active_region urgn
 // Arbitrate incoming requests.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-wire [CHANNELS-1:0] data_valid;
 wire [CHANNELS-1:0] rd_rst_busy;
 wire [CHANNELS-1:0] wr_rst_busy;
 wire [CHANNELS-1:0] wr_ack;						// not used
@@ -796,64 +794,28 @@ endgenerate
 			
 
 reg rr_ce;
-reg [CHANNELS-1:0] rr_active;
 reg [CHANNELS-1:0] rr_req;
 wire [CHANNELS-1:0] rr_sel;
-wire ne_ack;
-wire [CHANNELS-1:0] ne_cyc;
 fta_cmd_request128_t [CHANNELS-1:0] wbn_req_d;
 
-edge_det uedack
-(
-	.rst(rst_i),
-	.clk(clk_i),
-	.ce(1'b1),
-	.i(fta_resp_i.ack|fta_resp_i.err|fta_resp_i.rty),
-	.pe(),
-	.ne(ne_ack),
-	.ee()
-);
-
-generate begin : gNeCyc
-	for (g = 0; g < CHANNELS; g = g + 1)
-		edge_det uedcyc (
-			.rst(rst_i),
-			.clk(clk_i),
-			.ce(1'b1),
-			.i(wbn_req_i[g].cyc),
-			.pe(),
-			.ne(ne_cyc[g]),
-			.ee()
-		);
-end
-endgenerate
-
-reg [5:0] arbit_ctr;
-always_ff @(posedge clk_i)
-if (rst_i)
-	arbit_ctr <= 'd0;
-else
-	arbit_ctr <= arbit_ctr + 2'd1;
-
 // Piplein delay to line up with seleect.
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 	for (n12 = 0; n12 < CHANNELS; n12 = n12 + 1)
 		wbn_req_d[n12] <= wbn_req_i[n12];
 
 fta_tranid_t [CHANNELS-1:0] last_tid;
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 if (rst_i)
 	input_fifo_rd_d1 <= 'd0;
 else
 	input_fifo_rd_d1 <= input_fifo_rd;
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 if (rst_i) begin
 	for (n8 = 0; n8 < CHANNELS; n8 = n8 + 1)
 	last_tid[n8] <= 'd0;
 end
 else begin
 	req <= 'd0;
-	selected_channel <= 'd255;
 	for (n8 = 0; n8 < CHANNELS; n8 = n8 + 1)
 		if (input_fifo_rd_d1[n8] && last_tid[n8] != input_fifo_dout[n8].tid) begin
 			last_tid[n8] <= input_fifo_dout[n8].tid;
@@ -886,7 +848,7 @@ end
 fta_tranid_t used_tid [0:CHANNELS-1];
 reg [3:0] resp_ch;
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 if (rst_i) begin
 	for (n10 = 0; n10 < CHANNELS; n10 = n10 + 1)
 		used_tid[n10] <= 4'hF;
@@ -914,7 +876,7 @@ always_comb
 //		rr_req[n11] = wbn_req_i[n11].cyc;
 
 reg [5:0] chcnt = 'd0;
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_g)
 	chcnt <= chcnt + 2'd1;
 
 // Send a retry back as the response for non-selected channels.
@@ -956,16 +918,6 @@ always_comb
 always_comb
 	next_i = fta_resp_i.next;
 
-always_ff @(posedge clk_i)
-if (rst_i)
-	rr_active <= 'd0;
-else begin
-	rr_active <= (rr_active | rr_sel);
-	if (fta_resp_i.ack|fta_resp_i.rty|fta_resp_i.err)
-		rr_active[fta_resp_i.tid[7:4]] <= 1'b0;
-	if (wbm_resp.ack)
-		rr_active[wbm_resp.tid[7:4]] <= 1'b0;
-end
 wire [3:0] cache_type = fta_req_o.cache;
 
 wire non_cacheable =
@@ -1089,6 +1041,10 @@ edge_det u5 (
   .ee()
 );
 
+reg ne_xlatd;
+always_ff @(posedge clk_g)
+	ne_xlatd <= ne_xlat;
+	
 // Detect a change in the page number
 wire cd_adr;
 change_det #(.WID($bits(Thor2024pkg::address_t)-LOG_PAGE_SIZE)) ucd1 (
@@ -1351,7 +1307,7 @@ for (g = 0; g < ASSOC; g = g + 1) begin : gLvls
 	  .douta(tlbdato[g]),
 	  .clkb(clk_g),
 	  .enb(1'b1),
-	  .web(wr[g]),
+	  .web(wr[g]&ne_xlatd),
 	  .addrb(adr_i_slice[g]),
 	  .dinb(tentryi[g]),
 	  .doutb(tentryo[g])

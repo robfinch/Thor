@@ -166,6 +166,12 @@ Thor2024_decode_store udecst1
 	.store(db.store)
 );
 
+Thor2024_decode_erc udecerc1
+(
+	.instr(instr[0]),
+	.erc(db.erc)
+);
+
 Thor2024_decode_fpu ufpu
 (
 	.instr(instr[0]),

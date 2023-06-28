@@ -41,7 +41,7 @@ import Thor2024pkg::*;
 import Thor2024_cache_pkg::*;
 
 module Thor2024_icache_req_generator(rst, clk, hit, miss_adr, miss_asid,
-	wbm_req, full, vtags, snoop_v, snoop_adr, snoop_cid);
+	wbm_req, full, vtags, snoop_v, snoop_adr, snoop_cid, ack);
 parameter CORENO = 6'd1;
 parameter CID = 6'd0;
 parameter WAIT = 6'd6;
@@ -56,11 +56,12 @@ output Thor2024pkg::address_t [15:0] vtags;
 input snoop_v;
 input fta_address_t snoop_adr;
 input [5:0] snoop_cid;
-
+input ack;
 
 typedef enum logic [3:0] {
 	RESET = 0,
-	WAIT4MISS,STATE2,STATE3,STATE3a,STATE4,STATE4a,STATE5,STATE5a,DELAY1,RAND_DELAY
+	WAIT4MISS,STATE2,STATE3,STATE3a,STATE4,STATE4a,STATE5,STATE5a,DELAY1,
+	WAIT_ACK,WAIT_UPD1,WAIT_UPD2
 } state_t;
 state_t req_state;
 
@@ -115,9 +116,10 @@ else begin
 		end
 	WAIT4MISS:
 		if (!hit) begin
+			tid_cnt <= 4'h0;
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
-			wbm_req.tid.tranid <= tid_cnt;
+			wbm_req.tid.tranid <= 'h0;
 			wbm_req.blen <= 6'd1;
 			wbm_req.cti <= fta_bus_pkg::FIXED;
 			wbm_req.cyc <= 1'b1;
@@ -126,11 +128,10 @@ else begin
 			wbm_req.we <= 1'b0;
 			wbm_req.vadr <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			wbm_req.asid <= miss_asid;
-			vtags[tid_cnt] <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
+			vtags[4'd0] <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			vadr <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			madr <= {miss_adr[$bits(fta_address_t)-1:Thor2024_cache_pkg::ICacheTagLoBit],{Thor2024_cache_pkg::ICacheTagLoBit{1'h0}}};
 			if (!full) begin
-				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
 				req_state <= STATE3;
 			end
 		end
@@ -145,17 +146,16 @@ else begin
 		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
-			wbm_req.tid.tranid <= tid_cnt;
+			wbm_req.tid.tranid <= 4'h1;
 			wbm_req.cti <= fta_bus_pkg::FIXED;
 			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
-			vtags[tid_cnt] <= madr + 5'd16;
+			vtags[4'd1] <= madr + 5'd16;
 			if (!full) begin
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;
-				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
 				req_state <= STATE4;
 			end
 		end
@@ -168,17 +168,16 @@ else begin
 		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
-			wbm_req.tid.tranid <= tid_cnt;
+			wbm_req.tid.tranid <= 4'h2;
 			wbm_req.cti <= fta_bus_pkg::FIXED;
 			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
-			vtags[tid_cnt] <= madr + 5'd16;
+			vtags[4'd2] <= madr + 5'd16;
 			if (!full) begin
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;
-				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
 				req_state <= STATE5;
 			end
 		end
@@ -191,19 +190,18 @@ else begin
 		begin
 			wbm_req.tid.core = CORENO;
 			wbm_req.tid.channel = CID;			
-			wbm_req.tid.tranid <= tid_cnt;
+			wbm_req.tid.tranid <= 4'h3;
 			wbm_req.cti <= fta_bus_pkg::EOB;
 			wbm_req.cyc <= 1'b1;
 			wbm_req.stb <= 1'b1;
 			wbm_req.sel <= 16'hFFFF;
 			wbm_req.vadr <= vadr + 5'd16;
-			vtags[tid_cnt] <= madr + 5'd16;
+			vtags[4'd3] <= madr + 5'd16;
 			if (!full) begin
 				wait_cnt <= 'd0;
 				vadr <= vadr + 5'd16;
 				madr <= madr + 5'd16;
-				tid_cnt[3:0] <= tid_cnt[3:0] + 2'd1;
-				req_state <= RAND_DELAY;
+				req_state <= WAIT_ACK;
 			end
 		end
 	DELAY1:
@@ -212,14 +210,16 @@ else begin
 			req_state <= WAIT4MISS;
 		end
 	// Wait some random number of clocks before trying again.
-	RAND_DELAY:
+	WAIT_ACK:
 		begin
 			tBusClear();
-			if (wait_cnt==WAIT && lfsr_o[2:0]==3'b111)
-				req_state <= WAIT4MISS;
-			else if (wait_cnt != WAIT)
-				wait_cnt <= wait_cnt + 2'd1;
+			if (ack)
+				req_state <= WAIT_UPD1;
 		end
+	WAIT_UPD1:
+		req_state <= WAIT_UPD2;
+	WAIT_UPD2:
+		req_state <= WAIT4MISS;
 	default:
 		req_state <= RESET;
 	endcase
@@ -228,7 +228,7 @@ else begin
 		miss_adr[Thor2024_cache_pkg::ITAG_BIT:Thor2024_cache_pkg::ICacheTagLoBit] &&
 		snoop_cid != CID) begin
 		tBusClear();
-		req_state <= RAND_DELAY;		
+		req_state <= WAIT4MISS;		
 	end
 end
 

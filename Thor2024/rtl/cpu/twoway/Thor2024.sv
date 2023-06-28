@@ -100,7 +100,7 @@ genvar g;
 
 wire [AREGS-1:0] rf_v;
 wire [4:0] rf_source[0:AREGS-1];
-pc_address_t pc;
+pc_address_t pc, pc0, pc1;
 wire clk;
 wire rst;
 assign rst = rst_i;
@@ -316,6 +316,7 @@ cause_code_t dram0_exc;
 reg dram0_ack;
 reg [7:0] dram0_tid;
 reg dram0_more;
+reg dram0_erc;
 
 reg [639:0] dram1_data;
 address_t dram1_addr;
@@ -331,6 +332,7 @@ cause_code_t dram1_exc;
 reg dram1_ack;
 reg [7:0] dram1_tid;
 reg dram1_more;
+reg dram1_erc;
 
 /*
 value_t dram2_data;
@@ -352,6 +354,7 @@ reg [NDATA_PORTS-1:0] dramN_load;
 reg [NDATA_PORTS-1:0] dramN_loadz;
 reg [NDATA_PORTS-1:0] dramN_store;
 reg [NDATA_PORTS-1:0] dramN_ack;
+reg [NDATA_PORTS-1:0] dramN_erc;
 reg [7:0] dramN_tid [0:NDATA_PORTS-1];
 memsz_t dramN_memsz;
 
@@ -402,6 +405,7 @@ asid_t asid;
 asid_t ip_asid;
 pc_address_t [3:0] kvec;
 pc_address_t avec;
+reg ERC = 1'b0;
 
 assign clk = clk_i;
 
@@ -545,12 +549,12 @@ always_comb
 if (ICacheBundleWidth==120)
 	{pfx0[3],pfx0[2],pfx0[1],pfx0[0],ins0} = ic_line >> (pco[5:4] * 120 + pco[3:2] * 40);
 else
-	{pfx0[3],pfx0[2],pfx0[1],pfx0[0],ins0} = ic_line >> {pco[5:0],3'd0};
+	{pfx0[3],pfx0[2],pfx0[1],pfx0[0],ins0} = ic_line >> {pc[17:12],3'd0};
 always_comb
 if (ICacheBundleWidth==120)
 	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> (pci[5:4] * 120 + pci[3:2] * 40);
 else
-	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> {{1'b0,pco[5:0]}+4'd5,3'd0};
+	{pfx1[3],pfx1[2],pfx1[1],pfx1[0],ins1} = ic_line >> {{1'b0,pc[17:12]}+4'd5,3'd0};
 
 // hirq squashes the pc increment if there's an irq.
 // Normally atom_mask is zero.
@@ -775,6 +779,7 @@ begin
 	dramN_data[0] = dram0_data[511:0];
 	dramN_sel[0] = dram0_sel[63:0];
 	dramN_store[0] = dram0_store;
+	dramN_erc[0] = dram0_erc;
 	dramN_load[0] = dram0_load;
 	dramN_loadz[0] = dram0_loadz;
 	dramN_memsz[0] = dram0_memsz;
@@ -787,6 +792,7 @@ begin
 		dramN_data[1] = dram1_data[511:0];
 		dramN_sel[1] = dram1_sel[63:0];
 		dramN_store[1] = dram1_store;
+		dramN_erc[1] = dram1_erc;
 		dramN_load[1] = dram1_load;
 		dramN_loadz[1] = dram1_loadz;
 		dramN_memsz[1] = dram1_memsz;
@@ -813,7 +819,7 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		cpu_request_i[g].om = fta_bus_pkg::MACHINE;
 		cpu_request_i[g].cmd = dramN_store[g] ? CMD_STORE : dramN_loadz[g] ? CMD_LOADZ : dramN_load[g] ? CMD_LOAD : CMD_NONE;
 		cpu_request_i[g].bte = fta_bus_pkg::LINEAR;
-		cpu_request_i[g].cti = fta_bus_pkg::CLASSIC;
+		cpu_request_i[g].cti = (dramN_erc[g] || ERC) ? fta_bus_pkg::ERC : fta_bus_pkg::CLASSIC;
 		cpu_request_i[g].blen = 'd0;
 		cpu_request_i[g].seg = fta_bus_pkg::DATA;
 		cpu_request_i[g].asid = ip_asid;
@@ -1811,7 +1817,7 @@ for (n10 = 0; n10 < QENTRIES; n10 = n10 + 1)
   		& ~iqentry_stomp[n10])
   		;
 
-assign outstanding_stores = (dram0 && dram0_store);// || (dram1 && dram1_store);// || (dram2 && dram2_store);
+assign outstanding_stores = (dram0 && dram0_store && dram0_erc);// || (dram1 && dram1_store);// || (dram2 && dram2_store);
 
 always_ff @(posedge clk, posedge rst)
 if (rst)
@@ -1893,6 +1899,7 @@ did_branchback2 <= did_branchback1;
 				iq[tail0].load <= db1.load;
 				iq[tail0].loadz <= db1.loadz;
 				iq[tail0].store <= db1.store;
+				iq[tail0].erc <= db1.erc;
 				iq[tail0].jmp    <=   fetchbuf1_jmp;
 				iq[tail0].rfw    <=   fetchbuf1_rfw;
 				iq[tail0].tgt <= Rt1;
@@ -1971,6 +1978,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
+					iq[tail0].erc <= db0.erc;
 					iq[tail0].jmp <= fetchbuf0_jmp;
 					iq[tail0].rfw <= fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
@@ -2047,6 +2055,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
+					iq[tail0].erc <= db0.erc;
 			    iq[tail0].jmp    <=	fetchbuf0_jmp;
 			    iq[tail0].rfw    <=	fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
@@ -2130,6 +2139,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
+					iq[tail0].erc <= db0.erc;
 			    iq[tail0].jmp    <=   fetchbuf0_jmp;
 			    iq[tail0].rfw    <=   fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
@@ -2202,6 +2212,7 @@ did_branchback2 <= did_branchback1;
 						iq[tail1].load <= db1.load;
 						iq[tail1].loadz <= db1.loadz;
 						iq[tail1].store <= db1.store;
+						iq[tail1].erc <= db1.erc;
 						iq[tail1].jmp    <=   fetchbuf1_jmp;
 						iq[tail1].rfw    <=   fetchbuf1_rfw;
 						iq[tail1].tgt <= Rt1;
@@ -2413,12 +2424,14 @@ did_branchback2 <= did_branchback1;
 	if (dram_v0 && iq_v[ dram_id0[2:0] ] && iq[ dram_id0[2:0] ].mem ) begin	// if data for stomped instruction, ignore
     iq[ dram_id0[2:0] ].res <= dram_bus0;
     iq[ dram_id0[2:0] ].exc <= dram_exc0;
+    iq[ dram_id0[2:0] ].out <= INV;
     iq[ dram_id0[2:0] ].done <= VAL;
 	end
 	if (NDATA_PORTS > 1) begin
 		if (dram_v1 && iq_v[ dram_id1[2:0] ] && iq[ dram_id1[2:0] ].mem ) begin	// if data for stomped instruction, ignore
 	    iq[ dram_id1[2:0] ].res <= dram_bus1;
 	    iq[ dram_id1[2:0] ].exc <= dram_exc1;
+	    iq[ dram_id1[2:0] ].out <= INV;
 	    iq[ dram_id1[2:0] ].done <= VAL;
 		end
 	end
@@ -2427,13 +2440,13 @@ did_branchback2 <= did_branchback1;
 	// set the IQ entry == DONE as soon as the SW is let loose to the memory system
 	//
 	
-	if (dram0 == DRAMSLOT_ACTIVE && dram0p==DRAMSLOT_READY && dram0_store) begin
+	if (dram0 == DRAMSLOT_ACTIVE && (ERC ? dram0_ack : (dram0_ack||!dram0_erc)) && dram0p==DRAMSLOT_READY && dram0_store) begin
 //    if ((alu0_v && dram0_id[2:0] == alu0_id[2:0]) || (alu1_v && dram0_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
     iq[ dram0_id[2:0] ].done <= VAL;
     iq[ dram0_id[2:0] ].out <= INV;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram1 == DRAMSLOT_ACTIVE && dram0p==DRAMSLOT_READY && dram1_store) begin
+		if (dram1 == DRAMSLOT_ACTIVE && (ERC ? dram1_ack : (dram1_ack||!dram1_erc)) && dram0p==DRAMSLOT_READY && dram1_store) begin
 //	    if ((alu0_v && dram1_id[2:0] == alu0_id[2:0]) || (alu1_v && dram1_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
 	    iq[ dram1_id[2:0] ].done <= VAL;
 	    iq[ dram1_id[2:0] ].out <= INV;
@@ -2986,8 +2999,8 @@ fcu_dataready <= fcu_available
 				end
 			end
 		DRAMSLOT_ACTIVE:
-			if (dram0_ack) begin
-				iq[dram0_id[2:0]].out <= INV;
+			if (ERC ? dram0_ack : dram0_ack||(dram0_store&&!dram0_erc)) begin
+//				iq[dram0_id[2:0]].out <= INV;
 				/*
 				if (dram0_store && !dram0_more) begin
 					iq[dram0_id[2:0]].done <= VAL;
@@ -3017,8 +3030,8 @@ fcu_dataready <= fcu_available
 					end
 				end
 			DRAMSLOT_ACTIVE:
-				if (dram1_ack) begin
-					iq[dram1_id[2:0]].out <= INV;
+				if (ERC ? dram1_ack : dram1_ack||(dram1_store&&!dram1_erc)) begin
+//					iq[dram1_id[2:0]].out <= INV;
 					/*
 					if (dram1_store && !dram1_more) begin
 						iq[dram1_id[2:0]].done <= VAL;
@@ -3134,7 +3147,7 @@ fcu_dataready <= fcu_available
 //	if (dram2 == `DRAMSLOT_AVAIL)	dram2_exc <= FLT_NONE;
 
 	for (n3 = 0; n3 < QENTRIES; n3 = n3 + 1) begin
-		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out) begin
+		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out && ~iq[n3].done) begin
 	    if (dram0 == DRAMSLOT_AVAIL) begin
 				dram0 		<= 2'd1;
 				dram0_id 	<= { 1'b1, n3[2:0] };
@@ -3142,6 +3155,7 @@ fcu_dataready <= fcu_available
 				dram0_load <= iq[n3].load;
 				dram0_loadz <= iq[n3].loadz;
 				dram0_store <= iq[n3].store;
+				dram0_erc <= iq[n3].erc;
 				dram0_tgt 	<= iq[n3].tgt;
 				if (dram0_more) begin
 					dram0_sel <= dram0_sel >> 8'd64;
@@ -3165,6 +3179,7 @@ fcu_dataready <= fcu_available
 				dram1_load <= iq[n3].load;
 				dram1_loadz <= iq[n3].loadz;
 				dram1_store <= iq[n3].store;
+				dram1_erc <= iq[n3].erc;
 				dram1_tgt 	<= iq[n3].tgt;
 				if (dram1_more) begin
 					dram1_sel <= dram1_sel >> 8'd64;
@@ -3289,6 +3304,8 @@ always_ff @(posedge clk) begin: clock_n_debug
 	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
 	    );
 	$display("%c %h.%h #", branchback?"b":" ", backpc[$bits(pc_address_t)-1:12], backpc[11:0]);
+	$display("ic_line=%h", ic_line);
+	$display("ins0=%h", ic_line >> {pc[17:12],3'd0});
 	$display("%c%c A: %d %h,%h %h.%h #",
 	    45, fetchbuf?45:62, uif1.fetchbufA_v, uif1.fetchbufA_instr[1], uif1.fetchbufA_instr[0], uif1.fetchbufA_pc[$bits(pc_address_t)-1:12], uif1.fetchbufA_pc[11:0]);
 	$display("%c%c B: %d %h,%h %h.%h #",
@@ -3468,12 +3485,22 @@ begin
 	dram0_id <= 'd0;
 	dram0_load <= 'd0;
 	dram0_store <= 'd0;
+	dram0_erc <= 'd0;
 	dram0_op <= OP_NOP;
 	dram0_tgt <= 'd0;
 	dram0_tid <= 'd0;
 	dram0_more <= 'd0;
 	dram1 <= DRAMSLOT_AVAIL;
 	dram1p <= DRAMSLOT_AVAIL;
+	dram1_addr <= 'd0;
+	dram1_data <= 'd0;
+	dram1_exc <= FLT_NONE;
+	dram1_id <= 'd0;
+	dram1_load <= 'd0;
+	dram1_store <= 'd0;
+	dram1_erc <= 'd0;
+	dram1_op <= OP_NOP;
+	dram1_tgt <= 'd0;
 	dram1_tid <= 8'h08;
 	dram1_more <= 'd0;
 	dram_v0 <= 'd0;
@@ -3571,6 +3598,7 @@ begin
 		$display("regno: %h, om=%d", regno, sr.om);
 		casez(regno[15:0])
 		CSR_MCORENO:	res = coreno_i;
+		CSR_SR:		res = sr;
 		CSR_TICK:	res = tick;
 		CSR_ASID:	res = asid;
 		16'h303C:	res = {sr_stack[1],sr_stack[0]};
@@ -3633,6 +3661,7 @@ input [15:0] regno;
 begin
 	if (operating_mode_t'(regno[13:12]) <= sr.om) begin
 		casez(regno[15:0])
+		CSR_SR:		sr <= val;
 		CSR_ASID: 	asid <= val;
 		16'h303C: {sr_stack[1],sr_stack[0]} <= val;
 		16'h303D:	{sr_stack[3],sr_stack[2]} <= val;
@@ -3681,6 +3710,7 @@ input [15:0] regno;
 begin
 	if (operating_mode_t'(regno[13:12]) <= sr.om) begin
 		casez(regno[15:0])
+		CSR_SR:				sr <= sr | val;
 		/*
 		CSR_MCR0:			cr0[val[5:0]] <= 1'b1;
 		CSR_SEMA:			sema[val[5:0]] <= 1'b1;
@@ -3699,6 +3729,7 @@ input [15:0] regno;
 begin
 	if (operating_mode_t'(regno[13:12]) <= sr.om) begin
 		casez(regno[15:0])
+		CSR_SR:				sr <= sr & ~val;
 		/*
 		CSR_MCR0:			cr0[val[5:0]] <= 1'b0;
 		CSR_SEMA:			sema[val[5:0]] <= 1'b0;

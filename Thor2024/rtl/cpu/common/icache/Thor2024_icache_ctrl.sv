@@ -63,6 +63,7 @@ input snoop_v;
 input [5:0] snoop_cid;
 
 wire Thor2024pkg::address_t [15:0] vtags;
+wire ack;
 
 // Generate memory requests to fill cache line.
 
@@ -83,7 +84,8 @@ icrq1
 	.vtags(vtags),
 	.snoop_v(snoop_v),
 	.snoop_adr(snoop_adr),
-	.snoop_cid(snoop_cid)
+	.snoop_cid(snoop_cid),
+	.ack(wr_ic)
 );
 
 // Process ACK responses coming back.
