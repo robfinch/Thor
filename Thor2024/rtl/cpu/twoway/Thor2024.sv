@@ -1570,7 +1570,7 @@ begin
 	//n4p = (n4 + (QENTRIES-1)) % QENTRIES;
 	iqentry_stomp[n4] =
 		(branchmiss
-		&& iq[n4].sn >= iq[missid].sn
+		&& iq[n4].sn > iq[missid].sn
 		&& iq_v[n4]
 		&& heads[0] != n4[$clog2(QENTRIES)-1:0])
 	;
@@ -1711,6 +1711,10 @@ always_comb
 		tgtpc = fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
 		tgtpc[11:0] = 'd0;
 	end
+	else if (fnIsBsr(fcu_instr)) begin
+		tgtpc = fcu_pc + {{33{fcu_instr[39]}},fcu_instr[39:9],12'h000};
+		tgtpc[11:0] = 'd0;
+	end
 	else if (fnIsCall(fcu_instr)) begin
 		tgtpc = fcu_argA + {fcu_argI,12'h000};
 		tgtpc[11:0] = 'd0;
@@ -1718,7 +1722,7 @@ always_comb
 	else if (fnIsRti(fcu_instr))
 		tgtpc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
 	else if (fnIsRet(fcu_instr)) begin
-		tgtpc = fcu_argC + {fcu_instr[15:8],12'h000};
+		tgtpc = fcu_argC + {fcu_instr[18:11],12'h000};
 		tgtpc[11:0] = 'd0;
 	end
 	else
@@ -1737,6 +1741,10 @@ always_comb
 		fcu_misspc = fcu_bt ? tpc : fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
 		fcu_misspc[11:0] = 'd0;
 	end
+	else if (fnIsBsr(fcu_instr)) begin
+		fcu_misspc = fcu_pc + {{33{fcu_instr[39]}},fcu_instr[39:9],12'h000};
+		fcu_misspc[11:0] = 'd0;
+	end
 	else if (fnIsCall(fcu_instr)) begin
 		fcu_misspc = fcu_argA + {fcu_argI,12'h000};
 		fcu_misspc[11:0] = 'd0;
@@ -1745,7 +1753,7 @@ always_comb
 	else if (fnIsRti(fcu_instr))
 		fcu_misspc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
 	else if (fnIsRet(fcu_instr)) begin
-		fcu_misspc = fcu_argC + {fcu_instr[15:8],12'h000};
+		fcu_misspc = fcu_argC + {fcu_instr[18:11],12'h000};
 		fcu_misspc[11:0] = 'd0;
 	end
 	else
@@ -1782,6 +1790,8 @@ always_comb
 if (fcu_dataready) begin
 	if (fnIsBranch(fcu_instr))
 		fcu_branchmiss = ((takb && ~fcu_bt) || (!takb && fcu_bt));
+	else if (fnIsBsr(fcu_instr))
+		fcu_branchmiss = TRUE;
 	else if (fnIsCall(fcu_instr))
 		fcu_branchmiss = TRUE;
 	else if (fnIsRet(fcu_instr))
@@ -1929,7 +1939,7 @@ did_branchback2 <= did_branchback1;
 				iq[tail0].ap_s  <= rf_source [ Rp1 ];
 				lastq0 <= {1'b0,tail0};
 				lastq1 <= {1'b1,tail0};
-				if (!fnIsPostfix(fetchbuf1_instr[0])) begin
+				if (!db1.pfx) begin
 					atom_mask <= atom_mask >> 4'd3;
 					pred_mask <= {4'hF,pred_mask} >> 4'd4;
 					postfix_mask <= 'd0;
@@ -2008,7 +2018,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
-					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
+					if (!db0.pfx) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -2085,7 +2095,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
-					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
+					if (!db0.pfx) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -2100,8 +2110,8 @@ did_branchback2 <= did_branchback1;
 				end
 
 				else begin	// fetchbuf0 doesn't contain a backwards branch
-					if (!fnIsPostfix(fetchbuf0_instr[0]))
-						pred_mask <= pred_mask >> 4'd2;
+					if (!db0.pfx)
+						pred_mask <= {8'hFF,pred_mask} >> 4'd8;
 			    //
 			    // so -- we can enqueue 1 or 2 instructions, depending on space in the IQ
 			    // update tail0/tail1 separately (at top)
@@ -2169,7 +2179,7 @@ did_branchback2 <= did_branchback1;
 					iq[tail0].ap_s  <= rf_source [ Rp0 ];
 					lastq0 <= {1'b0,tail0};
 					lastq1 <= {1'b1,tail0};
-					if (!fnIsPostfix(fetchbuf0_instr[0])) begin
+					if (!db0.pfx) begin
 						atom_mask <= atom_mask >> 4'd3;
 						pred_mask <= {4'hF,pred_mask} >> 4'd4;
 						postfix_mask <= 'd0;
@@ -2231,9 +2241,12 @@ did_branchback2 <= did_branchback1;
 						iq[tail1].at <= rfot1;
 						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], rfop1);
 						lastq1 <= {1'b0,tail1};
-						if (!fnIsPostfix(fetchbuf1_instr[0])) begin
+						if (!db1.pfx) begin
 							atom_mask <= atom_mask >> 4'd6;
 							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
+							postfix_mask <= 'd0;
+						end
+						else if (!db0.pfx) begin
 							postfix_mask <= 'd0;
 						end
 						else

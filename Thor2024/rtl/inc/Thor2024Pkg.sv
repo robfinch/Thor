@@ -38,7 +38,7 @@
 package Thor2024pkg;
 
 `undef IS_SIM
-parameter SIM = 1'b1;
+parameter SIM = 1'b0;
 
 //`define IS_SIM	1
 // Comment out to remove the sigmoid approximate function
@@ -103,7 +103,7 @@ parameter NFPU = 1;
 
 parameter RAS_DEPTH	= 4;
 
-parameter SUPPORT_RSB = 1;
+parameter SUPPORT_RSB = 0;
 
 //
 // define PANIC types
@@ -446,19 +446,17 @@ typedef enum logic [2:0] {
 
 typedef enum logic [5:0] {
 	OP_ASL 	= 6'd0,
-	OP_ASR	= 6'd1,
-	OP_LSL	= 6'd2,
-	OP_LSR	= 6'd3,	
-	OP_ROL	= 6'd4,
-	OP_ROR	= 6'd5,
+	OP_LSR	= 6'd1,	
+	OP_ASR	= 6'd2,
+	OP_ROL	= 6'd3,
+	OP_ROR	= 6'd4,
 	OP_ZXB	= 6'd8,
 	OP_SXB	= 6'd9,
 	OP_ASLI	= 6'd32,
-	OP_ASRI	= 6'd33,
-	OP_LSLI	= 6'd34,
-	OP_LSRI	= 6'd35,
-	OP_ROLI	= 6'd36,
-	OP_RORI	= 6'd37,
+	OP_LSRI	= 6'd33,
+	OP_ASRI	= 6'd34,
+	OP_ROLI	= 6'd35,
+	OP_RORI	= 6'd36,
 	OP_ZXBI	= 6'd40,
 	OP_SXBI	= 6'd41
 } shift_t;
@@ -473,7 +471,7 @@ typedef enum logic [2:0] {
 	PRCNDX = 3'd7
 } prec_t;
 
-parameter NOP_INSN	= {32'd0,3'd4,OP_PFX};
+parameter NOP_INSN	= {33'h1FFFFFFFF,OP_NOP};
 
 typedef enum logic [4:0] {
 	MR_NOP = 5'd0,
@@ -502,7 +500,7 @@ typedef enum logic [4:0] {
 	MR_CAS = 5'd24
 } memop_t;
 
-parameter CSR_IE		= 16'h?004;
+parameter CSR_SR		= 16'h?004;
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_REPBUF = 16'h0008;
 parameter CSR_SEMA	= 16'h?00C;
@@ -628,10 +626,13 @@ typedef logic [11:0] order_tag_t;
 typedef logic [11:0] ASID;
 typedef logic [11:0] asid_t;
 typedef logic [31:0] address_t;
-typedef struct packed {
+typedef logic [43:0] pc_address_t;
+/*
+struct packed {
 	logic [31:0] pc;
 	logic [11:0] micro_ip;
 } pc_address_t;
+*/
 typedef logic [31:0] virtual_address_t;
 typedef logic [47:0] physical_address_t;
 typedef logic [31:0] code_address_t;
@@ -776,7 +777,7 @@ typedef struct packed
 	logic [2:0] pr;
 	logic b;
 	logic im;
-	logic [5:0] resv;
+	logic [5:0] func;
 	logic [6:0] imm;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -958,6 +959,7 @@ typedef struct packed
 	logic storer;
 	logic storen;
 	logic store;
+	logic erc;
 	logic stcr;
 	logic need_steps;
 	logic compress;
@@ -1043,7 +1045,7 @@ typedef struct packed
 	order_tag_t tag;
 	tid_t thread;
 	logic [1:0] omode;	// operating mode
-	code_address_t ip;			// Debugging aid
+	pc_address_t ip;			// Debugging aid
 	logic [5:0] step;		// vector step number
 	logic [5:0] count;	// vector operation count
 	logic wr;						// fifo write control
@@ -1118,6 +1120,7 @@ typedef struct packed {
 	logic load;
 	logic loadz;
 	logic store;
+	logic erc;
 	logic mem;
 	logic sync;
 	logic jmp;
@@ -1202,6 +1205,13 @@ begin
 end
 endfunction
 
+function fnIsBsr;
+input instruction_t ir;
+begin
+	fnIsBsr = ir.any.opcode==OP_BSR;
+end
+endfunction
+
 function fnIsCallType;
 input instruction_t ir;
 begin
@@ -1222,7 +1232,7 @@ begin
 	fnIsRet = 1'b0;
 	case(ir.any.opcode)
 	OP_RTD:
-		fnIsRet = 1'b1;	
+		fnIsRet = ir[10:9]==2'd2;	
 	default:
 		fnIsRet = 1'b0;
 	endcase
@@ -1630,7 +1640,7 @@ begin
 	OP_LDX,OP_STX:
 		fnImmc = 1'b0;
 	default:
-		fnImmc <= 1'b0;
+		fnImmc = 1'b0;
 	endcase
 end
 endfunction
@@ -1761,7 +1771,7 @@ begin
 			fnMemsz = octa;
 		endcase
 	OP_STX:
-		case(ir.lsn.func)
+		case(ir.lsn.func[4:0])
 		FN_STBX:	fnMemsz = byt;
 		FN_STWX:	fnMemsz = wyde;
 		FN_STTX:	fnMemsz = tetra;
@@ -1836,7 +1846,7 @@ function pc_address_t fnPCInc;
 input pc_address_t pc;
 begin
 	if (0) begin	//ICacheBundleWidth==120) begin
-		case(pc.pc[3:0])
+		case(pc[3:0])
 		4'h0:	fnPCInc = pc + 16'h5000;
 		4'h5:	fnPCInc = pc + 16'h5000;
 		4'hA:	fnPCInc = pc + 16'h6000;
@@ -1844,8 +1854,7 @@ begin
 		endcase
 	end
 	else begin
-		fnPCInc.pc = pc.pc + INSN_LEN;
-		fnPCInc.micro_ip = pc.micro_ip;
+		fnPCInc = pc + 16'h5000;
 	end
 end
 endfunction

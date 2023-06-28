@@ -36,66 +36,22 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_Rt(instr, Rt);
+module Thor2024_decode_pfx(instr, pfx);
 input instruction_t instr;
-output regspec_t Rt;
+output pfx;
 
-function regspec_t fnRt;
-input instruction_t ir;
+function fnIsPfx;
+input instruction_t op;
 begin
-	case(ir.any.opcode)
-	OP_R2:
-		case(ir.r2.func)
-		FN_ADD:	fnRt = ir.r2.Rt;
-		FN_CMP:	fnRt = ir.r2.Rt;
-		FN_MUL:	fnRt = ir.r2.Rt;
-		FN_DIV:	fnRt = ir.r2.Rt;
-		FN_SUB:	fnRt = ir.r2.Rt;
-		FN_MULU: fnRt = ir.r2.Rt;
-		FN_DIVU:	fnRt = ir.r2.Rt;
-		FN_MULH:	fnRt = ir.r2.Rt;
-		FN_MOD:	fnRt = ir.r2.Rt;
-		FN_MULUH:	fnRt = ir.r2.Rt;
-		FN_MODU:	fnRt = ir.r2.Rt;
-		FN_AND:	fnRt = ir.r2.Rt;
-		FN_OR:	fnRt = ir.r2.Rt;
-		FN_EOR:	fnRt = ir.r2.Rt;
-		FN_ANDC:	fnRt = ir.r2.Rt;
-		FN_NAND:	fnRt = ir.r2.Rt;
-		FN_NOR:	fnRt = ir.r2.Rt;
-		FN_ENOR:	fnRt = ir.r2.Rt;
-		FN_ORC:	fnRt = ir.r2.Rt;
-		FN_SEQ:	fnRt = ir.r2.Rt;
-		FN_SNE:	fnRt = ir.r2.Rt;
-		FN_SLT:	fnRt = ir.r2.Rt;
-		FN_SLE:	fnRt = ir.r2.Rt;
-		FN_SLTU:	fnRt = ir.r2.Rt;
-		FN_SLEU:	fnRt = ir.r2.Rt;
-		default:	fnRt = 'd0;
-		endcase
-	OP_FLT2:	fnRt = ir.f2.Rt;
-	OP_FLT3:	fnRt = ir.f3.Rt;
-	OP_BSR:	fnRt = 6'd56 + ir[8:7];
-	OP_JSR:	fnRt = 6'd56 + ir[8:7];
-	OP_RTD:	fnRt = 6'd62;
-	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
-	OP_MULUI,OP_DIVUI,
-	OP_ANDI,OP_ORI,OP_EORI:
-		fnRt = ir.ri.Rt;
-	OP_CSR:
-		fnRt = ir.csr.Rt;
-	OP_MOV:
-		fnRt = ir.r2.Rt;
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
-	OP_LDX:
-		fnRt = ir.ls.Rt;
+	case(op.any.opcode)
+	OP_PFX:
+		fnIsPfx = 1'b1;
 	default:
-		fnRt = 'd0;
+		fnIsPfx = 1'b0;
 	endcase
 end
 endfunction
 
-assign Rt = fnRt(instr);
+assign pfx = fnIsPfx(instr);
 
 endmodule
-

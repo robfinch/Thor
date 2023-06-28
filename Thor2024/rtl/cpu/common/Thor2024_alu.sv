@@ -61,10 +61,15 @@ wire cd_args;
 reg [3:0] mul_cnt;
 double_value_t prod, prod1, prod2;
 double_value_t produ, produ1, produ2;
+reg [191:0] shl, shr, asr;
 value_t div_q, div_r;
 value_t cmpo;
 value_t bus;
 value_t blendo;
+
+assign shl = {64'd0,a,{64{ir[33]}}} << (ir[32] ? ir[24:19] : b[5:0]);
+assign shr = {{64{ir[33]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
+assign asr = {{64{a[63]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
 
 always_ff @(posedge clk)
 begin
@@ -154,6 +159,20 @@ always_comb
 	OP_ORI:		bus = a | b;
 	OP_EORI:	bus = a ^ b;
 	OP_SLTI:	bus = $signed(a) < $signed(b);
+	OP_SHIFT:
+		case(ir.shifti.func)
+		OP_ASL:	bus = shl[127:64];
+		OP_LSR:	bus = shr[127:64];
+		OP_ROL:	bus = shl[127:64]|shl[191:128];
+		OP_ROR:	bus = shr[127:64]|shr[191:128];
+		OP_ASR:	bus = asr[127:64];
+		OP_ASLI:	bus = shl[127:64];
+		OP_LSRI:	bus = shr[127:64];
+		OP_ROLI:	bus = shl[127:64]|shl[191:128];
+		OP_RORI:	bus = shr[127:64]|shr[191:128];
+		OP_ASRI:	bus = asr[127:64];
+		default:	bus = {2{32'hDEADBEEF}};
+		endcase
 	OP_MOV:		bus = a;
 	OP_LDB:		bus = a + b;
 	OP_LDBU:	bus = a + b;

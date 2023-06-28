@@ -172,6 +172,12 @@ Thor2024_decode_erc udecerc1
 	.erc(db.erc)
 );
 
+Thor2024_decode_pfx udecpfx1
+(
+	.instr(instr[0]),
+	.pfx(db.pfx)
+);
+
 Thor2024_decode_fpu ufpu
 (
 	.instr(instr[0]),
