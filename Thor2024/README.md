@@ -23,7 +23,7 @@ Interruptible micro-code.
 ## Out-of-Order Version
 ### Status
 The Thor2024 OoO machine is currently in development. The base machine has
-had its first simulation run. A long way to go yet.
+been undergoing simulation runs. Running a test program in the FPGA the core was able to clear a text screen. A long way to go yet. 
 
 ### Register File
 The register file contains 63 registers and is unified, supporting integer and floating-point operations using the same set of registers. One register code, 63, is dedicated to indicate the use of a postfix immediate for the value.
@@ -42,12 +42,12 @@ There are roughly five stages in the pipeline, fetch, decode, queue, execute and
 The first step for an instruction is instruction fetch. At instruction fetch a pair of instructions is fetched from the instruction cache and placed in a fetch buffer. Any postfix instructions associated with the fetched instructions are also fetched. If there is a hardware interrupt, a special interrupt instruction overrides the fetched instructions and the PC increment is disabled until the interrupt is recognized.
 After instruction fetch the instructions are decoded and register values are fetched. And the instruction decodes and register values that are available are placed in the reorder buffer / queued.
 The next stage is execution. Note that the execute stage waits until all the instruction arguments are valid before trying to execute the instruction.
-Instruction arguments are made valid by the execution or writeback of prior instructions. Note that while the instruction may not be able to execute, decode and execute are *not* stalled. Other instructions are decoded and exeuted while waiting for an instruction missing arguments. Execution of instructions can be multi-cycle as for loads, stores, multiplies and divides.
-At the end of instruction execution the result is placed back into the reorder buffer. There may be a maximum of three instruction being executed at the same time. Two alu and one flow control.
+Instruction arguments are made valid by the execution or writeback of prior instructions. Note that while the instruction may not be able to execute, decode and execute are *not* stalled. Other instructions are decoded and executed while waiting for an instruction missing arguments. Execution of instructions can be multi-cycle as for loads, stores, multiplies and divides.
+At the end of instruction execution the result is placed back into the reorder buffer. There may be a maximum of four instruction being executed at the same time. An alu, an fpu a memory and one flow control.
 The last stage, writeback, reorders instructions into program order reading the oldest instructions from the ROB. The core may writeback or commit two instructions per clock cycle.
 
 ### Branch Prediction
-Branch prediction is via a simple backwards branch predictor. Backwards branches are predicted taken. There is also a branch target buffer in the works. The BTB has 1024 entries.
+Branch prediction is via a simple backwards branch predictor. Backwards branches are predicted taken. There is also a branch target buffer in the works. The BTB has 1024 entries. There is a 64-entry return stack buffer, RSB, to predict return addresses.
 
 ### Interrupts and Exceptions
 Interrupts and exceptions are precise.
@@ -102,7 +102,8 @@ The data cache is 64kB in size.
 Thor2024 will use vasm and vlink to assemble and link programs. vlink is used 'out of the box'. A Thor2024 backend is being written for vasm. The CC64 compiler may be used for high-level work and compiles to vasm compatible source code.
 
 # Core Size
-Including only basic integer instructions the core is about 50,000 LUTs or 80,000 LC's in size. Not including the MPU component or MMU.
+Including only basic integer instructions the core is about 60,000 LUTs or 100,000 LC's in size. Not including the MPU component or MMU. *The core size
+seems to be constantly increasing as updates occur.
 
 # Performance
 The toolset indicates the core should be able to reach 33 MHz operation. Under absolutely ideal conditions the core may execute two instructions per clock. All stages support processing at least two instructions per clock. Realistically the core will typically execute less than one instruction per clock.
