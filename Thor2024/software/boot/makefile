@@ -19,8 +19,10 @@ BIOS:
 	cc64 $(CFLAGS) printf_again.c
 #	cc64 $(CFLAGS) os_stub.c
 
+	vasmThor_std_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o
+	vasmThor_std_win32.exe -Fvobj -L serial.lst serial.asm -o serial.o
 	vasmThor_std_win32.exe -Fvobj -L fibonacci.lst fibonacci.asm -o fibonacci.o
-	vasmThor_mot_win32.exe -Fvobj -L tlbmiss34.lst tlbmiss34.asm -o tlbmiss34.o
+#	vasmThor_mot_win32.exe -Fvobj -L tlbmiss34.lst tlbmiss34.asm -o tlbmiss34.o
 	vasmThor_std_win32.exe -Fvobj -Lbpl=5 -L sieve.lst sieve.asm -o sieve.o
 	vasmThor_std_win32.exe -Fvobj -Lbpl=5 -L printf_again.lst printf_again.asm -o printf_again.o
 	vasmThor_std_win32.exe -Fvobj -Lbpl=5 -L ..\cc64rt\source\__store.lst ..\cc64rt\source\__store.asm -o __store.o
@@ -29,6 +31,7 @@ BIOS:
 #	vasmrf68000_mot_win32.exe -Fvobj -L cputest.lst cputest.asm -o cputest.o
 #	vasmrf68000_mot_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o -m68010
 #	vasmrfPhoenix_std_win32.exe -Fvobj -L add.lst add.asm -o add.o
+	vlink -T rom_bios.cmd -brawbin1 boot.o serial.o -o boot.bin
 	vlink -T rom_bios.cmd -brawbin1 fibonacci.o -o fibonacci.bin
 #	vlink -T rom_bios.cmd -brawbin1 __store.o __load.o printf_again.o sieve.o -o sieve.bin
 #	vlink -T rom_bios.cmd -brawbin1 LEDTest.o -o LEDTest.bin
@@ -36,8 +39,10 @@ BIOS:
 #	vlink -T rom_bios.cmd -bsrec37 boot.o -o boot.s37
 #	vlink -T rom_bios.cmd -brawbin1 boot.o -o boot.bin
 #	vlink -T rom_bios.cmd -brawbin1 add.o -o add.bin
-	bin2ver fibonacci.bin 128 m
-	bin2ver fibonacci.bin 128
+#	bin2ver fibonacci.bin 128 m
+#	bin2ver fibonacci.bin 128
+	bin2ver boot.bin 128 m
+	bin2ver boot.bin 128
 #	bin2ver LEDTest.bin 32 m
 #	bin2ver boot.bin 32 m
 #	bin2ver cputest.bin 32 m

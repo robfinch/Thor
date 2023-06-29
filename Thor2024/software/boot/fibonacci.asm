@@ -3,11 +3,11 @@
 
 	.bss
 	.space	10
-.set	ary,0xFFFC0000
-.set	txtscreen,0xFD000000
-.set leds,0xFD0FFF00
-.set keybd,0xFD0FFE00
-.set rand,0xFD0FFD00
+.set ary,0xFFFC0000
+.set txtscreen,0xFEC00000
+.set leds,0xFEDFFF00
+.set keybd,0xFEDCFE00
+.set rand,0xFEE1FD00
 
 	.data
 	.space	10
@@ -18,8 +18,9 @@
 start:
 	ldi t0,-1
 	stt t0,leds
-	ldi t0,0x43FFFFE000000020
 
+	# clearscreen
+	ldi t0,0x43FFFFE0003F0020
 	mov t3,r0
 	ldi t2,16384
 .st1:
@@ -39,16 +40,16 @@ start:
 	ldi t0,1
 	bne r2,t0,stall			# Allow only thread 1 to work
 
-	LDI r2,0xFD
-	LDI r2,0x01					# x = 1
-	STT r2,ary@got
+	ldi r2,0xFD
+	ldi r2,0x01					# x = 1
+	stt r2,ary@got
 
-	LDI r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
-	OR r1,r3,r0	# transfer y register to accumulator
-	ADD r3,r3,-3	# handles the algorithm iteration counting
+	ldi r3,0x10		# calculates 16th fibonacci number (13 = D in hex) (CHANGE HERE IF YOU WANT TO CALCULATE ANOTHER NUMBER)
+	or r1,r3,r0	# transfer y register to accumulator
+	add r3,r3,-3	# handles the algorithm iteration counting
 
-	LDI r1,2		# a = 2
-	STT r1,0xFFFC0004		# stores a
+	ldi r1,2		# a = 2
+	stt r1,0xFFFC0004		# stores a
 
 floop: 
 	LDT r2,0xFFFC0004		# x = a
@@ -63,8 +64,17 @@ floop:
   NOP
   NOP
 	NOP  
+	
 stall:
 	BRA	stall
 
 	.balign	0x100,0x0B
+	
+	.rodata
+	.org 0xffe0
+	.8byte	0xFFFFFFFFFFFCFFF0
+	.8byte	0xFFFFFFFFFFFFFFFF
+	.8byte	0xFFFFFFFFD0000000
+	.8byte	0xFFFFFFFFFFFFFFFF
+
 

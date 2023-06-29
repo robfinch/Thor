@@ -1,0 +1,442 @@
+Sections:
+00: ".bss" (0-A)
+01: ".text" (0-2E4)
+
+
+Source: "serial.asm"
+                                    	     1: # ============================================================================
+                                    	     2: #        __
+                                    	     3: #   \\__/ o\    (C) 2022-2023  Robert Finch, Waterloo
+                                    	     4: #    \  __ /    All rights reserved.
+                                    	     5: #     \/_//     robfinch<remove>@finitron.ca
+                                    	     6: #       ||
+                                    	     7: #  
+                                    	     8: #
+                                    	     9: # Serial port routines for a WDC6551 compatible circuit.
+                                    	    10: #
+                                    	    11: # ============================================================================
+                                    	    12: #
+                                    	    13: 	.bss
+00:0000000000000000 00              	    14: 	.space	10
+00:0000000000000001 *
+                                    	    15: .set XON,0x11
+                                    	    16: .set XOFF,0x13
+                                    	    17: .set ACIA_RX,0xFED00000
+                                    	    18: .set ACIA_TX,0xFED00000
+                                    	    19: .set ACIA_STAT,0xFED00004
+                                    	    20: .set ACIA_CMD,0xFED00008
+                                    	    21: .set ACIA_CTRL,0xFED0000C
+                                    	    22: .set SerTailRcv,0xFFFC0000
+                                    	    23: .set SerHeadRcv,0xFFFC0004
+                                    	    24: .set SerTailXmit,0xFFFC0008
+                                    	    25: .set SerHeadXmit,0xFFFC000C
+                                    	    26: .set SerRcvXon,0xFFFC0010
+                                    	    27: .set SerRcvXoff,0xFFFC0011
+                                    	    28: .set SerRcvBuf,0xFFFC1000
+                                    	    29: .set uart,0xFED00000
+                                    	    30: 
+                                    	    31: 	.text
+                                    	    32: #------------------------------------------------------------------------------
+                                    	    33: # Initialize serial port.
+                                    	    34: #
+                                    	    35: # Clear buffer indexes. Two bytes are used for the buffer index even though
+                                    	    36: # only a single byte is needed. This is for convenience in calculating the
+                                    	    37: # number of characters in the buffer, done later. The upper byte remains at
+                                    	    38: # zero.
+                                    	    39: # The port is initialized for 9600 baud, 1 stop bit and 8 bits data sent.
+                                    	    40: # The internal baud rate generator is used.
+                                    	    41: #
+                                    	    42: # Stack Space:
+                                    	    43: #		2 words
+                                    	    44: # Parameters:
+                                    	    45: #		none
+                                    	    46: # Modifies:
+                                    	    47: #		d
+                                    	    48: # Returns:
+                                    	    49: #		none
+                                    	    50: #------------------------------------------------------------------------------
+                                    	    51: 
+                                    	    52: InitSerial:
+                                    	    53: SerialInit:
+01:0000000000000000 52008000007C0400	    54: 	stt		r0,SerHeadRcv
+01:0000000000000008 FCFF
+01:000000000000000A 52000000007C0000	    55: 	stt		r0,SerTailRcv
+01:0000000000000012 FCFF
+01:0000000000000014 52008001007C0C00	    56: 	stt		r0,SerHeadXmit
+01:000000000000001C FCFF
+01:000000000000001E 52000001007C0800	    57: 	stt		r0,SerTailXmit
+01:0000000000000026 FCFF
+01:0000000000000028 50000002007C1000	    58: 	stb		r0,SerRcvXon
+01:0000000000000030 FCFF
+01:0000000000000032 50002002007C1100	    59: 	stb		r0,SerRcvXoff
+01:000000000000003A FCFF
+                                    	    60: #	lda		COREID
+                                    	    61: #sini1:
+                                    	    62: #	cmpa	IOFocusID
+                                    	    63: #	bne		sini1
+                                    	    64: #	orcc	#$290						; mask off interrupts
+                                    	    65: #	ldd		#ACIA_MMU				; map ACIA into address space
+                                    	    66: #	std		MMU
+01:000000000000003C 8400480000      	    67: 	ldi		a0,0x09					# dtr,rts active, rxint enabled (bit 1=0), no parity
+01:0000000000000041 D2000001007C0800	    68: 	stt		a0,ACIA_CMD
+01:0000000000000049 D0FE
+01:000000000000004B 8400F000007C1E00	    69: 	ldi		a0,0x6001E			# baud 9600, 1 stop bit, 8 bit, internal baud gen
+01:0000000000000053 0600
+01:0000000000000055 D2008001007C0C00	    70: 	stt		a0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
+01:000000000000005D D0FE
+                                    	    71: #	ldd		#$000F00				; map out ACIA
+                                    	    72: #	std		MMU
+01:000000000000005F A304000000      	    73: 	ret
+                                    	    74: 
+                                    	    75: #------------------------------------------------------------------------------
+                                    	    76: # Calculate number of character in input buffer.
+                                    	    77: #
+                                    	    78: # Parameters:
+                                    	    79: #		none
+                                    	    80: # Returns:
+                                    	    81: #		d = number of bytes in buffer.
+                                    	    82: #------------------------------------------------------------------------------
+                                    	    83: 
+                                    	    84: SerialRcvCount:
+01:0000000000000064 8F00000000      	    85: 	mov		a0,r0
+01:0000000000000069 45010000007C0000	    86: 	ldtu	a1,SerTailRcv
+01:0000000000000071 FCFF
+01:0000000000000073 C5018000007C0400	    87: 	ldtu	a2,SerHeadRcv
+01:000000000000007B FCFF
+01:000000000000007D 8240182800      	    88: 	sub		a0,a1,a2
+01:0000000000000082 2920001400      	    89: 	bge		a0,r0,.srcXit
+01:0000000000000087 8400008000      	    90: 	ldi		a0,0x1000
+01:000000000000008C C5018000007C0400	    91: 	ldtu	a2,SerHeadRcv
+01:0000000000000094 FCFF
+01:0000000000000096 45010000007C0000	    92: 	ldtu	a1,SerTailRcv
+01:000000000000009E FCFF
+01:00000000000000A0 8220182800      	    93: 	sub		a0,a0,a2
+01:00000000000000A5 8220102000      	    94: 	add		a0,a0,a1
+                                    	    95: .srcXit:
+01:00000000000000AA A304000000      	    96: 	ret
+                                    	    97: 
+                                    	    98: #------------------------------------------------------------------------------
+                                    	    99: # SerialGetChar
+                                    	   100: #
+                                    	   101: # Check the serial port buffer to see if there's a char available. If there's
+                                    	   102: # a char available then return it. If the buffer is almost empty then send an
+                                    	   103: # XON.
+                                    	   104: #
+                                    	   105: # Stack Space:
+                                    	   106: #		4 words
+                                    	   107: # Parameters:
+                                    	   108: #		none
+                                    	   109: # Modifies:
+                                    	   110: #		none
+                                    	   111: # Returns:
+                                    	   112: #		a0 = character or -1
+                                    	   113: #------------------------------------------------------------------------------
+                                    	   114: 
+                                    	   115: SerialGetChar:
+01:00000000000000AF 8400400000      	   116: 	ldi		a0,8						# bit 3=machine interrupt enable, mask off interrupts
+01:00000000000000B4 8721208007      	   117: 	csrrc	a2,a0,0x3004		# status reg
+01:00000000000000B9 FFFFFFFFFF      	   118: 	nop
+01:00000000000000BE FFFFFFFFFF      	   119: 	nop
+01:00000000000000C3 FFFFFFFFFF      	   120: 	nop
+01:00000000000000C8 FFFFFFFFFF      	   121: 	nop
+01:00000000000000CD FFFFFFFFFF      	   122: 	nop
+01:00000000000000D2 FFFFFFFFFF      	   123: 	nop
+01:00000000000000D7 FFFFFFFFFF      	   124: 	nop
+01:00000000000000DC FFFFFFFFFF      	   125: 	nop
+01:00000000000000E1 A006FFFFFF      	   126: 	bsr		SerialRcvCount			# check number of chars in receive buffer
+01:00000000000000E6 2B38F81B007C0800	   127: 	bgt		a0,8,.sgc2
+01:00000000000000EE 0000
+01:00000000000000F0 C0000002007C1000	   128: 	ldb		a0,SerRcvXon		# skip sending XON if already sent
+01:00000000000000F8 FCFF
+01:00000000000000FA 2738001000      	   129: 	bnez	a0,.sgc2        # XON already sent?
+01:00000000000000FF 8400880000      	   130: 	ldi		a0,XON					# if <8 send an XON
+01:0000000000000104 50002002007C1100	   131: 	stb		r0,SerRcvXoff		# clear XOFF status
+01:000000000000010C FCFF
+01:000000000000010E D0000002007C1000	   132: 	stb		a0,SerRcvXon		# flag so we don't send it multiple times
+01:0000000000000116 FCFF
+01:0000000000000118 A09A010000      	   133: 	bsr		SerialPutChar
+                                    	   134: .sgc2:
+01:000000000000011D C5008000007C0400	   135: 	ldtu	a0,SerHeadRcv		# check if anything is in buffer
+01:0000000000000125 FCFF
+01:0000000000000127 45010000007C0000	   136: 	ldtu	a1,SerTailRcv
+01:000000000000012F FCFF
+01:0000000000000131 2638101A00      	   137: 	beq		a0,a1,.sgcNoChars
+01:0000000000000136 0F21000000      	   138: 	mov		a1,a0
+01:000000000000013B C1001000027C0010	   139: 	ldbu	a0,SerRcvBuf[a1]	# get byte from buffer
+01:0000000000000143 FCFF7C00000000
+01:000000000000014A 0441080000      	   140: 	add		a1,a1,1
+01:000000000000014F 0841F87F00      	   141: 	and		a1,a1,0xfff			# 4k wrap around
+01:0000000000000154 52018000007C0400	   142: 	stt		a1,SerHeadRcv
+01:000000000000015C FCFF
+01:000000000000015E 0760208003      	   143: 	csrrw	r0,a2,0x3004		# restore interrupts
+01:0000000000000163 A304000000      	   144: 	ret
+                                    	   145: .sgcNoChars:
+01:0000000000000168 8400F8FF07      	   146: 	ldi		a0,-1						#-1
+01:000000000000016D 0760208003      	   147: 	csrrw	r0,a2,0x3004		# restore interrupts
+01:0000000000000172 A304000000      	   148: 	ret
+                                    	   149: 
+                                    	   150: #------------------------------------------------------------------------------
+                                    	   151: # SerialPeekChar
+                                    	   152: #
+                                    	   153: # Check the serial port buffer to see if there's a char available. If there's
+                                    	   154: # a char available then return it. But don't update the buffer indexes. No need
+                                    	   155: # to send an XON here.
+                                    	   156: #
+                                    	   157: # Stack Space:
+                                    	   158: #		3 words
+                                    	   159: # Parameters:
+                                    	   160: #		none
+                                    	   161: # Modifies:
+                                    	   162: #		none
+                                    	   163: # Returns:
+                                    	   164: #		a0 = character or -1
+                                    	   165: #------------------------------------------------------------------------------
+                                    	   166: 
+                                    	   167: SerialPeekChar:
+                                    	   168: #	orcc	#$290							; mask off interrupts
+01:0000000000000177 FAFF070000      	   169: 	atom	07777
+01:000000000000017C C5008000007C0400	   170: 	ldtu	a0,SerHeadRcv			# check if anything is in buffer
+01:0000000000000184 FCFF
+01:0000000000000186 45010000007C0000	   171: 	ldtu	a1,SerTailRcv
+01:000000000000018E FCFF
+01:0000000000000190 2628100C00      	   172: 	beq		a0,a1,.spcNoChars	# no?
+01:0000000000000195 C1000800027C0010	   173: 	ldbu	a0,SerRcvBuf[a0]	# get byte from buffer
+01:000000000000019D FCFF7C00000000
+01:00000000000001A4 A304000000      	   174: 	ret
+                                    	   175: .spcNoChars:
+01:00000000000001A9 8400F8FF07      	   176: 	ldi		a0,-1
+01:00000000000001AE A304000000      	   177: 	ret
+                                    	   178: 
+                                    	   179: #------------------------------------------------------------------------------
+                                    	   180: # SerialPeekChar
+                                    	   181: #		Get a character directly from the I/O port. This bypasses the input
+                                    	   182: # buffer.
+                                    	   183: #
+                                    	   184: # Stack Space:
+                                    	   185: #		3 words
+                                    	   186: # Parameters:
+                                    	   187: #		none
+                                    	   188: # Modifies:
+                                    	   189: #		a0
+                                    	   190: # Returns:
+                                    	   191: #		a0 = character or -1
+                                    	   192: #------------------------------------------------------------------------------
+                                    	   193: 
+                                    	   194: SerialPeekCharDirect:
+                                    	   195: #	lda		COREID					; Ensure we have the IO Focus
+                                    	   196: #	cmpa	IOFocusID
+                                    	   197: #	bne		spcd0001
+                                    	   198: # Disallow interrupts between status read and rx read.
+                                    	   199: #	orcc	#$290						; mask off interrupts
+01:00000000000001B3 FAFF3F0000      	   200: 	atom	077777
+01:00000000000001B8 C1008000007C0400	   201: 	ldbu	a0,ACIA_STAT
+01:00000000000001C0 D0FE
+01:00000000000001C2 8820400000      	   202: 	and		a0,a0,8					# look for Rx not empty
+01:00000000000001C7 2620000A00      	   203: 	beq		a0,r0,.spcd0001
+01:00000000000001CC C1000000007C0000	   204: 	ldbu	a0,ACIA_RX
+01:00000000000001D4 D0FE
+01:00000000000001D6 A304000000      	   205: 	ret
+                                    	   206: .spcd0001:
+01:00000000000001DB 8400F8FF07      	   207: 	ldi		a0,-1
+01:00000000000001E0 A304000000      	   208: 	ret
+                                    	   209: 
+                                    	   210: #------------------------------------------------------------------------------
+                                    	   211: # SerialPutChar
+                                    	   212: #    Put a character to the serial transmitter. This routine blocks until the
+                                    	   213: # transmitter is empty. 
+                                    	   214: #
+                                    	   215: # Stack Space
+                                    	   216: #		4 words
+                                    	   217: # Parameters:
+                                    	   218: #		a1 = character to put
+                                    	   219: # Modifies:
+                                    	   220: #		none
+                                    	   221: #------------------------------------------------------------------------------
+                                    	   222: 
+                                    	   223: SerialPutChar:
+                                    	   224: .spc0001:
+                                    	   225: #	lda		COREID					; Ensure we have the IO Focus
+                                    	   226: #	cmpa	IOFocusID
+                                    	   227: #	bne		spc0001
+                                    	   228: #	andcc	#$D6F						; provide a window for an interrupt to occur
+                                    	   229: #	ldu		#ACIA_MMU
+                                    	   230: #	orcc	#$290						; mask off interrupts
+                                    	   231: 	# Between the status read and the transmit do not allow an
+                                    	   232: 	# intervening interrupt.
+01:00000000000001E5 FAFF3F0000      	   233: 	atom	077777
+01:00000000000001EA C1008000007C0400	   234: 	ldbu	a0,ACIA_STAT		# wait until the uart indicates tx empty
+01:00000000000001F2 D0FE
+01:00000000000001F4 8820800000      	   235: 	and		a0,a0,16				# bit #4 of the status reg
+01:00000000000001F9 262000F6FF      	   236: 	beq		a0,r0,.spc0001	# branch if transmitter is not empty
+01:00000000000001FE 50010000007C0000	   237: 	stb		a1,ACIA_TX			# send the byte
+01:0000000000000206 D0FE
+01:0000000000000208 A304000000      	   238: 	ret
+                                    	   239: 
+                                    	   240: #------------------------------------------------------------------------------
+                                    	   241: # Serial IRQ routine
+                                    	   242: #
+                                    	   243: # Keeps looping as long as it finds characters in the ACIA recieve buffer/fifo.
+                                    	   244: # Received characters are buffered. If the buffer becomes full, new characters
+                                    	   245: # will be lost.
+                                    	   246: #
+                                    	   247: # Stack Space:
+                                    	   248: #		1 word
+                                    	   249: # Parameters:
+                                    	   250: #		none
+                                    	   251: # Modifies:
+                                    	   252: #		d,x
+                                    	   253: # Returns:
+                                    	   254: #		none
+                                    	   255: #------------------------------------------------------------------------------
+                                    	   256: 
+                                    	   257: SerialIRQ:
+                                    	   258: #	lda		$2000+$D3				; Serial active interrupt flag
+                                    	   259: #	beq		notSerInt
+                                    	   260: .sirqNxtByte:
+01:000000000000020D C4008000007C0400	   261: 	ldt		a0,ACIA_STAT			# look for IRQs
+01:0000000000000215 D0FE
+01:0000000000000217 2B28005200      	   262: 	bgt		a0,r0,.notSerInt	# quick test for any irqs
+01:000000000000021C 8820400000      	   263: 	and		a0,a0,8						# check bit 3 = rx full (not empty)
+01:0000000000000221 2638004C00      	   264: 	beq		a0,r0,.notRxInt1
+01:0000000000000226 C1000000007C0000	   265: 	ldbu	a0,ACIA_RX				# get data from Rx buffer to clear interrupt
+01:000000000000022E D0FE
+01:0000000000000230 45010000007C0000	   266: 	ldtu	a1,SerTailRcv			# check if recieve buffer full
+01:0000000000000238 FCFF
+01:000000000000023A 0441080000      	   267: 	add		a1,a1,1
+01:000000000000023F 0841F87F00      	   268: 	and		a1,a1,0xfff
+01:0000000000000244 C5018000007C0400	   269: 	ldtu	a2,SerHeadRcv
+01:000000000000024C FCFF
+01:000000000000024E 2650183600      	   270: 	beq		a1,a2,.sirqRxFull
+01:0000000000000253 52010000007C0000	   271: 	stt		a1,SerTailRcv			# update tail pointer
+01:000000000000025B FCFF
+01:000000000000025D 0441F8FF07      	   272: 	sub		a1,a1,1						# backup
+01:0000000000000262 0841F87F00      	   273: 	and		a1,a1,0xfff
+01:0000000000000267 D0001000027C0010	   274: 	stb		a0,SerRcvBuf[a1]	# store recieved byte in buffer
+01:000000000000026F FCFF7C00000000
+01:0000000000000276 C1002002007C1100	   275: 	ldbu	a0,SerRcvXoff			# check if xoff already sent
+01:000000000000027E FCFF
+01:0000000000000280 272800C6FF      	   276: 	bne		a0,r0,.sirqNxtByte
+01:0000000000000285 A0BEFBFFFF      	   277: 	bsr		SerialRcvCount		# if more than 4070 chars in buffer
+01:000000000000028A 2838F8C1FF7CE60F	   278: 	blt		a0,4070,.sirqNxtByte
+01:0000000000000292 0000
+01:0000000000000294 8400980000      	   279: 	ldi		a0,XOFF						# send an XOFF
+01:0000000000000299 50000002007C1000	   280: 	stb		r0,SerRcvXon			# clear XON status
+01:00000000000002A1 FCFF
+01:00000000000002A3 D0002002007C1100	   281: 	stb		a0,SerRcvXoff			# set XOFF status
+01:00000000000002AB FCFF
+01:00000000000002AD D0000000007C0000	   282: 	stb		a0,ACIA_TX
+01:00000000000002B5 D0FE
+01:00000000000002B7 20ACFEFFFF      	   283: 	bra		.sirqNxtByte     	# check the status for another byte
+                                    	   284: 	# Process other serial IRQs
+                                    	   285: .notRxInt1:
+                                    	   286: .sirqRxFull:
+                                    	   287: .notRxInt:
+                                    	   288: .notSerInt:
+01:00000000000002BC A304000000      	   289: 	ret
+                                    	   290: 
+                                    	   291: #------------------------------------------------------------------------------
+                                    	   292: # Put a string to the serial port.
+                                    	   293: #
+                                    	   294: # Parameters:
+                                    	   295: #		a0 = pointer to string
+                                    	   296: # Modifies:
+                                    	   297: #		none
+                                    	   298: # Returns:
+                                    	   299: #		none
+                                    	   300: #------------------------------------------------------------------------------
+                                    	   301: 
+                                    	   302: SerialPutString:
+01:00000000000002C1 0F34000000      	   303: 	mov		a3,a0
+                                    	   304: .sps2:
+01:00000000000002C6 4001800100      	   305: 	ldb		a1,[a3]
+01:00000000000002CB 2640000A00      	   306: 	beq		a1,r0,.spsXit
+01:00000000000002D0 04140D0000      	   307: 	add		a3,a3,1
+01:00000000000002D5 A020FEFFFF      	   308: 	bsr		SerialPutChar
+01:00000000000002DA 20D8FFFFFF      	   309: 	bra		.sps2
+                                    	   310: .spsXit:
+01:00000000000002DF A304000000      	   311: 	ret
+                                    	   312: 
+                                    	   313: 
+                                    	   314: #nmeSerial:
+                                    	   315: #	fcb		"Serial",0
+                                    	   316: 
+                                    	   317: .global SerialInit
+                                    	   318: .global SerialPutString
+                                    	   319: 
+
+
+Symbols by name:
+.notRxInt                       01:00000000000002BC
+.notRxInt1                      01:00000000000002BC
+.notSerInt                      01:00000000000002BC
+.sgc2                           01:000000000000011D
+.sgcNoChars                     01:0000000000000168
+.sirqNxtByte                    01:000000000000020D
+.sirqRxFull                     01:00000000000002BC
+.spc0001                        01:00000000000001E5
+.spcNoChars                     01:00000000000001A9
+.spcd0001                       01:00000000000001DB
+.sps2                           01:00000000000002C6
+.spsXit                         01:00000000000002DF
+.srcXit                         01:00000000000000AA
+ACIA_CMD                         S:00000000FED00008
+ACIA_CTRL                        S:00000000FED0000C
+ACIA_RX                          S:00000000FED00000
+ACIA_STAT                        S:00000000FED00004
+ACIA_TX                          S:00000000FED00000
+InitSerial                      01:0000000000000000
+SerHeadRcv                       S:00000000FFFC0004
+SerHeadXmit                      S:00000000FFFC000C
+SerRcvBuf                        S:00000000FFFC1000
+SerRcvXoff                       S:00000000FFFC0011
+SerRcvXon                        S:00000000FFFC0010
+SerTailRcv                       S:00000000FFFC0000
+SerTailXmit                      S:00000000FFFC0008
+SerialGetChar                   01:00000000000000AF
+SerialIRQ                       01:000000000000020D
+SerialInit                      01:0000000000000000 EXP
+SerialPeekChar                  01:0000000000000177
+SerialPeekCharDirect            01:00000000000001B3
+SerialPutChar                   01:00000000000001E5
+SerialPutString                 01:00000000000002C1 EXP
+SerialRcvCount                  01:0000000000000064
+XOFF                             S:0000000000000013
+XON                              S:0000000000000011
+
+Symbols by value:
+00000000FED00000 ACIA_TX
+00000000FED00000 ACIA_RX
+00000000FED00004 ACIA_STAT
+00000000FED00008 ACIA_CMD
+00000000FED0000C ACIA_CTRL
+00000000FFFC0000 SerTailRcv
+00000000FFFC0004 SerHeadRcv
+00000000FFFC0008 SerTailXmit
+00000000FFFC000C SerHeadXmit
+00000000FFFC0010 SerRcvXon
+00000000FFFC0011 SerRcvXoff
+00000000FFFC1000 SerRcvBuf
+0000000000000000 SerialInit
+0000000000000000 InitSerial
+0000000000000011 XON
+0000000000000013 XOFF
+0000000000000064 SerialRcvCount
+00000000000000AA .srcXit
+00000000000000AF SerialGetChar
+000000000000011D .sgc2
+0000000000000168 .sgcNoChars
+0000000000000177 SerialPeekChar
+00000000000001A9 .spcNoChars
+00000000000001B3 SerialPeekCharDirect
+00000000000001DB .spcd0001
+00000000000001E5 .spc0001
+00000000000001E5 SerialPutChar
+000000000000020D .sirqNxtByte
+000000000000020D SerialIRQ
+00000000000002BC .notSerInt
+00000000000002BC .sirqRxFull
+00000000000002BC .notRxInt1
+00000000000002BC .notRxInt
+00000000000002C1 SerialPutString
+00000000000002C6 .sps2
+00000000000002DF .spsXit

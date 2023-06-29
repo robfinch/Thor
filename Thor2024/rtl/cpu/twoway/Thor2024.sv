@@ -196,7 +196,7 @@ assign fetchbuf1_jmp = 1'b0;
 reg alu0_idle = 1'b1;
 reg        alu0_available;
 reg        alu0_dataready;
-reg  [3:0] alu0_sourceid;
+reg  [4:0] alu0_sourceid;
 instruction_t alu0_instr;
 reg alu0_div;
 value_t alu0_argA;
@@ -208,7 +208,7 @@ value_t alu0_argI;	// only used by BEQ
 value_t alu0_cmpo;
 pc_address_t alu0_pc;
 value_t alu0_bus;
-wire  [3:0] alu0_id;
+wire  [4:0] alu0_id;
 cause_code_t alu0_exc = FLT_NONE;
 wire        alu0_v;
 double_value_t alu0_prod,alu0_prod1,alu0_prod2;
@@ -222,7 +222,7 @@ reg alu0_ld;
 reg alu1_idle = 1'b1;
 reg        alu1_available;
 reg        alu1_dataready;
-reg  [3:0] alu1_sourceid;
+reg  [4:0] alu1_sourceid;
 instruction_t alu1_instr;
 reg alu1_div;
 value_t alu1_argA;
@@ -234,7 +234,7 @@ value_t alu1_argI;	// only used by BEQ
 value_t alu1_cmpo;
 pc_address_t alu1_pc;
 value_t alu1_bus;
-wire  [3:0] alu1_id;
+wire  [4:0] alu1_id;
 cause_code_t alu1_exc;
 wire        alu1_v;
 double_value_t alu1_prod,alu1_prod1,alu1_prod2;
@@ -248,7 +248,7 @@ reg alu1_ld;
 reg fpu_idle = 1'b1;
 reg        fpu_available;
 reg        fpu_dataready;
-reg  [3:0] fpu_sourceid;
+reg  [4:0] fpu_sourceid;
 instruction_t fpu_instr;
 value_t fpu_argA;
 value_t fpu_argB;
@@ -258,7 +258,7 @@ value_t fpu_argP;
 value_t fpu_argI;	// only used by BEQ
 pc_address_t fpu_pc;
 value_t fpu_bus;
-wire  [3:0] fpu_id;
+wire  [4:0] fpu_id;
 cause_code_t fpu_exc = FLT_NONE;
 wire        fpu_v;
 wire fpu_done;
@@ -266,7 +266,7 @@ wire fpu_done;
 reg fcu_idle = 1'b1;
 reg        fcu_available;
 reg        fcu_dataready;
-reg  [3:0] fcu_sourceid;
+reg  [4:0] fcu_sourceid;
 instruction_t fcu_instr;
 reg        fcu_bt;
 value_t fcu_argA;
@@ -277,7 +277,7 @@ value_t fcu_argP;
 value_t fcu_argI;	// only used by BEQ
 pc_address_t fcu_pc;
 value_t fcu_bus;
-wire  [3:0] fcu_id;
+wire  [4:0] fcu_id;
 cause_code_t fcu_exc;
 wire        fcu_v;
 reg fcu_branchmiss;
@@ -285,7 +285,7 @@ pc_address_t fcu_misspc;
 instruction_t fcu_missir;
 reg takb;
 
-que_ndx_t excid;
+reg [4:0] excid;
 pc_address_t excmisspc;
 reg excmiss;
 instruction_t excir;
@@ -1572,7 +1572,7 @@ begin
 		(branchmiss
 		&& iq[n4].sn > iq[missid].sn
 		&& iq_v[n4]
-		&& heads[0] != n4[$clog2(QENTRIES)-1:0])
+		&& heads[0] != n4[3:0])
 	;
 	/*
 	iqentry_stomp[n4] = branchmiss
@@ -3163,7 +3163,7 @@ fcu_dataready <= fcu_available
 		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out && ~iq[n3].done) begin
 	    if (dram0 == DRAMSLOT_AVAIL) begin
 				dram0 		<= 2'd1;
-				dram0_id 	<= { 1'b1, n3[2:0] };
+				dram0_id 	<= { 1'b1, n3[3:0] };
 				dram0_op 	<= iq[n3].op;
 				dram0_load <= iq[n3].load;
 				dram0_loadz <= iq[n3].loadz;
@@ -3187,7 +3187,7 @@ fcu_dataready <= fcu_available
 	    end
 	    else if (dram1 == DRAMSLOT_AVAIL && NDATA_PORTS > 1) begin
 				dram1 		<= 2'd1;
-				dram1_id 	<= { 1'b1, n3[2:0] };
+				dram1_id 	<= { 1'b1, n3[3:0] };
 				dram1_op 	<= iq[n3].op;
 				dram1_load <= iq[n3].load;
 				dram1_loadz <= iq[n3].loadz;
@@ -3212,7 +3212,7 @@ fcu_dataready <= fcu_available
 	    /*
 	    else if (dram2 == `DRAMSLOT_AVAIL) begin
 				dram2 		<= 2'd1;
-				dram2_id 	<= { 1'b1, n3[2:0] };
+				dram2_id 	<= { 1'b1, n3[3:0] };
 				dram2_op 	<= iq[n3].op;
 				dram2_load <= iq[n3].load;
 				dram2_store <= iq[n3].store;

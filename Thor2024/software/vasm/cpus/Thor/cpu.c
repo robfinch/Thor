@@ -34,14 +34,16 @@ static char *qualifiers[] =
 {
 	"b", "w", "t", "o", "h", "B", "W", "T", "O", "H",
 	"s", "d", "q",
-	"none", "io", "rd", "rda", "wt", "wta", "wb", "wba"
+	"none", "io", "rd", "rda", "wt", "wta", "wb", "wba",
+	"erc"
 };
 
 static int qualifiers_code[] =
 {
 	0, 1, 2, 3, 4, 0, 1, 2, 3, 4,
 	2, 3, 4,
-	0x80, 0x80, 0x81, 0x82, 0x80, 0x81, 0x82, 0x83
+	0x80, 0x80, 0x81, 0x82, 0x80, 0x81, 0x82, 0x83,
+	0x84
 };
 
 static char *regnames[64] = {
@@ -82,6 +84,8 @@ mnemonic mnemonics[]={
 	"asr", {OP_REG,OP_REG,OP_REG,0}, {SH,CPU_ALL,0,SHFUNC(0x02LL)|OPC(88LL),5,SZ_UNSIZED,0},	
 	"asr", {OP_REG,OP_REG,OP_IMM,0}, {SI,CPU_ALL,0,SHFUNC(0x42LL)|OPC(88LL),5,SZ_UNSIZED,0},	
 
+	"atom", {OP_IMM,0,0,0,0}, {ATOM,CPU_ALL,0,FMT2(0)|OPC(122LL),5,SZ_UNSIZED,0},	
+
 	"bbc",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(44LL),5,SZ_UNSIZED,0},
 	"bbc",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(46LL),5,SZ_UNSIZED,0},
 	"bbs",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(45LL),5,SZ_UNSIZED,0},
@@ -94,6 +98,7 @@ mnemonic mnemonics[]={
 
 	"bcs",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(40LL),5,SZ_UNSIZED,0},
 	"beq",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(38LL),5,SZ_UNSIZED,0},
+	"beq",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,RB(63)|OPC(38LL),5,SZ_UNSIZED,0},
 	"beqz",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,OPC(38LL),5,SZ_UNSIZED,0},
 
 //	"beven",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(13LL)|OPC(28LL),5},
@@ -101,6 +106,7 @@ mnemonic mnemonics[]={
 	"bge",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(41LL),5,SZ_UNSIZED,0},
 	"bgeu",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(41LL),5,SZ_UNSIZED,0},
 	"bgt",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(43LL),5,SZ_UNSIZED,0},
+	"bgt",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,RB(63)|OPC(43LL),5,SZ_UNSIZED,0},
 	"bgtu",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(43LL),5,SZ_UNSIZED,0},
 	"bhi",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(43LL),5,SZ_UNSIZED,0},
 	"bhs",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(41LL),5,SZ_UNSIZED,0},
@@ -111,22 +117,25 @@ mnemonic mnemonics[]={
 	"blo",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(40LL),5,SZ_UNSIZED,0},
 	"bls",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(42LL),5,SZ_UNSIZED,0},
 	"blt",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(40LL),5,SZ_UNSIZED,0},
+	"blt",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,RB(63)|OPC(40LL),5,SZ_UNSIZED,0},
 	"bltu",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(40LL),5,SZ_UNSIZED,0},
 
 	"bmap", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(35)|IM2(0)|OPC(2LL),5,SZ_UNSIZED,0},	
 	"bmm", 	{OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(34)|IM2(0)|OPC(2LL),5,SZ_UNSIZED,0},	
 
 	"bne",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(39LL),5,SZ_UNSIZED,0},
+	"bne",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,RB(63)|OPC(39LL),5,SZ_UNSIZED,0},
+
 	"bnez",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,OPC(39LL),5,SZ_UNSIZED,0},
 	"bnz",	{OP_REG,OP_IMM,0,0,0}, {BZ,CPU_ALL,0,OPC(39LL),5,SZ_UNSIZED,0},
 //	"bodd",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(5LL)|OPC(28LL),5},
 //	"bodd",	{OP_REG,OP_IMM,0,0,0}, {B,CPU_ALL,0,COND(5LL)|OPC(28LL),5},
 
-	"bra",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,COND(14LL)|OPC(27LL),5,SZ_UNSIZED,0},
+	"bra",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,OPC(32LL),5,SZ_UNSIZED,0},
 
 	"brk",	{0,0,0,0,0}, {R1,CPU_ALL,0,0x00,5,SZ_UNSIZED,0},
 
-	"bsr",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,OPC(32LL),5,SZ_UNSIZED,0},
+	"bsr",	{OP_IMM,0,0,0,0}, {B2,CPU_ALL,0,RT(1)|OPC(32LL),5,SZ_UNSIZED,0},
 	"bsr",	{OP_REG,OP_IMM,0,0,0}, {BL2,CPU_ALL,0,OPC(32LL),5,SZ_UNSIZED,0},
 
 	"bytndx", 	{OP_REG,OP_REG,OP_REG,0,0}, {R3,CPU_ALL,0,0xAA0000000002LL,6},	
@@ -188,6 +197,8 @@ mnemonic mnemonics[]={
 	"enor", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(2LL)|IM2(0)|OPC(2LL),5,SZ_UNSIZED,0},	
 	"enor", {OP_REG,OP_IMM,OP_REG,0,0}, {RIA,CPU_ALL,0,FMT3(0)|R2FUNC(2LL)|IM2(1)|OPC(2LL),5,SZ_UNSIZED,0},	
 	"enor", {OP_REG,OP_REG,OP_IMM,0,0}, {RIB,CPU_ALL,0,FMT3(0)|R2FUNC(2LL)|IM2(2)|OPC(2LL),5,SZ_UNSIZED,0},	
+
+	"enter", {OP_IMM,0,0,0,0}, {ENTER,CPU_ALL,0,OPC(52LL),5,SZ_UNSIZED,0},	
 
 	"eor", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(2LL)|IM2(0)|OPC(2LL),5,SZ_UNSIZED,0},	
 	"eor", {OP_REG,OP_IMM,OP_REG,0,0}, {RIA,CPU_ALL,0,FMT3(0)|R2FUNC(2LL)|IM2(1)|OPC(2LL),5,SZ_UNSIZED,0},	
@@ -361,10 +372,10 @@ mnemonic mnemonics[]={
 	"pfi",	{OP_REG,0,0,0,0},{R3RR,CPU_ALL,0,0x220000000007LL,6},	
 	"pfx", 	{OP_IMM,0,0,0,0},{PFX,CPU_ALL,0,OPC(127LL),5,SZ_UNSIZED,0},
 
-	"pop",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x800000BELL,4},	
-	"pop",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x600000BELL,4},	
-	"pop",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x400000BELL,4},	
-	"pop",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x000BCLL,2},	
+	"pop",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x200000037LL,5},	
+	"pop",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x180000037LL,5},	
+	"pop",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x100000037LL,5},	
+	"pop",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x80000037LL,5},	
 
 	"popq",	{OP_REG,OP_NEXTREG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	
 	"popq",	{OP_REG,OP_NEXTREG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x120000000007LL,6},	
@@ -374,10 +385,10 @@ mnemonic mnemonics[]={
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_IMM,0}, {R3RI,CPU_ALL,0,0x281000000002LL,6},
 	"ptrdif",	{OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
 
-	"push",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x800000AELL,4},	
-	"push",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x600000AELL,4},	
-	"push",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x400000AELL,4},	
-	"push",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x000ACLL,2},	
+	"push",	{OP_REG,OP_REG,OP_REG,OP_REG,0},{R4,CPU_ALL,0,0x200000036LL,5},	
+	"push",	{OP_REG,OP_REG,OP_REG,0,0},{R3,CPU_ALL,0,0x180000036LL,5},	
+	"push",	{OP_REG,OP_REG,0,0,0},{R3,CPU_ALL,0,0x100000036LL,5},	
+	"push",	{OP_REG,0,0,0,0},{R3,CPU_ALL,0,0x80000036LL,5},
 
 	"pushq",	{OP_NEXTREG,OP_REG,OP_IMM,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	
 	"pushq",	{OP_NEXTREG,OP_REG,OP_REG,0,0},{R3RR,CPU_ALL,0,0x100000000007LL,6},	
@@ -413,8 +424,8 @@ mnemonic mnemonics[]={
 
 	"revbit",	{OP_REG,OP_REG,0,0,0}, {R1,CPU_ALL,0,0x50000001LL,4},
 
-	"ret", {OP_REG,0,0,0,0}, {RTDR,CPU_ALL,0,0x80000000LL|R2FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
-	"ret", {0,0,0,0,0}, {RTDR,CPU_ALL,0,0x80000000LL|R2FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
+//	"ret", {OP_REG,0,0,0,0}, {RTDR,CPU_ALL,0,0x80000000LL|R2FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
+	"ret", {0,0,0,0,0}, {RTDR,CPU_ALL,0,0x0400LL|RT(1)|OPC(35LL),5,SZ_UNSIZED,0},	
 
 	"rex",	{OP_IMM,OP_REG,0,0,0},{REX,CPU_ALL,0,0x200000000007LL,6},	
 
@@ -429,11 +440,7 @@ mnemonic mnemonics[]={
 	"rti",	{OP_IMM,0,0,0,0}, {RTS,CPU_ALL,0,0x00F0LL, 2},
 	"rti",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x00F0LL, 2},
 	"rts", {OP_REG,0,0,0,0}, {RTDR,CPU_ALL,0,0x80000000LL|R2FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
-	"rts", {0,0,0,0,0}, {RTDR,CPU_ALL,0,0x80000000LL|R2FUNC(4LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
-
-	"rts",	{OP_LK,OP_IMM,0,0,0}, {RTS,CPU_ALL,0,0x00F2LL, 2},
-	"rts",	{OP_LK,0,0,0,0}, {RTS,CPU_ALL,0,0x00F2LL, 2},
-	"rts",	{0,0,0,0,0}, {RTS,CPU_ALL,0,0x02F2LL, 2},
+	"rts", {0,0,0,0,0}, {RTDR,CPU_ALL,0,0x0400LL|RT(1)|OPC(35LL),5,SZ_UNSIZED,0},	
 
 	"sbx", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,OP_IMM,0}, {RII,CPU_ALL,0,FUNC3(3LL)|OPC(13LL),5,SZ_INTALL,SZ_HEXI},	
 
@@ -509,9 +516,9 @@ mnemonic mnemonics[]={
 	"stw",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,OPC(81LL),5, SZ_UNSIZED, 0},	
 	"stw",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,LSFUNC(1LL)|OPC(87LL),5, SZ_UNSIZED, 0},	
 
-	"sub", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(5LL)|IM2(0)|OPC(2LL),5,SZ_UNSIZED,0},	
-	"sub", {OP_REG,OP_IMM,OP_REG,0,0}, {RIA,CPU_ALL,0,FMT3(0)|R2FUNC(5LL)|IM2(1LL)|OPC(2LL),5,SZ_UNSIZED,0},	
-	"sub", {OP_REG,OP_REG,OP_IMM,0,0}, {RIB,CPU_ALL,0,FMT3(0)|R2FUNC(5LL)|IM2(2LL)|OPC(2LL),5,SZ_UNSIZED,0},	
+	"sub", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,FMT3(0)|R2FUNC(5LL)|OPC(2LL),5,SZ_UNSIZED,0},	
+	"sub", {OP_REG,OP_IMM,OP_REG,0,0}, {RIA,CPU_ALL,0,FMT3(0)|R2FUNC(5LL)|OPC(2LL),5,SZ_UNSIZED,0},	
+	"sub", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FMT2(0)|OPC(4LL),5,SZ_UNSIZED,0, FLG_NEGIMM},	
 
 	"subf", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,FMT2(0)|OPC(5LL),5,SZ_UNSIZED,0},	
 
@@ -1573,6 +1580,11 @@ static thuge make_reloc(int reloctype,operand *op,section *sec,
       else {  /* instruction operand */
         addend = (btype == BASE_PCREL) ? hadd(val, huge_from_int(disp)) : val;
       	switch(op->format) {
+      	case B2:
+      	case BL2:
+		      add_extnreloc_masked(reloclist,base,addend.lo,reloctype,
+                           9,31,0,0x7fffffffLL);
+          break;
       	/* Conditional jump */
       	case J:
       	case JL:
@@ -1915,6 +1927,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==2)
 				*insn = *insn| (RB(op->basereg));
 			break;
+		/*
 		case RTDR:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg & regmask));
@@ -1925,17 +1938,18 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==3)
 				*insn = *insn| (RC(op->basereg & 3LL));
 			break;
+		*/
 		case R4:
 		case R3:
 		case R3RR:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
+				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+				*insn = *insn| (RA(op->basereg));
 			else if (i==2)
-				*insn = *insn| (RB(op->basereg & regmask));
+				*insn = *insn| (RB(op->basereg));
 			else if (i==3)
-				*insn = *insn| (RC(op->basereg & regmask));
+				*insn = *insn| (RC(op->basereg));
 			break;
 		case B:
 			if (i==0)
@@ -2044,9 +2058,11 @@ static void encode_vreg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 				*insn = *insn| (RK(op->basereg));
 			break;
 
+		/*
+		case RTDR:
+		*/
 		case R2:
 		case R2M:
-		case RTDR:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg)) | V(1);
 			else if (i==1)
@@ -2074,13 +2090,13 @@ static void encode_vreg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 		case R3:
 		case R3RR:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
+				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+				*insn = *insn| (RA(op->basereg));
 			else if (i==2)
-				*insn = *insn| (RB(op->basereg & regmask));
+				*insn = *insn| (RB(op->basereg));
 			else if (i==3)
-				*insn = *insn| (RC(op->basereg & regmask));
+				*insn = *insn| (RC(op->basereg));
 			break;
 
 		case B:
@@ -2259,7 +2275,11 @@ static size_t encode_immed(
 	val = hval;
 	val2 = hshr(val,32LL);
 	if (constexpr) {
-		if (mnemo->ext.format==DIRECT) {
+		if (mnemo->ext.format==ATOM) {
+			if (insn)
+				*insn = *insn | ((val.lo & 0xffffffLL) << 7LL);
+		}
+		else if (mnemo->ext.format==DIRECT) {
 			isize = encode_direct(insn, hval, postfix, pfxsize);
 		}
 		else if (mnemo->ext.format == CSR) {
@@ -2332,7 +2352,7 @@ static size_t encode_immed(
 		}
 		else if (mnemo->ext.format==ENTER) {
 			if (insn)
-				*insn = *insn | ((-val.lo & 0x7fffffLL) << 9LL);
+				*insn = *insn | ((-val.lo & 0xffffffffLL) << 8LL);
 		}
 		else if (mnemo->ext.format==LEAVE) {
 			if (insn)
@@ -2431,7 +2451,11 @@ static size_t encode_immed(
 		}
 	}
 	else {
-		if (mnemo->ext.format==DIRECT) {
+		if (mnemo->ext.format==ATOM) {
+			if (insn)
+				*insn = *insn | ((val.lo & 0xffffffLL) << 7LL);
+		}
+		else if (mnemo->ext.format==DIRECT) {
 			isize = encode_direct(insn, hval, postfix, pfxsize);
 		}
 		else if (mnemo->ext.format==CSRI) {
@@ -2691,9 +2715,7 @@ static void encode_branch_BL2(uint64_t* insn, operand* op, int64_t val, int i)
 		  	break;
 #else
 			case 1:
-  			tgt = ((val & 3LL) << 11LL);
-  			*insn |= tgt;
-  			tgt = (((val & 0x1ffffLL) >> 2LL) << 25LL);
+  			tgt = ((val & 0x7fffffffLL) << 9LL);
   			*insn |= tgt;
 		  	break;
 #endif		  
@@ -2719,7 +2741,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
   	return (1);
 
 	case B2:
-		encode_branch_BL2(insn, op, val, i-1);
+		encode_branch_BL2(insn, op, val, i+1);
 		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
@@ -3118,6 +3140,7 @@ static size_t encode_regind(
 
 static void create_split_target_operands(instruction* ip, mnemonic* mnemo)
 {
+#ifdef BRANCH_PGREL	
 	switch(mnemo->ext.format) {
 	case B:
 		TRACE("Fmtb:");
@@ -3151,6 +3174,7 @@ static void create_split_target_operands(instruction* ip, mnemonic* mnemo)
 		}
 		break;
 	}
+#endif
 }
 
 // Encode any instruction qualifiers.
@@ -3165,8 +3189,8 @@ static void encode_qualifiers(instruction* ip, uint64_t* insn)
 	TRACE("eq ");
 	if (insn == NULL)
 		return;
-	return;
-/*
+//	return;
+
 	for (i = 0; ip->qualifiers[i] && i < MAX_QUALIFIERS; i++) {
 //	for (i = 0; i < MAX_QUALIFIERS; i++) {
 //		if (qual[i]==NULL || qual_len[i] <= 0)
@@ -3177,6 +3201,8 @@ static void encode_qualifiers(instruction* ip, uint64_t* insn)
 				if (qualifiers_code[j] & 0x80) {
 					switch(mnemo->ext.format) {
 					case SCNDX:
+						if (qualifiers_code[j]==0x84)	// FAF store
+							*insn |= 0x400000000LL;
 						*insn |= (uint64_t)(qualifiers_code[j] & 3) << 12LL;
 						break;
 					case REGIND:
@@ -3186,6 +3212,7 @@ static void encode_qualifiers(instruction* ip, uint64_t* insn)
 					}
 				}
 				// else size code
+				/* Size code requires some more thought
 				else {
 					if (mnemo->ext.size != SZ_UNSIZED) {
 						setsz = 1;
@@ -3195,13 +3222,16 @@ static void encode_qualifiers(instruction* ip, uint64_t* insn)
 							*insn |= (uint64_t)SZ(qualifiers_code[j]);
 					}
 				}
+				*/
 				break;
 			}
 		}
 	}
+	/*
 	if (mnemo->ext.size != SZ_UNSIZED && !setsz)
 		*insn |= (uint64_t)SZ(mnemo->ext.defsize);
-*/
+	*/
+
 }
 
 /* evaluate expressions and try to optimize instruction,

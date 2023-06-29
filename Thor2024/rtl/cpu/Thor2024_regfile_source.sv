@@ -61,8 +61,8 @@ module Thor2024_regfile_source(rst, clk, tail0, tail1, branchmiss,
 parameter AREGS = 64;
 input rst;
 input clk;
-input [2:0] tail0;
-input [2:0] tail1;
+input que_ndx_t tail0;
+input que_ndx_t tail1;
 input branchmiss;
 input did_branchback;
 input regspec_t Rt0;

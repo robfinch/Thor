@@ -45,13 +45,13 @@ input fetchbuf1_v;
 input instruction_t fetchbuf0_instr;
 input [7:0] iqentry_stomp;
 input iq_entry_t [7:0] iq;
-output reg [2:0] tail0;
-output reg [2:0] tail1;
+output que_ndx_t tail0;
+output que_ndx_t tail1;
 
 always_ff @(posedge clk)
 if (rst) begin
-	tail0 <= 3'd0;
-	tail1 <= 3'd1;
+	tail0 <= 'd0;
+	tail1 <= 4'd1;
 end
 else begin
 	if (branchmiss) begin	// if branchmiss
@@ -93,28 +93,62 @@ else begin
 		2'b00:	;
 		2'b01:
 			if (iq[tail0].v == INV) begin
-				tail0 <= tail0 + 2'd1;
-				tail1 <= tail1 + 2'd1;
+				if (tail0==QENTRIES-1)
+					tail0 <= 'd0;
+				else
+					tail0 <= tail0 + 2'd1;
+				if (tail1==QENTRIES-1)
+					tail1 <= 'd0;
+				else
+					tail1 <= tail1 + 2'd1;
 			end
 		2'b10:
 			if (iq[tail0].v == INV) begin
-				tail0 <= tail0 + 2'd1;
-				tail1 <= tail1 + 2'd1;
+				if (tail0==QENTRIES-1)
+					tail0 <= 'd0;
+				else
+					tail0 <= tail0 + 2'd1;
+				if (tail1==QENTRIES-1)
+					tail1 <= 'd0;
+				else
+					tail1 <= tail1 + 2'd1;
 			end
 		2'b11:
 			if (iq[tail0].v == INV) begin
 				if (fnIsBackBranch(fetchbuf0_instr) == TRUE) begin
-					tail0 <= tail0 + 2'd1;
-					tail1 <= tail1 + 2'd1;
+					if (tail0==QENTRIES-1)
+						tail0 <= 'd0;
+					else
+						tail0 <= tail0 + 2'd1;
+					if (tail1==QENTRIES-1)
+						tail1 <= 'd0;
+					else
+						tail1 <= tail1 + 2'd1;
 				end
 				else begin
 			    if (iq[tail1].v == INV) begin
-						tail0 <= tail0 + 3'd2;
-						tail1 <= tail1 + 3'd2;
+			    	if (tail0==QENTRIES-2)
+			    		tail0 <= 'd0;
+			    	else if (tail0==QENTRIES-1)
+			    		tail0 <= 1;
+			    	else
+							tail0 <= tail0 + 3'd2;
+						if (tail1==QENTRIES-2)
+							tail1 <= 'd0;
+						else if (tail1==QENTRIES-1)
+							tail1 <= 1;
+						else
+							tail1 <= tail1 + 3'd2;
 			    end
 			    else begin
-						tail0 <= tail0 + 3'd1;
-						tail1 <= tail1 + 3'd1;
+						if (tail0==QENTRIES-1)
+							tail0 <= 'd0;
+						else
+							tail0 <= tail0 + 2'd1;
+						if (tail1==QENTRIES-1)
+							tail1 <= 'd0;
+						else
+							tail1 <= tail1 + 2'd1;
 					end				
 				end
 			end

@@ -202,6 +202,7 @@ typedef struct {
 #define RIB			64
 #define SH			65
 #define SI			66
+#define ATOM		67
 
 #define OPC(x)	(((x) & 0x7fLL))
 #define LK(x)		(((x) & 1LL) << 7LL)

@@ -89,13 +89,13 @@ else begin
 		6'b0?_10_??:
 			if (head0 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    inc <= 1;
 			end
 		6'b11_10_??:
 			begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    if (iq[head0].v && |iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 1;
 			end
@@ -104,31 +104,31 @@ else begin
 		6'b0?_0?_10:
 			if (head0 != tail0 && head1 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    inc <= 2;
 			end
 			else if (head0 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    inc <= 1;
 			end
 		6'b11_0?_10:
 			if (head1 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 1;
 			end
 		6'b11_11_10:
 			begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
@@ -138,78 +138,78 @@ else begin
 		6'b0?_0?_0?:
 			if (head0 != tail0 && head1 != tail0 && head2 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    inc <= 3;
 			end
 			else if (head0 != tail0 && head1 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    inc <= 2;
 			end
 			else if (head0 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    inc <= 1;
 			end
 		6'b0?_0?_11:
 			if (iq[head2].tgt=='d0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head2].v && iq[head2].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 		6'b0?_11_0?:
 			if (head2 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
 			end
 		6'b0?_11_11:
 			if (iq[head2].tgt=='d0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head2].v && iq[head2].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
 			end
 		6'b11_0?_11:
 			if (head1 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head2].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    if (iq[head0].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 1;
 			end
 		6'b11_11_0?:
 			if (head2 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head0].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
@@ -217,7 +217,7 @@ else begin
 		6'b11_11_11:
 			if (iq[head2].tgt=='d0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head2].v && iq[head2].exc)	panic_o <= PANIC_HALTINSTRUCTION;
@@ -225,7 +225,7 @@ else begin
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
@@ -233,19 +233,19 @@ else begin
 		6'b11_0?_0?:
 			if (head1 != tail0 && head2 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 3;
+					heads[nn] <= (heads[nn] + 3) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 3;
 			end
 			else if (head1 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 2;
+					heads[nn] <= (heads[nn] + 2) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 2;
 			end
 			else begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 1;
 			end
@@ -287,7 +287,7 @@ else begin
     4'b11_10:
 			if (iq[head0].v || head0 != tail0) begin
 				for (nn = 0; nn < QENTRIES; nn = nn + 1)
-					heads[nn] <= heads[nn] + 1;
+					heads[nn] <= (heads[nn] + 1) % QENTRIES;
 		    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 		    inc <= 1;
 			end
@@ -297,14 +297,14 @@ else begin
     	begin
 				if ((iq[head0].v && iq[head1].v) || (head0 != tail0 && head1 != tail0)) begin
 					for (nn = 0; nn < QENTRIES; nn = nn + 1)
-						heads[nn] <= heads[nn] + 2;
+						heads[nn] <= (heads[nn] + 2) % QENTRIES;
 			    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 			    if (iq[head1].v && iq[head1].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 			    inc <= 2;
 				end
 				else if (iq[head0].v || head0 != tail0) begin
 					for (nn = 0; nn < QENTRIES; nn = nn + 1)
-						heads[nn] <= heads[nn] + 1;
+						heads[nn] <= (heads[nn] + 1) % QENTRIES;
 			    if (iq[head0].v && iq[head0].exc)	panic_o <= PANIC_HALTINSTRUCTION;
 			    inc <= 1;
 				end

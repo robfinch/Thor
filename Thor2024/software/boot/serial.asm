@@ -28,10 +28,7 @@
 .set SerRcvBuf,0xFFFC1000
 .set uart,0xFED00000
 
-	.data
-	.space	10
-
-
+	.text
 #------------------------------------------------------------------------------
 # Initialize serial port.
 #
@@ -85,12 +82,12 @@ SerialInit:
 #------------------------------------------------------------------------------
 
 SerialRcvCount:
-	mov		a0,0
+	mov		a0,r0
 	ldtu	a1,SerTailRcv
 	ldtu	a2,SerHeadRcv
 	sub		a0,a1,a2
 	bge		a0,r0,.srcXit
-	mov		a0,0x1000
+	ldi		a0,0x1000
 	ldtu	a2,SerHeadRcv
 	ldtu	a1,SerTailRcv
 	sub		a0,a0,a2
@@ -116,7 +113,16 @@ SerialRcvCount:
 #------------------------------------------------------------------------------
 
 SerialGetChar:
-#	orcc	#$290						; mask off interrupts
+	ldi		a0,8						# bit 3=machine interrupt enable, mask off interrupts
+	csrrc	a2,a0,0x3004		# status reg
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 	bsr		SerialRcvCount			# check number of chars in receive buffer
 	bgt		a0,8,.sgc2
 	ldb		a0,SerRcvXon		# skip sending XON if already sent
@@ -126,17 +132,19 @@ SerialGetChar:
 	stb		a0,SerRcvXon		# flag so we don't send it multiple times
 	bsr		SerialPutChar
 .sgc2:
-	ldbu	a0,SerHeadRcv		# check if anything is in buffer
-	ldbu	a1,SerTailRcv
+	ldtu	a0,SerHeadRcv		# check if anything is in buffer
+	ldtu	a1,SerTailRcv
 	beq		a0,a1,.sgcNoChars
 	mov		a1,a0
 	ldbu	a0,SerRcvBuf[a1]	# get byte from buffer
 	add		a1,a1,1
 	and		a1,a1,0xfff			# 4k wrap around
 	stt		a1,SerHeadRcv
+	csrrw	r0,a2,0x3004		# restore interrupts
 	ret
 .sgcNoChars:
 	ldi		a0,-1						#-1
+	csrrw	r0,a2,0x3004		# restore interrupts
 	ret
 
 #------------------------------------------------------------------------------
@@ -158,6 +166,7 @@ SerialGetChar:
 
 SerialPeekChar:
 #	orcc	#$290							; mask off interrupts
+	atom	07777
 	ldtu	a0,SerHeadRcv			# check if anything is in buffer
 	ldtu	a1,SerTailRcv
 	beq		a0,a1,.spcNoChars	# no?
@@ -188,6 +197,7 @@ SerialPeekCharDirect:
 #	bne		spcd0001
 # Disallow interrupts between status read and rx read.
 #	orcc	#$290						; mask off interrupts
+	atom	077777
 	ldbu	a0,ACIA_STAT
 	and		a0,a0,8					# look for Rx not empty
 	beq		a0,r0,.spcd0001
@@ -220,8 +230,89 @@ SerialPutChar:
 #	orcc	#$290						; mask off interrupts
 	# Between the status read and the transmit do not allow an
 	# intervening interrupt.
+	atom	077777
 	ldbu	a0,ACIA_STAT		# wait until the uart indicates tx empty
 	and		a0,a0,16				# bit #4 of the status reg
 	beq		a0,r0,.spc0001	# branch if transmitter is not empty
 	stb		a1,ACIA_TX			# send the byte
 	ret
+
+#------------------------------------------------------------------------------
+# Serial IRQ routine
+#
+# Keeps looping as long as it finds characters in the ACIA recieve buffer/fifo.
+# Received characters are buffered. If the buffer becomes full, new characters
+# will be lost.
+#
+# Stack Space:
+#		1 word
+# Parameters:
+#		none
+# Modifies:
+#		d,x
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+SerialIRQ:
+#	lda		$2000+$D3				; Serial active interrupt flag
+#	beq		notSerInt
+.sirqNxtByte:
+	ldt		a0,ACIA_STAT			# look for IRQs
+	bgt		a0,r0,.notSerInt	# quick test for any irqs
+	and		a0,a0,8						# check bit 3 = rx full (not empty)
+	beq		a0,r0,.notRxInt1
+	ldbu	a0,ACIA_RX				# get data from Rx buffer to clear interrupt
+	ldtu	a1,SerTailRcv			# check if recieve buffer full
+	add		a1,a1,1
+	and		a1,a1,0xfff
+	ldtu	a2,SerHeadRcv
+	beq		a1,a2,.sirqRxFull
+	stt		a1,SerTailRcv			# update tail pointer
+	sub		a1,a1,1						# backup
+	and		a1,a1,0xfff
+	stb		a0,SerRcvBuf[a1]	# store recieved byte in buffer
+	ldbu	a0,SerRcvXoff			# check if xoff already sent
+	bne		a0,r0,.sirqNxtByte
+	bsr		SerialRcvCount		# if more than 4070 chars in buffer
+	blt		a0,4070,.sirqNxtByte
+	ldi		a0,XOFF						# send an XOFF
+	stb		r0,SerRcvXon			# clear XON status
+	stb		a0,SerRcvXoff			# set XOFF status
+	stb		a0,ACIA_TX
+	bra		.sirqNxtByte     	# check the status for another byte
+	# Process other serial IRQs
+.notRxInt1:
+.sirqRxFull:
+.notRxInt:
+.notSerInt:
+	ret
+
+#------------------------------------------------------------------------------
+# Put a string to the serial port.
+#
+# Parameters:
+#		a0 = pointer to string
+# Modifies:
+#		none
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+SerialPutString:
+	mov		a3,a0
+.sps2:
+	ldb		a1,[a3]
+	beq		a1,r0,.spsXit
+	add		a3,a3,1
+	bsr		SerialPutChar
+	bra		.sps2
+.spsXit:
+	ret
+
+
+#nmeSerial:
+#	fcb		"Serial",0
+
+.global SerialInit
+.global SerialPutString

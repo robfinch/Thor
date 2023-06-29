@@ -38,7 +38,7 @@
 package Thor2024pkg;
 
 `undef IS_SIM
-parameter SIM = 1'b0;
+parameter SIM = 1'b1;
 
 //`define IS_SIM	1
 // Comment out to remove the sigmoid approximate function
@@ -123,7 +123,7 @@ parameter PANIC_BADTARGETID	 = 4'd12;
 parameter PANIC_COMMIT = 4'd13;
 
 
-typedef logic [$clog2(QENTRIES)-1:0] que_ndx_t;
+typedef logic [3:0] que_ndx_t;
 typedef logic [NREGS-1:1] reg_bitmask_t;
 
 typedef enum logic [3:0] {
