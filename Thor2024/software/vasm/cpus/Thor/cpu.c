@@ -179,12 +179,8 @@ mnemonic mnemonics[]={
 	"di",		{OP_NEXTREG,OP_NEXTREG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x2C0000000007LL,6},
 	"dif",	{OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x280000000002LL,6},
 
-	"div", {OP_VREG,OP_VREG,OP_IMM,OP_VMREG,0}, {RIL,CPU_ALL,0,0x142LL,6},	
-	"div", {OP_VREG,OP_VREG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x142LL,6},
-	"div", {OP_VREG,OP_VREG,OP_VREG,OP_VMREG,0}, {R3,CPU_ALL,0,0x200000000102LL,6},	
-	"div", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3,CPU_ALL,0,0x200000000102LL,6},	
-	"div", {OP_REG,OP_REG,OP_REG,0,0}, {R3RR,CPU_ALL,0,0x200000000002LL,6},	
-	"div", {OP_REG,OP_REG,OP_IMM,0,0}, {RIL,CPU_ALL,0,0x42LL,6},
+	"div", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,R2FUNC(17LL)|OPC(2LL),5,SZ_UNSIZED,0},	
+	"div", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,OPC(13LL),5,SZ_UNSIZED,0},	
 
 	"divu", {OP_VREG,OP_VREG,OP_VREG,OP_VMREG,0}, {R3RR,CPU_ALL,0,0x220000000102LL,6},	
 	"divu", {OP_VREG,OP_VREG,OP_VREG,0,0}, {R3RR,CPU_ALL,0,0x220000000102LL,6},	
@@ -242,6 +238,10 @@ mnemonic mnemonics[]={
 	"jsr",	{OP_REG,OP_IMM,0,0,0}, {JL2,CPU_ALL,0,OPC(24LL),5, SZ_UNSIZED,0},
 	"jsr",	{OP_IMM,0,0,0,0}, {J2,CPU_ALL,0,RT(57LL)|OPC(24LL),5, SZ_UNSIZED,0},
 
+	"lda",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,OPC(74LL),5, SZ_UNSIZED, 0},	
+	"lda",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,OPC(74LL),5, SZ_UNSIZED, 0},	
+	"lda",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,LSFUNC(10LL)|OPC(79LL),5, SZ_UNSIZED, 0},	
+
 	"ldb",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,OPC(64LL),5, SZ_UNSIZED, 0},	
 	"ldb",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,OPC(64LL),5, SZ_UNSIZED, 0},	
 	"ldb",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,LSFUNC(0)|OPC(79LL),5, SZ_UNSIZED, 0},	
@@ -289,10 +289,6 @@ mnemonic mnemonics[]={
 	"ldwz",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,OPC(67LL),5, SZ_UNSIZED, 0},	
 	"ldwz",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,LSFUNC(3LL)|OPC(79LL),5, SZ_UNSIZED, 0},	
 
-	"lda",	{OP_REG,OP_IMM,0,0,0}, {DIRECT,CPU_ALL,0,OPC(74LL),5, SZ_UNSIZED, 0},	
-	"lda",	{OP_REG,OP_REGIND,0,0}, {REGIND,CPU_ALL,0,OPC(74LL),5, SZ_UNSIZED, 0},	
-	"lda",	{OP_REG,OP_SCNDX,0,0,0}, {SCNDX,CPU_ALL,0,LSFUNC(10LL)|OPC(79LL),5, SZ_UNSIZED, 0},	
-
 	"lsr", {OP_REG,OP_REG,OP_REG,0}, {SH,CPU_ALL,0,SHFUNC(0x01LL)|OPC(88LL),5,SZ_UNSIZED,0},	
 	"lsr", {OP_REG,OP_REG,OP_IMM,0}, {SI,CPU_ALL,0,SHFUNC(0x41LL)|OPC(88LL),5,SZ_UNSIZED,0},	
 
@@ -321,9 +317,8 @@ mnemonic mnemonics[]={
 
 	"mtlc",		{OP_NEXTREG,OP_REG,0,0,0}, {R2,CPU_ALL,0,0xA0000052LL,4},
 
-	"mul", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_VREG|OP_REG,0,0}, {R2,CPU_ALL,0,R2FUNC(6LL)|OPC(2LL),5,SZ_INTALL,SZ_HEXI},	
-	"mul", {OP_VREG|OP_REG,OP_VREG|OP_REG,OP_IMM,0}, {RI,CPU_ALL,0,OPC(6LL),5,SZ_INTALL,SZ_HEXI},	
-	"mul", {OP_VREG|OP_REG,OP_IMM,OP_VREG|OP_REG,0}, {RIS,CPU_ALL,0,OPC(6LL),5,SZ_INTALL,SZ_HEXI},	
+	"mul", {OP_REG,OP_REG,OP_REG,0,0}, {R2,CPU_ALL,0,R2FUNC(16LL)|OPC(2LL),5,SZ_UNSIZED,0},	
+	"mul", {OP_REG,OP_REG,OP_IMM,0,0}, {RI,CPU_ALL,0,OPC(6LL),5,SZ_UNSIZED,0},	
 
 	"muladd", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3RR,CPU_ALL,0,0x0C0000000002LL,6},	
 
@@ -1890,6 +1885,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			else if (i==3)
 				*insn = *insn| (RC(op->basereg & 3LL));
 			break;
+		case SI:
 		case RIV:
 		case RIS:
 		case RIMV:			
@@ -1920,6 +1916,7 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 		case R3RI:
 		case BFR3RI:
 		case SHIFTI:
+		case SH:
 			if (i==0)
 				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
@@ -1992,9 +1989,9 @@ static void encode_reg(uint64_t* insn, operand *op, mnemonic* mnemo, int i)
 			break;
 		case REGIND:
 			if (i==0)
-				*insn = *insn| (RT(op->basereg & regmask));
+				*insn = *insn| (RT(op->basereg));
 			else if (i==1)
-				*insn = *insn| (RA(op->basereg & regmask));
+				*insn = *insn| (RA(op->basereg));
 			break;
 		case SCNDX:
 			if (i==0)
@@ -2275,7 +2272,11 @@ static size_t encode_immed(
 	val = hval;
 	val2 = hshr(val,32LL);
 	if (constexpr) {
-		if (mnemo->ext.format==ATOM) {
+		if (mnemo->ext.format==SI) {
+			if (insn)
+				*insn = *insn | ((val.lo & 0x7fLL) << 19LL);
+		}
+		else if (mnemo->ext.format==ATOM) {
 			if (insn)
 				*insn = *insn | ((val.lo & 0xffffffLL) << 7LL);
 		}
@@ -2451,7 +2452,11 @@ static size_t encode_immed(
 		}
 	}
 	else {
-		if (mnemo->ext.format==ATOM) {
+		if (mnemo->ext.format==SI) {
+			if (insn)
+				*insn = *insn | ((val.lo & 0x7fLL) << 19LL);
+		}
+		else if (mnemo->ext.format==ATOM) {
 			if (insn)
 				*insn = *insn | ((val.lo & 0xffffffLL) << 7LL);
 		}
@@ -3081,9 +3086,9 @@ static size_t encode_regind(
 	TRACE("Etho5:");
 	if (insn) {
 		if (i==0)
-			*insn |= (RA(op->basereg));
+			*insn |= (RT(op->basereg));
 		else if (i==1) {
-			*insn |= (RB(op->basereg));
+			*insn |= (RA(op->basereg));
 			*insn |= (val.lo & 0x3fffLL) << 21LL;
 		}
 	}

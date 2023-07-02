@@ -70,10 +70,10 @@ case(micro_ip)
 12'h013:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,6'd0,6'd0,OP_NOP};	end
 // PUSH
 12'h016:	begin next_ip = 12'h017; instr = {2'd0,3'd0,-{9'h000,micro_ir[33:31],4'h0},SP,SP,OP_ADDI}; end				// SP = SP - N * 16
-12'h017:	begin next_ip = 12'h018; instr = micro_ir[33:31] > 3'd3 ? {2'd0,3'd0,9'h0,micro_ir[33:31]-3'd3,4'h0,2'd0,SP,micro_ir[30:25],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rc
-12'h018:	begin next_ip = 12'h019; instr = micro_ir[33:31] > 3'd2 ? {2'd0,3'd0,9'h0,micro_ir[33:31]-3'd2,4'h0,2'd0,SP,micro_ir[24:19],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rb
-12'h019:	begin next_ip = 12'h01A; instr = micro_ir[33:31] > 3'd1 ? {2'd0,3'd0,9'h0,micro_ir[33:31]-3'd1,4'h0,2'd0,SP,micro_ir[18:13],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Ra
-12'h01A:	begin next_ip = 12'h000; instr = micro_ir[33:31] > 3'd0 ? {2'd0,3'd0,9'h0,micro_ir[33:31]-3'd0,4'h0,2'd0,SP,micro_ir[12: 7],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rs
+12'h017:	begin next_ip = 12'h018; instr = micro_ir[33:31] > 3'd0 ? {2'd0,3'd0,9'h0,3'd0,4'h0,2'd0,SP,micro_ir[12: 7],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rs
+12'h018:	begin next_ip = 12'h019; instr = micro_ir[33:31] > 3'd1 ? {2'd0,3'd0,9'h0,3'd1,4'h0,2'd0,SP,micro_ir[18:13],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Ra
+12'h019:	begin next_ip = 12'h01A; instr = micro_ir[33:31] > 3'd2 ? {2'd0,3'd0,9'h0,3'd2,4'h0,2'd0,SP,micro_ir[24:19],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rb
+12'h01A:	begin next_ip = 12'h000; instr = micro_ir[33:31] > 3'd3 ? {2'd0,3'd0,9'h0,3'd3,4'h0,2'd0,SP,micro_ir[30:25],OP_STO} : {33'd0,OP_NOP};	end		// Mem[SP] = Rc
 12'h01B:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,6'd0,6'd0,OP_NOP};	end
 // POP
 12'h020:	begin next_ip = 12'h021; instr = micro_ir[33:31] > 3'd0 ? {2'd0,3'd0,8'h0,4'h0,4'h0,2'd0,SP,micro_ir[12: 7],OP_LDO} : {33'd0,OP_NOP};	end		// Rt = Mem[SP]

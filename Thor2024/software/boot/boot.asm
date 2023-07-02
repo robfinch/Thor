@@ -16,9 +16,11 @@
 .set TextCols,0xFFFC0403
 .set TextCurpos,0xFFFC0404
 .set TextScr,0xFFFC0408
+.set TextAttr,0xFFFC0410
 
 .extern	SerialInit
 .extern SerialPutString
+.extern SerialTest
 
 	.data
 	.space	10
@@ -28,9 +30,11 @@
 #	.align	0
 start:
 	ldi t0,-1
-	stt t0,leds
+	stt.io t0,leds
 	ldi	t0,txtscreen
 	stt t0,TextScr
+	ldi t0,0x43FFFFE0003F0000		# white foreground, blue background
+	sto t0,TextAttr
 	ldi t0,32
 	stb t0,TextRows
 	ldi t0,64
@@ -38,35 +42,17 @@ start:
 	stb r0,CursorRow
 	stb r0,CursorCol
 	stw r0,TextCurpos
-	ldi a0,0
-	ldi a1,1
-	ldi a2,2
-	ldi a3,3
-	push a0,a1,a2,a3
-	ldi a0,255
-	ldi a1,255
-	ldi a2,255
-	ldi a3,255
-	pop	a3,a2,a1,a0
 	
+	bsr	Delay3s
 	bsr SerialInit
+	bsr SerialTest
+	bsr ClearScreen
 
 #	ldi	a0,msgStart
 #	bsr	SerialPutString
-
-	# clearscreen
-	ldi t0,0x43FFFFE0003F0020
-	mov t3,r0
-	ldi t2,16384
-.st1:
-	sto t0,txtscreen[r0+t3]
-	add t3,t3,8
-	blt t3,t2,.st1
-
-	ldi a0,msgStart
+	ldi gp,0xffff0000
+	lda a0,msgStart[gp]
 	bsr DisplayString
-
-	bsr	Delay3s
 
 	mov t3,r0
 	ldi t2,40
@@ -113,21 +99,48 @@ stall:
 # ------------------------------------------------------------------------------
 
 Delay3s:
-	ldi		a0,1000000
+	ldi	a0,3	#000000
 .0001:
-	lsr		a1,a0,8
-	stt		a1,leds
-	sub		a0,a0,1
-	bgt		a0,r0,.0001	
+	lsr	a1,a0,8
+	stt.io a1,leds
+	sub	a0,a0,1
+	bgt	a0,r0,.0001	
 doRet:
 	ret
 
 #------------------------------------------------------------------------------
-# Calculate screen memory location from CursorRow,CursorCol.
-# Destroys d0,d2,a0
+# clearscreen
+# Parameters:
+# 	<none>
+# Modifies:
+#		<none>
+# Stack space:
+#		3 words
 #------------------------------------------------------------------------------
-#
+
+ClearScreen:
+	push t0,t2,t3
+	ldo t0,TextAttr
+	or t0,t0,' '
+	mov t3,r0
+	ldi t2,64*8*32							# 64x32x8
+.st1:
+	sto.io t0,txtscreen[r0+t3]
+	add t3,t3,8
+	blt t3,t2,.st1
+	pop t0,t2,t3
+	ret
+
+#------------------------------------------------------------------------------
+# Calculate screen memory location from CursorRow,CursorCol.
+# Returns:
+#		a0 = screen location
+# Stack space:
+#		1 word
+#------------------------------------------------------------------------------
+
 CalcScreenLoc:
+	push a1
 	ldb	a0,CursorRow			# cursor row
 	and a0,a0,0x7f
 	ldb a1,TextCols				# times number of columns
@@ -139,21 +152,30 @@ CalcScreenLoc:
 	asl a0,a0,3						# multiply by text cell size
 	ldtu a1,TextScr				# add in text screen location
 	add a0,a0,a1
+	pop a1
 	ret
 
 #------------------------------------------------------------------------------
 # Display a character on the screen
-# d1.b = char to display
-#------------------------------------------------------------------------------
 #
+# Parameters:
+# 	a1 = char to display
+# Modifies:
+#		screen and text cursor position updated
+#------------------------------------------------------------------------------
+
 DisplayChar:
+	push lr1
 	bne a1,'\r',.0010				# carriage return?
 	stb r0,CursorCol				# just set cursor column to zero on a CR
+	bsr SyncCursor
+	pop lr1
 	ret
 .0010:
-	push lr1
 	push a0,a1,a2,a3
+	and a1,a1,0xff					# make char unsigned
 	bne a1,0x91,.0005				# cursor right?
+	# Cursor right
 	ldb a0,CursorCol				# Is rightmost column reached?
 	ldb a2,TextCols
 	sub a2,a2,1
@@ -163,11 +185,12 @@ DisplayChar:
 .0002:
 	bsr SyncCursor
 .0001:
-	pop a3,a2,a1,a0
+	pop a0,a1,a2,a3
 	pop lr1
 	ret
 .0005:
 	bne a1,0x90,.0006
+	# Cursor up
 	ldb a0,CursorRow				# can the cursor move up?
 	beq a0,r0,.0001
 	sub a0,a0,1
@@ -175,6 +198,7 @@ DisplayChar:
 	bra .0002
 .0006:
 	bne a1,0x93,.0007
+	# Cursor left
 	ldb a0,CursorCol				# can the cursor move left?
 	beq a0,r0,.0001	
 	sub a0,a0,1
@@ -182,6 +206,7 @@ DisplayChar:
 	bra .0002
 .0007:
 	bne a1,0x92,.0008
+	# Cursor down
 	ldb a0,CursorRow				# can cursor move down?
 	ldb a2,TextRows
 	sub a2,a2,1
@@ -189,8 +214,9 @@ DisplayChar:
 	add a0,a0,1
 	stb a0,CursorRow
 	bra .0002
-.0008:
+.0008:										# home cursor
 	bne a1,0x94,.0011
+	# Home cursor
 	ldb a0,CursorCol
 	beq a0,r0,.0003
 	stb r0,CursorCol
@@ -202,18 +228,19 @@ DisplayChar:
 	beq a1,0x99,doDelete
 	beq a1,CTRLH,doBackspace
 	beq a1,CTRLX,doCtrlX
-	beq a1,'\n',.0012
+	beq a1,'\n',.0012				# line feed
 	# Regular char
-	mov a2,a1
 	bsr CalcScreenLoc				# a0 = screen location
-	stb a2,[a0]
+	ldo a2,TextAttr
+	or a2,a2,a1
+	sto.io a2,[a0]
 	bsr IncCursorPos
 .0004:
 	bsr SyncCursor
-	pop a3,a2,a1,a0
+	pop a0,a1,a2,a3
 	pop lr1
 	ret
-.0012:
+.0012:										# line feed
 	bsr IncCursorRow
 	bra .0004
 			
@@ -223,7 +250,7 @@ DisplayChar:
 doBackspace:
 	ldb a0,CursorCol				# At start of line already?
 	bne a0,a0,.0001
-	pop a3,a2,a1,a0
+	pop a0,a1,a2,a3
 	pop lr1
 	ret
 .0001:
@@ -239,13 +266,13 @@ doDelete:
 	ldb a3,TextCols
 .0001:
 	ldo a1,8[a0]
-	sto a1,[a0]
+	sto.io a1,[a0]
 	add a0,a0,8
 	add a2,a2,1
 	blt a2,a3,.0001
 	ldi a1,' '							# one space
-	stb a1,-8[a0]						# terminate line with space char
-	pop a3,a2,a1,a0
+	stb.io a1,-8[a0]				# terminate line with space char
+	pop a0,a1,a2,a3
 	pop lr1
 	ret
 
@@ -253,7 +280,6 @@ doDelete:
 	# CTRL-X: erase line
 	#---------------------------
 doCtrlX:
-	push a0,a1,lr1
 	stb r0,CursorCol			# Reset cursor to start of line
 	ldb a0,TextCols				# and display TextCols number of spaces
 	ldi	a1,' '						# one space
@@ -265,7 +291,8 @@ doCtrlX:
 	sub a0,a0,1
 	bge a0,r0,.0001
 	stb r0,CursorCol			# Reset cursor to start of line
-	pop lr1,a1,a0
+	pop a0,a1,a2,a3
+	pop lr1
 	ret										# we're done
 
 #------------------------------------------------------------------------------
@@ -274,9 +301,6 @@ doCtrlX:
 #
 IncCursorPos:
 	push a0,a1
-	ldw a0,TextCurpos
-	add a0,a0,1
-	stw a0,TextCurpos
 	ldb a0,CursorCol
 	add a0,a0,1
 	stb a0,CursorCol
@@ -284,7 +308,7 @@ IncCursorPos:
 	ldb a1,CursorCol
 	blt a1,a0,IncCursorPos1	# return if text cols not exceeded
 	stb r0,CursorCol
-	pop a1,a0
+	pop a0,a1
 IncCursorRow:
 	push a0,a1
 	ldb a0,CursorRow
@@ -299,7 +323,7 @@ IncCursorRow:
 	bsr ScrollUp
 	pop lr1
 IncCursorPos1:
-	pop	a1,a0
+	pop	a0,a1
 	ret
 
 #------------------------------------------------------------------------------
@@ -307,7 +331,7 @@ IncCursorPos1:
 #------------------------------------------------------------------------------
 
 ScrollUp:
-	push t0
+	push lr1,t0
 	push a0,a1,a2,a3
 	ldt a0,TextScr				# a0 = pointer to screen
 	ldb a1,TextCols				# a1 = number of columns
@@ -318,16 +342,14 @@ ScrollUp:
 .0001:
 	ldo t0,[a0+a3]
 	sub a3,a3,a1
-	sto t0,[a0+a3]
+	sto.io t0,[a0+a3]
 	add a3,a3,a1
 	add a3,a3,a1
 	sub a2,a2,1
 	bgt a2,r0,.0001
-	pop a3,a2,a1,a0
-	pop t0
-	push lr1
 	bsr BlankLastLine
-	pop lr1
+	pop a0,a1,a2,a3
+	pop lr1,t0
 	ret
 
 #------------------------------------------------------------------------------
@@ -345,11 +367,11 @@ BlankLastLine:
 	ldi t0,' '
 	ldb a2,TextCols
 .0001:
-	stb t0,[a0+a1]
+	stb.io t0,[a0+a1]
 	add a1,a1,8
 	sub a2,a2,1
 	bgt a2,r0,.0001
-	pop a2,a1,a0,t0
+	pop t0,a0,a1,a2
 	ret	
 
 #------------------------------------------------------------------------------
@@ -368,7 +390,7 @@ BlankLastLine:
 SyncCursor:
 	push a0
 	ldw a0,TextCurpos
-	stw a0,0xfec80024
+	stw.io a0,0xfec80024
 	pop a0
 	ret
 	
@@ -384,7 +406,7 @@ SyncCursor:
 #------------------------------------------------------------------------------
 
 DisplayString:
-	push a0,a1,lr1
+	push lr1,a0,a1
 .0002:
 	ldb a1,[a0]
 	beq a1,r0,.0001
@@ -392,8 +414,77 @@ DisplayString:
 	add a0,a0,1
 	bra .0002
 .0001:
-	pop lr1,a1,a0
+	pop lr1,a0,a1
 	ret
+
+#------------------------------------------------------------------------------
+# Display nybble in a1
+#------------------------------------------------------------------------------
+
+DisplayNybble:
+	push a1,lr1
+	and a1,a1,15
+	add a1,a1,'0'
+	ble a1,'9',.0001
+	add a1,a1,7
+.0001:
+	bsr DisplayChar
+	pop a1,lr1
+	ret
+
+#------------------------------------------------------------------------------
+# Display the byte in a1
+#------------------------------------------------------------------------------
+
+DisplayByte:
+	push lr1
+	bsr DisplayNybble
+	ror a1,a1,4
+	bsr DisplayNybble
+	rol a1,a1,4
+	pop lr1
+	ret
+
+#------------------------------------------------------------------------------
+# Display the wyde in a0.B
+#------------------------------------------------------------------------------
+
+DisplayWyde:
+	push lr1
+	bsr DisplayByte
+	ror a1,a1,8
+	bsr DisplayByte
+	rol a1,a1,8
+	pop lr1
+	ret
+
+#------------------------------------------------------------------------------
+# Display the tetra in a1
+#------------------------------------------------------------------------------
+
+DisplayTetra:
+	push lr1
+	bsr DisplayWyde
+	ror a1,a1,16
+	bsr DisplayWyde
+	rol a1,a1,16
+	pop lr1
+	ret
+
+#------------------------------------------------------------------------------
+# Display the octa in a1
+#------------------------------------------------------------------------------
+
+DisplayOcta:
+	push lr1
+	bsr DisplayTetra
+	ror a1,a1,32
+	bsr DisplayTetra
+	rol a1,a1,32
+	pop lr1
+	ret
+
+	.include "serial.asm"
 
 	.balign	0x100,0xff
 	
@@ -402,9 +493,12 @@ msgStart:
 	.byte "Thor2024 System Starting.",0
 
 	.org 0xffe0
+	# initial machine stack pointer
 	.8byte	0xFFFFFFFFFFFCFFF0
 	.8byte	0xFFFFFFFFFFFFFFFF
+	# initial program counter
 	.8byte	0xFFFFFFFFD0000000
 	.8byte	0xFFFFFFFFFFFFFFFF
 
+	.global Delay3s
 

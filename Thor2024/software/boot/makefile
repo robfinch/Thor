@@ -31,7 +31,7 @@ BIOS:
 #	vasmrf68000_mot_win32.exe -Fvobj -L cputest.lst cputest.asm -o cputest.o
 #	vasmrf68000_mot_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o -m68010
 #	vasmrfPhoenix_std_win32.exe -Fvobj -L add.lst add.asm -o add.o
-	vlink -T rom_bios.cmd -brawbin1 boot.o serial.o -o boot.bin
+	vlink -T rom_bios.cmd -brawbin1 boot.o -o boot.bin
 	vlink -T rom_bios.cmd -brawbin1 fibonacci.o -o fibonacci.bin
 #	vlink -T rom_bios.cmd -brawbin1 __store.o __load.o printf_again.o sieve.o -o sieve.bin
 #	vlink -T rom_bios.cmd -brawbin1 LEDTest.o -o LEDTest.bin
