@@ -38,7 +38,7 @@
 package Thor2024pkg;
 
 `undef IS_SIM
-parameter SIM = 1'b1;
+parameter SIM = 1'b0;
 
 //`define IS_SIM	1
 // Comment out to remove the sigmoid approximate function
@@ -59,6 +59,8 @@ parameter SIM = 1'b1;
 `define L1ICacheWays 4
 
 `define L1DCacheWays 4
+
+parameter SUPPORT_UNALIGNED_MEMORY = 1'b1;
 
 // The following adds support for committing a third result if there is no
 // target register. It takes more hardware.
@@ -339,7 +341,8 @@ typedef enum logic [5:0] {
 	FN_LDTX = 6'd4,
 	FN_LDTUX = 6'd5,
 	FN_LDOX = 6'd6,
-	FN_LDOUX = 6'd7
+	FN_LDOUX = 6'd7,
+	FN_LDAX = 6'd10
 } ldn_func_t;
 
 typedef enum logic [5:0] {
@@ -959,6 +962,7 @@ typedef struct packed
 	logic storer;
 	logic storen;
 	logic store;
+	logic lda;
 	logic erc;
 	logic stcr;
 	logic need_steps;
@@ -1120,6 +1124,7 @@ typedef struct packed {
 	logic load;
 	logic loadz;
 	logic store;
+	logic lda;
 	logic erc;
 	logic mem;
 	logic sync;
@@ -1320,7 +1325,7 @@ begin
 	OP_BLE:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
 	OP_BGT:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
 	OP_BGE:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSource1v = fnConstReg(ir.ls.Ra) || fnImma(ir);
 	OP_LDX:
 		fnSource1v = fnConstReg(ir.lsn.Ra) || fnImma(ir);
@@ -1379,7 +1384,7 @@ begin
 	OP_BLE:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
 	OP_BGT:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
 	OP_BGE:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSource2v = 1'b1;
 	OP_LDX:
 		fnSource2v = fnConstReg(ir.lsn.Rb) || fnImmb(ir);
@@ -1448,7 +1453,7 @@ begin
 	OP_ORI:		fnSourceTv = fnConstReg(ir.ri.Rt);
 	OP_EORI:	fnSourceTv = fnConstReg(ir.ri.Rt);
 	OP_SLTI:	fnSourceTv = fnConstReg(ir.ri.Rt);
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSourceTv = fnConstReg(ir.ls.Rt);
 	OP_LDX:
 		fnSourceTv = fnConstReg(ir.lsn.Rt);
@@ -1501,7 +1506,7 @@ begin
 	OP_ORI:		fnSourcePv = ~ir.ri.fmt[0];
 	OP_EORI:	fnSourcePv = ~ir.ri.fmt[0];
 	OP_SLTI:	fnSourcePv = ~ir.ri.fmt[0];
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSourcePv = ~ir.ri.fmt[0];
 	OP_LDX:
 		fnSourcePv = ~ir.ri.fmt[0];
@@ -1705,6 +1710,7 @@ endfunction
 
 // Sign or zero extend data as needed according to op.
 function [63:0] fnDati;
+input more;
 input instruction_t ins;
 input address_t adr;
 input value_t dat;
@@ -1714,11 +1720,17 @@ OP_LDB:
 OP_LDBU:
   fnDati = {{56{1'b0}},dat[7:0]};
 OP_LDW:
-  fnDati = {{48{dat[15]}},dat[15:0]};
+	if (more)
+		fnDati = {48'd0,dat[15:0]};
+	else
+  	fnDati = {{48{dat[15]}},dat[15:0]};
 OP_LDWU:
   fnDati = {{48{1'b0}},dat[15:0]};
 OP_LDT:
-	fnDati = {{32{dat[31]}},dat[31:0]};
+	if (more)
+		fnDati = {32'd0,dat[31:0]};
+	else
+		fnDati = {{32{dat[31]}},dat[31:0]};
 OP_LDTU:
 	fnDati = {{32{1'b0}},dat[31:0]};
 OP_LDO:
@@ -1730,11 +1742,17 @@ OP_LDX:
 	FN_LDBUX:
 	  fnDati = {{56{1'b0}},dat[7:0]};
 	FN_LDWX:
-	  fnDati = {{48{dat[15]}},dat[15:0]};
+		if (more)
+			fnDati = {48'h0,dat[15:0]};
+		else
+	  	fnDati = {{48{dat[15]}},dat[15:0]};
 	FN_LDWUX:
 	  fnDati = {{48{1'b0}},dat[15:0]};
 	FN_LDTX:
-		fnDati = {{32{dat[31]}},dat[31:0]};
+		if (more)
+			fnDati = {32'h0,dat[31:0]};
+		else
+			fnDati = {{32{dat[31]}},dat[31:0]};
 	FN_LDTUX:
 		fnDati = {{32{1'b0}},dat[31:0]};
 	FN_LDOX:

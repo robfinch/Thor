@@ -65,6 +65,7 @@ always_comb
 		OP_BLE:	takb = $signed(a) <= $signed(b);
 		OP_BGT:	takb = $signed(a) > $signed(b);
 		OP_BGE:	takb = $signed(a) >= $signed(b);
+		OP_BBC:	takb = ~a[b[5:0]];
 		OP_BBS:	takb = a[b[5:0]];
 		OP_MCB:
 			case(instr.mcb.cnd)
@@ -87,6 +88,7 @@ always_comb
 		OP_BLE:	takb = a <= b;
 		OP_BGT:	takb = a > b;
 		OP_BGE:	takb = a >= b;
+		OP_BBC:	takb = ~a[b[5:0]];
 		OP_BBS:	takb = a[b[5:0]];
 		OP_MCB:
 			case(instr.mcb.cnd)

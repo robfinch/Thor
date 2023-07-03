@@ -249,8 +249,9 @@ always_comb
 begin
 	line = 'd0;
 	uway = 'd0;
-	if (non_cacheable|~read_allocate|~dce)
+	if (non_cacheable|~read_allocate|~dce) begin
 		uway = 'd0;
+	end
 	else
 		casez (hits)
 		4'b1???:

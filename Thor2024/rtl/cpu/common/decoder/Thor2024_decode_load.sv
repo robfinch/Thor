@@ -46,7 +46,11 @@ begin
 	case(op.any.opcode)
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
 	OP_LDX:
-		fnIsLoad = 1'b1;
+		case(op.lsn.func)
+		FN_LDAX:	fnIsLoad = 1'b0;
+		default:
+			fnIsLoad = 1'b1;
+		endcase
 	default:
 		fnIsLoad = 1'b0;
 	endcase

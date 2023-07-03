@@ -128,6 +128,7 @@ typedef struct {
 #define FLG_NEGIMM	1
 #define FLG_FP			2
 #define FLG_MASK		4
+#define FLG_UI6			8
 
 #define EXI8	0x46
 #define EXI24	0x48

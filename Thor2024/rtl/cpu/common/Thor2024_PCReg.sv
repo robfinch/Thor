@@ -39,10 +39,10 @@
 import Thor2024pkg::*;
 
 module Thor2024_PCReg(rst, clk, irq, hit, next_pc, next_micro_ip, backpc,
-	back_micro_ip, branchmiss, misspc, branchback, did_branchback, fetchbuf,
+	branchmiss, misspc, branchback, fetchbuf,
 	fetchbufA_v, fetchbufB_v, fetchbufC_v, fetchbufD_v,
 	backbrA, backbrB, backbrC, backbrD, 
-	pc, micro_ip
+	pc
 );
 input rst;
 input clk;
@@ -51,11 +51,9 @@ input hit;
 input pc_address_t next_pc;
 input [11:0] next_micro_ip;
 input pc_address_t backpc;
-input [11:0] back_micro_ip;
 input branchmiss;
 input pc_address_t misspc;
 input branchback;
-input did_branchback;
 input fetchbuf;
 input fetchbufA_v;
 input fetchbufB_v;
@@ -66,7 +64,13 @@ input backbrB;
 input backbrC;
 input backbrD;
 output pc_address_t pc;
-output reg [11:0] micro_ip;
+
+reg did_branchback;
+always_ff @(posedge clk)
+if (rst)
+	did_branchback <= 1'b0;
+else
+	did_branchback <= branchback;
 
 always_ff @(posedge clk)
 if (rst)
@@ -91,20 +95,8 @@ else begin
 			//   cycle 1 - enqueued fbA, stomped on fbB, stalled fetch + updated pc0/pc1
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufB_v appropriately
 			4'b0100: 
-				if (backbrB) begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+				if (backbrB)
+					tUpdatePC();
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbA holding a branchback
@@ -112,20 +104,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufA_v appropriately
 			4'b1000:
 				if (backbrA)
-				begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+					tUpdatePC();
 
 			// if fbB has the branchback, can't immediately tell which of the following scenarios it is:
 			//   cycle 0 - fetched a pair of instructions, one or both of which is a branchback
@@ -142,24 +121,9 @@ else begin
 			    pc <= backpc;
 				else if (backbrB) begin
 			    if (did_branchback)
-					begin
-						if (|pc[11:0]) begin
-						  if (~irq) begin
-						  	if (~|next_micro_ip)
-						  		pc <= pc + 16'h5000;
-					  		pc[11:0] <= next_micro_ip;
-							end
-						end
-						else if (hit) begin
-						  if (~irq) begin
-							  pc <= next_pc;
-							end
-						end
-					end
-			    else begin
+			    	tUpdatePC();
+			    else
 						pc <= backpc;
-						micro_ip <= back_micro_ip;
-					end
 				end
 
 			default	: ;	// do nothing
@@ -176,20 +140,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufB_v appropriately
 			4'b0100:
 				if (backbrD)
-				begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+					tUpdatePC();
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbC holding a branchback
@@ -197,20 +148,7 @@ else begin
 			//   cycle 2 - where we are now ... fetch the two instructions & update fetchbufC_v appropriately
 			4'b1000:
 				if (backbrC)
-				begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+					tUpdatePC();
 
 			// if fbD has the branchback, can't immediately tell which of the following scenarios it is:
 			//   cycle 0 - fetched a pair of instructions, one or both of which is a branchback
@@ -227,24 +165,9 @@ else begin
 			    pc <= backpc;
 				else if (backbrD) begin
 			    if (did_branchback)
-					begin
-						if (|pc[11:0]) begin
-						  if (~irq) begin
-						  	if (~|next_micro_ip)
-						  		pc <= pc + 16'h5000;
-					  		pc[11:0] <= next_micro_ip;
-							end
-						end
-						else if (hit) begin
-						  if (~irq) begin
-							  pc <= next_pc;
-							end
-						end
-					end
-			    else begin
+			    	tUpdatePC();
+			    else
 						pc <= backpc;
-						micro_ip <= back_micro_ip;
-					end
 				end
 
 			default:	;
@@ -257,61 +180,28 @@ else begin
 	    // get data iff the fetch buffers are empty
 	    //
 		  if (fetchbufA_v == INV && fetchbufB_v == INV)
-				begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+		  	tUpdatePC();
 	    else if (fetchbufC_v == INV && fetchbufD_v == INV)
-				begin
-					if (|pc[11:0]) begin
-					  if (~irq) begin
-					  	if (~|next_micro_ip)
-					  		pc <= pc + 16'h5000;
-				  		pc[11:0] <= next_micro_ip;
-						end
-					end
-					else if (hit) begin
-					  if (~irq) begin
-						  pc <= next_pc;
-						end
-					end
-				end
+	    	tUpdatePC();
 		end
 	end
 end
 
-/*
 task tUpdatePC;
-input hit;
-input irq;
-input pc_address_t pci;
-output pc_address_t pco;
 begin
-	pco <= pci;
-	if (|pci[11:0]) begin
+	if (|pc[11:0]) begin
 	  if (~irq) begin
-	  	if (next_micro_ip=='d0)
-	  		pco <= pci + 16'h5000;
-  		pco[11:0] <= next_micro_ip;
+	  	if (~|next_micro_ip)
+	  		pc <= pc + 16'h5000;
+  		pc[11:0] <= next_micro_ip;
 		end
 	end
 	else if (hit) begin
 	  if (~irq) begin
-		  pco <= next_pc;
+		  pc <= next_pc;
 		end
 	end
 end
 endtask
-*/
 
 endmodule

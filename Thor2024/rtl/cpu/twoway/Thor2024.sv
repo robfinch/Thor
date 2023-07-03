@@ -316,7 +316,9 @@ cause_code_t dram0_exc;
 reg dram0_ack;
 reg [7:0] dram0_tid;
 reg dram0_more;
+reg dram0_hi;
 reg dram0_erc;
+reg [9:0] dram0_shift;
 
 reg [639:0] dram1_data;
 address_t dram1_addr;
@@ -333,6 +335,8 @@ reg dram1_ack;
 reg [7:0] dram1_tid;
 reg dram1_more;
 reg dram1_erc;
+reg dram1_hi;
+reg [9:0] dram1_shift;
 
 /*
 value_t dram2_data;
@@ -817,7 +821,7 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		cpu_request_i[g].cid = CID + g + 1;
 		cpu_request_i[g].tid = dramN_tid[g];
 		cpu_request_i[g].om = fta_bus_pkg::MACHINE;
-		cpu_request_i[g].cmd = dramN_store[g] ? CMD_STORE : dramN_loadz[g] ? CMD_LOADZ : dramN_load[g] ? CMD_LOAD : CMD_NONE;
+		cpu_request_i[g].cmd = dramN_store[g] ? fta_bus_pkg::CMD_STORE : dramN_loadz[g] ? fta_bus_pkg::CMD_LOADZ : dramN_load[g] ? fta_bus_pkg::CMD_LOAD : fta_bus_pkg::CMD_NONE;
 		cpu_request_i[g].bte = fta_bus_pkg::LINEAR;
 		cpu_request_i[g].cti = (dramN_erc[g] || ERC) ? fta_bus_pkg::ERC : fta_bus_pkg::CLASSIC;
 		cpu_request_i[g].blen = 'd0;
@@ -833,7 +837,7 @@ for (g = 0; g < NDATA_PORTS; g = g + 1) begin
 		cpu_request_i[g].sel = dramN_sel[g];
 		cpu_request_i[g].pl = 8'h00;
 		cpu_request_i[g].pri = 4'd7;
-		cpu_request_i[g].cache = fta_bus_pkg::WT_READWRITE_ALLOCATE;
+		cpu_request_i[g].cache = fta_bus_pkg::WT_NO_ALLOCATE;
 		dramN_ack[g] = cpu_resp_o[g].ack;
 	end
 
@@ -1772,7 +1776,10 @@ Thor2024_branch_eval ube1
 );
 
 always_comb
-	fcu_bus = tpc;
+	if (fnIsRet(fcu_instr))
+		fcu_bus = fcu_argA + {fcu_argI,3'd0};
+	else
+		fcu_bus = tpc;
 
 always_comb
 begin
@@ -1869,526 +1876,6 @@ if (fnIsAtom(fetchbuf1_instr[1]))
 
 did_branchback2 <= did_branchback1;
 
-	//
-	// enqueue fetchbuf0 and fetchbuf1, but only if there is room, 
-	// and ignore fetchbuf1 if fetchbuf0 has a backwards branch in it.
-	//
-	// also, do some instruction-decode ... set the operand_valid bits in the IQ
-	// appropriately so that the DATAINCOMING stage does not have to look at the opcode
-	//
-	if (!branchmiss) 	// don't bother doing anything if there's been a branch miss
-
-		case ({fetchbuf0_v, fetchbuf1_v})
-
-    2'b00: ; // do nothing
-
-    2'b01:
-    	if (iq_v[tail0] == INV) begin
-				did_branchback1 <= branchback & ~did_branchback;
-				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
-				iq[tail0].sn <= 6'h3F;
-				iq[tail0].done <= db1.nop;
-				iq[tail0].out    <=   INV;
-				iq[tail0].res    <=   `ZERO;
-				iq[tail0].op    <=   fetchbuf1_instr[0]; 
-				iq[tail0].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0])) | ptakb; 
-				iq[tail0].agen    <=   INV;
-				iq[tail0].pc    <=   fetchbuf1_pc;
-				iq[tail0].imm <= db1.has_imm;
-				iq[tail0].fc <= db1.fc;
-		    iq[tail0].alu <= db1.alu;
-		    iq[tail0].alu0 <= db1.alu0;
-		    iq[tail0].fpu = db1.fpu;
-		    iq[tail0].mul <= db1.mul;
-		    iq[tail0].mulu <= db1.mulu;
-		    iq[tail0].div <= db1.div;
-		    iq[tail0].divu <= db1.divu;
-		    iq[tail0].sync <= 1'b0;
-				iq[tail0].mem <= db1.mem;
-				iq[tail0].load <= db1.load;
-				iq[tail0].loadz <= db1.loadz;
-				iq[tail0].store <= db1.store;
-				iq[tail0].erc <= db1.erc;
-				iq[tail0].jmp    <=   fetchbuf1_jmp;
-				iq[tail0].rfw    <=   fetchbuf1_rfw;
-				iq[tail0].tgt <= Rt1;
-				iq[tail0].exc <= FLT_NONE;
-				iq[tail0].takb <= 1'b0;
-				iq[tail0].brtgt <= 'd0;
-				iq[tail0].Ra <= Ra1;
-				iq[tail0].Rb <= Rb1;
-				iq[tail0].Rc <= Rc1;
-				iq[tail0].Rt <= Rt1;
-				iq[tail0].Rp <= Rp1;
-				iq[tail0].a0 <= db1.imm;
-				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
-				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ];
-				iq[tail0].a1_s <= rf_source [ Ra1 ];
-				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
-				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ];
-				iq[tail0].a2_s  <= rf_source [ Rb1 ];
-				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
-				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ];
-				iq[tail0].a3_s  <= rf_source [ Rc1 ];
-				iq[tail0].at <= rfot1;
-				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) || rf_v[ Rt1 ];
-				iq[tail0].at_s  <= rf_source [ Rt1 ];
-				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], rfop1);
-				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) || rf_v[ Rp1 ];
-				iq[tail0].ap_s  <= rf_source [ Rp1 ];
-				lastq0 <= {1'b0,tail0};
-				lastq1 <= {1'b1,tail0};
-				if (!db1.pfx) begin
-					atom_mask <= atom_mask >> 4'd3;
-					pred_mask <= {4'hF,pred_mask} >> 4'd4;
-					postfix_mask <= 'd0;
-				end
-				else
-					postfix_mask <= {postfix_mask[4:0],1'b1};
-				if (postfix_mask[5])
-					iq[tail0].exc <= FLT_PFX;
-				if (fnIsPred(fetchbuf1_instr[0])) begin
-					pred_mask <= fetchbuf1_instr[0][34:7];
-				end
-				iqentry_issue_reg[tail0] <= 1'b0;
-			end
-    2'b10:
-    	begin
-	    	if (iq_v[tail0] == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
-					if (!db0.br)		panic <= `PANIC_FETCHBUFBEQ;
-					if (!db0.backbr)	panic <= `PANIC_FETCHBUFBEQ;
-					//
-					// this should only happen when the first instruction is a BEQ-backwards and the IQ
-					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
-					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
-					//
-					did_branchback1 <= branchback & ~did_branchback;
-					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
-					iq[tail0].sn <= 6'h3F;
-					iq[tail0].done <= db0.nop;
-					iq[tail0].out	<= INV;
-					iq[tail0].res	<= `ZERO;
-					iq[tail0].op <= fetchbuf0_instr[0]; 			// BEQ
-					iq[tail0].bt <= VAL;
-					iq[tail0].agen <= INV;
-					iq[tail0].pc <= fetchbuf0_pc;
-					iq[tail0].imm <= db0.has_imm;
-					iq[tail0].fc <= db0.fc;
-			    iq[tail0].alu <= db0.alu;
-			    iq[tail0].alu0 <= db0.alu0;
-			    iq[tail0].fpu = db0.fpu;
-			    iq[tail0].mul <= db0.mul;
-			    iq[tail0].mulu <= db0.mulu;
-			    iq[tail0].div <= db0.div;
-			    iq[tail0].divu <= db0.divu;
-			    iq[tail0].sync <= 1'b0;
-					iq[tail0].mem <= db0.mem;
-					iq[tail0].load <= db0.load;
-					iq[tail0].loadz <= db0.loadz;
-					iq[tail0].store <= db0.store;
-					iq[tail0].erc <= db0.erc;
-					iq[tail0].jmp <= fetchbuf0_jmp;
-					iq[tail0].rfw <= fetchbuf0_rfw;
-					iq[tail0].tgt <= Rt0;
-					iq[tail0].exc    <=	FLT_NONE;
-					iq[tail0].takb <= 1'b0;
-					iq[tail0].brtgt <= 'd0;
-					iq[tail0].Ra <= Ra0;
-					iq[tail0].Rb <= Rb0;
-					iq[tail0].Rc <= Rc0;
-					iq[tail0].Rt <= Rt0;
-					iq[tail0].Rp <= Rp0;
-					iq[tail0].a0	<=	db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
-					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
-					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
-					iq[tail0].a3_s  <= rf_source [ Rc0 ];
-					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
-					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
-					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					lastq0 <= {1'b0,tail0};
-					lastq1 <= {1'b1,tail0};
-					if (!db0.pfx) begin
-						atom_mask <= atom_mask >> 4'd3;
-						pred_mask <= {4'hF,pred_mask} >> 4'd4;
-						postfix_mask <= 'd0;
-					end
-					else
-						postfix_mask <= {postfix_mask[4:0],1'b1};
-					if (postfix_mask[5])
-						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr[0]))
-						pred_mask <= fetchbuf0_instr[0][34:7];
-					iqentry_issue_reg[tail0] <= 1'b0;
-		    end
-	  	end
-
-    2'b11:
-    	if (iq_v[tail0] == INV) begin
-
-				//
-				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
-				//
-				if (db0.backbr) begin
-					did_branchback1 <= branchback & ~did_branchback;
-					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
-					iq[tail0].sn <= 6'h3F;
-			    iq[tail0].done <=	db0.nop;
-			    iq[tail0].out    <=	INV;
-			    iq[tail0].res    <=	`ZERO;
-			    iq[tail0].op    <=	fetchbuf0_instr[0]; 			// BEQ
-			    iq[tail0].bt    <=	VAL;
-			    iq[tail0].agen    <=	INV;
-			    iq[tail0].pc    <=	fetchbuf0_pc;
-					iq[tail0].imm <= db0.has_imm;
-					iq[tail0].fc <= db0.fc;
-			    iq[tail0].alu <= db0.alu;
-			    iq[tail0].alu0 <= db0.alu0;
-			    iq[tail0].fpu = db0.fpu;
-			    iq[tail0].mul <= db0.mul;
-			    iq[tail0].mulu <= db0.mulu;
-			    iq[tail0].div <= db0.div;
-			    iq[tail0].divu <= db0.divu;
-			    iq[tail0].sync <= 1'b0;
-			    iq[tail0].mem    <=	db0.mem;
-					iq[tail0].load <= db0.load;
-					iq[tail0].loadz <= db0.loadz;
-					iq[tail0].store <= db0.store;
-					iq[tail0].erc <= db0.erc;
-			    iq[tail0].jmp    <=	fetchbuf0_jmp;
-			    iq[tail0].rfw    <=	fetchbuf0_rfw;
-					iq[tail0].tgt <= Rt0;
-			    iq[tail0].exc    <=	FLT_NONE;
-					iq[tail0].takb <= 1'b0;
-					iq[tail0].brtgt <= 'd0;
-					iq[tail0].Ra <= Ra0;
-					iq[tail0].Rb <= Rb0;
-					iq[tail0].Rc <= Rc0;
-					iq[tail0].Rt <= Rt0;
-					iq[tail0].Rp <= Rp0;
-			    iq[tail0].a0 <= db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
-					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
-					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
-					iq[tail0].a3_s  <= rf_source [ Rc0 ];
-					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
-					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
-					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					lastq0 <= {1'b0,tail0};
-					lastq1 <= {1'b1,tail0};
-					if (!db0.pfx) begin
-						atom_mask <= atom_mask >> 4'd3;
-						pred_mask <= {4'hF,pred_mask} >> 4'd4;
-						postfix_mask <= 'd0;
-					end
-					else
-						postfix_mask <= {postfix_mask[4:0],1'b1};
-					if (postfix_mask[5])
-						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr[0]))
-						pred_mask <= fetchbuf0_instr[0][34:7];
-					iqentry_issue_reg[tail0] <= 1'b0;
-				end
-
-				else begin	// fetchbuf0 doesn't contain a backwards branch
-					if (!db0.pfx)
-						pred_mask <= {8'hFF,pred_mask} >> 4'd8;
-			    //
-			    // so -- we can enqueue 1 or 2 instructions, depending on space in the IQ
-			    // update tail0/tail1 separately (at top)
-			    // update the rf_v and rf_source bits separately (at end)
-			    //   the problem is that if we do have two instructions, 
-			    //   they may interact with each other, so we have to be
-			    //   careful about where things point.
-			    //
-
-			    //
-			    // enqueue the first instruction ...
-			    //
-					did_branchback1 <= branchback & ~did_branchback;
-					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
-					iq[tail0].sn <= 6'h3F;
-			    iq[tail0].done <= db0.nop;
-			    iq[tail0].out    <=   INV;
-			    iq[tail0].res    <=   `ZERO;
-			    iq[tail0].op    <=   fetchbuf0_instr[0]; 
-			    iq[tail0].bt    <=   INV;//ptakb;
-			    iq[tail0].agen    <=   INV;
-			    iq[tail0].pc    <=   fetchbuf0_pc;
-					iq[tail0].imm <= db0.has_imm;
-					iq[tail0].fc <= db0.fc;
-			    iq[tail0].fpu = db0.fpu;
-			    iq[tail0].alu <= db0.alu;
-			    iq[tail0].alu0 <= db0.alu0;
-			    iq[tail0].mul <= db0.mul;
-			    iq[tail0].mulu <= db0.mulu;
-			    iq[tail0].div <= db0.div;
-			    iq[tail0].divu <= db0.divu;
-			    iq[tail0].sync <= 1'b0;
-			    iq[tail0].mem <= db0.mem;
-					iq[tail0].load <= db0.load;
-					iq[tail0].loadz <= db0.loadz;
-					iq[tail0].store <= db0.store;
-					iq[tail0].erc <= db0.erc;
-			    iq[tail0].jmp    <=   fetchbuf0_jmp;
-			    iq[tail0].rfw    <=   fetchbuf0_rfw;
-					iq[tail0].tgt <= Rt0;
-			    iq[tail0].exc    <=   FLT_NONE;
-					iq[tail0].takb <= 1'b0;
-					iq[tail0].brtgt <= 'd0;
-					iq[tail0].Ra <= Ra0;
-					iq[tail0].Rb <= Rb0;
-					iq[tail0].Rc <= Rc0;
-					iq[tail0].Rt <= Rt0;
-					iq[tail0].Rp <= Rp0;
-			    iq[tail0].a0 <= db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
-					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
-					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
-					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
-					iq[tail0].a2_s <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
-					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
-					iq[tail0].a3_s  <= rf_source [ Rc0 ];
-					iq[tail0].at <= rfot0;
-					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
-					iq[tail0].at_s  <= rf_source [ Rt0 ];
-					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
-					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
-					iq[tail0].ap_s  <= rf_source [ Rp0 ];
-					lastq0 <= {1'b0,tail0};
-					lastq1 <= {1'b1,tail0};
-					if (!db0.pfx) begin
-						atom_mask <= atom_mask >> 4'd3;
-						pred_mask <= {4'hF,pred_mask} >> 4'd4;
-						postfix_mask <= 'd0;
-					end
-					else
-						postfix_mask <= {postfix_mask[4:0],1'b1};
-					if (postfix_mask[5])
-						iq[tail0].exc <= FLT_PFX;
-					if (fnIsPred(fetchbuf0_instr[0]))
-						pred_mask <= fetchbuf0_instr[0][34:7];
-					iqentry_issue_reg[tail0] <= 1'b0;
-
-			    //
-			    // if there is room for a second instruction, enqueue it
-			    //
-			    if (iq_v[tail1] == INV) begin
-
-						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
-						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
-						iq[tail1].sn <= 6'h3F;
-						iq[tail1].done <= db1.nop;
-						iq[tail1].out    <=   INV;
-						iq[tail1].res    <=   `ZERO;
-						iq[tail1].op    <=   fetchbuf1_instr[0]; 
-						iq[tail1].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
-						iq[tail1].agen    <=   INV;
-						iq[tail1].pc    <=   fetchbuf1_pc;
-						iq[tail1].imm <= db1.has_imm;
-						iq[tail1].fc <= db1.fc;
-				    iq[tail1].alu <= db1.alu;
-			    	iq[tail1].alu0 <= db1.alu0;
-				    iq[tail1].fpu = db1.fpu;
-				    iq[tail1].mul <= db1.mul;
-				    iq[tail1].mulu <= db1.mulu;
-				    iq[tail1].div <= db1.div;
-				    iq[tail1].divu <= db1.divu;
-				    iq[tail1].sync <= 1'b0;
-						iq[tail1].mem <= db1.mem;
-						iq[tail1].load <= db1.load;
-						iq[tail1].loadz <= db1.loadz;
-						iq[tail1].store <= db1.store;
-						iq[tail1].erc <= db1.erc;
-						iq[tail1].jmp    <=   fetchbuf1_jmp;
-						iq[tail1].rfw    <=   fetchbuf1_rfw;
-						iq[tail1].tgt <= Rt1;
-						iq[tail1].exc <= FLT_NONE;
-						iq[tail1].takb <= 1'b0;
-						iq[tail1].brtgt <= 'd0;
-						iq[tail1].Ra <= Ra1;
-						iq[tail1].Rb <= Rb1;
-						iq[tail1].Rc <= Rc1;
-						iq[tail1].Rt <= Rt1;
-						iq[tail1].Rp <= Rp1;
-						iq[tail1].a0 <= db1.imm;
-						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
-						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
-						iq[tail1].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
-						iq[tail1].at <= rfot1;
-						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], rfop1);
-						lastq1 <= {1'b0,tail1};
-						if (!db1.pfx) begin
-							atom_mask <= atom_mask >> 4'd6;
-							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
-							postfix_mask <= 'd0;
-						end
-						else if (!db0.pfx) begin
-							postfix_mask <= 'd0;
-						end
-						else
-							postfix_mask <= {postfix_mask[4:0],1'b1};
-						if (postfix_mask[5])
-							iq[tail1].exc <= FLT_PFX;
-						if (fnIsPred(fetchbuf1_instr[0]))
-							pred_mask <= fetchbuf1_instr[0][34:7];
-						iqentry_issue_reg[tail1] <= 1'b0;
-
-						// a1/a2_v and a1/a2_s values require a bit of thinking ...
-
-						//
-						// SOURCE 1 ... this is relatively straightforward, because all instructions
-						// that have a source (i.e. every instruction but LUI) read from RB
-						//
-						// if the argument is an immediate or not needed, we're done
-						if (fnSource1v(fetchbuf1_instr[0])) begin
-					    iq[tail1].a1_v <= VAL;
-					    iq[tail1].a1_s <= 'd0;
-						end
-						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
-						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ];
-					    iq[tail1].a1_s <= rf_source [ Ra1 ];
-						end
-						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 'd0 && Ra1 == Rt0) begin
-					    // if the previous instruction is a LW, then grab result from memq, not the iq
-					    iq[tail1].a1_v <= INV;
-					    iq[tail1].a1_s <= { db0.mem, tail0 };
-						end
-						// if no overlap, get info from rf_v and rf_source
-						else begin
-					    iq[tail1].a1_v <= rf_v [ Ra1 ];
-					    iq[tail1].a1_s <= rf_source [ Ra1 ];
-						end
-
-						//
-						// SOURCE 2 ... this is more contorted than the logic for SOURCE 1 because
-						// some instructions (NAND and ADD) read from RC and others (SW, BEQ) read from RA
-						//
-						// if the argument is an immediate or not needed, we're done
-						if (fnSource2v(fetchbuf1_instr[0])) begin
-					    iq[tail1].a2_v <= VAL;
-					    iq[tail1].a2_s <= 'd0;
-						end
-						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
-						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ];
-					    iq[tail1].a2_s <= rf_source [ Rb1 ];
-						end
-						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 6'd0 && Rb1 == Rt0) begin
-					    // if the previous instruction is a LW, then grab result from memq, not the iq
-					    iq[tail1].a2_v <= INV;
-					    iq[tail1].a2_s <= { db0.mem, tail0 };
-						end
-						// if no overlap, get info from rf_v and rf_source
-						else begin
-					    iq[tail1].a2_v <= rf_v [ Rb1 ];
-					    iq[tail1].a2_s <= rf_source [ Rb1 ];
-						end
-
-						//
-						// SOURCE 3 ... 
-						//
-						// if the argument is an immediate or not needed, we're done
-						if (fnSource3v(fetchbuf1_instr[0])) begin
-					    iq[tail1].a3_v <= VAL;
-					    iq[tail1].a3_s <= 'd0;
-						end
-						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
-						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ];
-					    iq[tail1].a3_s <= rf_source [ Rc1 ];
-						end
-						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 5'd0 && Rc1 == Rt0) begin
-					    // if the previous instruction is a LW, then grab result from memq, not the iq
-					    iq[tail1].a3_v <= INV;
-					    iq[tail1].a3_s <= { db0.mem, tail0 };
-						end
-						// if no overlap, get info from rf_v and rf_source
-						else begin
-					    iq[tail1].a3_v <= rf_v [ Rc1 ];
-					    iq[tail1].a3_s <= rf_source [ Rc1 ];
-						end
-
-						//
-						// SOURCE T ... 
-						//
-						// if the argument is an immediate or not needed, we're done
-						if (fnSourceTv(fetchbuf1_instr[0])) begin
-					    iq[tail1].at_v <= VAL;
-					    iq[tail1].at_s <= 'd0;
-						end
-						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
-						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ];
-					    iq[tail1].at_s <= rf_source [ Rt1 ];
-						end
-						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 6'd0 && Rt1 == Rt0) begin
-					    // if the previous instruction is a LW, then grab result from memq, not the iq
-					    iq[tail1].at_v <= INV;
-					    iq[tail1].at_s <= { db0.mem, tail0 };
-						end
-						// if no overlap, get info from rf_v and rf_source
-						else begin
-					    iq[tail1].at_v <= rf_v [ Rt1 ];
-					    iq[tail1].at_s <= rf_source [ Rt1 ];
-						end
-
-						//
-						// SOURCE P ... 
-						//
-						// if the argument is an immediate or not needed, we're done
-						if (fnSourcePv(fetchbuf1_instr[0])) begin
-					    iq[tail1].ap_v <= VAL;
-					    iq[tail1].ap_s <= 'd0;
-						end
-						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
-						else if (~fetchbuf0_rfw) begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ];
-					    iq[tail1].ap_s <= rf_source [ Rp1 ];
-						end
-						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 6'd0 && Rp1 == Rt0) begin
-					    // if the previous instruction is a LW, then grab result from memq, not the iq
-					    iq[tail1].ap_v <= INV;
-					    iq[tail1].ap_s <= { db0.mem, tail0 };
-						end
-						// if no overlap, get info from rf_v and rf_source
-						else begin
-					    iq[tail1].ap_v <= rf_v [ Rp1 ];
-					    iq[tail1].ap_s <= rf_source [ Rp1 ];
-						end
-					end	
-	    	end// ends the "else fetchbuf0 doesn't have a backwards branch" clause
-	    end
-		endcase
 //
 // DATAINCOMING
 //
@@ -2402,30 +1889,44 @@ did_branchback2 <= did_branchback1;
 	for (n13 = 0; n13 < QENTRIES; n13 = n13 + 1)
 		if (iqentry_issue[n13])
 			iqentry_issue_reg[n13] <= 1'b1;
-	if (alu0_v) begin
+	if (alu0_v & iq[alu0_id[2:0]].v) begin
     iq[ alu0_id[2:0] ].res <= alu0_bus;
     iq[ alu0_id[2:0] ].exc <= alu0_exc;
-    iq[ alu0_id[2:0] ].done <= (!iq[ alu0_id[2:0] ].load && !iq[ alu0_id[2:0] ].store);
+    iq[ alu0_id[2:0] ].done <= (!iq[ alu0_id[2:0] ].load
+    	&& !iq[ alu0_id[2:0] ].store
+    	&& !iq[ alu0_id[2:0]].mul
+    	&& !iq[ alu0_id[2:0]].mulu
+    	&& !iq[ alu0_id[2:0]].div
+    	&& !iq[ alu0_id[2:0]].divu
+    	);
     iq[ alu0_id[2:0] ].out <= INV;
     iq[ alu0_id[2:0] ].agen <= VAL;
     if (!iq[ alu0_id[2:0] ].load && !iq[ alu0_id[2:0] ].store)
     	iqentry_issue_reg[alu0_id[2:0]] <= 1'b0;
+    if ((iq[ alu0_id[2:0]].mul || iq[ alu0_id[2:0]].mulu) && mul0_done) begin
+	    iq[ alu0_id[2:0] ].done <= VAL;
+	    iq[ alu0_id[2:0] ].out <= INV;
+  	end
+    if ((iq[ alu0_id[2:0]].div || iq[ alu0_id[2:0]].divu) && div0_done) begin
+	    iq[ alu0_id[2:0] ].done <= VAL;
+	    iq[ alu0_id[2:0] ].out <= INV;
+  	end
 	end
-	if (NALU > 1 && alu1_v) begin
+	if (NALU > 1 && alu1_v && iq[alu1_id[2:0]].v) begin
     iq[ alu1_id[2:0] ].res <= alu1_bus;
     iq[ alu1_id[2:0] ].exc <= alu1_exc;
     iq[ alu1_id[2:0] ].done <= (!iq[ alu1_id[2:0] ].load && !iq[ alu1_id[2:0] ].store);
     iq[ alu1_id[2:0] ].out <= INV;
     iq[ alu1_id[2:0] ].agen <= VAL;
 	end
-	if (NFPU > 0 && fpu_v) begin
+	if (NFPU > 0 && fpu_v && iq[fpu_id[2:0]].v) begin
     iq[ fpu_id[2:0] ].res <= fpu_bus;
     iq[ fpu_id[2:0] ].exc <= fpu_exc;
     iq[ fpu_id[2:0] ].done <= fpu_done;
     iq[ fpu_id[2:0] ].out <= INV;
     iq[ fpu_id[2:0] ].agen <= VAL;
 	end
-	if (fcu_v) begin
+	if (fcu_v && iq[fcu_id[2:0]].v) begin
     iq[ fcu_id[2:0] ].res <= fcu_bus;
     iq[ fcu_id[2:0] ].exc <= fcu_exc;
     iq[ fcu_id[2:0] ].done <= VAL;
@@ -2449,19 +1950,15 @@ did_branchback2 <= did_branchback1;
 		end
 	end
 
-	//
-	// set the IQ entry == DONE as soon as the SW is let loose to the memory system
-	//
-	
-	if (dram0 == DRAMSLOT_ACTIVE && (ERC ? dram0_ack : (dram0_ack||!dram0_erc)) && dram0p==DRAMSLOT_READY && dram0_store) begin
-//    if ((alu0_v && dram0_id[2:0] == alu0_id[2:0]) || (alu1_v && dram0_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
-    iq[ dram0_id[2:0] ].done <= VAL;
+	// Set the IQ entry == DONE as soon as the SW is let loose to the memory system
+	// If the store is unaligned, setting .out to INV will cause a second bus cycle.
+	if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_store) begin
+    iq[ dram0_id[2:0] ].done <= !dram0_more || !SUPPORT_UNALIGNED_MEMORY;
     iq[ dram0_id[2:0] ].out <= INV;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram1 == DRAMSLOT_ACTIVE && (ERC ? dram1_ack : (dram1_ack||!dram1_erc)) && dram0p==DRAMSLOT_READY && dram1_store) begin
-//	    if ((alu0_v && dram1_id[2:0] == alu0_id[2:0]) || (alu1_v && dram1_id[2:0] == alu1_id[2:0]))	panic <= `PANIC_MEMORYRACE;
-	    iq[ dram1_id[2:0] ].done <= VAL;
+		if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && dram1_store) begin
+	    iq[ dram1_id[2:0] ].done <= !dram1_more || !SUPPORT_UNALIGNED_MEMORY;
 	    iq[ dram1_id[2:0] ].out <= INV;
 		end
 	end
@@ -2660,6 +2157,7 @@ did_branchback2 <= did_branchback1;
 			end
 		end
 		
+		/* These two commit busses used in lieu of a write-bypassed register file. */
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].a1 <= commit0a_bus;
 	    iq[nn].a1_v <= VAL;
@@ -3008,25 +2506,13 @@ fcu_dataready <= fcu_available
 			begin
 				dram0 <= dram0 + 2'd1;
 				if (|dram0_sel[79:64]) begin
-					dram0_more <= 1'b1;
+					dram0_more <= SUPPORT_UNALIGNED_MEMORY;
 				end
 			end
 		DRAMSLOT_ACTIVE:
-			if (ERC ? dram0_ack : dram0_ack||(dram0_store&&!dram0_erc)) begin
-//				iq[dram0_id[2:0]].out <= INV;
-				/*
-				if (dram0_store && !dram0_more) begin
-					iq[dram0_id[2:0]].done <= VAL;
-					iq[dram0_id[2:0]].out <= INV;
-				end
-				*/
+			if (dram0_ack)
 				dram0 <= DRAMSLOT_AVAIL;
-			end
-		default:
-			if (iq_v[dram0_id[2:0]])
-				dram0 <= dram0 + 2'd1;
-			else
-				dram0 <= DRAMSLOT_AVAIL;
+		default:	;
 		endcase
 
 	if (NDATA_PORTS > 1) begin
@@ -3039,25 +2525,13 @@ fcu_dataready <= fcu_available
 				begin
 					dram1 <= dram1 + 2'd1;
 					if (|dram1_sel[79:64]) begin
-						dram1_more <= 1'b1;
+						dram1_more <= SUPPORT_UNALIGNED_MEMORY;
 					end
 				end
 			DRAMSLOT_ACTIVE:
-				if (ERC ? dram1_ack : dram1_ack||(dram1_store&&!dram1_erc)) begin
-//					iq[dram1_id[2:0]].out <= INV;
-					/*
-					if (dram1_store && !dram1_more) begin
-						iq[dram1_id[2:0]].done <= VAL;
-						iq[dram1_id[2:0]].out <= INV;
-					end
-					*/
+				if (dram1_ack)
 					dram1 <= DRAMSLOT_AVAIL;
-				end
-			default:
-				if (iq_v[dram1_id[2:0]])
-					dram1 <= dram1 + 2'd1;
-				else
-					dram1 <= DRAMSLOT_AVAIL;
+			default:	;
 			endcase
 	end
 /*
@@ -3081,16 +2555,33 @@ fcu_dataready <= fcu_available
 */
 	  begin
 	    
-		//
+		
 		// grab requests that have finished and put them on the dram_bus
-		if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && ~|dram0_sel[79:64]) begin
+		if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_hi && SUPPORT_UNALIGNE_MEMORY) begin
+			dram0_hi <= 1'b0;
 	    dram_v0 <= dram0_load;
 	    dram_id0 <= dram0_id;
 	    dram_tgt0 <= dram0_tgt;
 	    dram_exc0 <= dram0_exc;
-	    if (dram0_load)
-	    	dram_bus0 <= fnDati(dram0_op,dram0_addr,cpu_resp_o[0] >> {dram0_addr[5:0],3'd0});
-	    else if (dram0_store) begin
+    	dram_bus0 <= fnDati(1'b0,dram0_op,dram0_addr,(cpu_resp_o[0] << dram0_shift)|dram_bus0);
+	    if (dram0_store) begin
+	    	dram0_store <= 'd0;
+	    	dram0_sel <= 'd0;
+	  	end
+	    else			panic <= `PANIC_INVALIDMEMOP;
+	    if (dram0_store)
+	    	$display("m[%h] <- %h", dram0_addr, dram0_data);
+		end
+		else if (dram0 == DRAMSLOT_ACTIVE && dram0_ack) begin
+			// If there is more to do, trigger a second instruction issue.
+			if (dram0_more)
+				iq[dram0_id].out <= INV;
+	    dram_v0 <= dram0_load & ~dram0_more;
+	    dram_id0 <= dram0_id;
+	    dram_tgt0 <= dram0_tgt;
+	    dram_exc0 <= dram0_exc;
+    	dram_bus0 <= fnDati(dram0_more,dram0_op,dram0_addr,cpu_resp_o[0] >> {dram0_addr[5:0],3'd0});
+	    if (dram0_store) begin
 	    	dram0_store <= 'd0;
 	    	dram0_sel <= 'd0;
 	  	end
@@ -3101,14 +2592,31 @@ fcu_dataready <= fcu_available
 		else
 			dram_v0 <= INV;
 		if (NDATA_PORTS > 1) begin
-			if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && ~|dram1_sel[79:64]) begin
+			if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && dram1_hi && SUPPORT_UNALIGNED_MEMORY) begin
+				dram1_hi <= 1'b0;
 		    dram_v1 <= dram1_load;
 		    dram_id1 <= dram1_id;
 		    dram_tgt1 <= dram1_tgt;
 		    dram_exc1 <= dram1_exc;
-		    if (dram1_load) 	
-		    	dram_bus1 <= fnDati(dram1_op,dram1_addr,cpu_resp_o[1] >> {dram1_addr[5:0],3'd0});	
-		    else if (dram1_store) begin
+	    	dram_bus1 <= fnDati(1'b0,dram1_op,dram1_addr,(cpu_resp_o[0] << dram1_shift)|dram_bus1);
+		    if (dram1_store) begin
+		    	dram1_store <= 1'b0;
+		    	dram1_sel <= 'd0;
+		  	end
+		    else			panic <= `PANIC_INVALIDMEMOP;
+		    if (dram1_store)
+		     	$display("m[%h] <- %h", dram1_addr, dram1_data);
+			end
+			else if (dram1 == DRAMSLOT_ACTIVE && dram1_ack) begin
+				// If there is more to do, trigger a second instruction issue.
+				if (dram1_more)
+					iq[dram1_id].out <= INV;
+		    dram_v1 <= dram1_load & ~dram1_more;
+		    dram_id1 <= dram1_id;
+		    dram_tgt1 <= dram1_tgt;
+		    dram_exc1 <= dram1_exc;
+	    	dram_bus1 <= fnDati(dram1_more,dram1_op,dram1_addr,cpu_resp_o[1] >> {dram1_addr[5:0],3'd0});	
+		    if (dram1_store) begin
 		    	dram1_store <= 1'b0;
 		    	dram1_sel <= 'd0;
 		  	end
@@ -3159,26 +2667,34 @@ fcu_dataready <= fcu_available
 	if (dram1 == DRAMSLOT_AVAIL)	dram1_exc <= FLT_NONE;
 //	if (dram2 == `DRAMSLOT_AVAIL)	dram2_exc <= FLT_NONE;
 
+	// For unaligned accesses the instruction will issue again. Unfortunately
+	// the address will be calculated again in the ALU, and it will be incorrect
+	// as it would be using the previous address in the calc. Fortunately the
+	// correct address is already available for the second bus cycle in the
+	// dramN_addr var. We can tell when to use it by the setting of the more
+	// flag.
 	for (n3 = 0; n3 < QENTRIES; n3 = n3 + 1) begin
 		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out && ~iq[n3].done) begin
 	    if (dram0 == DRAMSLOT_AVAIL) begin
-				dram0 		<= 2'd1;
-				dram0_id 	<= { 1'b1, n3[3:0] };
-				dram0_op 	<= iq[n3].op;
+				dram0 <= DRAMSLOT_READY;
+				dram0_id <= { 1'b1, n3[3:0] };
+				dram0_op <= iq[n3].op;
 				dram0_load <= iq[n3].load;
 				dram0_loadz <= iq[n3].loadz;
 				dram0_store <= iq[n3].store;
 				dram0_erc <= iq[n3].erc;
-				dram0_tgt 	<= iq[n3].tgt;
-				if (dram0_more) begin
+				dram0_tgt	<= iq[n3].tgt;
+				if (dram0_more && SUPPORT_UNALIGNED_MEMORY) begin
+					dram0_hi <= 1'b1;
 					dram0_sel <= dram0_sel >> 8'd64;
-					dram0_addr <= {iq[n3].a1[$bits(address_t)-1:6] + 2'd1,6'h0};
+					dram0_addr <= {dram0_addr[$bits(address_t)-1:6] + 2'd1,6'h0};
 					dram0_data <= dram0_data >> 12'd512;
+					dram0_shift <= {7'd64-dram0_addr[5:1],3'b0};
 				end
 				else begin
 					dram0_sel <= {64'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
-					dram0_addr	<= iq[n3].a1;
-					dram0_data	<= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
+					dram0_addr <= iq[n3].a1;
+					dram0_data <= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
 				end
 				dram0_memsz <= fnMemsz(iq[n3].op);
 				dram0_tid[2:0] <= dram0_tid[2:0] + 2'd1;
@@ -3186,18 +2702,20 @@ fcu_dataready <= fcu_available
 				iq[n3].out <= VAL;
 	    end
 	    else if (dram1 == DRAMSLOT_AVAIL && NDATA_PORTS > 1) begin
-				dram1 		<= 2'd1;
-				dram1_id 	<= { 1'b1, n3[3:0] };
-				dram1_op 	<= iq[n3].op;
+				dram1 <= DRAMSLOT_READY;
+				dram1_id <= { 1'b1, n3[3:0] };
+				dram1_op <= iq[n3].op;
 				dram1_load <= iq[n3].load;
 				dram1_loadz <= iq[n3].loadz;
 				dram1_store <= iq[n3].store;
 				dram1_erc <= iq[n3].erc;
-				dram1_tgt 	<= iq[n3].tgt;
-				if (dram1_more) begin
+				dram1_tgt <= iq[n3].tgt;
+				if (dram1_more && SUPPORT_UNALIGNED_MEMORY) begin
+					dram1_hi <= 1'b1;
 					dram1_sel <= dram1_sel >> 8'd64;
-					dram1_addr <= {iq[n3].a1[$bits(address_t)-1:6] + 2'd1,6'h0};
+					dram1_addr <= {dram1_addr[$bits(address_t)-1:6] + 2'd1,6'h0};
 					dram1_data <= dram1_data >> 12'd512;
+					dram1_shift <= {7'd64-dram1_addr[5:1],3'b0};
 				end
 				else begin
 					dram1_sel <= {64'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
@@ -3224,6 +2742,532 @@ fcu_dataready <= fcu_available
 	    */
 		end
 	end
+
+	//
+	// enqueue fetchbuf0 and fetchbuf1, but only if there is room, 
+	// and ignore fetchbuf1 if fetchbuf0 has a backwards branch in it.
+	//
+	// also, do some instruction-decode ... set the operand_valid bits in the IQ
+	// appropriately so that the DATAINCOMING stage does not have to look at the opcode
+	//
+	if (!branchmiss) 	// don't bother doing anything if there's been a branch miss
+
+		case ({fetchbuf0_v, fetchbuf1_v})
+
+    2'b00: ; // do nothing
+
+    2'b01:
+    	if (iq_v[tail0] == INV) begin
+				did_branchback1 <= branchback & ~did_branchback;
+				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+				iq[tail0].sn <= 6'h3F;
+				iq[tail0].done <= db1.nop;
+				iq[tail0].out    <=   INV;
+				iq[tail0].res    <=   `ZERO;
+				iq[tail0].op    <=   fetchbuf1_instr[0]; 
+				iq[tail0].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0])) | ptakb; 
+				iq[tail0].agen    <=   INV;
+				iq[tail0].pc    <=   fetchbuf1_pc;
+				iq[tail0].imm <= db1.has_imm;
+				iq[tail0].fc <= db1.fc;
+		    iq[tail0].alu <= db1.alu;
+		    iq[tail0].alu0 <= db1.alu0;
+		    iq[tail0].fpu = db1.fpu;
+		    iq[tail0].mul <= db1.mul;
+		    iq[tail0].mulu <= db1.mulu;
+		    iq[tail0].div <= db1.div;
+		    iq[tail0].divu <= db1.divu;
+		    iq[tail0].sync <= 1'b0;
+				iq[tail0].mem <= db1.mem;
+				iq[tail0].load <= db1.load;
+				iq[tail0].loadz <= db1.loadz;
+				iq[tail0].store <= db1.store;
+				iq[tail0].lda <= db1.lda;
+				iq[tail0].erc <= db1.erc;
+				iq[tail0].jmp    <=   fetchbuf1_jmp;
+				iq[tail0].rfw    <=   fetchbuf1_rfw;
+				iq[tail0].tgt <= Rt1;
+				iq[tail0].exc <= FLT_NONE;
+				iq[tail0].takb <= 1'b0;
+				iq[tail0].brtgt <= 'd0;
+				iq[tail0].Ra <= Ra1;
+				iq[tail0].Rb <= Rb1;
+				iq[tail0].Rc <= Rc1;
+				iq[tail0].Rt <= Rt1;
+				iq[tail0].Rp <= Rp1;
+				iq[tail0].a0 <= db1.imm;
+				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
+				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ];
+				iq[tail0].a1_s <= rf_source [ Ra1 ];
+				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
+				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ];
+				iq[tail0].a2_s  <= rf_source [ Rb1 ];
+				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
+				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ];
+				iq[tail0].a3_s  <= rf_source [ Rc1 ];
+				iq[tail0].at <= rfot1;
+				iq[tail0].at_v <= fnSourceTv(fetchbuf1_instr[0]) || rf_v[ Rt1 ];
+				iq[tail0].at_s  <= rf_source [ Rt1 ];
+				iq[tail0].ap <= fnAP(fetchbuf1_instr[0], rfop1);
+				iq[tail0].ap_v <= fnSourcePv(fetchbuf1_instr[0]) || rf_v[ Rp1 ];
+				iq[tail0].ap_s  <= rf_source [ Rp1 ];
+				lastq0 <= {1'b0,tail0};
+				lastq1 <= {1'b1,tail0};
+				if (!db1.pfx) begin
+					atom_mask <= atom_mask >> 4'd3;
+					pred_mask <= {4'hF,pred_mask} >> 4'd4;
+					postfix_mask <= 'd0;
+				end
+				else
+					postfix_mask <= {postfix_mask[4:0],1'b1};
+				if (postfix_mask[5])
+					iq[tail0].exc <= FLT_PFX;
+				if (fnIsPred(fetchbuf1_instr[0])) begin
+					pred_mask <= fetchbuf1_instr[0][34:7];
+				end
+				iqentry_issue_reg[tail0] <= 1'b0;
+			end
+    2'b10:
+    	begin
+	    	if (iq_v[tail0] == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
+					if (!db0.br)		panic <= `PANIC_FETCHBUFBEQ;
+					if (!db0.backbr)	panic <= `PANIC_FETCHBUFBEQ;
+					//
+					// this should only happen when the first instruction is a BEQ-backwards and the IQ
+					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
+					// enqueue fetchbuf0) ... probably no need to check for LW -- sanity check, just in case
+					//
+					did_branchback1 <= branchback & ~did_branchback;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
+					iq[tail0].done <= db0.nop;
+					iq[tail0].out	<= INV;
+					iq[tail0].res	<= `ZERO;
+					iq[tail0].op <= fetchbuf0_instr[0]; 			// BEQ
+					iq[tail0].bt <= VAL;
+					iq[tail0].agen <= INV;
+					iq[tail0].pc <= fetchbuf0_pc;
+					iq[tail0].imm <= db0.has_imm;
+					iq[tail0].fc <= db0.fc;
+			    iq[tail0].alu <= db0.alu;
+			    iq[tail0].alu0 <= db0.alu0;
+			    iq[tail0].fpu = db0.fpu;
+			    iq[tail0].mul <= db0.mul;
+			    iq[tail0].mulu <= db0.mulu;
+			    iq[tail0].div <= db0.div;
+			    iq[tail0].divu <= db0.divu;
+			    iq[tail0].sync <= 1'b0;
+					iq[tail0].mem <= db0.mem;
+					iq[tail0].load <= db0.load;
+					iq[tail0].loadz <= db0.loadz;
+					iq[tail0].store <= db0.store;
+					iq[tail0].lda <= db0.lda;
+					iq[tail0].erc <= db0.erc;
+					iq[tail0].jmp <= fetchbuf0_jmp;
+					iq[tail0].rfw <= fetchbuf0_rfw;
+					iq[tail0].tgt <= Rt0;
+					iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
+					iq[tail0].Ra <= Ra0;
+					iq[tail0].Rb <= Rb0;
+					iq[tail0].Rc <= Rc0;
+					iq[tail0].Rt <= Rt0;
+					iq[tail0].Rp <= Rp0;
+					iq[tail0].a0	<=	db0.imm;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
+					iq[tail0].a1_s <= rf_source [ Ra0 ];
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
+					iq[tail0].a2_s  <= rf_source [ Rb0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
+					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rfot0;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
+					if (!db0.pfx) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
+					iqentry_issue_reg[tail0] <= 1'b0;
+		    end
+	  	end
+
+    2'b11:
+    	if (iq_v[tail0] == INV) begin
+
+				//
+				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
+				//
+				if (db0.backbr) begin
+					did_branchback1 <= branchback & ~did_branchback;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
+			    iq[tail0].done <=	db0.nop;
+			    iq[tail0].out    <=	INV;
+			    iq[tail0].res    <=	`ZERO;
+			    iq[tail0].op    <=	fetchbuf0_instr[0]; 			// BEQ
+			    iq[tail0].bt    <=	VAL;
+			    iq[tail0].agen    <=	INV;
+			    iq[tail0].pc    <=	fetchbuf0_pc;
+					iq[tail0].imm <= db0.has_imm;
+					iq[tail0].fc <= db0.fc;
+			    iq[tail0].alu <= db0.alu;
+			    iq[tail0].alu0 <= db0.alu0;
+			    iq[tail0].fpu = db0.fpu;
+			    iq[tail0].mul <= db0.mul;
+			    iq[tail0].mulu <= db0.mulu;
+			    iq[tail0].div <= db0.div;
+			    iq[tail0].divu <= db0.divu;
+			    iq[tail0].sync <= 1'b0;
+			    iq[tail0].mem    <=	db0.mem;
+					iq[tail0].load <= db0.load;
+					iq[tail0].loadz <= db0.loadz;
+					iq[tail0].store <= db0.store;
+					iq[tail0].lda <= db0.lda;
+					iq[tail0].erc <= db0.erc;
+			    iq[tail0].jmp    <=	fetchbuf0_jmp;
+			    iq[tail0].rfw    <=	fetchbuf0_rfw;
+					iq[tail0].tgt <= Rt0;
+			    iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
+					iq[tail0].Ra <= Ra0;
+					iq[tail0].Rb <= Rb0;
+					iq[tail0].Rc <= Rc0;
+					iq[tail0].Rt <= Rt0;
+					iq[tail0].Rp <= Rp0;
+			    iq[tail0].a0 <= db0.imm;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
+					iq[tail0].a1_s <= rf_source [ Ra0 ];
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
+					iq[tail0].a2_s  <= rf_source [ Rb0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
+					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rfot0;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
+					if (!db0.pfx) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
+					iqentry_issue_reg[tail0] <= 1'b0;
+				end
+
+				else begin	// fetchbuf0 doesn't contain a backwards branch
+					if (!db0.pfx)
+						pred_mask <= {8'hFF,pred_mask} >> 4'd8;
+			    //
+			    // so -- we can enqueue 1 or 2 instructions, depending on space in the IQ
+			    // update tail0/tail1 separately (at top)
+			    // update the rf_v and rf_source bits separately (at end)
+			    //   the problem is that if we do have two instructions, 
+			    //   they may interact with each other, so we have to be
+			    //   careful about where things point.
+			    //
+
+			    //
+			    // enqueue the first instruction ...
+			    //
+					did_branchback1 <= branchback & ~did_branchback;
+					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[tail0].sn <= 6'h3F;
+			    iq[tail0].done <= db0.nop;
+			    iq[tail0].out    <=   INV;
+			    iq[tail0].res    <=   `ZERO;
+			    iq[tail0].op    <=   fetchbuf0_instr[0]; 
+			    iq[tail0].bt    <=   INV;//ptakb;
+			    iq[tail0].agen    <=   INV;
+			    iq[tail0].pc    <=   fetchbuf0_pc;
+					iq[tail0].imm <= db0.has_imm;
+					iq[tail0].fc <= db0.fc;
+			    iq[tail0].fpu = db0.fpu;
+			    iq[tail0].alu <= db0.alu;
+			    iq[tail0].alu0 <= db0.alu0;
+			    iq[tail0].mul <= db0.mul;
+			    iq[tail0].mulu <= db0.mulu;
+			    iq[tail0].div <= db0.div;
+			    iq[tail0].divu <= db0.divu;
+			    iq[tail0].sync <= 1'b0;
+			    iq[tail0].mem <= db0.mem;
+					iq[tail0].load <= db0.load;
+					iq[tail0].loadz <= db0.loadz;
+					iq[tail0].store <= db0.store;
+					iq[tail0].lda <= db0.lda;
+					iq[tail0].erc <= db0.erc;
+			    iq[tail0].jmp    <=   fetchbuf0_jmp;
+			    iq[tail0].rfw    <=   fetchbuf0_rfw;
+					iq[tail0].tgt <= Rt0;
+			    iq[tail0].exc    <=   FLT_NONE;
+					iq[tail0].takb <= 1'b0;
+					iq[tail0].brtgt <= 'd0;
+					iq[tail0].Ra <= Ra0;
+					iq[tail0].Rb <= Rb0;
+					iq[tail0].Rc <= Rc0;
+					iq[tail0].Rt <= Rt0;
+					iq[tail0].Rp <= Rp0;
+			    iq[tail0].a0 <= db0.imm;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
+					iq[tail0].a1_s <= rf_source [ Ra0 ];
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
+					iq[tail0].a2_s <= rf_source [ Rb0 ];
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
+					iq[tail0].a3_s  <= rf_source [ Rc0 ];
+					iq[tail0].at <= rfot0;
+					iq[tail0].at_v <= fnSourceTv(fetchbuf0_instr[0]) || rf_v[ Rt0 ];
+					iq[tail0].at_s  <= rf_source [ Rt0 ];
+					iq[tail0].ap <= fnAP(fetchbuf0_instr[0], rfop0);
+					iq[tail0].ap_v <= fnSourcePv(fetchbuf0_instr[0]) || rf_v[ Rp0 ];
+					iq[tail0].ap_s  <= rf_source [ Rp0 ];
+					lastq0 <= {1'b0,tail0};
+					lastq1 <= {1'b1,tail0};
+					if (!db0.pfx) begin
+						atom_mask <= atom_mask >> 4'd3;
+						pred_mask <= {4'hF,pred_mask} >> 4'd4;
+						postfix_mask <= 'd0;
+					end
+					else
+						postfix_mask <= {postfix_mask[4:0],1'b1};
+					if (postfix_mask[5])
+						iq[tail0].exc <= FLT_PFX;
+					if (fnIsPred(fetchbuf0_instr[0]))
+						pred_mask <= fetchbuf0_instr[0][34:7];
+					iqentry_issue_reg[tail0] <= 1'b0;
+
+			    //
+			    // if there is room for a second instruction, enqueue it
+			    //
+			    if (iq_v[tail1] == INV) begin
+
+						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
+							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
+						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
+						iq[tail1].sn <= 6'h3F;
+						iq[tail1].done <= db1.nop;
+						iq[tail1].out    <=   INV;
+						iq[tail1].res    <=   `ZERO;
+						iq[tail1].op    <=   fetchbuf1_instr[0]; 
+						iq[tail1].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
+						iq[tail1].agen    <=   INV;
+						iq[tail1].pc    <=   fetchbuf1_pc;
+						iq[tail1].imm <= db1.has_imm;
+						iq[tail1].fc <= db1.fc;
+				    iq[tail1].alu <= db1.alu;
+			    	iq[tail1].alu0 <= db1.alu0;
+				    iq[tail1].fpu = db1.fpu;
+				    iq[tail1].mul <= db1.mul;
+				    iq[tail1].mulu <= db1.mulu;
+				    iq[tail1].div <= db1.div;
+				    iq[tail1].divu <= db1.divu;
+				    iq[tail1].sync <= 1'b0;
+						iq[tail1].mem <= db1.mem;
+						iq[tail1].load <= db1.load;
+						iq[tail1].loadz <= db1.loadz;
+						iq[tail1].store <= db1.store;
+						iq[tail1].lda <= db1.lda;
+						iq[tail1].erc <= db1.erc;
+						iq[tail1].jmp    <=   fetchbuf1_jmp;
+						iq[tail1].rfw    <=   fetchbuf1_rfw;
+						iq[tail1].tgt <= Rt1;
+						iq[tail1].exc <= FLT_NONE;
+						iq[tail1].takb <= 1'b0;
+						iq[tail1].brtgt <= 'd0;
+						iq[tail1].Ra <= Ra1;
+						iq[tail1].Rb <= Rb1;
+						iq[tail1].Rc <= Rc1;
+						iq[tail1].Rt <= Rt1;
+						iq[tail1].Rp <= Rp1;
+						iq[tail1].a0 <= db1.imm;
+						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
+						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
+						iq[tail1].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
+						iq[tail1].at <= rfot1;
+						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], rfop1);
+						lastq1 <= {1'b0,tail1};
+						if (!db1.pfx) begin
+							atom_mask <= atom_mask >> 4'd6;
+							pred_mask <= {8'hFF,pred_mask} >> 4'd8;
+							postfix_mask <= 'd0;
+						end
+						else if (!db0.pfx) begin
+							postfix_mask <= 'd0;
+						end
+						else
+							postfix_mask <= {postfix_mask[4:0],1'b1};
+						if (postfix_mask[5])
+							iq[tail1].exc <= FLT_PFX;
+						if (fnIsPred(fetchbuf1_instr[0]))
+							pred_mask <= fetchbuf1_instr[0][34:7];
+						iqentry_issue_reg[tail1] <= 1'b0;
+
+						// a1/a2_v and a1/a2_s values require a bit of thinking ...
+
+						//
+						// SOURCE 1 ... this is relatively straightforward, because all instructions
+						// that have a source (i.e. every instruction but LUI) read from RB
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSource1v(fetchbuf1_instr[0])) begin
+					    iq[tail1].a1_v <= VAL;
+					    iq[tail1].a1_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].a1_v <= rf_v [ Ra1 ];
+					    iq[tail1].a1_s <= rf_source [ Ra1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 'd0 && Ra1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].a1_v <= INV;
+					    iq[tail1].a1_s <= { db0.mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].a1_v <= rf_v [ Ra1 ];
+					    iq[tail1].a1_s <= rf_source [ Ra1 ];
+						end
+
+						//
+						// SOURCE 2 ... this is more contorted than the logic for SOURCE 1 because
+						// some instructions (NAND and ADD) read from RC and others (SW, BEQ) read from RA
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSource2v(fetchbuf1_instr[0])) begin
+					    iq[tail1].a2_v <= VAL;
+					    iq[tail1].a2_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].a2_v <= rf_v [ Rb1 ];
+					    iq[tail1].a2_s <= rf_source [ Rb1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 6'd0 && Rb1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].a2_v <= INV;
+					    iq[tail1].a2_s <= { db0.mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].a2_v <= rf_v [ Rb1 ];
+					    iq[tail1].a2_s <= rf_source [ Rb1 ];
+						end
+
+						//
+						// SOURCE 3 ... 
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSource3v(fetchbuf1_instr[0])) begin
+					    iq[tail1].a3_v <= VAL;
+					    iq[tail1].a3_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].a3_v <= rf_v [ Rc1 ];
+					    iq[tail1].a3_s <= rf_source [ Rc1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 5'd0 && Rc1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].a3_v <= INV;
+					    iq[tail1].a3_s <= { db0.mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].a3_v <= rf_v [ Rc1 ];
+					    iq[tail1].a3_s <= rf_source [ Rc1 ];
+						end
+
+						//
+						// SOURCE T ... 
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSourceTv(fetchbuf1_instr[0])) begin
+					    iq[tail1].at_v <= VAL;
+					    iq[tail1].at_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_s <= rf_source [ Rt1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 6'd0 && Rt1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].at_v <= INV;
+					    iq[tail1].at_s <= { db0.mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].at_v <= rf_v [ Rt1 ];
+					    iq[tail1].at_s <= rf_source [ Rt1 ];
+						end
+
+						//
+						// SOURCE P ... 
+						//
+						// if the argument is an immediate or not needed, we're done
+						if (fnSourcePv(fetchbuf1_instr[0])) begin
+					    iq[tail1].ap_v <= VAL;
+					    iq[tail1].ap_s <= 'd0;
+						end
+						// if previous instruction writes nothing to RF, then get info from rf_v and rf_source
+						else if (~fetchbuf0_rfw) begin
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_s <= rf_source [ Rp1 ];
+						end
+						// otherwise, previous instruction does write to RF ... see if overlap
+						else if (Rt0 != 6'd0 && Rp1 == Rt0) begin
+					    // if the previous instruction is a LW, then grab result from memq, not the iq
+					    iq[tail1].ap_v <= INV;
+					    iq[tail1].ap_s <= { db0.mem, tail0 };
+						end
+						// if no overlap, get info from rf_v and rf_source
+						else begin
+					    iq[tail1].ap_v <= rf_v [ Rp1 ];
+					    iq[tail1].ap_s <= rf_source [ Rp1 ];
+						end
+					end	
+	    	end// ends the "else fetchbuf0 doesn't have a backwards branch" clause
+	    end
+		endcase
 
 //
 // COMMIT PHASE (dequeue only ... not register-file update)
@@ -3311,7 +3355,7 @@ always_ff @(posedge clk) begin: clock_n_debug
 	$display("%h #", pc);
 	for (i=0; i< AREGS; i=i+4)
 	    $display("%d: %h %d %o  %d: %h %d %o  %d: %h %d %o  %d: %h %d %o #",
-	    	i+0, urf2.ab[i+1] ? urf2.urf20.mem[i+0] : urf2.urf10.mem[i+0], rf_v[i+0], rf_source[i+0],
+	    	i+0, urf2.ab[i+0] ? urf2.urf20.mem[i+0] : urf2.urf10.mem[i+0], rf_v[i+0], rf_source[i+0],
 	    	i+1, urf2.ab[i+1] ? urf2.urf20.mem[i+1] : urf2.urf10.mem[i+1], rf_v[i+1], rf_source[i+1],
 	    	i+2, urf2.ab[i+2] ? urf2.urf20.mem[i+2] : urf2.urf10.mem[i+2], rf_v[i+2], rf_source[i+2],
 	    	i+3, urf2.ab[i+3] ? urf2.urf20.mem[i+3] : urf2.urf10.mem[i+3], rf_v[i+3], rf_source[i+3]
@@ -3497,12 +3541,15 @@ begin
 	dram0_exc <= FLT_NONE;
 	dram0_id <= 'd0;
 	dram0_load <= 'd0;
+	dram0_loadz <= 'd0;
 	dram0_store <= 'd0;
 	dram0_erc <= 'd0;
 	dram0_op <= OP_NOP;
 	dram0_tgt <= 'd0;
 	dram0_tid <= 'd0;
 	dram0_more <= 'd0;
+	dram0_hi <= 'd0;
+	dram0_shift <= 'd0;
 	dram1 <= DRAMSLOT_AVAIL;
 	dram1p <= DRAMSLOT_AVAIL;
 	dram1_addr <= 'd0;
@@ -3510,12 +3557,15 @@ begin
 	dram1_exc <= FLT_NONE;
 	dram1_id <= 'd0;
 	dram1_load <= 'd0;
+	dram1_loadz <= 'd0;
 	dram1_store <= 'd0;
 	dram1_erc <= 'd0;
 	dram1_op <= OP_NOP;
 	dram1_tgt <= 'd0;
 	dram1_tid <= 8'h08;
 	dram1_more <= 'd0;
+	dram1_hi <= 'd0;
+	dram1_shift <= 'd0;
 	dram_v0 <= 'd0;
 	dram_v1 <= 'd0;
 	panic <= `PANIC_NONE;

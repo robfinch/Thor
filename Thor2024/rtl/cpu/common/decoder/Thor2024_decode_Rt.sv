@@ -86,7 +86,7 @@ begin
 		fnRt = ir.csr.Rt;
 	OP_MOV:
 		fnRt = ir.r2.Rt;
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,
 	OP_LDX:
 		fnRt = ir.ls.Rt;
 	default:

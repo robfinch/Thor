@@ -87,9 +87,9 @@ mnemonic mnemonics[]={
 	"atom", {OP_IMM,0,0,0,0}, {ATOM,CPU_ALL,0,FMT2(0)|OPC(122LL),5,SZ_UNSIZED,0},	
 
 	"bbc",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(44LL),5,SZ_UNSIZED,0},
-	"bbc",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(46LL),5,SZ_UNSIZED,0},
+	"bbc",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(46LL),5,SZ_UNSIZED,0, FLG_UI6},
 	"bbs",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(45LL),5,SZ_UNSIZED,0},
-	"bbs",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(47LL),5,SZ_UNSIZED,0},
+	"bbs",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(47LL),5,SZ_UNSIZED,0, FLG_UI6},
 	"bcc",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(41LL),5,SZ_UNSIZED,0},
 
 	"bcdadd", {OP_REG,OP_REG,OP_REG,OP_REG,0}, {R3,CPU_ALL,0,0x0000000000F5LL,6},	
@@ -111,6 +111,7 @@ mnemonic mnemonics[]={
 	"bhi",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(43LL),5,SZ_UNSIZED,0},
 	"bhs",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(41LL),5,SZ_UNSIZED,0},
 	"ble",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,OPC(42LL),5,SZ_UNSIZED,0},
+	"ble",	{OP_REG,OP_IMM,OP_IMM,0,0}, {B,CPU_ALL,0,RB(63)|OPC(42LL),5,SZ_UNSIZED,0},
 	"bleu",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|OPC(42LL),5,SZ_UNSIZED,0},
 	"bllt",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,LK(1)|OPC(40LL),5,SZ_UNSIZED,0},
 	"blltu",	{OP_REG,OP_REG,OP_IMM,0,0}, {B,CPU_ALL,0,CM(1LL)|LK(1)|OPC(40LL),5,SZ_UNSIZED,0},
@@ -744,32 +745,32 @@ static int is_reg(char *p, char **ep)
 	/* SP */
 	if ((p[n]=='s' || p[n]=='S') && (p[n+1]=='p' || p[n+1]=='P') && !ISIDCHAR((unsigned char)p[n+2])) {
 		*ep = &p[n+2];
-		return (63+sgn);
+		return (62+sgn);
 	}
 	/* FP */
 	if ((p[n]=='f' || p[n]=='F') && (p[n+1]=='p' || p[n+1]=='P') && !ISIDCHAR((unsigned char)p[n+2])) {
 		*ep = &p[n+2];
-		return (62+sgn);
+		return (61+sgn);
 	}
 	/* GP */
 	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && !ISIDCHAR((unsigned char)p[n+2])) {
 		*ep = &p[n+2];
-		return (61+sgn);
+		return (60+sgn);
 	}
 	/* GP0 */
 	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && p[n+2]=='0' && !ISIDCHAR((unsigned char)p[n+3])) {
 		*ep = &p[n+3];
-		return (61+sgn);
+		return (60+sgn);
 	}
 	/* GP1 */
 	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && p[n+2]=='1' && !ISIDCHAR((unsigned char)p[n+3])) {
 		*ep = &p[n+3];
-		return (60+sgn);
+		return (59+sgn);
 	}
 	/* GP2 */
 	if ((p[n]=='g' || p[n]=='G') && (p[n+1]=='p' || p[n+1]=='P') && p[n+2]=='2' && !ISIDCHAR((unsigned char)p[n+3])) {
 		*ep = &p[n+3];
-		return (59+sgn);
+		return (58+sgn);
 	}
 	/* Argument registers 0 to 9 */
 	if (p[n] == 'a' || p[n]=='A') {
@@ -2636,7 +2637,7 @@ static int encode_vmask(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t va
 
 /* Encode condional branch. */
 
-static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, thuge* postfix, size_t* pfxsize)
+static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, thuge* postfix, size_t* pfxsize, unsigned int flags)
 {
 	uint64_t tgt;
 	thuge hg;
@@ -2657,17 +2658,23 @@ static void encode_branch_B(uint64_t* insn, operand* op, int64_t val, int i, thu
 				*insn = *insn | RA(63);
 			break;
 		case 1:
-			hg = huge_from_int(val);
-			if (postfix)
-				*postfix = hg;
-			if (pfxsize)
-				*pfxsize = 4;
-			if (!is_nbit(huge_from_int(val), 32LL)) {
-				if (pfxsize)
-					*pfxsize = 8;
+			if (flags & FLG_UI6) {
+				if (insn)
+					*insn = *insn | RB(val & 0x3f);
 			}
-			if (insn)
-				*insn = *insn | RB(63);
+			else {
+				hg = huge_from_int(val);
+				if (postfix)
+					*postfix = hg;
+				if (pfxsize)
+					*pfxsize = 4;
+				if (!is_nbit(huge_from_int(val), 32LL)) {
+					if (pfxsize)
+						*pfxsize = 8;
+				}
+				if (insn)
+					*insn = *insn | RB(63);
+			}
 			break;
 #ifdef BRANCH_PGREL			
 		case 2:
@@ -2741,7 +2748,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
 	switch(mnemo->ext.format) {
 
 	case B:
-		encode_branch_B(insn, op, val, i, postfix, pfxsize);
+		encode_branch_B(insn, op, val, i, postfix, pfxsize, mnemo->ext.flags);
 		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 
@@ -2751,7 +2758,7 @@ static int encode_branch(uint64_t* insn, mnemonic* mnemo, operand* op, int64_t v
   	return (1);
 
 	case BZ:
-		encode_branch_B(insn, op, val, i+1, postfix, pfxsize);
+		encode_branch_B(insn, op, val, i+1, postfix, pfxsize, mnemo->ext.flags);
 		*isize = *pfxsize==4 ? 10 : *pfxsize==8 ? 15 : *isize;
   	return (1);
 

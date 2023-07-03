@@ -82,7 +82,7 @@ begin
 	OP_SHIFT:	fnIsAlu = 1'b1;
 	OP_CSR:		fnIsAlu = 1'b1;
 	OP_MOV:		fnIsAlu = 1'b1;
-	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
+	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnIsAlu = 1'b1;
 	OP_LDX:
 		fnIsAlu = 1'b1;
