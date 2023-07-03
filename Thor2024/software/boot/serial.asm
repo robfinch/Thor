@@ -219,7 +219,7 @@ SerialPeekCharDirect:
 # transmitter is empty. 
 #
 # Stack Space
-#		4 words
+#		1 words
 # Parameters:
 #		a1 = character to put
 # Modifies:
@@ -227,20 +227,20 @@ SerialPeekCharDirect:
 #------------------------------------------------------------------------------
 
 SerialPutChar:
+	push a0
 .spc0001:
 #	lda		COREID					; Ensure we have the IO Focus
 #	cmpa	IOFocusID
 #	bne		spc0001
-#	andcc	#$D6F						; provide a window for an interrupt to occur
-#	ldu		#ACIA_MMU
-#	orcc	#$290						; mask off interrupts
+	nop										# provide a window for an interrupt to occur
+	nop
 	# Between the status read and the transmit do not allow an
 	# intervening interrupt.
-	atom 077777
+	atom 0777
 	ldtu.io a0,ACIA_STAT	# wait until the uart indicates tx empty
-	and	a0,a0,16					# bit #4 of the status reg
-	beq	a0,r0,.spc0001		# branch if transmitter is not empty
+	bbc	a0,4,.spc0001			# branch if transmitter is not empty, bit #4 of the status reg
 	stt.io a1,ACIA_TX			# send the byte
+	pop a0
 	ret
 
 #------------------------------------------------------------------------------
@@ -306,16 +306,15 @@ SerialIRQ:
 #------------------------------------------------------------------------------
 
 SerialPutString:
-	push lr1,a0,a1,a3
-	mov	a3,a0
+	push lr1,a0,a1
 .sps2:
-	ldb	a1,[a3]
+	ldb	a1,[a0]
+	add	a0,a0,1
 	beq	a1,r0,.spsXit
-	add	a3,a3,1
 	bsr	SerialPutChar
 	bra	.sps2
 .spsXit:
-	pop lr1,a0,a1,a3
+	pop lr1,a0,a1
 	ret
 
 #------------------------------------------------------------------------------

@@ -18,12 +18,16 @@
 .set TextScr,0xFFFC0408
 .set TextAttr,0xFFFC0410
 
+.set mon_r1,0xFFFC0430
+.set mon_r2,0xFFFC0440
+
 .extern	SerialInit
 .extern SerialPutString
 .extern SerialTest
 
 	.data
 	.space	10
+	.sdreg 60
 
 #	.org	0xFFFFFFFFFFFD0000
 	.text
@@ -45,12 +49,17 @@ start:
 	
 	bsr	Delay3s
 	bsr SerialInit
-	bsr SerialTest
-	bsr ClearScreen
-
-#	ldi	a0,msgStart
-#	bsr	SerialPutString
+	nop
+	nop
 	ldi gp,0xffff0000
+	lda a0,msgStart[gp]
+	nop
+	nop
+	bsr	SerialPutString
+	nop
+	nop
+#	bsr SerialTest
+	bsr ClearScreen
 	lda a0,msgStart[gp]
 	bsr DisplayString
 
@@ -99,7 +108,7 @@ stall:
 # ------------------------------------------------------------------------------
 
 Delay3s:
-	ldi	a0,3	#000000
+	ldi	a0,30000000
 .0001:
 	lsr	a1,a0,8
 	stt.io a1,leds
@@ -310,6 +319,8 @@ IncCursorPos:
 	stb r0,CursorCol
 	pop a0,a1
 IncCursorRow:
+	nop
+	nop
 	push a0,a1
 	ldb a0,CursorRow
 	add a0,a0,1
@@ -418,6 +429,17 @@ DisplayString:
 	ret
 
 #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+CRLF:
+	push a1
+	ldi a1,'\r'
+	bsr DisplayChar
+	ldi a1,'\n'
+	bsr DisplayChar
+	pop a1
+	ret
+
+#------------------------------------------------------------------------------
 # Display nybble in a1
 #------------------------------------------------------------------------------
 
@@ -484,7 +506,18 @@ DisplayOcta:
 	pop lr1
 	ret
 
+Monitor:
+	bra Monitor
+
+GetNumber:
+	ret
+
+GetRange:
+	ret
+
 	.include "serial.asm"
+	.include "xmodem.asm"
+	.include "keyboard.asm"
 
 	.balign	0x100,0xff
 	

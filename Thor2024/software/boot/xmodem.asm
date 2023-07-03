@@ -59,58 +59,53 @@
 
 # ------------------------------------------------------------------------------
 # Send data using XModem.
+#
+# Register usage
+#		t2 = xm_flag
+#		t3 = xm_protocol
+#		t5 = xm_packetnum
 # ------------------------------------------------------------------------------
 
 xm_SendStart:
 	bsr	GetRange
-	ldx		mon_r1+2				; x = buffer address
-	tfr		x,u
-	ldi		t0,1						# packet numbers start at one
-	sto		t0,xm_packetnum+1
+	ldo a3,mon_r1					# a3 = buffer address
+	ldo a4,mon_r2					# a4 = last address
+	ldi	t5,1							# packet numbers start at one
 	# Wait for receiver to send a NAK
 xm_send:							
 	bsr SerialGetChar			# select blocking input
 	beq a0,NAK,xm_send5		# should have got a NAK
 	bne a0,'C',xm_send		# or a 'C'
 xm_send5:
-	stb	a0,xm_protocol
+	mov t3,a0
 xm_send4:
 	ldi a0,SOH
 	bsr SerialPutChar			# send start
-	ldb a0,xm_packetnum+1	# send packet number
+	mov a0,t5							# send packet number
 	bsr SerialPutChar
 	xor a0,a0,-1					# one's complement
 	bsr SerialPutChar
 	ldi a1,0							# a1 = byte count
-	tfr		x,u							; u = buffer address
 xm_send1:
-	ldb a0,[a2]						# grab a byte from the buffer
-	add a2,a2,1
+	ldb a0,[a3+a1]				# grab a byte from the buffer
 	bsr SerialPutChar			# send it out
 	add a1,a1,1
-	blt a1,128,xm_send1		# number of bytes in payload
-	ldb a0,xm_protocol
-	bne a0,'C',xm_send2		# CRC protocol?
+	bbc a1,7,xm_send1			# number of bytes in payload
+	bne t3,'C',xm_send2		# CRC protocol?
 	bsr	xm_calc_crc				# compute CRC
-	ldw a0,xm_crc					# get crc
 	ror a0,a0,8						# transfer high eight bits first, so
 	bsr SerialPutChar
 	rol a0,a0,8
-	bsr SerialPutChar			# and send out low byte
 	bra	xm_send3
 xm_send2:
 	bsr	xm_calc_checksum
-	ldb a0,xm_checksum
-	bsr SerialPutChar
 xm_send3:
+	bsr SerialPutChar			# send low byte
 	bsr SerialGetChar			# block until input is present
 	bne a0,ACK,xm_send4		# not an ACK then resend the record
-	ldo a0,xm_packetnum		# increment packet number
-	add a0,a0,1
-	sto a0,xm_packetnum
-	add a2,a2,128					# advance buffer pointer
-	cmpx	mon_r2+2
-	blo		xm_send4				; go send next record
+	add t5,t5,1						# increment packet number
+	add a3,a3,128					# advance buffer pointer
+	blt a3,a4,xm_send4		# go send next record
 	ldi a0,EOT
 	bsr SerialPutChar			# send end of transmission
 	bsr SerialPutChar			# send end of transmission
@@ -121,17 +116,17 @@ xm_send3:
 # Get a byte, checking for a receive timeout.
 #
 # Returns:
-#		accb = byte (0 to 255) or -1 if timed out
+#		a0 = byte (0 to 255) or -1 if timed out
 # ------------------------------------------------------------------------------
 
 xm_getbyte:
 	push a1
 xm_gb1:
 	ldo a1,xm_timer
-	bgt a1,2047,xm_gb2	# check the timeout - 2048 ticks (3 seconds approx.)
-	bsr SerialPeekChar	# non-blocking, try and get a character
-	blt a0,r0,xm_gb1		# if no character, try again
-	bsr	xm_outbyteAsHex
+	bbs a1,11,xm_gb2					# check the timeout - 2048 ticks (3 seconds approx.)
+	bsr SerialPeekCharDirect	# non-blocking, try and get a character
+	blt a0,r0,xm_gb1					# if no character, try again
+#	bsr	xm_outbyteAsHex
 	pop a1
 	ret
 xm_gb2:
@@ -142,6 +137,11 @@ xm_gb2:
 # ------------------------------------------------------------------------------
 # XModem Receive
 #
+# Register usage
+#		t2 = xm_flag
+#		t3 = xm_protocol
+#		t4 = xm_packetnum (last seen)
+#		t5 = xm_packetnum
 # Parameters:
 #		none
 # Modifies:
@@ -156,16 +156,17 @@ xm_ReceiveStart:
 	bsr	Delay3s
 	bsr	Delay3s
 	bsr	GetNumber			# Get the transfer address
-	tstb							# Make sure we got a value
-	lbeq Monitor
-	ldx	mon_numwka+2	; X = transfer address
-	sto	r0,xm_packetnum	# initialize
-	ldi	a0,#'C'				# try for CRC first
-	stb	a0,xm_protocol
+	beq a0,r0,Monitor	# Make sure we got a value
+	mov a3,a0					# a3 = transfer address
+#	ldx	mon_numwka+2	; X = transfer address
+	ldi t4,0					# packet num = 0
+	ldi t5,0
+	ldi	a0,'C'				# try for CRC first
+	mov t3,a0
 xm_receive:
 	ldi	a1,2					# number of times to retry -1
 xm_rcv5:
-	ldb	a0,xm_protocol	# indicate we want a transfer (send protocol byte)
+	mov	a0,t3					# indicate we want a transfer (send protocol byte)
 	bsr SerialPutChar
 xm_rcv4:
 	sto r0,xm_timer		# clear the timeout
@@ -183,53 +184,45 @@ xm_rcv_nak:					# wasn't a valid start so
 xm_SOH:
 	bsr	xm_getbyte		# get packet number
 	blt a0,r0,xm_rcv_to1
-	stb a0,xm_packetnum
+	mov t5,a0					# t5 = packet num
 	mov a2,a0					# save it
 	bsr	xm_getbyte		# get complement of packet number
 	blt a0,r0,xm_rcv_to2
 	add a0,a0,a2			# add the two values
 	and a0,a0,0xff		# the sum should be $FF
 	sub a0,a0,0xff
-	stb	a0,xm_flag		# should be storing a zero if there is no error
+	mov	t2,a0					# xm_flag, should be storing a zero if there is no error
 	ldi a2,0					# a2 = payload byte counter
-	tfr		x,u
 xm_rcv2:
 	bsr	xm_getbyte
 	blt a0,r0,xm_rcv_to1
-	stb a0,[a3]				# store the byte to memory
-	add a3,a3,1
+	stb a0,[a3+a2]		# store the byte to memory
 	add a2,a2,1
-	blt a2,128,xm_rcv3	# 128 bytes per payload
+	bbc a2,7,xm_rcv2	# 128 bytes per payload
 	bsr	xm_getbyte		# get checksum or CRC byte
 	blt a0,r0,xm_rcv_to1
-	stb	a0,xm_tmp			# stuff checksum/CRC byte
-	ldb	a0,xm_protocol
-	bne a0,'C',xm_rcv_chksum
+	mov	t1,a0					# stuff checksum/CRC byte
+	bne t3,'C',xm_rcv_chksum	# check protocol
 	bsr	xm_getbyte		# get low order CRC byte
 	blt a0,r0,xm_rcv_to1
-	ldb a1,xm_tmp			# get the high byte
-	and a0,a0,0xff
+	and a1,t1,0xff		# get the high byte
 	asl a1,a1,8
-	or a0,a0,a1				# combine high and low byte
-	stw a0,xm_tmp2
+	or s0,a0,a1				# combine high and low byte
+	ldi a1,128				# number of bytes in buffer
 	bsr	xm_calc_crc		# compute the CRC-16 for the received data
-	ldw	a0,xm_crc			# and compare to received value
-	ldw a1,xm_tmp2
+	mov a1,s0					# and compare to received value
 	bra	xm_rcv3
 xm_rcv_chksum:
 	bsr	xm_calc_checksum
-	ldb	a0,xm_checksum
-	ldb a1,xm_tmp			# where we stuffed the byte
+	and a1,t1,0xff		# where we stuffed the byte
 xm_rcv3:
 	bne a0,a1,xm_rcv_nak	# if not the same, NAK
-	ldb a0,xm_flag
+	mov a0,t2					# get back flag value
 	bne	a0,r0,xm_rcv_nak	# bad packet number?
 	ldi a0,ACK				# packet recieved okay, send back an ACK
 	bsr SerialPutChar
-	ldb a0,xm_packetnum+1	# did we receive the same packet
-	ldb a1,xm_packetnum
-	beq	a0,a1,xm_rcv4		# same packet received, dont update buffer pointer
-	stb	a0,xm_packetnum	# update last seen packet number
+	beq	t4,t5,xm_rcv4		# same packet received, dont update buffer pointer
+	mov t4,t5						# update last seen packet number
 	add a3,a3,128				# increment buffer pointer
 	bra	xm_rcv4					# and go back for next packet
 xm_rcv_to2:
@@ -244,13 +237,13 @@ xm_EOT:								# end of transmission received, return
 xm_retry1:
 	sub a1,a1,1
 	bgt a1,r0,xm_rcv5
-	ldb a0,xm_protocol	# are we already lowered down to checksum protocol?
+	mov a0,t3						# are we already lowered down to checksum protocol?
 	beq a0,NAK,xm_noTransmitter		# did we try both checksum and CRC?
 	ldi a0,NAK
-	stb	a0,xm_protocol
+	mov t3,a0						# set protocol
 	bra xm_receive
 xm_noTransmitter:
-	lda a0,msgXmNoTransmitter
+	lda a0,msgXmNoTransmitter[gp]
 	bsr DisplayString
 	bra	Monitor	
 
@@ -272,7 +265,7 @@ msgXmNoTransmitter:
 # Parameters:
 #		a0 = buffer address
 #	Returns:
-#		none
+#		a0 = checksum
 # ------------------------------------------------------------------------------
 
 xm_calc_checksum:
@@ -317,37 +310,32 @@ xm_cs1:
 #		xm_crc variable
 # Parameters:
 #		a0 = buffer address
+#		a1 = buffer length
 # Returns:
 #		a0 = crc
 # ------------------------------------------------------------------------------
 
 xm_calc_crc:
-	push a1,a2,a3,a4
-	push a5
-	mov a2,r0					# crc = 0
+	push a2,a3,a4,a5
+	ldi a2,0					# crc = 0
 	ldi	a5,0					# a5 = byte count
 xm_crc1:
 	ldbu a3,[a0+a5]		# get byte
 	asl a3,a3,8
-	xor a2,a3,a2			# crc = crc ^ tmp
-	ldi a1,0
+	xor a2,a2,a3			# crc = crc ^ tmp
+	ldi a4,0					# iter count
 xm_crc4:
-	and a4,a2,0x8000	# check for $8000
-	beq	a4,r0,xm_crc2	# no? then just go shift
 	asl a2,a2,1
+	bbc	a2,16,xm_crc3	# check for $10000, no?
 	xor a2,a2,0x1021	# and xor
-	bra	xm_crc3
-xm_crc2:
-	asl a2,a2,1
 xm_crc3:
-	add a1,a1,1
-	blt a1,8,xm_crc4	# repeat eight times
+	add a4,a4,1
+	blt a4,8,xm_crc4	# repeat eight times
 	add a5,a5,1				# increment byte count
-	blt a5,128,xm_crc1
+	blt a5,a1,xm_crc1
 	and a0,a2,0xffff	# we want only a 16-bit CRC
 	stw a0,xm_crc
-	pop a5
-	pop a1,a2,a3,a4
+	pop a2,a3,a4,a5
 	ret
 
 #xm_outbyteAsHex:
