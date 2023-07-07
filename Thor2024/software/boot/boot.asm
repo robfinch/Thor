@@ -35,6 +35,8 @@
 start:
 	ldi t0,-1
 	stt.io t0,leds
+	ldi t0,ExcHandler
+	csrrw r0,t0,0x3033					# set kernel exception vector
 	ldi	t0,txtscreen
 	stt t0,TextScr
 	ldi t0,0x43FFFFE0003F0000		# white foreground, blue background
@@ -49,15 +51,9 @@ start:
 	
 	bsr	Delay3s
 	bsr SerialInit
-	nop
-	nop
 	ldi gp,0xffff0000
 	lda a0,msgStart[gp]
-	nop
-	nop
-	bsr	SerialPutString
-	nop
-	nop
+#	bsr	SerialPutString
 #	bsr SerialTest
 	bsr ClearScreen
 	lda a0,msgStart[gp]
@@ -108,7 +104,8 @@ stall:
 # ------------------------------------------------------------------------------
 
 Delay3s:
-	ldi	a0,30000000
+	ldi	a0,10000000
+Delay:
 .0001:
 	lsr	a1,a0,8
 	stt.io a1,leds
@@ -120,24 +117,22 @@ doRet:
 #------------------------------------------------------------------------------
 # clearscreen
 # Parameters:
-# 	<none>
+# 	none
 # Modifies:
-#		<none>
+#		mc0,mc1,mc2
 # Stack space:
-#		3 words
+#		none
 #------------------------------------------------------------------------------
 
 ClearScreen:
-	push t0,t2,t3
-	ldo t0,TextAttr
-	or t0,t0,' '
-	mov t3,r0
-	ldi t2,64*8*32							# 64x32x8
+	ldo mc0,TextAttr
+	or mc0,mc0,' '
+	ldo mc1,TextScr
+	add mc2,mc1,64*8*32						# 64x32x8
 .st1:
-	sto.io t0,txtscreen[r0+t3]
-	add t3,t3,8
-	blt t3,t2,.st1
-	pop t0,t2,t3
+	sto.io mc0,[mc1]
+	add mc1,mc1,8
+	blt mc1,mc2,.st1
 	ret
 
 #------------------------------------------------------------------------------
@@ -149,19 +144,17 @@ ClearScreen:
 #------------------------------------------------------------------------------
 
 CalcScreenLoc:
-	push a1
 	ldb	a0,CursorRow			# cursor row
 	and a0,a0,0x7f
-	ldb a1,TextCols				# times number of columns
-	mul a0,a0,a1
-	ldb a1,CursorCol			# plus cursor col
-	and a1,a1,0x7f
-	add a0,a0,a1
+	ldb mc0,TextCols			# times number of columns
+	mul a0,a0,mc0
+	ldb mc0,CursorCol			# plus cursor col
+	and mc0,mc0,0x7f
+	add a0,a0,mc0
 	stw a0,TextCurpos			# update text position
 	asl a0,a0,3						# multiply by text cell size
-	ldtu a1,TextScr				# add in text screen location
-	add a0,a0,a1
-	pop a1
+	ldtu mc0,TextScr			# add in text screen location
+	add a0,a0,mc0
 	ret
 
 #------------------------------------------------------------------------------
@@ -368,21 +361,19 @@ ScrollUp:
 #------------------------------------------------------------------------------
 
 BlankLastLine:
-	push t0,a0,a1,a2
-	ldt a0,TextScr
-	ldb a1,TextCols
-	ldb a2,TextRows
-	sub a2,a2,1
-	mul a1,a1,a2
-	asl a1,a1,3
-	ldi t0,' '
-	ldb a2,TextCols
+	ldt mc0,TextScr
+	ldb mc1,TextCols
+	ldb mc2,TextRows
+	sub mc2,mc2,1
+	mul mc1,mc1,mc2
+	asl mc1,mc1,3
+	ldi mc3,' '
+	ldb mc2,TextCols
 .0001:
-	stb.io t0,[a0+a1]
-	add a1,a1,8
-	sub a2,a2,1
-	bgt a2,r0,.0001
-	pop t0,a0,a1,a2
+	stb.io mc3,[mc0+mc1]
+	add mc1,mc1,8
+	sub mc2,mc2,1
+	bgt mc2,r0,.0001
 	ret	
 
 #------------------------------------------------------------------------------
@@ -391,18 +382,16 @@ BlankLastLine:
 # Sync the hardware cursor's position to the text cursor position.
 #
 # Parameters:
-#		<none>
+#		none
 # Returns:
-#		<none>
+#		none
 # Registers Affected:
-#		<none>
+#		mc0
 #------------------------------------------------------------------------------
 
 SyncCursor:
-	push a0
-	ldw a0,TextCurpos
-	stw.io a0,0xfec80024
-	pop a0
+	ldw mc0,TextCurpos
+	stw.io mc0,0xfec80024
 	ret
 	
 #------------------------------------------------------------------------------
@@ -419,7 +408,7 @@ SyncCursor:
 DisplayString:
 	push lr1,a0,a1
 .0002:
-	ldb a1,[a0]
+	ldb.io a1,[a0]
 	beq a1,r0,.0001
 	bsr DisplayChar
 	add a0,a0,1
@@ -506,18 +495,19 @@ DisplayOcta:
 	pop lr1
 	ret
 
-Monitor:
-	bra Monitor
-
 GetNumber:
 	ret
 
-GetRange:
-	ret
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+	.align 4
+ExcHandler:
+	rti
 
 	.include "serial.asm"
 	.include "xmodem.asm"
 	.include "keyboard.asm"
+	.include "Monitor.asm"
 
 	.balign	0x100,0xff
 	
@@ -534,4 +524,4 @@ msgStart:
 	.8byte	0xFFFFFFFFFFFFFFFF
 
 	.global Delay3s
-
+	.global Delay

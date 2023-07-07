@@ -10,6 +10,8 @@
 #
 # ============================================================================
 #
+	.extern Delay
+
 	.bss
 	.space	10
 .set XON,0x11
@@ -32,29 +34,28 @@
 #------------------------------------------------------------------------------
 # Initialize serial port.
 #
-# Clear buffer indexes. Two bytes are used for the buffer index even though
-# only a single byte is needed. This is for convenience in calculating the
-# number of characters in the buffer, done later. The upper byte remains at
-# zero.
-# The port is initialized for 9600 baud, 1 stop bit and 8 bits data sent.
+# Clear buffer indexes. Two bytes are used for the buffer index.
+# The port is initialized for 57600 baud, 1 stop bit and 8 bits data sent.
 # The internal baud rate generator is used.
 #
+# Stack Space:
+#		none
 # Parameters:
 #		none
 # Modifies:
-#		a0
+#		mc0
 # Returns:
 #		none
 #------------------------------------------------------------------------------
 
 InitSerial:
 SerialInit:
-	stt		r0,SerHeadRcv
-	stt		r0,SerTailRcv
-	stt		r0,SerHeadXmit
-	stt		r0,SerTailXmit
-	stb		r0,SerRcvXon
-	stb		r0,SerRcvXoff
+	stt	r0,SerHeadRcv
+	stt	r0,SerTailRcv
+	stt	r0,SerHeadXmit
+	stt	r0,SerTailXmit
+	stb	r0,SerRcvXon
+	stb	r0,SerRcvXoff
 #	lda		COREID
 #sini1:
 #	cmpa	IOFocusID
@@ -62,37 +63,41 @@ SerialInit:
 #	orcc	#$290						; mask off interrupts
 #	ldd		#ACIA_MMU				; map ACIA into address space
 #	std		MMU
-	ldi	a0,0x09					# dtr,rts active, rxint enabled (bit 1=0), no parity
-	stt.io a0,ACIA_CMD
-	ldi	a0,0x6001E			# baud 9600, 1 stop bit, 8 bit, internal baud gen
-	stt.io a0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
+	ldi	mc0,0x09						#	dtr,rts active, rxint enabled (bit 1=0), no parity
+	stt.io mc0,ACIA_CMD
+#	ldi	a0,0x6001E					# baud 9600, 1 stop bit, 8 bit, internal baud gen
+	ldi	mc0,0x08060011			# baud 57600, 1 stop bit, 8 bit, internal baud gen
+	stt.io mc0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
 #	ldd		#$000F00				; map out ACIA
 #	std		MMU
 	ret
 
 #------------------------------------------------------------------------------
-# Calculate number of character in input buffer.
+# Calculate number of character in input buffer. Must be called with interrupts
+# disabled.
 #
+# Stack Space:
+#		none
 # Parameters:
 #		none
+# Modifies:
+#		mc0,mc1
 # Returns:
 #		a0 = number of bytes in buffer.
 #------------------------------------------------------------------------------
 
 SerialRcvCount:
-	push a1,a2
 	mov	a0,r0
-	ldtu a1,SerTailRcv
-	ldtu a2,SerHeadRcv
-	sub	a0,a1,a2
+	ldtu mc0,SerTailRcv
+	ldtu mc1,SerHeadRcv
+	sub	a0,mc0,mc1
 	bge	a0,r0,.srcXit
 	ldi	a0,0x1000
-	ldtu a2,SerHeadRcv
-	ldtu a1,SerTailRcv
-	sub	a0,a0,a2
-	add	a0,a0,a1
+	ldtu mc1,SerHeadRcv
+	ldtu mc0,SerTailRcv
+	sub	a0,a0,mc1
+	add	a0,a0,mc0
 .srcXit:
-	pop a1,a2
 	ret
 
 #------------------------------------------------------------------------------
@@ -103,7 +108,7 @@ SerialRcvCount:
 # XON.
 #
 # Stack Space:
-#		4 words
+#		3 words
 # Parameters:
 #		none
 # Modifies:
@@ -158,28 +163,24 @@ SerialGetChar:
 # to send an XON here.
 #
 # Stack Space:
-#		3 words
+#		none
 # Parameters:
 #		none
 # Modifies:
-#		none
+#		mc0
 # Returns:
 #		a0 = character or -1
 #------------------------------------------------------------------------------
 
 SerialPeekChar:
-#	orcc	#$290							; mask off interrupts
-	push a1
-	atom 07777
+	atom 077777							# temporarily mask interrupts
 	ldtu a0,SerHeadRcv			# check if anything is in buffer
-	ldtu a1,SerTailRcv
-	beq	a0,a1,.spcNoChars		# no?
+	ldtu mc0,SerTailRcv
+	beq	a0,mc0,.spcNoChars		# no?
 	ldbu a0,SerRcvBuf[a0]		# get byte from buffer
-	pop a1
 	ret
 .spcNoChars:
 	ldi	a0,-1
-	pop a1
 	ret
 
 #------------------------------------------------------------------------------
@@ -188,7 +189,7 @@ SerialPeekChar:
 # buffer.
 #
 # Stack Space:
-#		3 words
+#		none
 # Parameters:
 #		none
 # Modifies:
@@ -205,11 +206,10 @@ SerialPeekCharDirect:
 #	orcc	#$290						; mask off interrupts
 	atom 077777
 	ldbu.io	a0,ACIA_STAT
-	and	a0,a0,8					# look for Rx not empty
-	beq	a0,r0,.spcd0001
+	bbc	a0,3,.0001				# look for Rx not empty
 	ldbu.io	a0,ACIA_RX
 	ret
-.spcd0001:
+.0001:
 	ldi	a0,-1
 	ret
 
@@ -223,12 +223,11 @@ SerialPeekCharDirect:
 # Parameters:
 #		a1 = character to put
 # Modifies:
-#		none
+#		mc0
 #------------------------------------------------------------------------------
 
 SerialPutChar:
-	push a0
-.spc0001:
+.0001:
 #	lda		COREID					; Ensure we have the IO Focus
 #	cmpa	IOFocusID
 #	bne		spc0001
@@ -237,10 +236,9 @@ SerialPutChar:
 	# Between the status read and the transmit do not allow an
 	# intervening interrupt.
 	atom 0777
-	ldtu.io a0,ACIA_STAT	# wait until the uart indicates tx empty
-	bbc	a0,4,.spc0001			# branch if transmitter is not empty, bit #4 of the status reg
+	ldtu.io mc0,ACIA_STAT	# wait until the uart indicates tx empty
+	bbc	mc0,4,.0001				# branch if transmitter is not empty, bit #4 of the status reg
 	stt.io a1,ACIA_TX			# send the byte
-	pop a0
 	ret
 
 #------------------------------------------------------------------------------
@@ -263,58 +261,105 @@ SerialPutChar:
 SerialIRQ:
 #	lda		$2000+$D3				; Serial active interrupt flag
 #	beq		notSerInt
-.sirqNxtByte:
-	ldt.io a0,ACIA_STAT			# look for IRQs
-	bgt	a0,r0,.notSerInt	# quick test for any irqs
-	and	a0,a0,8						# check bit 3 = rx full (not empty)
-	beq	a0,r0,.notRxInt1
-	ldbu.io	a0,ACIA_RX				# get data from Rx buffer to clear interrupt
-	ldtu a1,SerTailRcv			# check if recieve buffer full
+.0002:
+	ldt.io a0,ACIA_STAT		# look for IRQs
+	bgt	a0,r0,.0001				# quick test for any irqs
+	bbc	a0,3,.0001				# check bit 3 = rx full (not empty)
+	ldbu.io	a0,ACIA_RX		# get data from Rx buffer to clear interrupt
+	ldtu a1,SerTailRcv		# check if recieve buffer full
 	add	a1,a1,1
-	and	a1,a1,0xfff
+	and	a1,a1,0xfff				# 4k Limit
 	ldtu a2,SerHeadRcv
-	beq	a1,a2,.sirqRxFull
+	beq	a1,a2,.0001				# ignore byte if buffer full
 	stt	a1,SerTailRcv			# update tail pointer
 	sub	a1,a1,1						# backup
 	and	a1,a1,0xfff
 	stb	a0,SerRcvBuf[a1]	# store recieved byte in buffer
-	ldbu a0,SerRcvXoff			# check if xoff already sent
-	bne	a0,r0,.sirqNxtByte
+	ldbu a0,SerRcvXoff		# check if xoff already sent
+	bne	a0,r0,.0002
 	bsr	SerialRcvCount		# if more than 4070 chars in buffer
-	blt	a0,4070,.sirqNxtByte
+	blt	a0,4070,.0002
 	ldi	a0,XOFF						# send an XOFF
 	stb	r0,SerRcvXon			# clear XON status
 	stb	a0,SerRcvXoff			# set XOFF status
 	stb.io a0,ACIA_TX
-	bra	.sirqNxtByte     	# check the status for another byte
+	bra	.0002     				# check the status for another byte
 	# Process other serial IRQs
-.notRxInt1:
-.sirqRxFull:
-.notRxInt:
-.notSerInt:
+.0001:
 	ret
 
 #------------------------------------------------------------------------------
 # Put a string to the serial port.
 #
+# Stack Space:
+#		none
 # Parameters:
 #		a0 = pointer to string
 # Modifies:
-#		none
+#		mc0,mc1,mc2,mc3
 # Returns:
 #		none
 #------------------------------------------------------------------------------
 
 SerialPutString:
-	push lr1,a0,a1
-.sps2:
-	ldb	a1,[a0]
+	mov mc1,a0
+	mov mc2,a1
+.0002:
+	ldb a1,[a0]
+	beq	a1,r0,.0003				# NULL terminator encountered?
 	add	a0,a0,1
-	beq	a1,r0,.spsXit
-	bsr	SerialPutChar
-	bra	.sps2
-.spsXit:
-	pop lr1,a0,a1
+	# inline serial putchar, avoid stacks pushes and pops
+.0001:
+	nop										# provide a window for an interrupt to occur
+	nop
+	# Between the status read and the transmit do not allow an
+	# intervening interrupt.
+	atom 0777
+	ldtu.io mc0,ACIA_STAT	# wait until the uart indicates tx empty
+	bbc	mc0,4,.0001				# branch if transmitter is not empty, bit #4 of the status reg
+	stt.io a1,ACIA_TX			# send the byte
+	bra	.0002
+.0003:
+	mov a0,mc1
+	mov a1,mc2
+	ret
+
+#------------------------------------------------------------------------------
+# Put a buffer to the serial port.
+#
+# Stack Space:
+#		none
+# Parameters:
+#		a0 = pointer to buffer
+#		a1 = number of bytes
+# Modifies:
+#		mc0,mc1,mc2,mc3
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+SerialPutBuf:
+	mov mc1,a0
+	mov mc2,a1
+.0002:
+	ble a1,r0,.0003				# end of buffer reached?
+	sub a1,a1,1
+	ldb.io mc3,[a0]
+	add	a0,a0,1
+	# inline serial putchar, avoid stacks pushes and pops
+.0001:
+	nop										# provide a window for an interrupt to occur
+	nop
+	# Between the status read and the transmit do not allow an
+	# intervening interrupt.
+	atom 0777
+	ldtu.io mc0,ACIA_STAT	# wait until the uart indicates tx empty
+	bbc	mc0,4,.0001				# branch if transmitter is not empty, bit #4 of the status reg
+	stt.io mc3,ACIA_TX		# send the byte
+	bra	.0002
+.0003:
+	mov a0,mc1
+	mov a1,mc2
 	ret
 
 #------------------------------------------------------------------------------
@@ -326,9 +371,11 @@ SerialTest:
 	bsr SerialPutChar
 	bra .0001
 
-#nmeSerial:
-#	fcb		"Serial",0
+	.rodata
+nmeSerial:
+	.byte "Serial",0
 
 .global SerialInit
 .global SerialPutString
+.global SerialPutBuf
 .global SerialTest

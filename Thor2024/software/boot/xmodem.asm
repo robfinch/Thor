@@ -35,6 +35,8 @@
 # ============================================================================
 
 	.extern Delay3s
+	.extern GetRange
+	.extern SerialPutBuf
 #
 # Xmodem variables
 #
@@ -57,9 +59,13 @@
 .set xm_ibuf,0xFFFC0080
 .set xm_obuf,0xFFFC0100
 
+	.text
 # ------------------------------------------------------------------------------
 # Send data using XModem.
 #
+# Parameters:
+#		a0 = buffer address
+#		a1 = last address
 # Register usage
 #		t2 = xm_flag
 #		t3 = xm_protocol
@@ -67,9 +73,9 @@
 # ------------------------------------------------------------------------------
 
 xm_SendStart:
-	bsr	GetRange
-	ldo a3,mon_r1					# a3 = buffer address
-	ldo a4,mon_r2					# a4 = last address
+	push lr1
+	mov a3,a0							# a3 = buffer address
+	mov a4,a1							# a4 = last address
 	ldi	t5,1							# packet numbers start at one
 	# Wait for receiver to send a NAK
 xm_send:							
@@ -79,37 +85,35 @@ xm_send:
 xm_send5:
 	mov t3,a0
 xm_send4:
-	ldi a0,SOH
+	ldi a1,SOH
 	bsr SerialPutChar			# send start
-	mov a0,t5							# send packet number
+	mov a1,t5							# send packet number
 	bsr SerialPutChar
-	xor a0,a0,-1					# one's complement
+	xor a1,a1,-1					# one's complement
 	bsr SerialPutChar
-	ldi a1,0							# a1 = byte count
-xm_send1:
-	ldb a0,[a3+a1]				# grab a byte from the buffer
-	bsr SerialPutChar			# send it out
-	add a1,a1,1
-	bbc a1,7,xm_send1			# number of bytes in payload
+	mov a0,a3							# a0 = buffer address
+	ldi a1,128						# a1 = byte count
+	bsr SerialPutBuf			# copy buffer to serial port
 	bne t3,'C',xm_send2		# CRC protocol?
 	bsr	xm_calc_crc				# compute CRC
-	ror a0,a0,8						# transfer high eight bits first, so
+	lsr a1,a0,8						# transfer high eight bits first
 	bsr SerialPutChar
-	rol a0,a0,8
 	bra	xm_send3
 xm_send2:
 	bsr	xm_calc_checksum
 xm_send3:
+	mov a1,a0							# transfer low eight bits
 	bsr SerialPutChar			# send low byte
 	bsr SerialGetChar			# block until input is present
 	bne a0,ACK,xm_send4		# not an ACK then resend the record
 	add t5,t5,1						# increment packet number
 	add a3,a3,128					# advance buffer pointer
-	blt a3,a4,xm_send4		# go send next record
-	ldi a0,EOT
+	bltu a3,a4,xm_send4		# go send next record
+	ldi a1,EOT
 	bsr SerialPutChar			# send end of transmission
 	bsr SerialPutChar			# send end of transmission
 	bsr SerialPutChar			# send end of transmission
+	pop lr1
 	ret
 
 # ------------------------------------------------------------------------------
