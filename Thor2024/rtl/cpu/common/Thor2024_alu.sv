@@ -66,10 +66,12 @@ value_t div_q, div_r;
 value_t cmpo;
 value_t bus;
 value_t blendo;
-
-assign shl = {64'd0,a,{64{ir[33]}}} << (ir[32] ? ir[24:19] : b[5:0]);
-assign shr = {{64{ir[33]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
-assign asr = {{64{a[63]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
+always_comb
+	shl = {64'd0,a,{64{ir[33]}}} << (ir[32] ? ir[24:19] : b[5:0]);
+always_comb
+	shr = {{64{ir[33]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
+always_comb
+	asr = {{64{a[63]}},a,64'd0} >> (ir[32] ? ir[24:19] : b[5:0]);
 
 always_ff @(posedge clk)
 begin
@@ -164,12 +166,12 @@ always_comb
 		OP_ASL:	bus = shl[127:64];
 		OP_LSR:	bus = shr[127:64];
 		OP_ROL:	bus = shl[127:64]|shl[191:128];
-		OP_ROR:	bus = shr[127:64]|shr[191:128];
+		OP_ROR:	bus = shr[127:64]|shr[63:0];
 		OP_ASR:	bus = asr[127:64];
 		OP_ASLI:	bus = shl[127:64];
 		OP_LSRI:	bus = shr[127:64];
 		OP_ROLI:	bus = shl[127:64]|shl[191:128];
-		OP_RORI:	bus = shr[127:64]|shr[191:128];
+		OP_RORI:	bus = shr[127:64]|shr[63:0];
 		OP_ASRI:	bus = asr[127:64];
 		default:	bus = {2{32'hDEADBEEF}};
 		endcase
@@ -186,8 +188,8 @@ always_comb
 	OP_STW:		bus = a + b;
 	OP_STT:		bus = a + b;
 	OP_STO:		bus = a + b;
-	OP_LDX:	bus = a + (b) + i;
-	OP_STX:	bus = a + (b) + i;
+	OP_LDX:	bus = a + (b << ir[26:25]) + i;
+	OP_STX:	bus = a + (b << ir[26:25]) + i;
 	OP_BLEND:	bus = blendo;
 	OP_PFX:		bus = 0;
 	default:	bus = {2{32'hDEADBEEF}};

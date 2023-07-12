@@ -83,7 +83,7 @@ else begin
 			    //
 			    // if there is room for a second instruction, enqueue it
 			    //
-			    if (iq_v[tail1] == INV)
+			    if (iq_v[tail1] == INV && SUPPORT_Q2)
 						iq_v[tail1] <= VAL;
 				end
 			end

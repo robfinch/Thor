@@ -59,6 +59,7 @@ always_comb
 	case(instr.br.cm)
 	2'd0:	// integer signed branches
 		case(instr.any.opcode)
+		OP_DBRA: takb = a!='d0;
 		OP_BEQ:	takb = a==b;
 		OP_BNE:	takb = a!=b;
 		OP_BLT:	takb = $signed(a) < $signed(b);
@@ -67,6 +68,8 @@ always_comb
 		OP_BGE:	takb = $signed(a) >= $signed(b);
 		OP_BBC:	takb = ~a[b[5:0]];
 		OP_BBS:	takb = a[b[5:0]];
+		OP_BBCI: takb = ~a[instr.br.Rb];
+		OP_BBSI: takb = a[instr.br.Rb];
 		OP_MCB:
 			case(instr.mcb.cnd)
 			MCB_EQ:	takb = a==b;
@@ -90,6 +93,8 @@ always_comb
 		OP_BGE:	takb = a >= b;
 		OP_BBC:	takb = ~a[b[5:0]];
 		OP_BBS:	takb = a[b[5:0]];
+		OP_BBCI: takb = ~a[instr.br.Rb];
+		OP_BBSI: takb = a[instr.br.Rb];
 		OP_MCB:
 			case(instr.mcb.cnd)
 			MCB_EQ:	takb = a==b;

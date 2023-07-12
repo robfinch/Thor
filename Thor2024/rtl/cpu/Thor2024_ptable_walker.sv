@@ -72,7 +72,7 @@ input fta_cmd_request128_t ftas_req;
 output fta_cmd_response128_t ftas_resp;
 output fta_cmd_request128_t ftam_req;
 input fta_cmd_response128_t ftam_resp;
-output fault_o;
+output [31:0] fault_o;
 
 integer nn,n1,n2;
 
@@ -135,6 +135,7 @@ reg wr1,wr2;
 reg [1:0] stk;
 reg [63:0] stlb_adr;
 reg [10:0] addrb;
+reg cs_config, cs_hwtw;
 
 rootptr_t root_ptrs, root_ptrs2;
 
@@ -267,7 +268,6 @@ reg tlbmiss_v;
 fta_cmd_request128_t sreq;
 fta_cmd_response128_t sresp;
 wire irq_en;
-reg cs_config, cs_hwtw;
 wire [127:0] cfg_out;
 
 always_ff @(posedge clk)
@@ -333,6 +333,7 @@ upci
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
 	stlb_adr <= 64'h0FEF00000;
+	ptbr <= 'd0;
 end
 else begin
 	if (cs_hwtw && sreq.we)

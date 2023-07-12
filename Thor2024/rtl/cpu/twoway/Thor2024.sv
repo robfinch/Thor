@@ -293,7 +293,8 @@ instruction_t excir;
 wire branchback;
 reg did_branchback, did_branchback1, did_branchback2;
 pc_address_t backpc;
-wire branchmiss;
+wire branchmiss_next;
+reg branchmiss;
 pc_address_t misspc;
 instruction_t missir;
 
@@ -319,6 +320,8 @@ reg dram0_more;
 reg dram0_hi;
 reg dram0_erc;
 reg [9:0] dram0_shift;
+reg dram0_stomp;
+reg [11:0] dram0_tocnt;
 
 reg [639:0] dram1_data;
 address_t dram1_addr;
@@ -337,6 +340,8 @@ reg dram1_more;
 reg dram1_erc;
 reg dram1_hi;
 reg [9:0] dram1_shift;
+reg dram1_stomp;
+reg [11:0] dram1_tocnt;
 
 /*
 value_t dram2_data;
@@ -402,7 +407,7 @@ reg [63:0] tick;
 cause_code_t [3:0] cause;
 status_reg_t sr_stack [0:8];
 status_reg_t sr;
-pc_address_t pc_stack [0:8];
+pc_address_t [8:0] pc_stack;
 wire [2:0] im = sr.ipl;
 reg [5:0] regset = 6'd0;
 asid_t asid;
@@ -1736,32 +1741,17 @@ pc_address_t tpc;
 always_comb
 	tpc = fcu_pc + 16'h5000;
 
-always_comb
-	if (fnIsBccR(fcu_instr)) begin
-		fcu_misspc = fcu_bt ? tpc : fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11],12'h000};
-		fcu_misspc[11:0] = 'd0;
-	end
-	else if (fnIsBranch(fcu_instr)) begin
-		fcu_misspc = fcu_bt ? tpc : fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
-		fcu_misspc[11:0] = 'd0;
-	end
-	else if (fnIsBsr(fcu_instr)) begin
-		fcu_misspc = fcu_pc + {{33{fcu_instr[39]}},fcu_instr[39:9],12'h000};
-		fcu_misspc[11:0] = 'd0;
-	end
-	else if (fnIsCall(fcu_instr)) begin
-		fcu_misspc = fcu_argA + {fcu_argI,12'h000};
-		fcu_misspc[11:0] = 'd0;
-	end
-	// Must be tested before Ret
-	else if (fnIsRti(fcu_instr))
-		fcu_misspc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
-	else if (fnIsRet(fcu_instr)) begin
-		fcu_misspc = fcu_argC + {fcu_instr[18:11],12'h000};
-		fcu_misspc[11:0] = 'd0;
-	end
-	else
-		fcu_misspc = RSTPC;
+modFcuMissPC umisspc1
+(
+	.instr(fcu_instr),
+	.pc(fcu_pc),
+	.pc_stack(pc_stack),
+	.bt(fcu_bt),
+	.argA(fcu_argA),
+	.argC(fcu_argC),
+	.argI(fcu_argI),
+	.misspc(fcu_misspc)
+);
 
 always_comb
 	fcu_missir <= fcu_instr;
@@ -1778,6 +1768,10 @@ Thor2024_branch_eval ube1
 always_comb
 	if (fnIsRet(fcu_instr))
 		fcu_bus = fcu_argA + {fcu_argI,3'd0};
+	/* Under construction.
+	else if (fcu_instr.any.opcode==OP_DBRA)
+		fcu_bus = fcu_argA - 2'd1;
+	*/
 	else
 		fcu_bus = tpc;
 
@@ -1810,10 +1804,21 @@ else begin
 	fcu_branchmiss = FALSE;
 end
 
-assign branchmiss = excmiss | fcu_branchmiss;
-assign misspc = excmiss ? excmisspc : fcu_misspc;
-assign missir = excmiss ? excir : fcu_missir;
-assign missid = excmiss ? excid : fcu_sourceid;
+// Registering the branch miss signals may allow a second miss directly after
+// the first one to occur. We want to process only the first miss. Three in
+// a row cannot happen as the stomp signal is active by then.
+assign branchmiss_next = (excmiss | fcu_branchmiss);// & ~branchmiss;
+always_comb	//ff @(posedge clk)
+	branchmiss = branchmiss_next;
+always_comb	//ff @(posedge clk)
+	if (branchmiss_next)
+		misspc = excmiss ? excmisspc : fcu_misspc;
+always_comb	//ff @(posedge clk)
+	if (branchmiss_next)
+		missir = excmiss ? excir : fcu_missir;
+always_comb	//ff @(posedge clk)
+	if (branchmiss_next)
+		missid = excmiss ? excid : fcu_sourceid;
 
 //
 // additional DRAM-enqueue logic
@@ -1889,7 +1894,7 @@ did_branchback2 <= did_branchback1;
 	for (n13 = 0; n13 < QENTRIES; n13 = n13 + 1)
 		if (iqentry_issue[n13])
 			iqentry_issue_reg[n13] <= 1'b1;
-	if (alu0_v & iq[alu0_id[2:0]].v) begin
+	if (alu0_v && iq[alu0_id[2:0]].v && iq[alu0_id[2:0]].owner==Thor2024pkg::ALU0) begin
     iq[ alu0_id[2:0] ].res <= alu0_bus;
     iq[ alu0_id[2:0] ].exc <= alu0_exc;
     iq[ alu0_id[2:0] ].done <= (!iq[ alu0_id[2:0] ].load
@@ -1912,21 +1917,21 @@ did_branchback2 <= did_branchback1;
 	    iq[ alu0_id[2:0] ].out <= INV;
   	end
 	end
-	if (NALU > 1 && alu1_v && iq[alu1_id[2:0]].v) begin
+	if (NALU > 1 && alu1_v && iq[alu1_id[2:0]].v && iq[alu1_id[2:0]].owner==Thor2024pkg::ALU1) begin
     iq[ alu1_id[2:0] ].res <= alu1_bus;
     iq[ alu1_id[2:0] ].exc <= alu1_exc;
     iq[ alu1_id[2:0] ].done <= (!iq[ alu1_id[2:0] ].load && !iq[ alu1_id[2:0] ].store);
     iq[ alu1_id[2:0] ].out <= INV;
     iq[ alu1_id[2:0] ].agen <= VAL;
 	end
-	if (NFPU > 0 && fpu_v && iq[fpu_id[2:0]].v) begin
+	if (NFPU > 0 && fpu_v && iq[fpu_id[2:0]].v && iq[fpu_id[2:0]].owner==FPU0) begin
     iq[ fpu_id[2:0] ].res <= fpu_bus;
     iq[ fpu_id[2:0] ].exc <= fpu_exc;
     iq[ fpu_id[2:0] ].done <= fpu_done;
     iq[ fpu_id[2:0] ].out <= INV;
     iq[ fpu_id[2:0] ].agen <= VAL;
 	end
-	if (fcu_v && iq[fcu_id[2:0]].v) begin
+	if (fcu_v && iq[fcu_id[2:0]].v && iq[fcu_id[2:0]].out && iq[fcu_id[2:0]].owner==Thor2024pkg::FCU) begin
     iq[ fcu_id[2:0] ].res <= fcu_bus;
     iq[ fcu_id[2:0] ].exc <= fcu_exc;
     iq[ fcu_id[2:0] ].done <= VAL;
@@ -1935,14 +1940,16 @@ did_branchback2 <= did_branchback1;
     iq[ fcu_id[2:0] ].takb <= takb;
     iq[ fcu_id[2:0] ].brtgt <= tgtpc;
 	end
-	if (dram_v0 && iq_v[ dram_id0[2:0] ] && iq[ dram_id0[2:0] ].mem ) begin	// if data for stomped instruction, ignore
+	// If data for stomped instruction, ignore
+	// dram_vn will be false for stomped data
+	if (dram_v0 && iq_v[ dram_id0[2:0] ] && iq[ dram_id0[2:0] ].mem  && iq[dram0_id[2:0]].owner==Thor2024pkg::DRAM0) begin
     iq[ dram_id0[2:0] ].res <= dram_bus0;
     iq[ dram_id0[2:0] ].exc <= dram_exc0;
     iq[ dram_id0[2:0] ].out <= INV;
     iq[ dram_id0[2:0] ].done <= VAL;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram_v1 && iq_v[ dram_id1[2:0] ] && iq[ dram_id1[2:0] ].mem ) begin	// if data for stomped instruction, ignore
+		if (dram_v1 && iq_v[ dram_id1[2:0] ] && iq[ dram_id1[2:0] ].mem  && iq[dram1_id[2:0]].owner==Thor2024pkg::DRAM1) begin
 	    iq[ dram_id1[2:0] ].res <= dram_bus1;
 	    iq[ dram_id1[2:0] ].exc <= dram_exc1;
 	    iq[ dram_id1[2:0] ].out <= INV;
@@ -1950,14 +1957,14 @@ did_branchback2 <= did_branchback1;
 		end
 	end
 
-	// Set the IQ entry == DONE as soon as the SW is let loose to the memory system
+	// Set the IQ entry = DONE as soon as the SW is let loose to the memory system
 	// If the store is unaligned, setting .out to INV will cause a second bus cycle.
-	if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_store) begin
+	if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_store && !dram0_stomp) begin
     iq[ dram0_id[2:0] ].done <= !dram0_more || !SUPPORT_UNALIGNED_MEMORY;
     iq[ dram0_id[2:0] ].out <= INV;
 	end
 	if (NDATA_PORTS > 1) begin
-		if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && dram1_store) begin
+		if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && dram1_store && !dram1_stomp) begin
 	    iq[ dram1_id[2:0] ].done <= !dram1_more || !SUPPORT_UNALIGNED_MEMORY;
 	    iq[ dram1_id[2:0] ].out <= INV;
 		end
@@ -2380,6 +2387,8 @@ fcu_dataready <= fcu_available
 								    : {2{32'hDEADBEEF}};
 						alu0_argI	<= iq[n1].a0;
 						alu0_ld <= 1'b1;
+				    iq[n1].out <= VAL;
+				    iq[n1].owner <= Thor2024pkg::ALU0;
 			    end
 				2'd1:
 					if (NALU > 1 && alu1_available) begin
@@ -2415,10 +2424,11 @@ fcu_dataready <= fcu_available
 								    : {2{32'hDEADBEEF}};
 						alu1_argI	<= iq[n1].a0;
 						alu1_ld <= 1'b1;
+				    iq[n1].out <= VAL;
+				    iq[n1].owner <= Thor2024pkg::ALU1;
 			    end
 				default: panic <= `PANIC_INVALIDISLOT;
 		    endcase
-		    iq[n1].out <= VAL;
 		    // if it is a memory operation, this is the address-generation step ... collect result into arg1
 		    if (iq[n1].mem) begin
 					iq[n1].a1_v <= INV;
@@ -2447,6 +2457,8 @@ fcu_dataready <= fcu_available
 									: (iq[n1].a3_s == alu1_id) ? alu1_bus
 									: {2{32'hDEADBEEF}});
 					fcu_argI	<= iq[n1].a0;
+			    iq[n1].out <= VAL;
+			    iq[n1].owner <= Thor2024pkg::FCU;
 		    end
 		  end
 		  if (NFPU > 0 && iqentry_fpu_issue[n1]) begin
@@ -2475,6 +2487,8 @@ fcu_dataready <= fcu_available
 									: (iq[n1].ap_s == fpu_id) ? fpu_bus
 									: 32'hDEADBEEF);
 					fpu_argI	<= iq[n1].a0;
+			    iq[n1].out <= VAL;
+			    iq[n1].owner <= Thor2024pkg::FPU0;
 		    end
 		  end
 		end
@@ -2510,8 +2524,11 @@ fcu_dataready <= fcu_available
 				end
 			end
 		DRAMSLOT_ACTIVE:
-			if (dram0_ack)
-				dram0 <= DRAMSLOT_AVAIL;
+			begin
+				if (dram0_ack)
+					dram0 <= DRAMSLOT_AVAIL;
+				dram0_tocnt <= dram0_tocnt + 2'd1;
+			end
 		default:	;
 		endcase
 
@@ -2529,10 +2546,44 @@ fcu_dataready <= fcu_available
 					end
 				end
 			DRAMSLOT_ACTIVE:
-				if (dram1_ack)
-					dram1 <= DRAMSLOT_AVAIL;
+				begin
+					if (dram1_ack)
+						dram1 <= DRAMSLOT_AVAIL;
+					dram1_tocnt <= dram1_tocnt + 2'd1;
+				end
 			default:	;
 			endcase
+	end
+	
+	// Bus timeout logic
+	// Reset out to trigger another access
+	if (SUPPORT_BUS_TO) begin
+		if (dram0_tocnt[10]) begin
+			if (~|iq[dram0_id[2:0]].exc)
+				iq[dram0_id[2:0]].exc <= FLT_BERR;
+			iq[dram0_id[2:0]].done <= VAL;
+			iq[dram0_id[2:0]].out <= INV;
+			dram0 <= DRAMSLOT_AVAIL;
+			dram0_tocnt <= 'd0;
+		end
+		else if (dram0_tocnt[8]) begin
+			dram0 <= DRAMSLOT_AVAIL;
+			iq[dram0_id[2:0]].out <= INV;
+		end
+		if (NDATA_PORTS > 1) begin
+			if (dram1_tocnt[10]) begin
+				if (~|iq[dram1_id[2:0]].exc)
+					iq[dram1_id[2:0]].exc <= FLT_BERR;
+				iq[dram1_id[2:0]].done <= VAL;
+				iq[dram1_id[2:0]].out <= INV;
+				dram1 <= DRAMSLOT_AVAIL;
+				dram1_tocnt <= 'd0;
+			end
+			else if (dram1_tocnt[8]) begin
+				dram1 <= DRAMSLOT_AVAIL;
+				iq[dram1_id[2:0]].out <= INV;
+			end
+		end
 	end
 /*
 	case(dram2)
@@ -2557,35 +2608,33 @@ fcu_dataready <= fcu_available
 	    
 		
 		// grab requests that have finished and put them on the dram_bus
-		if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_hi && SUPPORT_UNALIGNE_MEMORY) begin
+		if (dram0 == DRAMSLOT_ACTIVE && dram0_ack && dram0_hi && SUPPORT_UNALIGNED_MEMORY) begin
 			dram0_hi <= 1'b0;
-	    dram_v0 <= dram0_load;
+	    dram_v0 <= dram0_load & ~dram0_stomp;
 	    dram_id0 <= dram0_id;
 	    dram_tgt0 <= dram0_tgt;
 	    dram_exc0 <= dram0_exc;
-    	dram_bus0 <= fnDati(1'b0,dram0_op,dram0_addr,(cpu_resp_o[0] << dram0_shift)|dram_bus0);
+    	dram_bus0 <= fnDati(1'b0,dram0_op,(cpu_resp_o[0].dat << dram0_shift)|dram_bus0);
 	    if (dram0_store) begin
 	    	dram0_store <= 'd0;
 	    	dram0_sel <= 'd0;
 	  	end
-	    else			panic <= `PANIC_INVALIDMEMOP;
 	    if (dram0_store)
 	    	$display("m[%h] <- %h", dram0_addr, dram0_data);
 		end
 		else if (dram0 == DRAMSLOT_ACTIVE && dram0_ack) begin
 			// If there is more to do, trigger a second instruction issue.
-			if (dram0_more)
-				iq[dram0_id].out <= INV;
-	    dram_v0 <= dram0_load & ~dram0_more;
+			if (dram0_more && !dram0_stomp)
+				iq[dram0_id[2:0]].out <= INV;
+	    dram_v0 <= dram0_load & ~dram0_more & ~dram0_stomp;
 	    dram_id0 <= dram0_id;
 	    dram_tgt0 <= dram0_tgt;
 	    dram_exc0 <= dram0_exc;
-    	dram_bus0 <= fnDati(dram0_more,dram0_op,dram0_addr,cpu_resp_o[0] >> {dram0_addr[5:0],3'd0});
+    	dram_bus0 <= fnDati(dram0_more,dram0_op,cpu_resp_o[0].dat >> dram0_shift);
 	    if (dram0_store) begin
 	    	dram0_store <= 'd0;
 	    	dram0_sel <= 'd0;
 	  	end
-	    else			panic <= `PANIC_INVALIDMEMOP;
 	    if (dram0_store)
 	    	$display("m[%h] <- %h", dram0_addr, dram0_data);
 		end
@@ -2594,33 +2643,31 @@ fcu_dataready <= fcu_available
 		if (NDATA_PORTS > 1) begin
 			if (dram1 == DRAMSLOT_ACTIVE && dram1_ack && dram1_hi && SUPPORT_UNALIGNED_MEMORY) begin
 				dram1_hi <= 1'b0;
-		    dram_v1 <= dram1_load;
+		    dram_v1 <= dram1_load & ~dram1_stomp;
 		    dram_id1 <= dram1_id;
 		    dram_tgt1 <= dram1_tgt;
 		    dram_exc1 <= dram1_exc;
-	    	dram_bus1 <= fnDati(1'b0,dram1_op,dram1_addr,(cpu_resp_o[0] << dram1_shift)|dram_bus1);
+	    	dram_bus1 <= fnDati(1'b0,dram1_op,(cpu_resp_o[0].dat << dram1_shift)|dram_bus1);
 		    if (dram1_store) begin
 		    	dram1_store <= 1'b0;
 		    	dram1_sel <= 'd0;
 		  	end
-		    else			panic <= `PANIC_INVALIDMEMOP;
 		    if (dram1_store)
 		     	$display("m[%h] <- %h", dram1_addr, dram1_data);
 			end
 			else if (dram1 == DRAMSLOT_ACTIVE && dram1_ack) begin
 				// If there is more to do, trigger a second instruction issue.
-				if (dram1_more)
-					iq[dram1_id].out <= INV;
-		    dram_v1 <= dram1_load & ~dram1_more;
+				if (dram1_more && !dram1_stomp)
+					iq[dram1_id[2:0]].out <= INV;
+		    dram_v1 <= dram1_load & ~dram1_more & ~dram1_stomp;
 		    dram_id1 <= dram1_id;
 		    dram_tgt1 <= dram1_tgt;
 		    dram_exc1 <= dram1_exc;
-	    	dram_bus1 <= fnDati(dram1_more,dram1_op,dram1_addr,cpu_resp_o[1] >> {dram1_addr[5:0],3'd0});	
+	    	dram_bus1 <= fnDati(dram1_more,dram1_op,cpu_resp_o[1].dat >> dram1_shift);
 		    if (dram1_store) begin
 		    	dram1_store <= 1'b0;
 		    	dram1_sel <= 'd0;
 		  	end
-		    else			panic <= `PANIC_INVALIDMEMOP;
 		    if (dram1_store)
 		     	$display("m[%h] <- %h", dram1_addr, dram1_data);
 			end
@@ -2660,12 +2707,7 @@ fcu_dataready <= fcu_available
     end
 //	endcase
 
-	//
-	// take requests that are ready and put them into DRAM slots
-
-	if (dram0 == DRAMSLOT_AVAIL)	dram0_exc <= FLT_NONE;
-	if (dram1 == DRAMSLOT_AVAIL)	dram1_exc <= FLT_NONE;
-//	if (dram2 == `DRAMSLOT_AVAIL)	dram2_exc <= FLT_NONE;
+	// Take requests that are ready and put them into DRAM slots
 
 	// For unaligned accesses the instruction will issue again. Unfortunately
 	// the address will be calculated again in the ALU, and it will be incorrect
@@ -2677,6 +2719,8 @@ fcu_dataready <= fcu_available
 		if (~iqentry_stomp[n3] && iqentry_memissue[n3] && iq[n3].agen && ~iq[n3].out && ~iq[n3].done) begin
 	    if (dram0 == DRAMSLOT_AVAIL) begin
 				dram0 <= DRAMSLOT_READY;
+				dram0_exc <= FLT_NONE;
+				dram0_stomp <= 1'b0;
 				dram0_id <= { 1'b1, n3[3:0] };
 				dram0_op <= iq[n3].op;
 				dram0_load <= iq[n3].load;
@@ -2687,22 +2731,31 @@ fcu_dataready <= fcu_available
 				if (dram0_more && SUPPORT_UNALIGNED_MEMORY) begin
 					dram0_hi <= 1'b1;
 					dram0_sel <= dram0_sel >> 8'd64;
-					dram0_addr <= {dram0_addr[$bits(address_t)-1:6] + 2'd1,6'h0};
+					dram0_addr <= {iq[n3].a1[$bits(address_t)-1:6] + 2'd1,6'h0};
 					dram0_data <= dram0_data >> 12'd512;
-					dram0_shift <= {7'd64-dram0_addr[5:1],3'b0};
+					dram0_shift <= {7'd64-iq[n3].a1[5:0],3'b0};
 				end
 				else begin
+					dram0_hi <= 1'b0;
 					dram0_sel <= {64'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
 					dram0_addr <= iq[n3].a1;
 					dram0_data <= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
+					dram0_shift <= {iq[n3].a1[5:0],3'd0};
 				end
 				dram0_memsz <= fnMemsz(iq[n3].op);
 				dram0_tid[2:0] <= dram0_tid[2:0] + 2'd1;
 				dram0_tid[7:3] <= {4'h1,1'b0};
 				iq[n3].out <= VAL;
+		    iq[n3].owner <= Thor2024pkg::DRAM0;
+		    dram0_tocnt <= 'd0;
 	    end
+	    // ToDo: fix to use second data port properly. Should be able to have two
+	    // memory ops using both ports at the same time. Eliminate 'else' and add
+	    // more memory issue logic.
 	    else if (dram1 == DRAMSLOT_AVAIL && NDATA_PORTS > 1) begin
 				dram1 <= DRAMSLOT_READY;
+				dram1_exc <= FLT_NONE;
+				dram1_stomp <= 1'b0;
 				dram1_id <= { 1'b1, n3[3:0] };
 				dram1_op <= iq[n3].op;
 				dram1_load <= iq[n3].load;
@@ -2713,19 +2766,23 @@ fcu_dataready <= fcu_available
 				if (dram1_more && SUPPORT_UNALIGNED_MEMORY) begin
 					dram1_hi <= 1'b1;
 					dram1_sel <= dram1_sel >> 8'd64;
-					dram1_addr <= {dram1_addr[$bits(address_t)-1:6] + 2'd1,6'h0};
+					dram1_addr <= {iq[n3].a1[$bits(address_t)-1:6] + 2'd1,6'h0};
 					dram1_data <= dram1_data >> 12'd512;
-					dram1_shift <= {7'd64-dram1_addr[5:1],3'b0};
+					dram1_shift <= {7'd64-iq[n3].a1[5:0],3'b0};
 				end
 				else begin
+					dram1_hi <= 1'b0;
 					dram1_sel <= {64'h0,fnSel(iq[n3].op)} << iq[n3].a1[5:0];
 					dram1_addr	<= iq[n3].a1;
 					dram1_data	<= {448'h0,iq[n3].a3} << {iq[n3].a1[5:0],3'b0};
+					dram1_shift <= {iq[n3].a1[5:0],3'd0};
 				end
 				dram1_memsz <= fnMemsz(iq[n3].op);
 				dram1_tid[2:0] <= dram1_tid[2:0] + 2'd1;
 				dram1_tid[7:3] <= {4'h2,1'b0};
 				iq[n3].out	<= VAL;
+		    iq[n3].owner <= Thor2024pkg::DRAM1;
+		    dram1_tocnt <= 'd0;
 	    end
 	    /*
 	    else if (dram2 == `DRAMSLOT_AVAIL) begin
@@ -2741,6 +2798,10 @@ fcu_dataready <= fcu_available
 	    end
 	    */
 		end
+		if (iqentry_stomp[n3] && n3[2:0]==dram0_id[2:0])
+			dram0_stomp <= 1'b1;
+		if (iqentry_stomp[n3] && n3[2:0]==dram1_id[2:0])
+			dram1_stomp <= 1'b1;
 	end
 
 	//
@@ -2762,6 +2823,7 @@ fcu_dataready <= fcu_available
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 				iq[tail0].sn <= 6'h3F;
+				iq[tail0].owner <= Thor2024pkg::NONE;
 				iq[tail0].done <= db1.nop;
 				iq[tail0].out    <=   INV;
 				iq[tail0].res    <=   `ZERO;
@@ -2780,6 +2842,7 @@ fcu_dataready <= fcu_available
 		    iq[tail0].divu <= db1.divu;
 		    iq[tail0].sync <= 1'b0;
 				iq[tail0].mem <= db1.mem;
+				iq[tail0].io <= db1.io;
 				iq[tail0].load <= db1.load;
 				iq[tail0].loadz <= db1.loadz;
 				iq[tail0].store <= db1.store;
@@ -2842,6 +2905,7 @@ fcu_dataready <= fcu_available
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
+					iq[tail0].owner <= Thor2024pkg::NONE;
 					iq[tail0].done <= db0.nop;
 					iq[tail0].out	<= INV;
 					iq[tail0].res	<= `ZERO;
@@ -2860,6 +2924,7 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 					iq[tail0].mem <= db0.mem;
+					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
@@ -2920,6 +2985,7 @@ fcu_dataready <= fcu_available
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
+					iq[tail0].owner <= Thor2024pkg::NONE;
 			    iq[tail0].done <=	db0.nop;
 			    iq[tail0].out    <=	INV;
 			    iq[tail0].res    <=	`ZERO;
@@ -2938,6 +3004,7 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem    <=	db0.mem;
+					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
@@ -3005,6 +3072,7 @@ fcu_dataready <= fcu_available
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
+					iq[tail0].owner <= Thor2024pkg::NONE;
 			    iq[tail0].done <= db0.nop;
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
@@ -3023,6 +3091,7 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem <= db0.mem;
+					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
@@ -3073,12 +3142,13 @@ fcu_dataready <= fcu_available
 			    //
 			    // if there is room for a second instruction, enqueue it
 			    //
-			    if (iq_v[tail1] == INV) begin
+			    if (iq_v[tail1] == INV && SUPPORT_Q2) begin
 
 						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
 							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
 						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
 						iq[tail1].sn <= 6'h3F;
+						iq[tail1].owner <= Thor2024pkg::NONE;
 						iq[tail1].done <= db1.nop;
 						iq[tail1].out    <=   INV;
 						iq[tail1].res    <=   `ZERO;
@@ -3097,6 +3167,7 @@ fcu_dataready <= fcu_available
 				    iq[tail1].divu <= db1.divu;
 				    iq[tail1].sync <= 1'b0;
 						iq[tail1].mem <= db1.mem;
+						iq[tail1].io <= db1.io;
 						iq[tail1].load <= db1.load;
 						iq[tail1].loadz <= db1.loadz;
 						iq[tail1].store <= db1.store;
@@ -3536,6 +3607,7 @@ begin
 	dram_exc1 <= FLT_NONE;
 	dram0 <= DRAMSLOT_AVAIL;
 	dram0p <= DRAMSLOT_AVAIL;
+	dram0_stomp <= 'd0;
 	dram0_addr <= 'd0;
 	dram0_data <= 'd0;
 	dram0_exc <= FLT_NONE;
@@ -3550,8 +3622,10 @@ begin
 	dram0_more <= 'd0;
 	dram0_hi <= 'd0;
 	dram0_shift <= 'd0;
+	dram0_tocnt <= 'd0;
 	dram1 <= DRAMSLOT_AVAIL;
 	dram1p <= DRAMSLOT_AVAIL;
+	dram1_stomp <= 'd0;
 	dram1_addr <= 'd0;
 	dram1_data <= 'd0;
 	dram1_exc <= FLT_NONE;
@@ -3566,14 +3640,17 @@ begin
 	dram1_more <= 'd0;
 	dram1_hi <= 'd0;
 	dram1_shift <= 'd0;
+	dram1_tocnt <= 'd0;
 	dram_v0 <= 'd0;
 	dram_v1 <= 'd0;
 	panic <= `PANIC_NONE;
 	did_branchback1 <= 'd0;
 	did_branchback2 <= 'd0;
 	iqentry_issue_reg <= 'd0;
-	for (n14 = 0; n14 < QENTRIES; n14 = n14 + 1)
+	for (n14 = 0; n14 < QENTRIES; n14 = n14 + 1) begin
 		iq[n14].sn <= 6'd0;
+		iq[n14].owner <= NONE;
+	end
 	alu0_available <= 1;
 	alu0_dataready <= 0;
 	alu1_available <= 1;
@@ -3664,6 +3741,7 @@ begin
 		CSR_SR:		res = sr;
 		CSR_TICK:	res = tick;
 		CSR_ASID:	res = asid;
+		CSR_KVEC3: res = kvec[3];
 		16'h303C:	res = {sr_stack[1],sr_stack[0]};
 		16'h303D:	res = {sr_stack[3],sr_stack[2]};
 		16'h303E:	res = {sr_stack[5],sr_stack[4]};
@@ -3726,6 +3804,7 @@ begin
 		casez(regno[15:0])
 		CSR_SR:		sr <= val;
 		CSR_ASID: 	asid <= val;
+		CSR_KVEC3:	kvec[3] <= val;
 		16'h303C: {sr_stack[1],sr_stack[0]} <= val;
 		16'h303D:	{sr_stack[3],sr_stack[2]} <= val;
 		16'h303E:	{sr_stack[5],sr_stack[4]} <= val;
@@ -3827,7 +3906,7 @@ begin
 	excid <= id;
 	excmiss <= 1'b1;
 	if (vecno < 9'd64)
-		excmisspc <= {kvec[3][$bits(pc_address_t)-1:4] + vecno,4'h0,12'h000};
+		excmisspc <= {kvec[3][$bits(pc_address_t)-1:4] /*+ vecno*/,4'h0,12'h000};
 	else
 		excmisspc <= {avec[$bits(pc_address_t)-1:4] + vecno,4'h0,12'h000};
 end
@@ -3880,5 +3959,48 @@ always_comb
 	out1 = 64'd1 << num;
 
 assign out = out1[63:1];
+
+endmodule
+
+module modFcuMissPC(instr, pc, pc_stack, bt, argA, argC, argI, misspc);
+input instruction_t instr;
+input pc_address_t pc;
+input pc_address_t [8:0] pc_stack;
+input bt;
+input value_t argA;
+input value_t argC;
+input value_t argI;
+output pc_address_t misspc;
+
+pc_address_t tpc;
+always_comb
+	tpc = pc + 16'h5000;
+
+always_comb
+	if (fnIsBccR(instr)) begin
+		misspc = bt ? tpc : argC + {{53{instr[39]}},instr[39:31],instr[12:11],12'h000};
+		misspc[11:0] = 'd0;
+	end
+	else if (fnIsBranch(instr)) begin
+		misspc = bt ? tpc : pc + {{47{instr[39]}},instr[39:25],instr[12:11],12'h000};
+		misspc[11:0] = 'd0;
+	end
+	else if (fnIsBsr(instr)) begin
+		misspc = pc + {{33{instr[39]}},instr[39:9],12'h000};
+		misspc[11:0] = 'd0;
+	end
+	else if (fnIsCall(instr)) begin
+		misspc = argA + {argI,12'h000};
+		misspc[11:0] = 'd0;
+	end
+	// Must be tested before Ret
+	else if (fnIsRti(instr))
+		misspc = instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
+	else if (fnIsRet(instr)) begin
+		misspc = argC + {instr[18:11],12'h000};
+		misspc[11:0] = 'd0;
+	end
+	else
+		misspc = RSTPC;
 
 endmodule

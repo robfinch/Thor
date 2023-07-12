@@ -228,19 +228,12 @@ reg non_cacheable;
 reg read_allocate;
 
 always_comb
-	non_cacheable =
+	non_cacheable = !dce || 
 	cache_type==fta_bus_pkg::NC_NB ||
 	cache_type==fta_bus_pkg::NON_CACHEABLE
 	;
 always_comb
-	read_allocate =
-	cache_type==fta_bus_pkg::CACHEABLE_NB ||
-	cache_type==fta_bus_pkg::CACHEABLE ||
-	cache_type==fta_bus_pkg::WT_READ_ALLOCATE ||
-	cache_type==fta_bus_pkg::WT_READWRITE_ALLOCATE ||
-	cache_type==fta_bus_pkg::WB_READ_ALLOCATE ||
-	cache_type==fta_bus_pkg::WB_READWRITE_ALLOCATE
-	;
+	read_allocate = fnFtaReadAllocate(cache_type);
 
 // Pass through the incoming line back to the CPU when data cache is not enabled.
 // If a cache hit, the update way is the hit way.

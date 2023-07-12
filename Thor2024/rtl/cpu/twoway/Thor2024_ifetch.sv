@@ -99,9 +99,7 @@ pc_address_t pci;
 reg takb1;
 instruction_t micro_ir;
 instruction_t micro_instr0, micro_instr1, micro_instr2;
-wire [11:0] micro_ip;
 wire [11:0] next_micro_ip;
-reg [11:0] back_micro_ip;
 
 Thor2024_micro_code umc0
 (
@@ -186,11 +184,9 @@ Thor2024_PCReg upcr1
 	.next_pc(next_pc),
 	.next_micro_ip(next_micro_ip),
 	.backpc(backpc),
-	.back_micro_ip(back_micro_ip),
 	.branchmiss(branchmiss),
 	.misspc(misspc),
 	.branchback(branchback),
-	.did_branchback(did_branchback),
 	.fetchbuf(fetchbuf),
 	.fetchbufA_v(fetchbufA_v),
 	.fetchbufB_v(fetchbufB_v),
@@ -200,8 +196,7 @@ Thor2024_PCReg upcr1
 	.backbrB(backbrB),
 	.backbrC(backbrC),
 	.backbrD(backbrD),
-	.pc(pc),
-	.micro_ip(micro_ip)
+	.pc(pc)
 );
 
 always_ff @(posedge clk)
@@ -267,9 +262,9 @@ else begin
 	    if (fetchbuf == 1'b0) case ({fetchbufA_v, fetchbufB_v, fetchbufC_v, fetchbufD_v})
 
 			4'b0000	: ;	// do nothing
-			4'b0001	: panic <= PANIC_INVALIDFBSTATE;
-			4'b0010	: panic <= PANIC_INVALIDFBSTATE;
-			4'b0011	: panic <= PANIC_INVALIDFBSTATE;	// this looks like it might be screwy fetchbuf logic
+			4'b0001	: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0010	: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0011	: if (SIM) panic <= PANIC_INVALIDFBSTATE;	// this looks like it might be screwy fetchbuf logic
 
 			// because the first instruction has been enqueued, 
 			// we must have noted this in the previous cycle.
@@ -284,10 +279,10 @@ else begin
 	    		fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
 	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b0101: panic <= PANIC_INVALIDFBSTATE;
-			4'b0110: panic <= PANIC_INVALIDFBSTATE;
+			4'b0101: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0110: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched an INSTR+BEQ, with fbB holding a branchback
@@ -302,7 +297,7 @@ else begin
 			    fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbA holding a branchback
@@ -314,10 +309,10 @@ else begin
 	    		fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b1001: panic <= PANIC_INVALIDFBSTATE;
-			4'b1010: panic <= PANIC_INVALIDFBSTATE;
+			4'b1001: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b1010: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbA holding a branchback
@@ -332,7 +327,7 @@ else begin
 			    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
 			// if fbB has the branchback, can't immediately tell which of the following scenarios it is:
 			//   cycle 0 - fetched a pair of instructions, one or both of which is a branchback
@@ -348,25 +343,29 @@ else begin
 			    // has to be first scenario
 			    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbufB_v <= INV;		// stomp on it
-			    if (~iq[tail0].v)	fetchbuf <= 1'b0;
+			    //if (~iq[tail0].v)	fetchbuf <= 1'b0; // fetchbuf stays at zero
 				end
 				else if (backbrB) begin
 			    if (did_branchback) begin
 			    	tFetchCD();
 						fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-						fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-						fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+						if (SUPPORT_Q2) begin
+							fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
+							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+						end
 			    end
 			    else begin
 						fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-						fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-						if (~iq[tail0].v & ~iq[tail1].v)	fetchbuf <= 1'b0;
+						if (SUPPORT_Q2) begin
+							fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
+							//if (~iq[tail0].v & ~iq[tail1].v)	fetchbuf <= 1'b0;	// fetchbuf stays at zero
+						end
 			    end
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b1101: panic <= PANIC_INVALIDFBSTATE;
-			4'b1110: panic <= PANIC_INVALIDFBSTATE;
+			4'b1101: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b1110: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched an INSTR+BEQ, with fbB holding a branchback
@@ -379,18 +378,20 @@ else begin
 			4'b1111:
 				if (backbrB|backbrC|backbrD) begin
 			    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			    if (SUPPORT_Q2) begin
+			    	fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
+			    	fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			  	end
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
 		  endcase
 	    else case ({fetchbufC_v, fetchbufD_v, fetchbufA_v, fetchbufB_v})
 
 			4'b0000: ; // do nothing
-			4'b0001: panic <= PANIC_INVALIDFBSTATE;
-			4'b0010: panic <= PANIC_INVALIDFBSTATE;
-			4'b0011: panic <= PANIC_INVALIDFBSTATE;	// this looks like it might be screwy fetchbuf logic
+			4'b0001: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0010: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0011: if (SIM) panic <= PANIC_INVALIDFBSTATE;	// this looks like it might be screwy fetchbuf logic
 
 			// because the first instruction has been enqueued, 
 			// we must have noted this in the previous cycle.
@@ -405,10 +406,10 @@ else begin
 	    		fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
 	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b0101: panic <= PANIC_INVALIDFBSTATE;
-			4'b0110: panic <= PANIC_INVALIDFBSTATE;
+			4'b0101: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b0110: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched an INSTR+BEQ, with fbD holding a branchback
@@ -423,7 +424,7 @@ else begin
 			    fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbC holding a branchback
@@ -435,10 +436,10 @@ else begin
 		    	fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 		    	fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b1001: panic <= PANIC_INVALIDFBSTATE;
-			4'b1010: panic <= PANIC_INVALIDFBSTATE;
+			4'b1001: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b1010: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched a BEQ+INSTR, with fbC holding a branchback
@@ -453,7 +454,7 @@ else begin
 			    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbuf <= fetchbuf + ~iq[tail0].v;
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
 			// if fbD has the branchback, can't immediately tell which of the following scenarios it is:
 			//   cycle 0 - fetched a pair of instructions, one or both of which is a branchback
@@ -469,25 +470,29 @@ else begin
 			    // has to be first scenario
 			    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 			    fetchbufD_v <= INV;		// stomp on it
-			    if (~iq[tail0].v)	fetchbuf <= 1'b0;
+			    //if (~iq[tail0].v)	fetchbuf <= 1'b1;	// fetcbuf stays at one
 				end
 				else if (backbrD) begin
 			    if (did_branchback) begin
 			    	tFetchAB();
 						fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-						fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-						fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+						if (SUPPORT_Q2) begin
+							fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
+							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+						end
 			    end
 			    else begin
 						fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-						fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-						if (~iq[tail0].v & ~iq[tail1].v)	fetchbuf <= 1'b0;
+						if (SUPPORT_Q2) begin
+							fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
+							// if (~iq[tail0].v & ~iq[tail1].v)	fetchbuf <= 1'b1; // fetchbuf stays at one
+						end
 			    end
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 
-			4'b1101: panic <= PANIC_INVALIDFBSTATE;
-			4'b1110: panic <= PANIC_INVALIDFBSTATE;
+			4'b1101: if (SIM) panic <= PANIC_INVALIDFBSTATE;
+			4'b1110: if (SIM) panic <= PANIC_INVALIDFBSTATE;
 
 			// this looks like the following:
 			//   cycle 0 - fetched an INSTR+BEQ, with fbD holding a branchback
@@ -500,10 +505,12 @@ else begin
 			4'b1111:
 				if (backbrD|backbrA|backbrB) begin
 			    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			    if (SUPPORT_Q2) begin
+			    	fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
+			    	fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			  	end
 				end
-				else panic <= PANIC_BRANCHBACK;
+				else if (SIM) panic <= PANIC_BRANCHBACK;
 	    endcase
 
 		end // if branchback
@@ -514,11 +521,11 @@ else begin
 	    // there are no backwards branches in the mix
 	    if (fetchbuf == 1'b0) case ({fetchbufA_v, fetchbufB_v, ~iq[tail0].v, ~iq[tail1].v})
 			4'b00_00: ;	// do nothing
-			4'b00_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b00_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 			4'b00_10: ;	// do nothing
 			4'b00_11: ;	// do nothing
 			4'b01_00: ;	// do nothing
-			4'b01_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b01_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b01_10,
 			4'b01_11:
@@ -528,7 +535,7 @@ else begin
 			  end
 
 			4'b10_00: ;	// do nothing
-			4'b10_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b10_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b10_10,
 			4'b10_11:
@@ -538,7 +545,7 @@ else begin
 			  end
 
 			4'b11_00: ;	// do nothing
-			4'b11_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b11_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b11_10:
 				begin	// enqueue fbA but leave fetchbuf
@@ -548,17 +555,19 @@ else begin
 			4'b11_11:
 				begin	// enqueue both and flip fetchbuf
 					fetchbufA_v <= INV;
-					fetchbufB_v <= INV;
-					fetchbuf <= ~fetchbuf;
+					if (SUPPORT_Q2) begin
+						fetchbufB_v <= INV;
+						fetchbuf <= ~fetchbuf;
+					end
 			  end
 		  endcase
 		  else case ({fetchbufC_v, fetchbufD_v, ~iq[tail0].v, ~iq[tail1].v})
 			4'b00_00: ;	// do nothing
-			4'b00_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b00_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 			4'b00_10: ;	// do nothing
 			4'b00_11: ;	// do nothing
 			4'b01_00: ;	// do nothing
-			4'b01_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b01_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b01_10,
 			4'b01_11:
@@ -568,7 +577,7 @@ else begin
 			  end
 
 			4'b10_00: ;	// do nothing
-			4'b10_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b10_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b10_10,
 			4'b10_11:
@@ -578,7 +587,7 @@ else begin
 			  end
 
 			4'b11_00: ;	// do nothing
-			4'b11_01: panic <= PANIC_INVALIDIQSTATE;
+			4'b11_01: if (SIM) panic <= PANIC_INVALIDIQSTATE;
 
 			4'b11_10:
 				begin	// enqueue fbC but leave fetchbuf
@@ -588,8 +597,10 @@ else begin
 			4'b11_11:
 				begin	// enqueue both and flip fetchbuf
 					fetchbufC_v <= INV;
-					fetchbufD_v <= INV;
-					fetchbuf <= ~fetchbuf;
+					if (SUPPORT_Q2) begin
+						fetchbufD_v <= INV;
+						fetchbuf <= ~fetchbuf;
+					end
 			  end
 		  endcase
 		    //
@@ -642,7 +653,6 @@ always_comb
 			;
 always_comb
 begin
-	back_micro_ip = 'd0;
 	if (SUPPORT_RSB && fetchbuf0_v && fnIsRet(fetchbuf0_instr[0]))
 		backpc = ret_pc;
 	else if (SUPPORT_RSB && fetchbuf0_v && fetchbuf1_v && fnIsRet(fetchbuf1_instr[0]))

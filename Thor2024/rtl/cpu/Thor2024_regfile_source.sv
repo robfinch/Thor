@@ -128,7 +128,7 @@ else begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
 				end
 				else begin
-					if (iq[tail1].v == 1'b0) begin
+					if (iq[tail1].v == 1'b0 && SUPPORT_Q2) begin
 						//
 						// if the two instructions enqueued target the same register, 
 						// make sure only the second writes to rf_v and rf_source.

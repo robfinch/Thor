@@ -46,6 +46,8 @@ begin
 	case(ir.any.opcode)
 	OP_RTD:
 		fnRa = 6'd62;
+	OP_DBRA:
+		fnRa = 6'd55;
 	default:
 		fnRa = ir[18:13];
 	endcase

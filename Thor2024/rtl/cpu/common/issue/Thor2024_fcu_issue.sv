@@ -56,6 +56,7 @@ integer n;
 
 // Don't issue to the fcu until the following instruction is enqueued.
 // However, if the queue is full then issue anyway. A branch miss will likely occur.
+// Issue flow controls in order unless SUPPORT_OOOFC is defined.
 always_comb
 begin
 	iqentry_fcu_issue = 8'h00;
@@ -63,16 +64,23 @@ begin
     if (could_issue[head0] && iq[head0].fc) begin
       iqentry_fcu_issue[head0] = 1'b1;
     end
-    else if (could_issue[head1] && iq[head1].fc)
+    else if (could_issue[head1] && iq[head1].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    )
     begin
       iqentry_fcu_issue[head1] = 1'b1;
     end
     else if (could_issue[head2] && iq[head2].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     ) begin
    		iqentry_fcu_issue[head2] = 1'b1;
     end
     else if (could_issue[head3] && iq[head3].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head2].fc && iq[head2].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
      		((!iq[head0].v)
@@ -82,6 +90,10 @@ begin
    		iqentry_fcu_issue[head3] = 1'b1;
     end
     else if (could_issue[head4] && iq[head4].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head2].fc && iq[head2].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head3].fc && iq[head3].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
      		((!iq[head0].v)
@@ -96,6 +108,11 @@ begin
    		iqentry_fcu_issue[head4] = 1'b1;
     end
     else if (could_issue[head5] && iq[head5].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head2].fc && iq[head2].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head3].fc && iq[head3].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head4].fc && iq[head4].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
      		((!iq[head0].v)
@@ -117,6 +134,12 @@ begin
     end
  
     else if (could_issue[head6] && iq[head6].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head2].fc && iq[head2].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head3].fc && iq[head3].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head4].fc && iq[head4].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head5].fc && iq[head5].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
      		((!iq[head0].v)
@@ -145,6 +168,13 @@ begin
     end
    
     else if (could_issue[head7] && iq[head7].fc
+    	&& (!(iq[head0].fc && iq[head0].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head1].fc && iq[head1].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head2].fc && iq[head2].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head3].fc && iq[head3].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head4].fc && iq[head4].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head5].fc && iq[head5].v) || SUPPORT_OOOFC)
+    	&& (!(iq[head6].fc && iq[head6].v) || SUPPORT_OOOFC)
     && (!(iq[head1].v && iq[head1].sync) || !iq[head0].v)
     && (!(iq[head2].v && iq[head2].sync) ||
      		((!iq[head0].v)

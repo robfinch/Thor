@@ -126,7 +126,7 @@ else begin
 						tail1 <= tail1 + 2'd1;
 				end
 				else begin
-			    if (iq[tail1].v == INV) begin
+			    if (iq[tail1].v == INV && SUPPORT_Q2) begin
 			    	if (tail0==QENTRIES-2)
 			    		tail0 <= 'd0;
 			    	else if (tail0==QENTRIES-1)

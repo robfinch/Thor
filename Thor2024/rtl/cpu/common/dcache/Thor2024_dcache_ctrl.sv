@@ -178,7 +178,8 @@ generate begin : gCacheLineUpdate
 				if (cpu_req_queue[ndx].sel[g])
 					upd_dat[g*8+7:g*8] <= cpu_req_queue[ndx].dat[g*8+7:g*8];
 				else
-					upd_dat[g*8+7:g*8] <= data_to_cache_o.dat[g*8+7:g*8];
+//					upd_dat[g*8+7:g*8] <= data_to_cache_o.dat[g*8+7:g*8];
+					upd_dat[g*8+7:g*8] <= response_from_cache_i.dat[g*8+7:g*8];
 			end
 			else
 				upd_dat[g*8+7:g*8] <= cache_load_data[g*8+7:g*8];

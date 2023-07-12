@@ -49,7 +49,7 @@ input branchmiss;
 input did_branchback;
 input regspec_t Rt0;
 input regspec_t Rt1;
-input [63:1] livetarget;
+input reg_bitmask_t livetarget;
 input que_ndx_t tail0;
 input que_ndx_t tail1;
 input fetchbuf0_v;
@@ -125,7 +125,7 @@ else begin
 						rf_vr[LR0] <= INV;
 				end
 				else begin
-					if (iq[tail1].v == INV) begin
+					if (iq[tail1].v == INV && SUPPORT_Q2) begin
 						//
 						// if the two instructions enqueued target the same register, 
 						// make sure only the second writes to rf_v and rf_source.

@@ -148,6 +148,12 @@ Thor2024_decode_mem umem1
 	.mem(db.mem)
 );
 
+Thor2024_decode_io uio1
+(
+	.instr(instr[0]),
+	.io(db.io)
+);
+
 Thor2024_decode_load udecld1
 (
 	.instr(instr[0]),

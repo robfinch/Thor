@@ -78,10 +78,15 @@ begin
 	OP_BSR:	fnRt = 6'd56 + ir[8:7];
 	OP_JSR:	fnRt = 6'd56 + ir[8:7];
 	OP_RTD:	fnRt = 6'd62;
+	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS,OP_BBCI,OP_BBSI:
+		fnRt = 6'd56 + ir[7];
+	OP_DBRA: fnRt = 6'd55;
 	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
 	OP_MULUI,OP_DIVUI,
 	OP_ANDI,OP_ORI,OP_EORI:
 		fnRt = ir.ri.Rt;
+	OP_SHIFT:
+		fnRt = ir.r2.Rt;
 	OP_CSR:
 		fnRt = ir.csr.Rt;
 	OP_MOV:

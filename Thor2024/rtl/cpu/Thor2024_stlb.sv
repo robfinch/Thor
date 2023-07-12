@@ -138,7 +138,7 @@ reg invall;
 reg [LOG_ENTRIES-1:0] inv_count;
 
 tlb_count_t master_count;
-fta_cmd_request128_t req,req1,wbs_req,fta_req;
+fta_cmd_request128_t req,req1,req2,wbs_req,fta_req;
 fta_cmd_response128_t wbm_resp;
 fta_asid_t asid_i;
 fta_asid_t asidd;
@@ -1275,7 +1275,7 @@ begin
   		default:	;
   		endcase
   	end
-  	if (hit < 4'd15) begin
+  	if (hit < 4'd15 && hit != 4'd5) begin
 			tentryi[hit].lru <= 'd0;
 			if (wed)
 				tentryi[hit].pte.m <= 1'b1;
@@ -1322,6 +1322,11 @@ if (rst_i)
 	req1 <= 'd0;
 else
 	req1 <= req;
+always_ff @(posedge clk_g, posedge rst_i)
+if (rst_i)
+	req2 <= 'd0;
+else
+	req2 <= req1;
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
 	omd <= fta_bus_pkg::APP;
@@ -1429,11 +1434,17 @@ else begin
 		t2 <= {$bits(address_t){1'b1}} & ~mask1;
 end
 
+reg [3:0] hit2;
 always_ff @(posedge clk_g, posedge rst_i)
 if (rst_i)
 	hitr <= 'd0;
 else
 	hitr <= hit;
+always_ff @(posedge clk_g, posedge rst_i)
+if (rst_i)
+	hit2 <= 'd0;
+else
+	hit2 <= hitr;
 
 address_t t12;
 assign t12 = t1|t2;
@@ -1449,7 +1460,6 @@ umtran1
 	.rst(rst_i),
 	.clk(clk_g),
 	.xlaten(xlatend),
-	.hitr(hitr),
 	.hit(hit),
 	.cd_adr(cd_adr),
 	.dl(dl),
@@ -1592,7 +1602,7 @@ end
 endmodule
 
 
-module modTranslate(rst, clk, xlaten, hitr, hit, cd_adr, dl, om, req,
+module modTranslate(rst, clk, xlaten, hit, cd_adr, dl, om, req,
 	tlbmiss_irq, tlbmiss_adr, tlbmiss_asid, adr, asid, t12, cache_i,
 	tentryo, rwx, rwx_i, rgn, cache, tentryo2, fta_req_o
 );
@@ -1603,7 +1613,6 @@ localparam LOG_PAGE_SIZE = $clog2(PAGE_SIZE);
 input rst;
 input clk;
 input xlaten;
-input [3:0] hitr;
 input [3:0] hit;
 input cd_adr;
 input [5:0] dl;
@@ -1632,7 +1641,7 @@ integer n;
 
 always_ff @(posedge clk, posedge rst)
 if (rst) begin
-//	fta_req_o <= 'd0;
+	fta_req_o <= 'd0;
 //	fta_req_o <= req1;
 	xlatend <= 'd0;
 	fta_req.om <= fta_bus_pkg::APP;

@@ -48,7 +48,9 @@ begin
 	OP_SYS:	fnIsFlowCtrl = 1'b1;
 	OP_JSR:
 		fnIsFlowCtrl = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	OP_DBRA,
+	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,
+	OP_BBC,OP_BBS,OP_BBCI,OP_BBSI:
 		fnIsFlowCtrl = 1'b1;	
 	OP_BSR,OP_RTD:
 		fnIsFlowCtrl = 1'b1;	
