@@ -34,7 +34,39 @@
 #	.align	0
 start:
 	ldi t0,-1
-	stt.io t0,leds
+	stt t0,leds
+	stt r0,rand+4								# select stream 0
+	ldi a0,0x99999999						# set random seed
+	asl a0,a0,3
+	stt a0,rand+8
+	stt a0,rand+12
+	ldt a0,rand
+	stt a0,rand
+	ldi a3,0xfffc0000
+#	stt r0,rand+4								# select stream 0
+#	bsr Delay3s	
+#	bsr ramtest
+	bsr Delay3s	
+	bsr SerialInit
+	bsr Delay3s	
+#	bsr SerialTest
+	ldi a0,0xfffde000
+	ldi a1,4096
+	bsr SerialGetBufDirect
+	nop
+	nop
+	jsr 0xfffde000
+	jsr 0xfffde000
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	bsr Delay3s	
+	bsr Delay3s	
 	ldi t0,ExcHandler
 	csrrw r0,t0,0x3033					# set kernel exception vector
 	ldi	t0,txtscreen
@@ -45,16 +77,13 @@ start:
 	stb t0,TextRows
 	ldi t0,64
 	stb t0,TextCols
-	stb r0,CursorRow
-	stb r0,CursorCol
-	stw r0,TextCurpos
 	
 	bsr	Delay3s
-	bsr SerialInit
 	ldi gp,0xffff0000
 	lda a0,msgStart[gp]
-#	bsr	SerialPutString
+	bsr	SerialPutString
 #	bsr SerialTest
+	bsr HomeCursor
 	bsr ClearScreen
 	lda a0,msgStart[gp]
 	bsr DisplayString
@@ -107,8 +136,8 @@ Delay3s:
 	ldi	a0,10000000
 Delay:
 .0001:
-	lsr	a1,a0,8
-	stt.io a1,leds
+	lsr	a1,a0,17
+	stt a1,leds
 	sub	a0,a0,1
 	bgt	a0,r0,.0001	
 doRet:
@@ -126,13 +155,14 @@ doRet:
 
 ClearScreen:
 	ldo mc0,TextAttr
-	or mc0,mc0,' '
-	ldo mc1,TextScr
+	add mc0,mc0,' '
+#	ldtu mc1,TextScr
+	ldi mc1,txtscreen
 	add mc2,mc1,64*8*32						# 64x32x8
-.st1:
-	sto.io mc0,[mc1]
+.0001:
+	sto mc0,[mc1]
 	add mc1,mc1,8
-	blt mc1,mc2,.st1
+	bltu mc1,mc2,.0001
 	ret
 
 #------------------------------------------------------------------------------
@@ -154,7 +184,7 @@ CalcScreenLoc:
 	stw a0,TextCurpos			# update text position
 	asl a0,a0,3						# multiply by text cell size
 	ldtu mc0,TextScr			# add in text screen location
-	add a0,a0,mc0
+	add a0,a0,txtscreen	#mc0
 	ret
 
 #------------------------------------------------------------------------------
@@ -235,7 +265,7 @@ DisplayChar:
 	bsr CalcScreenLoc				# a0 = screen location
 	ldo a2,TextAttr
 	or a2,a2,a1
-	sto.io a2,[a0]
+	sto a2,[a0]
 	bsr IncCursorPos
 .0004:
 	bsr SyncCursor
@@ -377,6 +407,14 @@ BlankLastLine:
 	ret	
 
 #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+HomeCursor:
+	stb r0,CursorRow
+	stb r0,CursorCol
+	stw r0,TextCurpos
+
+#------------------------------------------------------------------------------
 # SyncCursor:
 #
 # Sync the hardware cursor's position to the text cursor position.
@@ -391,7 +429,7 @@ BlankLastLine:
 
 SyncCursor:
 	ldw mc0,TextCurpos
-	stw.io mc0,0xfec80024
+	stw mc0,0xfec80024
 	ret
 	
 #------------------------------------------------------------------------------
@@ -449,10 +487,10 @@ DisplayNybble:
 
 DisplayByte:
 	push lr1
-	bsr DisplayNybble
 	ror a1,a1,4
 	bsr DisplayNybble
 	rol a1,a1,4
+	bsr DisplayNybble
 	pop lr1
 	ret
 
@@ -462,10 +500,10 @@ DisplayByte:
 
 DisplayWyde:
 	push lr1
-	bsr DisplayByte
 	ror a1,a1,8
 	bsr DisplayByte
 	rol a1,a1,8
+	bsr DisplayByte
 	pop lr1
 	ret
 
@@ -475,10 +513,10 @@ DisplayWyde:
 
 DisplayTetra:
 	push lr1
-	bsr DisplayWyde
 	ror a1,a1,16
 	bsr DisplayWyde
 	rol a1,a1,16
+	bsr DisplayWyde
 	pop lr1
 	ret
 
@@ -488,10 +526,10 @@ DisplayTetra:
 
 DisplayOcta:
 	push lr1
-	bsr DisplayTetra
 	ror a1,a1,32
 	bsr DisplayTetra
 	rol a1,a1,32
+	bsr DisplayTetra
 	pop lr1
 	ret
 
@@ -508,6 +546,7 @@ ExcHandler:
 	.include "xmodem.asm"
 	.include "keyboard.asm"
 	.include "Monitor.asm"
+#	.include "ramtest.asm"
 
 	.balign	0x100,0xff
 	

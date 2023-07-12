@@ -20,7 +20,7 @@ BIOS:
 #	cc64 $(CFLAGS) os_stub.c
 
 	vasmThor_std_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o
-	vasmThor_std_win32.exe -Fvobj -L serial.lst serial.asm -o serial.o
+	vasmThor_std_win32.exe -Fvobj -L ramtest.lst ramtest.asm -o ramtest.o
 	vasmThor_std_win32.exe -Fvobj -L fibonacci.lst fibonacci.asm -o fibonacci.o
 #	vasmThor_mot_win32.exe -Fvobj -L tlbmiss34.lst tlbmiss34.asm -o tlbmiss34.o
 	vasmThor_std_win32.exe -Fvobj -Lbpl=5 -L sieve.lst sieve.asm -o sieve.o
@@ -32,6 +32,7 @@ BIOS:
 #	vasmrf68000_mot_win32.exe -Fvobj -L boot.lst boot.asm -o boot.o -m68010
 #	vasmrfPhoenix_std_win32.exe -Fvobj -L add.lst add.asm -o add.o
 	vlink -T rom_bios.cmd -brawbin1 boot.o -o boot.bin
+	vlink -T ramtest.cmd -brawbin1 ramtest.o -o ramtest.bin
 	vlink -T rom_bios.cmd -brawbin1 fibonacci.o -o fibonacci.bin
 #	vlink -T rom_bios.cmd -brawbin1 __store.o __load.o printf_again.o sieve.o -o sieve.bin
 #	vlink -T rom_bios.cmd -brawbin1 LEDTest.o -o LEDTest.bin

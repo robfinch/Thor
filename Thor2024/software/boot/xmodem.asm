@@ -147,7 +147,7 @@ xm_gb2:
 #		t4 = xm_packetnum (last seen)
 #		t5 = xm_packetnum
 # Parameters:
-#		none
+#		a0 = transfer address
 # Modifies:
 #		All
 #	Returns:
@@ -155,22 +155,20 @@ xm_gb2:
 # ------------------------------------------------------------------------------
 
 xm_ReceiveStart:
+	push lr1
 	ldi gp,0xffff0000
+	mov a3,a0					# a3 = transfer address
 	bsr	Delay3s				# give a little bit of time for sender
 	bsr	Delay3s
 	bsr	Delay3s
-	bsr	GetNumber			# Get the transfer address
-	beq a0,r0,Monitor	# Make sure we got a value
-	mov a3,a0					# a3 = transfer address
 #	ldx	mon_numwka+2	; X = transfer address
 	ldi t4,0					# packet num = 0
 	ldi t5,0
-	ldi	a0,'C'				# try for CRC first
-	mov t3,a0
+	ldi t3,'C'				# try for CRC first
 xm_receive:
-	ldi	a1,2					# number of times to retry -1
+	ldi	a4,2					# number of times to retry -1
 xm_rcv5:
-	mov	a0,t3					# indicate we want a transfer (send protocol byte)
+	mov	a1,t3					# indicate we want a transfer (send protocol byte)
 	bsr SerialPutChar
 xm_rcv4:
 	sto r0,xm_timer		# clear the timeout
@@ -182,7 +180,7 @@ xm_rcv1:
 	beq a0,CAN,xm_receive	# might be a cancel
 	beq a0,ETB,xm_EOT
 xm_rcv_nak:					# wasn't a valid start so
-	ldi a0,NAK				# send a NAK
+	ldi a1,NAK				# send a NAK
 	bsr SerialPutChar	# and try again
 	bra	xm_rcv4
 xm_SOH:
@@ -212,18 +210,20 @@ xm_rcv2:
 	and a1,t1,0xff		# get the high byte
 	asl a1,a1,8
 	or s0,a0,a1				# combine high and low byte
+	mov a0,a3					# buffer address
 	ldi a1,128				# number of bytes in buffer
 	bsr	xm_calc_crc		# compute the CRC-16 for the received data
 	mov a1,s0					# and compare to received value
 	bra	xm_rcv3
 xm_rcv_chksum:
+	mov a0,a3
 	bsr	xm_calc_checksum
 	and a1,t1,0xff		# where we stuffed the byte
 xm_rcv3:
 	bne a0,a1,xm_rcv_nak	# if not the same, NAK
 	mov a0,t2					# get back flag value
 	bne	a0,r0,xm_rcv_nak	# bad packet number?
-	ldi a0,ACK				# packet recieved okay, send back an ACK
+	ldi a1,ACK				# packet recieved okay, send back an ACK
 	bsr SerialPutChar
 	beq	t4,t5,xm_rcv4		# same packet received, dont update buffer pointer
 	mov t4,t5						# update last seen packet number
@@ -233,23 +233,25 @@ xm_rcv_to2:
 xm_rcv_to1:
 	lda a0,msgXmTimeout[gp]
 	bsr DisplayString
-	bra	Monitor
+	pop lr1
+	ret
 xm_EOT:								# end of transmission received, return
-	ldi a0,ACK
+	ldi a1,ACK
 	bsr SerialPutChar		# ACK the EOT
-	bra	Monitor
+	pop lr1
+	ret
 xm_retry1:
-	sub a1,a1,1
-	bgt a1,r0,xm_rcv5
-	mov a0,t3						# are we already lowered down to checksum protocol?
-	beq a0,NAK,xm_noTransmitter		# did we try both checksum and CRC?
-	ldi a0,NAK
-	mov t3,a0						# set protocol
+	sub a4,a4,1
+	bgt a4,r0,xm_rcv5
+	# are we already lowered down to checksum protocol?
+	beq t3,NAK,xm_noTransmitter		# did we try both checksum and CRC?
+	ldi t3,NAK					# set protocol
 	bra xm_receive
 xm_noTransmitter:
 	lda a0,msgXmNoTransmitter[gp]
 	bsr DisplayString
-	bra	Monitor	
+	pop lr1
+	ret
 
 	.rodata
 msgXmTimeout:

@@ -56,6 +56,11 @@ SerialInit:
 	stt	r0,SerTailXmit
 	stb	r0,SerRcvXon
 	stb	r0,SerRcvXoff
+	ldi	mc0,0x09						#	dtr,rts active, rxint enabled (bit 1=0), no parity
+	stt mc0,ACIA_CMD
+	ldi	mc0,0x6001E					# baud 9600, 1 stop bit, 8 bit, internal baud gen
+	stt mc0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
+	ret
 #	lda		COREID
 #sini1:
 #	cmpa	IOFocusID
@@ -64,10 +69,10 @@ SerialInit:
 #	ldd		#ACIA_MMU				; map ACIA into address space
 #	std		MMU
 	ldi	mc0,0x09						#	dtr,rts active, rxint enabled (bit 1=0), no parity
-	stt.io mc0,ACIA_CMD
-#	ldi	a0,0x6001E					# baud 9600, 1 stop bit, 8 bit, internal baud gen
-	ldi	mc0,0x08060011			# baud 57600, 1 stop bit, 8 bit, internal baud gen
-	stt.io mc0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
+	stt mc0,ACIA_CMD
+	ldi	mc0,0x6001E					# baud 9600, 1 stop bit, 8 bit, internal baud gen
+#	ldi	mc0,0x08060011			# baud 57600, 1 stop bit, 8 bit, internal baud gen
+	stt mc0,ACIA_CTRL		# disable fifos (bit zero, one), reset fifos
 #	ldd		#$000F00				; map out ACIA
 #	std		MMU
 	ret
@@ -312,12 +317,13 @@ SerialPutString:
 .0001:
 	nop										# provide a window for an interrupt to occur
 	nop
+	nop
 	# Between the status read and the transmit do not allow an
 	# intervening interrupt.
 	atom 0777
-	ldtu.io mc0,ACIA_STAT	# wait until the uart indicates tx empty
+	ldtu mc0,ACIA_STAT		# wait until the uart indicates tx empty
 	bbc	mc0,4,.0001				# branch if transmitter is not empty, bit #4 of the status reg
-	stt.io a1,ACIA_TX			# send the byte
+	stt a1,ACIA_TX				# send the byte
 	bra	.0002
 .0003:
 	mov a0,mc1
@@ -344,7 +350,7 @@ SerialPutBuf:
 .0002:
 	ble a1,r0,.0003				# end of buffer reached?
 	sub a1,a1,1
-	ldb.io mc3,[a0]
+	ldb mc3,[a0]
 	add	a0,a0,1
 	# inline serial putchar, avoid stacks pushes and pops
 .0001:
@@ -353,9 +359,9 @@ SerialPutBuf:
 	# Between the status read and the transmit do not allow an
 	# intervening interrupt.
 	atom 0777
-	ldtu.io mc0,ACIA_STAT	# wait until the uart indicates tx empty
+	ldtu mc0,ACIA_STAT		# wait until the uart indicates tx empty
 	bbc	mc0,4,.0001				# branch if transmitter is not empty, bit #4 of the status reg
-	stt.io mc3,ACIA_TX		# send the byte
+	stt mc3,ACIA_TX				# send the byte
 	bra	.0002
 .0003:
 	mov a0,mc1
@@ -370,6 +376,62 @@ SerialTest:
 	ldi a1,'A'
 	bsr SerialPutChar
 	bra .0001
+
+#------------------------------------------------------------------------------
+# Get a buffer from the serial port.
+#
+# Stack Space:
+#		none
+# Parameters:
+#		a0 = pointer to buffer
+#		a1 = number of bytes
+# Modifies:
+#		mc0,mc1,mc2,mc3,t0
+# Returns:
+#		none
+#------------------------------------------------------------------------------
+
+SerialGetBufDirect:
+	mov mc1,a0						# preserve a0,a1
+	mov mc2,a1
+	ldi mc3,0
+.0001:
+	nop										# interrupt ramp
+	nop
+	nop
+	atom 07777						# no interrupts for 4 instructions
+	ldtu mc0,ACIA_STAT		# check the status
+	bbc	mc0,3,.0001				# look for Rx not empty
+	ldtu mc0,ACIA_RX			# grab the char from the port
+	stb mc0,[a0]					# store in buffer
+	ror t0,mc0,4
+	and t0,t0,15
+	add t0,t0,'0'
+	ble t0,'9',.0002
+	add t0,t0,7
+.0002:
+	or t0,t0,0x43FFFFE0003F0000
+	sto t0,txtscreen[mc3]
+	add mc3,mc3,8
+	mov t0,mc0
+	and t0,t0,15
+	add t0,t0,'0'
+	ble t0,'9',.0003
+	add t0,t0,7
+.0003:
+	or t0,t0,0x43FFFFE0003F0000
+	sto t0,txtscreen[mc3]
+	add mc3,mc3,8
+	ldi t0,0x43FFFFE0003F0020
+	sto t0,txtscreen[mc3]
+	add mc3,mc3,8
+	add a0,a0,1						# increment buffer pointer
+	sub a1,a1,1						# and decrement buffer count
+	bne a1,r0,.0001				# go back for another character
+	mov a0,mc1
+	mov a1,mc2
+	jmp [a0]
+	ret
 
 	.rodata
 nmeSerial:

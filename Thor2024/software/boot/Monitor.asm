@@ -46,8 +46,14 @@ Prompt2:
 	bne a1,'x',.0001
 	ldb a1,[t0]
 	add t0,t0,1
-	beq a1,'r',xm_ReceiveStart
-	bne a1,'t',Monitor
+	bne a1,'r',.0002		# 'r' - receive
+	bsr	GetHexNumber				# Get the transfer address
+	beq a0,r0,Monitor		# Make sure we got a value
+	mov a0,a1
+	bsr xm_ReceiveStart
+	bra Monitor
+.0002:
+	bne a1,'s',Monitor	# 's' - send
 	bsr GetRange
 	bsr xm_SendStart
 	bra Monitor
