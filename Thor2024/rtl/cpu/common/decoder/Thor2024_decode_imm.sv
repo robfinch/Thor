@@ -39,18 +39,27 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_imm(ins, imm);
+module Thor2024_decode_imm(ins, imma, immb, immc);
 parameter WID=32;
 input instruction_t [4:0] ins;
-output reg [63:0] imm;
+output reg [63:0] imma;
+output reg [63:0] immb;
+output reg [63:0] immc;
 
-wire [63:0] imm32x64;
+wire [63:0] imm32x64a;
+wire [63:0] imm32x64b;
+wire [63:0] imm32x64c;
 reg [63:0] imm1;
+reg [2:0] ndx;
+reg flt;
 
-fpCvt32To64 ucvt32x64(imm1[31:0], imm32x64);
+fpCvt32To64 ucvt32x64a(imma[31:0], imm32x64a);
+fpCvt32To64 ucvt32x64b(immb[31:0], imm32x64b);
+fpCvt32To64 ucvt32x64C(immc[31:0], imm32x64c);
 
 always_comb
 begin
+	flt = 'd0;
 	imm = 'd0;
 	imm1 = 'd0;
 	case(ins[0].any.opcode)
@@ -65,9 +74,42 @@ begin
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
 	OP_STB,OP_STW,OP_STT,OP_STO:
 		imm1 = {{48{ins[0][34]}},ins[0][34:19]};
+	OP_FENCE:
+		imm1 = {48'h0,ins[0][23:8]};
 	default:
 		imm1 = 'd0;
 	endcase
+	ndx = 1;
+	if (ins[ndx].any.opcode==OP_PFXA) begin
+		imma = {{31{ins[ndx][39]}},ins[ndx][39:7]};
+		if (flt)
+			imma = imm32x64a;
+		ndx = ndx + 1;
+		if (ins[ndx].any.opcode==OP_PFXA) begin
+			imma[63:33] = {ins[ndx][37:7]};
+			ndx = ndx + 1;
+		end
+	end
+	if (ins[ndx].any.opcode==OP_PFXB) begin
+		immb = {{31{ins[ndx][39]}},ins[ndx][39:7]};
+		if (flt)
+			immb = imm32x64b;
+		ndx = ndx + 1;
+		if (ins[ndx].any.opcode==OP_PFXB) begin
+			immb[63:33] = {ins[ndx][37:7]};
+			ndx = ndx + 1;
+		end
+	end
+	if (ins[ndx].any.opcode==OP_PFXC) begin
+		immc = {{31{ins[ndx][39]}},ins[ndx][39:7]};
+		if (flt)
+			immc = imm32x64c;
+		ndx = ndx + 1;
+		if (ins[ndx].any.opcode==OP_PFXC) begin
+			immc[63:33] = {ins[ndx][37:7]};
+			ndx = ndx + 1;
+		end
+	end
 	if (ins[1].any.opcode==OP_PFX) begin
 		imm1 = {{32{ins[1][39]}},ins[1][39:8]};
 		if (ins[2].any.opcode==OP_PFX)

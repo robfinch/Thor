@@ -106,6 +106,12 @@ Thor2024_decode_backbr ubkbr1
 	.backbr(db.backbr)
 );
 
+Thor2024_decode_branch_tgt_src udbts1
+(
+	.instr(instr[0]),
+	.bts(db.bts)
+);
+
 Thor2024_decode_alu udcalu
 (
 	.instr(instr[0]),
@@ -148,12 +154,6 @@ Thor2024_decode_mem umem1
 	.mem(db.mem)
 );
 
-Thor2024_decode_io uio1
-(
-	.instr(instr[0]),
-	.io(db.io)
-);
-
 Thor2024_decode_load udecld1
 (
 	.instr(instr[0]),
@@ -176,6 +176,12 @@ Thor2024_decode_lda udeclda1
 (
 	.instr(instr[0]),
 	.lda(db.lda)
+);
+
+Thor2024_decode_fence udfence1
+(
+	.instr(instr[0]),
+	.fence(db.fence)
 );
 
 Thor2024_decode_erc udecerc1

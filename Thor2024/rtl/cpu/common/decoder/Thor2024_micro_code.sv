@@ -110,7 +110,7 @@ case(micro_ip)
 //   y = y*(1.5f – xhalf *y*y); // first NR iteration			9.16 bits accurate
 //	 y = y*(1.5f – xhalf *y*y); // second NR iteration	 17.69 bits accurate
 //	 y = y*(1.5f – xhalf *y*y); // third NR iteration	   35 bits accurate
-//   y = y*(1.5f – xhalf *y*y); // second NR iteration	 70 bits accurate
+//   y = y*(1.5f – xhalf *y*y); // fourth NR iteration	 70 bits accurate
 //	 return y;
 // }
 //64-bit magic used:

@@ -101,7 +101,7 @@ genvar g;
 wire [AREGS-1:0] rf_v;
 wire [4:0] rf_source[0:AREGS-1];
 pc_address_t pc, pc0, pc1;
-wire clk;
+wire clk, clk2x;
 wire rst;
 assign rst = rst_i;
 reg  [3:0] panic;		// indexes the message structure
@@ -163,6 +163,7 @@ reg fetch0,fetch1;
 reg q1open,q2open,q3open,q4open;
 reg canq1,canq2;
 reg queued1Nop, queued2Nop;
+wire pt0, pt1;			// predict taken branch
 
 que_ndx_t missid;
 
@@ -268,6 +269,7 @@ reg        fcu_available;
 reg        fcu_dataready;
 reg  [4:0] fcu_sourceid;
 instruction_t fcu_instr;
+bts_t fcu_bts;
 reg        fcu_bt;
 value_t fcu_argA;
 value_t fcu_argB;
@@ -391,6 +393,8 @@ value_t commit0a_bus, commit1a_bus;
 pc_address_t commit_pc0;
 reg commit_takb0;
 pc_address_t commit_brtgt0;
+wire commit0_br;
+wire commit0_takb;
 instruction_t commit0_instr;
 wire commit1_v;
 wire [4:0] commit1_id;
@@ -400,6 +404,8 @@ pc_address_t commit_pc1;
 reg commit_takb1;
 pc_address_t commit_brtgt1;
 instruction_t commit1_instr;
+wire commit1_br;
+wire commit1_takb;
 wire int_commit;
 
 // CSRs
@@ -416,7 +422,8 @@ pc_address_t [3:0] kvec;
 pc_address_t avec;
 reg ERC = 1'b0;
 
-assign clk = clk_i;
+assign clk = clk_i;				// convenience
+assign clk2x = clk2x_i;
 
 function [63:0] fnA1;
 input instruction_t fetchbuf_instr;
@@ -689,6 +696,7 @@ Thor2024_ifetch uif1
 (
 	.rst(rst),
 	.clk(clk),
+	.clk2x(clk2x),
 	.hit(ihito),
 	.irq(hirq),
 	.branchback(branchback),
@@ -715,9 +723,15 @@ Thor2024_ifetch uif1
 	.commit0_v(commit0_v),
 	.commit0_instr(commit0_instr),	
 	.commit0_pc(commit_pc0),
+	.commit0_br(commit0_br),
+	.commit0_takb(commit0_takb),
 	.commit1_v(commit1_v),
 	.commit1_instr(commit1_instr),	
-	.commit1_pc(commit_pc0)
+	.commit1_pc(commit_pc0),
+	.commit1_br(commit1_br),
+	.commit1_takb(commit1_takb),
+	.isBB0(pt0),
+	.isBB1(pt1)
 );
 
 Thor2024_decoder udeci0
@@ -1548,7 +1562,7 @@ Thor2024_fcu_issue ufcuiss1
 	.iqentry_fcu_issue(iqentry_fcu_issue)
 );
 
-assign iqentry_issue2 = iqentry_issue | iqentry_issue_reg;
+assign iqentry_issue2 = iqentry_issue;// | iqentry_issue_reg;
 
 /*
 always_comb
@@ -1570,7 +1584,6 @@ always_comb
 */
 // 
 // additional logic for handling a branch miss (STOMP logic)
-// Must also stomp on the last entry queued as a branch has a delayed effect.
 //
 //reg [$clog2(QENTRIES)-1:0] n4p;
 always_comb
@@ -1580,8 +1593,8 @@ begin
 	iqentry_stomp[n4] =
 		(branchmiss
 		&& iq[n4].sn > iq[missid].sn
-		&& iq_v[n4]
-		&& heads[0] != n4[3:0])
+		&& iq_v[n4])
+//		&& heads[0] != n4[3:0])
 	;
 	/*
 	iqentry_stomp[n4] = branchmiss
@@ -1712,30 +1725,35 @@ assign fpu_id = fpu_sourceid;
 pc_address_t tgtpc;
 
 always_comb
-	if (fnIsBccR(fcu_instr)) begin
-		tgtpc = fcu_argC + {{53{fcu_instr[39]}},fcu_instr[39:31],fcu_instr[12:11],12'h000};
-		tgtpc[11:0] = 'd0;
-	end
-	else if (fnIsBranch(fcu_instr)) begin
-		tgtpc = fcu_pc + {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
-		tgtpc[11:0] = 'd0;
-	end
-	else if (fnIsBsr(fcu_instr)) begin
-		tgtpc = fcu_pc + {{33{fcu_instr[39]}},fcu_instr[39:9],12'h000};
-		tgtpc[11:0] = 'd0;
-	end
-	else if (fnIsCall(fcu_instr)) begin
-		tgtpc = fcu_argA + {fcu_argI,12'h000};
-		tgtpc[11:0] = 'd0;
-	end
-	else if (fnIsRti(fcu_instr))
+	case(fcu_bts)
+	BTS_REG:
+		tgtpc = fcu_argC;
+	BTS_DISP:
+		begin
+			tgtpc = fcu_pc + {{{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],2'b0} +
+											{{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
+			tgtpc[11:0] = 'd0;
+		end
+	BTS_BSR:
+		begin
+			tgtpc = fcu_pc + {{33{fcu_instr[39]}},fcu_instr[39:9],12'h000};
+			tgtpc[11:0] = 'd0;
+		end
+	BTS_CALL:
+		begin
+			tgtpc = fcu_argA + {fcu_argI,12'h000};
+			tgtpc[11:0] = 'd0;
+		end
+	BTS_RTI:
 		tgtpc = fcu_instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
-	else if (fnIsRet(fcu_instr)) begin
-		tgtpc = fcu_argC + {fcu_instr[18:11],12'h000};
-		tgtpc[11:0] = 'd0;
-	end
-	else
+	BTS_RET:
+		begin
+			tgtpc = fcu_argC + {fcu_instr[18:11],12'h000};
+			tgtpc[11:0] = 'd0;
+		end
+	default:
 		tgtpc = RSTPC;
+	endcase
 
 pc_address_t tpc;
 always_comb
@@ -1744,6 +1762,7 @@ always_comb
 modFcuMissPC umisspc1
 (
 	.instr(fcu_instr),
+	.bts(fcu_bts),
 	.pc(fcu_pc),
 	.pc_stack(pc_stack),
 	.bt(fcu_bt),
@@ -1789,16 +1808,14 @@ end
 
 always_comb
 if (fcu_dataready) begin
-	if (fnIsBranch(fcu_instr))
-		fcu_branchmiss = ((takb && ~fcu_bt) || (!takb && fcu_bt));
-	else if (fnIsBsr(fcu_instr))
-		fcu_branchmiss = TRUE;
-	else if (fnIsCall(fcu_instr))
-		fcu_branchmiss = TRUE;
-	else if (fnIsRet(fcu_instr))
-		fcu_branchmiss = TRUE;
-	else
+	case(fcu_bts)
+	BTS_REG,BTS_DISP:
+		fcu_branchmiss = TRUE;//((takb && ~fcu_bt) || (!takb && fcu_bt));
+	BTS_BSR,BTS_CALL,BTS_RET:
+		fcu_branchmiss = TRUE;//((takb && ~fcu_bt) || (!takb && fcu_bt));
+	default:
 		fcu_branchmiss = FALSE;		
+	endcase
 end
 else begin
 	fcu_branchmiss = FALSE;
@@ -2165,6 +2182,7 @@ did_branchback2 <= did_branchback1;
 		end
 		
 		/* These two commit busses used in lieu of a write-bypassed register file. */
+/*
 		if (iq[nn].a1_v == INV && iq[nn].a1_s == commit0a_id && iq_v[nn] == VAL && commit0a_v == VAL) begin
 	    iq[nn].a1 <= commit0a_bus;
 	    iq[nn].a1_v <= VAL;
@@ -2206,7 +2224,7 @@ did_branchback2 <= did_branchback1;
 	    iq[nn].ap <= commit1a_bus;
 	    iq[nn].ap_v <= VAL;
 		end
-
+*/
 		// These may be overridden by commit0 / commit1
 		if (SUPPORT_COMMIT23) begin
 			if (iq[nn].a1_v == INV && iq[nn].a1_s == commit2_id && iq_v[nn] == VAL && commit2_v == VAL) begin
@@ -2439,6 +2457,7 @@ fcu_dataready <= fcu_available
 				if (fcu_available) begin
 					fcu_sourceid	<= n1[3:0];
 					fcu_instr		<= iq[n1].op;
+					fcu_bts   <= iq[n1].bts;
 					fcu_bt		<= iq[n1].bt;
 					fcu_pc		<= iq[n1].pc;
 					fcu_argA	<= 
@@ -2821,16 +2840,17 @@ fcu_dataready <= fcu_available
     	if (iq_v[tail0] == INV) begin
 				did_branchback1 <= branchback & ~did_branchback;
 				for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+					iq[n12].sn <= iq[n12].sn - 2'd1;
+//					iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 				iq[tail0].sn <= 6'h3F;
 				iq[tail0].owner <= Thor2024pkg::NONE;
 				iq[tail0].done <= db1.nop;
 				iq[tail0].out    <=   INV;
 				iq[tail0].res    <=   `ZERO;
 				iq[tail0].op    <=   fetchbuf1_instr[0]; 
-				iq[tail0].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0])) | ptakb; 
-				iq[tail0].agen    <=   INV;
-				iq[tail0].pc    <=   fetchbuf1_pc;
+				iq[tail0].bt <= pt1;
+				iq[tail0].agen <= INV;
+				iq[tail0].pc <= fetchbuf1_pc;
 				iq[tail0].imm <= db1.has_imm;
 				iq[tail0].fc <= db1.fc;
 		    iq[tail0].alu <= db1.alu;
@@ -2842,16 +2862,18 @@ fcu_dataready <= fcu_available
 		    iq[tail0].divu <= db1.divu;
 		    iq[tail0].sync <= 1'b0;
 				iq[tail0].mem <= db1.mem;
-				iq[tail0].io <= db1.io;
 				iq[tail0].load <= db1.load;
 				iq[tail0].loadz <= db1.loadz;
 				iq[tail0].store <= db1.store;
 				iq[tail0].lda <= db1.lda;
+				iq[tail0].fence <= db1.fence;
 				iq[tail0].erc <= db1.erc;
 				iq[tail0].jmp    <=   fetchbuf1_jmp;
 				iq[tail0].rfw    <=   fetchbuf1_rfw;
 				iq[tail0].tgt <= Rt1;
 				iq[tail0].exc <= FLT_NONE;
+				iq[tail0].br <= db1.br;
+				iq[tail0].bts <= db1.bts;
 				iq[tail0].takb <= 1'b0;
 				iq[tail0].brtgt <= 'd0;
 				iq[tail0].Ra <= Ra1;
@@ -2894,8 +2916,8 @@ fcu_dataready <= fcu_available
     2'b10:
     	begin
 	    	if (iq_v[tail0] == INV && (~^pred_mask[1:0] || pred_mask[1:0]==pred_val)) begin
-					if (!db0.br)		panic <= `PANIC_FETCHBUFBEQ;
-					if (!db0.backbr)	panic <= `PANIC_FETCHBUFBEQ;
+					if (!db0.br) panic <= `PANIC_FETCHBUFBEQ;
+					if (!pt0)	panic <= `PANIC_FETCHBUFBEQ;
 					//
 					// this should only happen when the first instruction is a BEQ-backwards and the IQ
 					// happened to be full on the previous cycle (thus we deleted fetchbuf1 but did not
@@ -2903,7 +2925,8 @@ fcu_dataready <= fcu_available
 					//
 					did_branchback1 <= branchback & ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+						iq[n12].sn <= iq[n12].sn - 2'd1;
+//						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
 					iq[tail0].owner <= Thor2024pkg::NONE;
 					iq[tail0].done <= db0.nop;
@@ -2924,16 +2947,18 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 					iq[tail0].mem <= db0.mem;
-					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
 					iq[tail0].lda <= db0.lda;
+					iq[tail0].fence <= db0.fence;
 					iq[tail0].erc <= db0.erc;
 					iq[tail0].jmp <= fetchbuf0_jmp;
 					iq[tail0].rfw <= fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 					iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].br <= db0.br;
+					iq[tail0].bts <= db0.bts;
 					iq[tail0].takb <= 1'b0;
 					iq[tail0].brtgt <= 'd0;
 					iq[tail0].Ra <= Ra0;
@@ -2980,19 +3005,20 @@ fcu_dataready <= fcu_available
 				//
 				// if the first instruction is a backwards branch, enqueue it & stomp on all following instructions
 				//
-				if (db0.backbr) begin
+				if (pt0) begin
 					did_branchback1 <= branchback & ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+						iq[n12].sn <= iq[n12].sn - 2'd1;
+//						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
 					iq[tail0].owner <= Thor2024pkg::NONE;
 			    iq[tail0].done <=	db0.nop;
 			    iq[tail0].out    <=	INV;
 			    iq[tail0].res    <=	`ZERO;
 			    iq[tail0].op    <=	fetchbuf0_instr[0]; 			// BEQ
-			    iq[tail0].bt    <=	VAL;
-			    iq[tail0].agen    <=	INV;
-			    iq[tail0].pc    <=	fetchbuf0_pc;
+			    iq[tail0].bt <=	VAL;
+			    iq[tail0].agen <=	INV;
+			    iq[tail0].pc <=	fetchbuf0_pc;
 					iq[tail0].imm <= db0.has_imm;
 					iq[tail0].fc <= db0.fc;
 			    iq[tail0].alu <= db0.alu;
@@ -3004,16 +3030,18 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem    <=	db0.mem;
-					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
 					iq[tail0].lda <= db0.lda;
+					iq[tail0].fence <= db0.fence;
 					iq[tail0].erc <= db0.erc;
 			    iq[tail0].jmp    <=	fetchbuf0_jmp;
 			    iq[tail0].rfw    <=	fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=	FLT_NONE;
+					iq[tail0].br <= db0.br;
+					iq[tail0].bts <= db0.bts;
 					iq[tail0].takb <= 1'b0;
 					iq[tail0].brtgt <= 'd0;
 					iq[tail0].Ra <= Ra0;
@@ -3070,16 +3098,17 @@ fcu_dataready <= fcu_available
 			    //
 					did_branchback1 <= branchback & ~did_branchback;
 					for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
+						iq[n12].sn <= iq[n12].sn - 2'd1;
+//						iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd1 : iq[n12].sn;
 					iq[tail0].sn <= 6'h3F;
 					iq[tail0].owner <= Thor2024pkg::NONE;
 			    iq[tail0].done <= db0.nop;
 			    iq[tail0].out    <=   INV;
 			    iq[tail0].res    <=   `ZERO;
 			    iq[tail0].op    <=   fetchbuf0_instr[0]; 
-			    iq[tail0].bt    <=   INV;//ptakb;
-			    iq[tail0].agen    <=   INV;
-			    iq[tail0].pc    <=   fetchbuf0_pc;
+			    iq[tail0].bt <= INV;//ptakb;
+			    iq[tail0].agen <= INV;
+			    iq[tail0].pc <= fetchbuf0_pc;
 					iq[tail0].imm <= db0.has_imm;
 					iq[tail0].fc <= db0.fc;
 			    iq[tail0].fpu = db0.fpu;
@@ -3091,16 +3120,18 @@ fcu_dataready <= fcu_available
 			    iq[tail0].divu <= db0.divu;
 			    iq[tail0].sync <= 1'b0;
 			    iq[tail0].mem <= db0.mem;
-					iq[tail0].io <= db0.io;
 					iq[tail0].load <= db0.load;
 					iq[tail0].loadz <= db0.loadz;
 					iq[tail0].store <= db0.store;
 					iq[tail0].lda <= db0.lda;
+					iq[tail0].fence <= db0.fence;
 					iq[tail0].erc <= db0.erc;
 			    iq[tail0].jmp    <=   fetchbuf0_jmp;
 			    iq[tail0].rfw    <=   fetchbuf0_rfw;
 					iq[tail0].tgt <= Rt0;
 			    iq[tail0].exc    <=   FLT_NONE;
+					iq[tail0].br <= db0.br;
+					iq[tail0].bts <= db0.bts;
 					iq[tail0].takb <= 1'b0;
 					iq[tail0].brtgt <= 'd0;
 					iq[tail0].Ra <= Ra0;
@@ -3145,17 +3176,18 @@ fcu_dataready <= fcu_available
 			    if (iq_v[tail1] == INV && SUPPORT_Q2) begin
 
 						for (n12 = 0; n12 < QENTRIES; n12 = n12 + 1)
-							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
+							iq[n12].sn <= iq[n12].sn - 2'd2;
+//							iq[n12].sn <= |iq[n12].sn ? iq[n12].sn - 2'd2 : iq[n12].sn;
 						iq[tail0].sn <= 6'h3E;	// <- this needs be done again here
 						iq[tail1].sn <= 6'h3F;
 						iq[tail1].owner <= Thor2024pkg::NONE;
 						iq[tail1].done <= db1.nop;
-						iq[tail1].out    <=   INV;
-						iq[tail1].res    <=   `ZERO;
-						iq[tail1].op    <=   fetchbuf1_instr[0]; 
-						iq[tail1].bt    <=   db1.backbr;//(fnIsBackBranch(fetchbuf1_instr[0]))|ptakb; 
-						iq[tail1].agen    <=   INV;
-						iq[tail1].pc    <=   fetchbuf1_pc;
+						iq[tail1].out <= INV;
+						iq[tail1].res <= `ZERO;
+						iq[tail1].op <= fetchbuf1_instr[0]; 
+						iq[tail1].bt <= pt1;
+						iq[tail1].agen <= INV;
+						iq[tail1].pc <= fetchbuf1_pc;
 						iq[tail1].imm <= db1.has_imm;
 						iq[tail1].fc <= db1.fc;
 				    iq[tail1].alu <= db1.alu;
@@ -3167,16 +3199,18 @@ fcu_dataready <= fcu_available
 				    iq[tail1].divu <= db1.divu;
 				    iq[tail1].sync <= 1'b0;
 						iq[tail1].mem <= db1.mem;
-						iq[tail1].io <= db1.io;
 						iq[tail1].load <= db1.load;
 						iq[tail1].loadz <= db1.loadz;
 						iq[tail1].store <= db1.store;
+						iq[tail1].fence <= db1.fence;
 						iq[tail1].lda <= db1.lda;
 						iq[tail1].erc <= db1.erc;
 						iq[tail1].jmp    <=   fetchbuf1_jmp;
 						iq[tail1].rfw    <=   fetchbuf1_rfw;
 						iq[tail1].tgt <= Rt1;
 						iq[tail1].exc <= FLT_NONE;
+						iq[tail1].br <= db1.br;
+						iq[tail1].bts <= db1.bts;
 						iq[tail1].takb <= 1'b0;
 						iq[tail1].brtgt <= 'd0;
 						iq[tail1].Ra <= Ra1;
@@ -3275,7 +3309,7 @@ fcu_dataready <= fcu_available
 					    iq[tail1].a3_s <= rf_source [ Rc1 ];
 						end
 						// otherwise, previous instruction does write to RF ... see if overlap
-						else if (Rt0 != 5'd0 && Rc1 == Rt0) begin
+						else if (Rt0 != 6'd0 && Rc1 == Rt0) begin
 					    // if the previous instruction is a LW, then grab result from memq, not the iq
 					    iq[tail1].a3_v <= INV;
 					    iq[tail1].a3_s <= { db0.mem, tail0 };
@@ -3364,7 +3398,7 @@ Thor2024_que_valid uiqv1
 	.tail0(tail0), 
 	.tail1(tail1), 
 	.branchmiss(branchmiss),
-	.backbr(db0.backbr),
+	.backbr(pt0),
 	.fetchbuf0_v(fetchbuf0_v),
 	.fetchbuf1_v(fetchbuf1_v),
 	.pred_mask(pred_mask[1:0]),
@@ -3410,6 +3444,10 @@ assign commit_brtgt0 = iq[heads[0]].brtgt;
 assign commit_brtgt1 = iq[heads[1]].brtgt;
 assign commit_takb0 =iq[heads[0]].takb;
 assign commit_takb1 =iq[heads[1]].takb;
+assign commit0_takb = iq[heads[0]].takb;
+assign commit1_takb = iq[heads[1]].takb;
+assign commit0_br = iq[heads[0]].br & iq[heads[0]].v & iq[heads[0]].done;
+assign commit1_br = iq[heads[1]].br & iq[heads[1]].v & iq[heads[1]].done;
 
 assign int_commit = (commit0_v && fnIsIrq(iq[heads[0]].op)) ||
                     (commit0_v && commit1_v && fnIsIrq(iq[heads[1]].op));
@@ -3962,8 +4000,9 @@ assign out = out1[63:1];
 
 endmodule
 
-module modFcuMissPC(instr, pc, pc_stack, bt, argA, argC, argI, misspc);
+module modFcuMissPC(instr, bts, pc, pc_stack, bt, argA, argC, argI, misspc);
 input instruction_t instr;
+input bts_t bts;
 input pc_address_t pc;
 input pc_address_t [8:0] pc_stack;
 input bt;
@@ -3977,30 +4016,37 @@ always_comb
 	tpc = pc + 16'h5000;
 
 always_comb
-	if (fnIsBccR(instr)) begin
-		misspc = bt ? tpc : argC + {{53{instr[39]}},instr[39:31],instr[12:11],12'h000};
-		misspc[11:0] = 'd0;
-	end
-	else if (fnIsBranch(instr)) begin
-		misspc = bt ? tpc : pc + {{47{instr[39]}},instr[39:25],instr[12:11],12'h000};
-		misspc[11:0] = 'd0;
-	end
-	else if (fnIsBsr(instr)) begin
-		misspc = pc + {{33{instr[39]}},instr[39:9],12'h000};
-		misspc[11:0] = 'd0;
-	end
-	else if (fnIsCall(instr)) begin
-		misspc = argA + {argI,12'h000};
-		misspc[11:0] = 'd0;
-	end
+	case(bts)
+	BTS_REG:
+		 begin
+			misspc = bt ? tpc : argC + {{53{instr[39]}},instr[39:31],instr[12:11],12'h000};
+			misspc[11:0] = 'd0;
+		end
+	BTS_DISP:
+		begin
+			misspc = bt ? tpc : pc + {{47{instr[39]}},instr[39:25],instr[12:11],12'h000};
+			misspc[11:0] = 'd0;
+		end
+	BTS_BSR:
+		begin
+			misspc = pc + {{33{instr[39]}},instr[39:9],12'h000};
+			misspc[11:0] = 'd0;
+		end
+	BTS_CALL:
+		begin
+			misspc = argA + {argI,12'h000};
+			misspc[11:0] = 'd0;
+		end
 	// Must be tested before Ret
-	else if (fnIsRti(instr))
+	BTS_RTI:
 		misspc = instr[8:7]==2'd1 ? pc_stack[1] : pc_stack[0];
-	else if (fnIsRet(instr)) begin
-		misspc = argC + {instr[18:11],12'h000};
-		misspc[11:0] = 'd0;
-	end
-	else
+	BTS_RET:
+		begin
+			misspc = argC + {instr[18:11],12'h000};
+			misspc[11:0] = 'd0;
+		end
+	default:
 		misspc = RSTPC;
+	endcase
 
 endmodule
