@@ -1,6 +1,6 @@
 // ============================================================================
 //        __
-//   \\__/ o\    (C) 2021-2023  Robert Finch, Waterloo
+//   \\__/ o\    (C) 2023  Robert Finch, Waterloo
 //    \  __ /    All rights reserved.
 //     \/_//     robfinch<remove>@finitron.ca
 //       ||
@@ -36,21 +36,21 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_decode_nop(instr, nop);
+module Thor2024_decode_fence(instr, fence);
 input instruction_t instr;
-output nop;
+output fence;
 
-function fnIsNop;
+function fnIsFence;
 input instruction_t ir;
 begin
 	case(ir.r2.opcode)
-	OP_PFXA,OP_PFXB,OP_PFXC,OP_NOP,OP_ENTER,OP_LEAVE,OP_PUSH,OP_POP,OP_ATOM:
-		fnIsNop = 1'b1;
-	default:	fnIsNop = 1'b0;
+	OP_FENCE:
+		fnIsFence = 1'b1;
+	default:	fnIsFence = 1'b0;
 	endcase
 end
 endfunction
 
-assign nop = fnIsNop(instr);
+assign fence = fnIsFence(instr);
 
 endmodule

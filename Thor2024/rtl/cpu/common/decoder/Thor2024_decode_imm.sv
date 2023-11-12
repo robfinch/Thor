@@ -49,7 +49,6 @@ output reg [63:0] immc;
 wire [63:0] imm32x64a;
 wire [63:0] imm32x64b;
 wire [63:0] imm32x64c;
-reg [63:0] imm1;
 reg [2:0] ndx;
 reg flt;
 
@@ -60,26 +59,28 @@ fpCvt32To64 ucvt32x64C(immc[31:0], imm32x64c);
 always_comb
 begin
 	flt = 'd0;
-	imm = 'd0;
-	imm1 = 'd0;
+	imma = 'd0;
+	immb = 'd0;
+	immc = 'd0;
 	case(ins[0].any.opcode)
 	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
-		imm1 = {{48{ins[0][34]}},ins[0][34:19]};
-	OP_ANDI:	imm1 = {48'hFFFFFFFFFFFF,ins[0][34:19]};
+		immb = {{48{ins[0][34]}},ins[0][34:19]};
+	OP_ANDI:	immb = {48'hFFFFFFFFFFFF,ins[0][34:19]};
 	OP_ORI,OP_EORI:
-		imm1 = {48'h0000,ins[0][34:19]};
-	OP_CSR:	imm1 = {50'd0,ins[0][32:19]};
-	OP_RTD:	imm1 = {{16{ins[0][34]}},ins[0][34:19]};
-	OP_JSR: imm1 = {{48{ins[0][34]}},ins[0][34:19]};
+		immb = {48'h0000,ins[0][34:19]};
+	OP_CSR:	immb = {50'd0,ins[0][32:19]};
+	OP_RTD:	immb = {{16{ins[0][34]}},ins[0][34:19]};
+	OP_JSR: immb = {{48{ins[0][34]}},ins[0][34:19]};
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
 	OP_STB,OP_STW,OP_STT,OP_STO:
-		imm1 = {{48{ins[0][34]}},ins[0][34:19]};
+		immb = {{48{ins[0][34]}},ins[0][34:19]};
 	OP_FENCE:
-		imm1 = {48'h0,ins[0][23:8]};
+		immb = {48'h0,ins[0][23:8]};
 	default:
-		imm1 = 'd0;
+		immb = 'd0;
 	endcase
 	ndx = 1;
+	flt = ins[0].any.opcode==OP_FLT2 || ins[0].any.opcode==OP_FLT3;
 	if (ins[ndx].any.opcode==OP_PFXA) begin
 		imma = {{31{ins[ndx][39]}},ins[ndx][39:7]};
 		if (flt)
@@ -110,19 +111,6 @@ begin
 			ndx = ndx + 1;
 		end
 	end
-	if (ins[1].any.opcode==OP_PFX) begin
-		imm1 = {{32{ins[1][39]}},ins[1][39:8]};
-		if (ins[2].any.opcode==OP_PFX)
-			imm1[63:32] = ins[2][39:8];
-	end
-	case(ins[0].any.opcode)
-	OP_FLT2,OP_FLT3:
-		if (ins[1].any.opcode==OP_PFX && ins[2].any.opcode!=OP_PFX)
-			imm = imm32x64;
-		else
-			imm = imm1;
-	default:	imm = imm1;
-	endcase
 end
 
 endmodule

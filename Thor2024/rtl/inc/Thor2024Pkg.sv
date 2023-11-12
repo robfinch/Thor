@@ -38,7 +38,7 @@
 package Thor2024pkg;
 
 `undef IS_SIM
-parameter SIM = 1'b0;
+parameter SIM = 1'b1;
 
 //`define IS_SIM	1
 // Comment out to remove the sigmoid approximate function
@@ -60,16 +60,38 @@ parameter SIM = 1'b0;
 
 `define L1DCacheWays 4
 
-parameter SUPPORT_UNALIGNED_MEMORY = 1'b1;
+// Select building for performance or size.
+// If this is set to one extra logic will be included to improve performance.
+parameter PERFORMANCE = 1'b0;
+
+// Predictor
+//		0 = none
+//		1 = backwards branch predictor (accuracy < 60%)
+//		2 = g select predictor
+parameter BRANCH_PREDICTOR = 0;
+
+// The following indicate to queue two instructions at a time if possible.
+// This parameter should be set to one as queueing only single instructions
+// does not work yet. Queuing only a single instruction would result in a
+// smaller core if it worked.
+parameter SUPPORT_Q2 = 1'b1;
+// The following allows the core to process flow control ops in any order
+// to reduce the size of the core. Set to zero to restrict flow control ops
+// to be processed in order. If processed out of order a branch may 
+// speculate incorrectly leading to lower performance.
+parameter SUPPORT_OOOFC = 1'b0;
+// Allowing unaligned memory access increases the size of the core.
+parameter SUPPORT_UNALIGNED_MEMORY = 1'b0;
+parameter SUPPORT_BUS_TO = 1'b0;
 
 // The following adds support for committing a third result if there is no
 // target register. It takes more hardware.
-parameter SUPPORT_3COMMIT = 1'b0;
+parameter SUPPORT_3COMMIT = PERFORMANCE;
 // The following adds two forwarding busses which may improve performance, but
 // cost additional logic.
-parameter SUPPORT_COMMIT23 = 1'b0;
+parameter SUPPORT_COMMIT23 = PERFORMANCE;
 
-parameter SUPPORT_PGREL	= 1'b0;	// Page relative branching
+parameter SUPPORT_PGREL	= 1'b0;	// Page relative branching, must be zero
 parameter SUPPORT_REP = 1'b1;
 parameter REP_BIT = 31;
 
@@ -168,9 +190,19 @@ typedef enum logic [6:0] {
 	*/
 	OP_DBcc			= 7'd29,
 	OP_BSR			= 7'd32,
+	OP_DBRA			= 7'd33,
 	OP_MCB			= 7'd34,
 	OP_RTD			= 7'd35,
 	OP_JSR			= 7'd36,
+	
+	OP_BccU			= 7'd40,
+	OP_Bcc			= 7'd41,
+	OP_DFBcc		= 7'd43,
+	OP_FBccH		= 7'd44,
+	OP_FBccS		= 7'd45,
+	OP_FBccD		= 7'd46,
+	OP_FBccQ		= 7'd47,
+/*
 	OP_BEQ			= 7'd38,
 	OP_BNE			= 7'd39,
 	OP_BLT			= 7'd40,
@@ -179,6 +211,9 @@ typedef enum logic [6:0] {
 	OP_BGT			= 7'd43,
 	OP_BBC			= 7'd44,
 	OP_BBS			= 7'd45,
+	OP_BBCI			= 7'd46,
+	OP_BBSI			= 7'd47,
+*/
 	OP_ENTER		= 7'd52,
 	OP_LEAVE		= 7'd53,
 	OP_PUSH			= 7'd54,
@@ -204,10 +239,14 @@ typedef enum logic [6:0] {
 	OP_FLT2			= 7'd98,
 	OP_FLT3			= 7'd99,
 	OP_IRQ			= 7'd112,
+	OP_FENCE		= 7'd114,
 	OP_REP			= 7'd120,
 	OP_PRED			= 7'd121,
 	OP_ATOM			= 7'd122,
-	OP_PFX			= 7'd124,
+	OP_TPFX			= 7'd123,
+	OP_PFXA			= 7'd124,
+	OP_PFXB			= 7'd125,
+	OP_PFXC			= 7'd126,
 	OP_NOP			= 7'd127
 } opcode_t;
 /*
@@ -237,11 +276,11 @@ typedef enum logic [3:0] {
 
 typedef enum logic [1:0] {
 	CM_INT = 2'd0,
-	CM_POSIT = 2'd1,
+	CM_UINT = 2'd1,
 	CM_FLOAT = 2'd2,
 	CM_DECFLOAT = 2'd3
 } branch_cm_t;
-
+/*
 typedef enum logic [3:0] {
 	EQ = 4'd0,
 	NE = 4'd1,
@@ -262,6 +301,46 @@ typedef enum logic [3:0] {
 	RA = 4'd14,
 	SR = 4'd15
 } branch_cnd_t;
+*/
+typedef enum logic [3:0] {
+	EQ = 4'd0,
+	NE = 4'd1,
+	LT = 4'd2,
+	LE = 4'd3,
+	GE = 4'd4,
+	GT = 4'd5,
+	BC = 4'd6,
+	BS = 4'd7,
+	
+	BCI = 4'd8,
+	BSI = 4'd9,
+	LO = 4'd10,
+	LS = 4'd11,
+	HS = 4'd12,
+	HI = 4'd13,
+	
+	RA = 4'd14,
+	SR = 4'd15
+} branch_fn_t;
+
+typedef enum logic [3:0] {
+	FEQ = 4'd0,
+	FNE = 4'd1,
+	FGT = 4'd2,
+	FUGT = 4'd3,
+	FGE = 4'd4,
+	FUGE = 4'd5,
+	FLT = 4'd6,
+	FULT = 4'd7,
+	
+	FLE = 4'd8,
+	FULE = 4'd9,
+	FGL = 4'd10,
+	FUGL = 4'd11,
+	FORD = 4'd12,
+	FUN = 4'd13
+	
+} fbranch_fn_t;
 
 typedef enum logic [2:0] {
 	MCB_EQ = 3'd0,
@@ -274,6 +353,17 @@ typedef enum logic [2:0] {
 	MCB_BS = 3'd7
 } mcb_cond_t;
 
+typedef enum logic [2:0] {
+	BTS_NONE = 3'd0,
+	BTS_DISP = 3'd1,
+	BTS_REG = 3'd2,
+	BTS_BSR = 3'd3,
+	BTS_CALL = 3'd4,
+	BTS_RET = 3'd5,
+	BTS_RTI = 3'd6
+} bts_t;
+
+/*
 typedef enum logic [3:0] {
 	FEQ = 4'd0,
 	FNE = 4'd1,
@@ -284,7 +374,7 @@ typedef enum logic [3:0] {
 	FORD = 4'd6,
 	FUN = 4'd7
 } fbranch_cnd_t;
-
+*/
 // R2 ops
 typedef enum logic [6:0] {
 	FN_AND			= 7'd00,
@@ -447,21 +537,21 @@ typedef enum logic [2:0] {
 	FN_FNMS = 3'd3
 } f3func_t;
 
-typedef enum logic [5:0] {
-	OP_ASL 	= 6'd0,
-	OP_LSR	= 6'd1,	
-	OP_ASR	= 6'd2,
-	OP_ROL	= 6'd3,
-	OP_ROR	= 6'd4,
-	OP_ZXB	= 6'd8,
-	OP_SXB	= 6'd9,
-	OP_ASLI	= 6'd32,
-	OP_LSRI	= 6'd33,
-	OP_ASRI	= 6'd34,
-	OP_ROLI	= 6'd35,
-	OP_RORI	= 6'd36,
-	OP_ZXBI	= 6'd40,
-	OP_SXBI	= 6'd41
+typedef enum logic [6:0] {
+	OP_ASL 	= 7'd0,
+	OP_LSR	= 7'd1,	
+	OP_ASR	= 7'd2,
+	OP_ROL	= 7'd3,
+	OP_ROR	= 7'd4,
+	OP_ZXB	= 7'd8,
+	OP_SXB	= 7'd9,
+	OP_ASLI	= 7'h40,
+	OP_LSRI	= 7'h41,
+	OP_ASRI	= 7'h42,
+	OP_ROLI	= 7'h43,
+	OP_RORI	= 7'h44,
+	OP_ZXBI	= 7'h48,
+	OP_SXBI	= 7'h49
 } shift_t;
 
 typedef enum logic [2:0] {
@@ -503,6 +593,17 @@ typedef enum logic [4:0] {
 	MR_CAS = 5'd24
 } memop_t;
 
+typedef enum logic [3:0] {
+	NONE = 4'd0,
+	ALU0 = 4'd1,
+	ALU1 = 4'd2,
+	FPU0 = 4'd3,
+	FPU1 = 4'd4,
+	DRAM0 = 4'd5,
+	DRAM1 = 4'd6,
+	FCU = 4'd7
+} iq_owner_t;
+
 parameter CSR_SR		= 16'h?004;
 parameter CSR_CAUSE	= 16'h?006;
 parameter CSR_REPBUF = 16'h0008;
@@ -524,6 +625,7 @@ parameter CSR_MDBAD	= 16'b00110000000110??;
 parameter CSR_MDBAM	= 16'b00110000000111??;
 parameter CSR_MDBCR	= 16'h3020;
 parameter CSR_MDBSR	= 16'h3021;
+parameter CSR_KVEC3 = 16'h3033;
 parameter CSR_MPLSTACK	= 16'h303F;
 parameter CSR_MPMSTACK	= 16'h3040;
 parameter CSR_MSTUFF0	= 16'h3042;
@@ -563,7 +665,8 @@ typedef enum logic [2:0] {
 
 typedef enum logic [11:0] {
 	FLT_NONE	= 12'h000,
-	FLT_EXV		= 12'h002,
+	FLT_BERR	= 12'h002,
+	FLT_EXV		= 12'h003,
 	FLT_TLBMISS = 12'h04,
 	FLT_DCM		= 12'h005,
 	FLT_CANARY= 12'h00B,
@@ -779,8 +882,7 @@ typedef struct packed
 	logic [2:0] fmt;
 	logic [2:0] pr;
 	logic b;
-	logic im;
-	logic [5:0] func;
+	shift_t func;
 	logic [6:0] imm;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -802,9 +904,7 @@ typedef struct packed
 {
 	logic [1:0] fmt;
 	logic [2:0] pr;
-	logic [11:0] disp;
-	logic [1:0] pi;
-	logic [1:0] ca;
+	logic [15:0] disp;
 	regspec_t Ra;
 	regspec_t Rt;
 	opcode_t opcode;
@@ -815,9 +915,9 @@ typedef struct packed
 	logic [1:0] fmt;
 	logic [2:0] pr;
 	lsn_func_t func;
-	logic [1:0] ca;
-	logic d;
-	logic sc;
+	logic c;
+	logic resv;
+	logic [1:0] sc;
 	regspec_t Rb;
 	regspec_t Ra;
 	regspec_t Rt;
@@ -830,21 +930,29 @@ typedef struct packed
 	regspec_t Rb;
 	regspec_t	Ra;
 	logic [1:0] displo;
-	logic op;
-	branch_cm_t cm;
-	logic lk;
+	branch_fn_t fn;
 	opcode_t opcode;
 } brinst_t;
 
 typedef struct packed
 {
-	logic [2:0] resv;
-	logic [11:0] tgt;
+	logic [14:0] disphi;
 	regspec_t Rb;
 	regspec_t	Ra;
-	mcb_cond_t cnd;
-	branch_cm_t cm;
+	logic [1:0] displo;
+	fbranch_fn_t fn;
+	opcode_t opcode;
+} fbrinst_t;
+
+typedef struct packed
+{
+	logic [3:0] resv2;
+	logic [10:0] tgt;
+	regspec_t Rb;
+	regspec_t	Ra;
+	logic resv;
 	logic lk;
+	logic [3:0] fn;
 	opcode_t opcode;
 } mcb_inst_t;
 
@@ -875,6 +983,7 @@ typedef union packed
 	r1inst_t	r1;
 	r2inst_t	r2;
 	brinst_t	br;
+	fbrinst_t	fbr;
 	mcb_inst_t mcb;
 	jsrinst_t	jsr;
 	jsrinst_t	jmp;
@@ -932,7 +1041,9 @@ typedef struct packed
 	logic hasRp;
 	logic Rtsrc;	// Rt is a source register
 	logic has_imm;
-	value_t imm;
+	value_t imma;
+	value_t immb;
+	value_t immc;
 	prec_t prc;
 	logic rfwr;
 	logic vrfwr;
@@ -944,6 +1055,7 @@ typedef struct packed
 	logic nop;				// NOP semantics
 	logic fc;					// flow control op
 	logic backbr;			// backwards target branch
+	bts_t bts;				// branch target source
 	logic alu;				// true if instruction must use alu (alu or mem)
 	logic alu0;				// true if instruction must use alu #0
 	logic fpu;				// FPU op
@@ -964,6 +1076,7 @@ typedef struct packed
 	logic store;
 	logic lda;
 	logic erc;
+	logic fence;
 	logic stcr;
 	logic need_steps;
 	logic compress;
@@ -1109,6 +1222,7 @@ const address_t RSTSP = 32'hFFFFFFF0;
 typedef struct packed {
 	logic v;
 	logic [5:0] sn;
+	iq_owner_t owner;
 	logic out;
 	logic done;
 	logic bt;
@@ -1128,12 +1242,14 @@ typedef struct packed {
 	logic erc;
 	logic mem;
 	logic sync;
+	logic fence;
 	logic jmp;
 	logic imm;
 	logic rfw;
 	value_t res;
 	logic br;
 	pc_address_t brtgt;
+	bts_t bts;				// branch target source
 	logic takb;
 	instruction_t op;
 	cause_code_t exc;
@@ -1162,18 +1278,12 @@ typedef struct packed {
 	pc_address_t pc;
 } iq_entry_t;
 
-function fnIsBccR;
-input instruction_t ir;
-begin
-	fnIsBccR = fnIsBranch(ir) && ir[10]==1'b1;
-end
-endfunction
-
 function fnIsBranch;
 input instruction_t ir;
 begin
-	case(ir.any.opcode)
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	casez(ir.any.opcode)
+	OP_DBRA,
+	8'b00101???:
 		fnIsBranch = 1'b1;
 	default:
 		fnIsBranch = 1'b0;
@@ -1181,12 +1291,21 @@ begin
 end
 endfunction
 
+function fnIsBccR;
+input instruction_t ir;
+begin
+	fnIsBccR = fnIsBranch(ir) && ir[39:36]==4'h7;
+end
+endfunction
+
 function fnBranchDispSign;
 input instruction_t ir;
 begin
-	case(ir.any.opcode)
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	casez(ir.any.opcode)
+	OP_BSR,OP_DBRA:
 		fnBranchDispSign = ir[39];
+	8'b00101???:
+		fnBranchDispSign = ir[39] && |ir[38:36];
 	default:	fnBranchDispSign = 1'b0;
 	endcase	
 end
@@ -1195,9 +1314,11 @@ endfunction
 function [63:0] fnBranchDisp;
 input instruction_t ir;
 begin
-	case(ir.any.opcode)
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	casez(ir.any.opcode)
+	OP_DBRA,
+	8'b00101???:
 		fnBranchDisp = {{47{ir[39]}},ir[39:25],ir[12:11]};
+	OP_BSR:	fnBranchDisp = {{33{ir[39]}},ir[39:9]};
 	default:	fnBranchDisp = 'd0;
 	endcase
 end
@@ -1220,9 +1341,7 @@ endfunction
 function fnIsCallType;
 input instruction_t ir;
 begin
-	if (ir.any.opcode==OP_JSR && ir.jsr.lk!=2'd0)
-		fnIsCallType = 1'b1;
-	else if (fnIsBranch(ir) && ir.br.lk!=1'b0)
+	if (ir.any.opcode==OP_JSR && ir.jsr.Rt!=6'd0)
 		fnIsCallType = 1'b1;
 	else if (ir.any.opcode==OP_BSR && ir.bsr.lk!=2'd0)
 		fnIsCallType = 1'b1;
@@ -1255,11 +1374,12 @@ function fnIsFlowCtrl;
 input instruction_t ir;
 begin
 	fnIsFlowCtrl = 1'b0;
-	case(ir.any.opcode)
+	casez(ir.any.opcode)
 	OP_SYS:	fnIsFlowCtrl = 1'b1;
 	OP_JSR:
 		fnIsFlowCtrl = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	OP_DBRA,
+	8'b00101???:
 		fnIsFlowCtrl = 1'b1;	
 	OP_BSR,OP_RTD:
 		fnIsFlowCtrl = 1'b1;	
@@ -1282,7 +1402,7 @@ endfunction
 function fnSource1v;
 input instruction_t ir;
 begin
-	case(ir.r2.opcode)
+	casez(ir.r2.opcode)
 	OP_SYS:	fnSource1v = 1'b1;
 	OP_R2:
 		case(ir.r2.func)
@@ -1319,12 +1439,10 @@ begin
 	OP_ORI:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
 	OP_EORI:	fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
 	OP_SLTI:	fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BEQ:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BNE:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BLT:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BLE:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BGT:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
-	OP_BGE:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
+	OP_SHIFT:	fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
+	OP_MOV:		fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
+	OP_DBRA:	fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
+	8'b00101???:	fnSource1v = fnConstReg(ir.r2.Ra) || fnImma(ir);
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSource1v = fnConstReg(ir.ls.Ra) || fnImma(ir);
 	OP_LDX:
@@ -1341,7 +1459,7 @@ endfunction
 function fnSource2v;
 input instruction_t ir;
 begin
-	case(ir.r2.opcode)
+	casez(ir.r2.opcode)
 	OP_SYS:	fnSource2v = 1'b1;
 	OP_R2:
 		case(ir.r2.func)
@@ -1378,12 +1496,13 @@ begin
 	OP_ORI:		fnSource2v = 1'b1;
 	OP_EORI:	fnSource2v = 1'b1;
 	OP_SLTI:	fnSource2v = 1'b1;
-	OP_BEQ:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_BNE:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_BLT:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_BLE:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_BGT:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
-	OP_BGE:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
+	OP_SHIFT:
+		case(ir.shifti.func[6])
+		1'b0:	fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
+		1'b1: fnSource2v = 1'b1;
+		endcase
+	OP_DBRA:	fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
+	8'b00101???:		fnSource2v = fnConstReg(ir.br.Rb) || fnImmb(ir);
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSource2v = 1'b1;
 	OP_LDX:
@@ -1400,13 +1519,14 @@ endfunction
 function fnSource3v;
 input instruction_t ir;
 begin
-	case(ir.r2.opcode)
+	casez(ir.r2.opcode)
 	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
-		fnSource3v = ir[12:7]=='d0;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
-		fnSource3v = ir[10] ? ir[30:25]=='d0 : 1'b1;	
+		fnSource3v = fnConstReg(ir[12:7]);
+	OP_DBRA,
+	8'b00101???:
+		fnSource3v = fnIsBccR(ir) ? ir[30:25]=='d0 : 1'b1;	
 	OP_RTD:
-		fnSource3v = ir[7:6]=='d0;
+		fnSource3v = 1'd0;
 	default:
 		fnSource3v = 1'b1;
 	endcase
@@ -1416,7 +1536,7 @@ endfunction
 function fnSourceTv;
 input instruction_t ir;
 begin
-	case(ir.r2.opcode)
+	casez(ir.r2.opcode)
 	OP_SYS:	fnSourceTv = 1'b1;
 	OP_R2:
 		case(ir.r2.func)
@@ -1453,14 +1573,17 @@ begin
 	OP_ORI:		fnSourceTv = fnConstReg(ir.ri.Rt);
 	OP_EORI:	fnSourceTv = fnConstReg(ir.ri.Rt);
 	OP_SLTI:	fnSourceTv = fnConstReg(ir.ri.Rt);
+	OP_SHIFT:	fnSourceTv = fnConstReg(ir.ri.Rt);
+	OP_MOV:		fnSourceTv = fnConstReg(ir.ri.Rt);
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSourceTv = fnConstReg(ir.ls.Rt);
 	OP_LDX:
 		fnSourceTv = fnConstReg(ir.lsn.Rt);
 	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
 		fnSourceTv = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
-		fnSourceTv = 1'b1;	
+	OP_DBRA: fnSourceTv = 1'b1;
+	8'b00101???:
+		fnSourceTv = 1'b1;
 	default:
 		fnSourceTv = 1'b1;
 	endcase
@@ -1470,7 +1593,7 @@ endfunction
 function fnSourcePv;
 input instruction_t ir;
 begin
-	case(ir.r2.opcode)
+	casez(ir.r2.opcode)
 	OP_SYS:	fnSourcePv = ~ir.r2.fmt[0];
 	OP_R2:
 		case(ir.r2.func)
@@ -1506,13 +1629,16 @@ begin
 	OP_ORI:		fnSourcePv = ~ir.ri.fmt[0];
 	OP_EORI:	fnSourcePv = ~ir.ri.fmt[0];
 	OP_SLTI:	fnSourcePv = ~ir.ri.fmt[0];
+	OP_SHIFT:	fnSourcePv = ~ir.r2.fmt[0];
+	OP_MOV:		fnSourcePv = ~ir.r2.fmt[0];
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA:
 		fnSourcePv = ~ir.ri.fmt[0];
 	OP_LDX:
 		fnSourcePv = ~ir.ri.fmt[0];
 	OP_STB,OP_STW,OP_STT,OP_STO,OP_STX:
 		fnSourcePv = ~ir.ri.fmt[0];
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
+	OP_DBRA,
+	8'b00101???:
 		fnSourcePv = 1'b1;
 	default:
 		fnSourcePv = 1'b1;
@@ -1571,7 +1697,7 @@ begin
 	fnIsMem = fnIsLoad(ir) || fnIsStore(ir);
 end
 endfunction
-
+/*
 function [63:0] fnImm;
 input instruction_t [4:0] ins;
 reg [1:0] sz;
@@ -1597,19 +1723,11 @@ begin
 	end
 end
 endfunction
-
+*/
 function fnImma;
 input instruction_t ir;
 begin
 	fnImma = 1'b0;
-	case(ir.any.opcode)
-	OP_R2:
-		if (&ir.r2.Ra)
-			fnImma = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
-		fnImma = &ir.br.Ra;
-	default:	fnImma = 1'b0;
-	endcase
 end
 endfunction
 
@@ -1618,13 +1736,8 @@ input instruction_t ir;
 begin
 	fnImmb = 1'b0;
 	case(ir.any.opcode)
-	OP_R2:
-		if (&ir.r2.Rb)
-			fnImmb = 1'b1;
 	OP_ADDI,OP_CMPI,OP_MULI,OP_DIVI,OP_SUBFI,OP_SLTI:
 		fnImmb = 1'b1;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS:
-		fnImmb = &ir.br.Rb;
 	OP_RTD:
 		fnImmb = 1'b1;
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO,OP_LDA,OP_CACHE,
@@ -1660,7 +1773,7 @@ endfunction
 function fnIsNop;
 input instruction_t ir;
 begin
-	fnIsNop = ir.any.opcode==OP_NOP || ir.any.opcode==OP_PFX;
+	fnIsNop = ir.any.opcode==OP_NOP || ir.any.opcode==OP_PFXA || ir.any.opcode==OP_PFXB || ir.any.opcode==OP_PFXC;
 end
 endfunction
 
@@ -1697,7 +1810,7 @@ endfunction
 function fnIsPostfix;
 input instruction_t ir;
 begin
-	fnIsPostfix = ir.any.opcode==OP_PFX;
+	fnIsPostfix = ir.any.opcode==OP_PFXA || ir.any.opcode==OP_PFXB || ir.any.opcode==OP_PFXC;
 end
 endfunction
 
@@ -1712,7 +1825,6 @@ endfunction
 function [63:0] fnDati;
 input more;
 input instruction_t ins;
-input address_t adr;
 input value_t dat;
 case(ins.any.opcode)
 OP_LDB:

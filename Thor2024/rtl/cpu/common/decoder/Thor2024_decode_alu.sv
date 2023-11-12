@@ -90,7 +90,9 @@ begin
 		fnIsAlu = 1'b1;
 	OP_STX:
 		fnIsAlu = 1'b1;
-	OP_PFX,OP_NOP,OP_PUSH,OP_POP,OP_ENTER,OP_LEAVE,OP_ATOM:
+	OP_PFXA,OP_PFXB,OP_PFXC,OP_NOP,OP_PUSH,OP_POP,OP_ENTER,OP_LEAVE,OP_ATOM:
+		fnIsAlu = 1'b1;
+	OP_FENCE:
 		fnIsAlu = 1'b1;
 	default:	fnIsAlu = 1'b0;
 	endcase

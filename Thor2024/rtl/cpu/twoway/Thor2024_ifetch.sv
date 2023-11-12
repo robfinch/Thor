@@ -37,15 +37,17 @@
 
 import Thor2024pkg::*;
 
-module Thor2024_ifetch(rst, clk, hit, irq, branchback, backpc, branchmiss, misspc, missir,
+module Thor2024_ifetch(rst, clk, clk2x, hit, irq, branchback, backpc, branchmiss, misspc, missir,
 	next_pc, takb, ptakb, pc, inst0, inst1, iq, tail0, tail1,
 	fetchbuf, fetchbuf0_instr, fetchbuf0_v, fetchbuf0_pc, 
 	fetchbuf1_instr, fetchbuf1_v, fetchbuf1_pc,
-	commit0_v, commit0_instr, commit0_pc,
-	commit1_v, commit1_instr, commit1_pc
+	commit0_v, commit0_instr, commit0_pc, commit0_br, commit0_takb,
+	commit1_v, commit1_instr, commit1_pc, commit1_br, commit1_takb,
+	isBB0, isBB1
 );
 input rst;
 input clk;
+input clk2x;
 input hit;
 input irq;
 output reg branchback;
@@ -73,9 +75,14 @@ output pc_address_t fetchbuf1_pc;
 input commit0_v;
 input instruction_t commit0_instr;
 input pc_address_t commit0_pc;
+input commit0_br;
+input commit0_takb;
 input commit1_v;
 input instruction_t commit1_instr;
 input pc_address_t commit1_pc;
+input commit1_br;
+input commit1_takb;
+output reg isBB0, isBB1;
 
 reg [3:0] panic;
 reg did_branchback;
@@ -83,7 +90,6 @@ reg fetchbufA_v;
 reg fetchbufB_v;
 reg fetchbufC_v;
 reg fetchbufD_v;
-reg isBB0, isBB1;
 
 instruction_t [4:0] inst0a;
 instruction_t [4:0] inst1a;
@@ -166,14 +172,35 @@ always_comb
 	mip1 = fnMip(fetchbuf1_instr[0]);
 
 reg backbrA, backbrB, backbrC, backbrD;
+wire ptA, ptB, ptC, ptD;
 always_comb
-	backbrA = fnIsBackBranch(fetchbufA_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	backbrA = FALSE;
+	1:	backbrA = ptA;
+	2:	backbrA = fnIsBackBranch(fetchbufA_instr[0]);
+	default:	backbrA = FALSE;
+	endcase
 always_comb
-	backbrB = fnIsBackBranch(fetchbufB_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	backbrB = FALSE;
+	1:	backbrB = ptB;
+	2:	backbrB = fnIsBackBranch(fetchbufB_instr[0]);
+	default:	backbrB = FALSE;
+	endcase
 always_comb
-	backbrC = fnIsBackBranch(fetchbufC_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	backbrC = FALSE;
+	1:	backbrC = ptC;
+	2:	backbrC = fnIsBackBranch(fetchbufC_instr[0]);
+	default:	backbrC = FALSE;
+	endcase
 always_comb
-	backbrD = fnIsBackBranch(fetchbufD_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	backbrD = FALSE;
+	1:	backbrD = ptD;
+	2:	backbrD = fnIsBackBranch(fetchbufD_instr[0]);
+	default:	backbrD = FALSE;
+	endcase
 	
 Thor2024_PCReg upcr1
 (
@@ -277,7 +304,7 @@ else begin
 				if (backbrB) begin
 					tFetchCD();
 	    		fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
-	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
+	    		fetchbuf <= ~iq[tail0].v;		// fetchbuf is zero
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -295,7 +322,7 @@ else begin
 			4'b0111:
 				if (backbrB|backbrC|backbrD) begin
 			    fetchbufB_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + ~iq[tail0].v;
+			    fetchbuf <= ~iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -307,7 +334,7 @@ else begin
 				if (backbrA) begin
 					tFetchCD();
 	    		fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
+	    		fetchbuf <= ~iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -325,7 +352,7 @@ else begin
 			4'b1011:
 				if (backbrA|backbrC|backbrD) begin
 			    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + ~iq[tail0].v;
+			    fetchbuf <= ~iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -351,7 +378,7 @@ else begin
 						fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 						if (SUPPORT_Q2) begin
 							fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+							fetchbuf <= (~iq[tail0].v & ~iq[tail1].v);	// fetchbuf is zero
 						end
 			    end
 			    else begin
@@ -380,7 +407,7 @@ else begin
 			    fetchbufA_v <= iq[tail0].v;	// if it can be queued, it will
 			    if (SUPPORT_Q2) begin
 			    	fetchbufB_v <= iq[tail1].v;	// if it can be queued, it will
-			    	fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			    	fetchbuf <= (~iq[tail0].v & ~iq[tail1].v);	// fetchbuf is zero
 			  	end
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
@@ -404,7 +431,7 @@ else begin
 				if (backbrD) begin
 					tFetchAB();
 	    		fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
-	    		fetchbuf <= fetchbuf + ~iq[tail0].v;
+	    		fetchbuf <= iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -422,7 +449,7 @@ else begin
 			4'b0111:
 				if (backbrD|backbrA|backbrB) begin
 			    fetchbufD_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + ~iq[tail0].v;
+			    fetchbuf <= iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -434,7 +461,7 @@ else begin
 				if (backbrC) begin
 					tFetchAB();
 		    	fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-		    	fetchbuf <= fetchbuf + ~iq[tail0].v;
+		    	fetchbuf <= iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -452,7 +479,7 @@ else begin
 			4'b1011:
 				if (backbrC|backbrA|backbrB) begin
 			    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
-			    fetchbuf <= fetchbuf + ~iq[tail0].v;
+			    fetchbuf <= iq[tail0].v;
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
 
@@ -478,7 +505,7 @@ else begin
 						fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 						if (SUPPORT_Q2) begin
 							fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-							fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+							fetchbuf <= (~iq[tail0].v & ~iq[tail1].v) + 1;
 						end
 			    end
 			    else begin
@@ -507,7 +534,7 @@ else begin
 			    fetchbufC_v <= iq[tail0].v;	// if it can be queued, it will
 			    if (SUPPORT_Q2) begin
 			    	fetchbufD_v <= iq[tail1].v;	// if it can be queued, it will
-			    	fetchbuf <= fetchbuf + (~iq[tail0].v & ~iq[tail1].v);
+			    	fetchbuf <= (~iq[tail0].v & ~iq[tail1].v) + 1;
 			  	end
 				end
 				else if (SIM) panic <= PANIC_BRANCHBACK;
@@ -641,15 +668,81 @@ reg rsb_pop, rsb_popc;
 pc_address_t ret_pc;
 pc_address_t rsb_pc;
 
+generate begin : gBranchPredictor
+	if (BRANCH_PREDICTOR==1) begin
+		gselectPredictor upredA
+		(
+			.rst(rst),
+			.clk(clk),
+			.clk2x(clk2x),
+			.en(1'b1),
+			.xisBranch({commit0_br,commit1_br}),
+			.xip({commit0_pc[43:12],commit1_pc[43:12]}),
+			.takb({commit0_takb,commit1_takb}),
+			.ip(fetchbufA_pc[43:12]),
+			.predict_taken(ptA)
+		);
+
+		gselectPredictor upredB
+		(
+			.rst(rst),
+			.clk(clk),
+			.clk2x(clk2x),
+			.en(1'b1),
+			.xisBranch({commit0_br,commit1_br}),
+			.xip({commit0_pc[43:12],commit1_pc[43:12]}),
+			.takb({commit0_takb,commit1_takb}),
+			.ip(fetchbufB_pc[43:12]),
+			.predict_taken(ptB)
+		);
+
+		gselectPredictor upredC
+		(
+			.rst(rst),
+			.clk(clk),
+			.clk2x(clk2x),
+			.en(1'b1),
+			.xisBranch({commit0_br,commit1_br}),
+			.xip({commit0_pc[43:12],commit1_pc[43:12]}),
+			.takb({commit0_takb,commit1_takb}),
+			.ip(fetchbufC_pc[43:12]),
+			.predict_taken(ptC)
+		);
+
+		gselectPredictor upredD
+		(
+			.rst(rst),
+			.clk(clk),
+			.clk2x(clk2x),
+			.en(1'b1),
+			.xisBranch({commit0_br,commit1_br}),
+			.xip({commit0_pc[43:12],commit1_pc[43:12]}),
+			.takb({commit0_takb,commit1_takb}),
+			.ip(fetchbufD_pc[43:12]),
+			.predict_taken(ptD)
+		);
+	end
+end
+endgenerate
+
 always_comb
-	isBB0 = fnIsBackBranch(fetchbuf0_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	isBB0 = FALSE;
+	1:	isBB0 = fetchbuf0_v && fnIsBranch(fetchbuf0_instr[0]) && (fetchbuf ? ptC : ptA);
+	2:	isBB0 = fetchbuf0_v && fnIsBackBranch(fetchbuf0_instr[0]);
+	default:	isBB0 = FALSE;
+	endcase
 always_comb
-	isBB1 = fnIsBackBranch(fetchbuf1_instr[0]);
+	case(BRANCH_PREDICTOR)
+	0:	isBB1 = FALSE;
+	1:	isBB1 = fetchbuf1_v && fnIsBranch(fetchbuf1_instr[0]) && (fetchbuf ? ptD : ptB);
+	2:	isBB1 = fetchbuf1_v && fnIsBackBranch(fetchbuf1_instr[0]);
+	default:	isBB1 = FALSE;
+	endcase
 always_comb
-	branchback = ((fetchbuf0_v & isBB0) | (fetchbuf1_v & isBB1)
+	branchback = (isBB0) | (isBB1)
 			|| (SUPPORT_RSB && fetchbuf0_v && fnIsRet(fetchbuf0_instr[0]))
 			|| (SUPPORT_RSB && fetchbuf1_v && fnIsRet(fetchbuf1_instr[0]) && fetchbuf1_v)
-			)
 			;
 always_comb
 begin

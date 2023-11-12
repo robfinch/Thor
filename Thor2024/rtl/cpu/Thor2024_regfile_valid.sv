@@ -88,7 +88,8 @@ else begin
 	rf_vr <= rf_v;
 	if (branchmiss) begin
 		for (n1 = 1; n1 < AREGS; n1 = n1 + 1)
-		  if (rf_vr[n1] == INV && ~livetarget[n1])	rf_vr[n1] <= VAL;
+		  if (rf_vr[n1] == INV && ~livetarget[n1])
+		  	rf_vr[n1] <= VAL;
 	end
 	//
 	// COMMIT PHASE (register-file update only ... dequeue is elsewhere)
@@ -121,8 +122,6 @@ else begin
 		2'b11:
 			if (iq[tail0].v == INV) begin
 				if (fnIsBackBranch(fetchbuf0_instr)) begin
-					if (fetchbuf0_instr.br.lk != 1'b0)
-						rf_vr[LR0] <= INV;
 				end
 				else begin
 					if (iq[tail1].v == INV && SUPPORT_Q2) begin
@@ -159,7 +158,14 @@ always_comb
 begin
 
 	rf_v = rf_vr;
-	rf_v[0] = 1;
+	if (commit0_v) begin
+    if (!rf_v[ commit0_tgt ]) 
+			rf_v[ commit0_tgt ] = rf_source[ commit0_tgt ] == commit0_id || (branchmiss && iqentry_source[ commit0_id[2:0] ]);
+	end
+	if (commit1_v) begin
+    if (!rf_v[ commit1_tgt ]) 
+			rf_v[ commit1_tgt ] = rf_source[ commit1_tgt ] == commit1_id || (branchmiss && iqentry_source[ commit1_id[2:0] ]);
+	end
 
 	rf_v[0] = 1;
 end

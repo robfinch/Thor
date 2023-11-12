@@ -56,77 +56,50 @@ fpCompare64 ufpcmp1
 );
 
 always_comb
-	case(instr.br.cm)
-	2'd0:	// integer signed branches
-		case(instr.any.opcode)
-		OP_DBRA: takb = a!='d0;
-		OP_BEQ:	takb = a==b;
-		OP_BNE:	takb = a!=b;
-		OP_BLT:	takb = $signed(a) < $signed(b);
-		OP_BLE:	takb = $signed(a) <= $signed(b);
-		OP_BGT:	takb = $signed(a) > $signed(b);
-		OP_BGE:	takb = $signed(a) >= $signed(b);
-		OP_BBC:	takb = ~a[b[5:0]];
-		OP_BBS:	takb = a[b[5:0]];
-		OP_BBCI: takb = ~a[instr.br.Rb];
-		OP_BBSI: takb = a[instr.br.Rb];
-		OP_MCB:
-			case(instr.mcb.cnd)
-			MCB_EQ:	takb = a==b;
-			MCB_NE:	takb = a!=b;
-			MCB_LT:	takb = $signed(a) < $signed(b);
-			MCB_LE:	takb = $signed(a) <= $signed(b);
-			MCB_GT:	takb = $signed(a) > $signed(b);
-			MCB_GE:	takb = $signed(a) >= $signed(b);
-			MCB_BC:	takb = ~a[b[5:0]];
-			MCB_BS:	takb = a[b[5:0]];
-			endcase
+	case(instr.any.opcode)
+	OP_DBRA:	takb = a!='d0;
+	OP_BccU:	// integer unsigned branches
+		case(instr.br.fn)
+		EQ:	takb = a==b;
+		NE:	takb = a!=b;
+		LT:	takb = a < b;
+		LE:	takb = a <= b;
+		GT:	takb = a > b;
+		GE:	takb = a >= b;
+		BC:	takb = ~a[b[5:0]];
+		BS:	takb = a[b[5:0]];
+		BCI: takb = ~a[instr.br.Rb];
+		BSI: takb = a[instr.br.Rb];
 		default:	takb = 1'b0;
 		endcase	
-	2'd1:	// integer usigned branches
-		case(instr.any.opcode)
-		OP_BEQ:	takb = a==b;
-		OP_BNE:	takb = a!=b;
-		OP_BLT:	takb = a < b;
-		OP_BLE:	takb = a <= b;
-		OP_BGT:	takb = a > b;
-		OP_BGE:	takb = a >= b;
-		OP_BBC:	takb = ~a[b[5:0]];
-		OP_BBS:	takb = a[b[5:0]];
-		OP_BBCI: takb = ~a[instr.br.Rb];
-		OP_BBSI: takb = a[instr.br.Rb];
-		OP_MCB:
-			case(instr.mcb.cnd)
-			MCB_EQ:	takb = a==b;
-			MCB_NE:	takb = a!=b;
-			MCB_LT:	takb = a < b;
-			MCB_LE:	takb = a <= b;
-			MCB_GT:	takb = a > b;
-			MCB_GE:	takb = a >= b;
-			MCB_BC:	takb = ~a[b[5:0]];
-			MCB_BS:	takb = a[b[5:0]];
-			endcase
+	OP_Bcc:	// integer signed branches
+		case(instr.br.fn)
+		EQ:	takb = a==b;
+		NE:	takb = a!=b;
+		LT:	takb = $signed(a) < $signed(b);
+		LE:	takb = $signed(a) <= $signed(b);
+		GT:	takb = $signed(a) > $signed(b);
+		GE:	takb = $signed(a) >= $signed(b);
+		BC:	takb = ~a[b[5:0]];
+		BS:	takb = a[b[5:0]];
+		BCI: takb = ~a[instr.br.Rb];
+		BSI: takb = a[instr.br.Rb];
 		default:	takb = 1'b0;
 		endcase	
-	2'd2:
-		case(instr.any.opcode)
-		OP_BEQ:	takb = fcmpo[0];
-		OP_BNE:	takb = ~fcmpo[0];
-		OP_BLT:	takb = fcmpo[1];
-		OP_BLE:	takb = fcmpo[2];
-		OP_BGT: takb = ~fcmpo[2];
-		OP_BGE: takb = ~fcmpo[1];
-		OP_MCB:
-			case(instr.mcb.cnd)
-			MCB_EQ:	takb = fcmpo[0];
-			MCB_NE:	takb = ~fcmpo[0];
-			MCB_LT:	takb = fcmpo[1];
-			MCB_LE:	takb = fcmpo[2];
-			MCB_GT:	takb = ~fcmpo[2];
-			MCB_GE:	takb = ~fcmpo[1];
-			MCB_BC:	takb = fcmp_nan;
-			MCB_BS:	takb = ~fcmp_nan;
-			endcase
+	OP_FBccD:
+		case(instr.fbr.fn)
+		FEQ:	takb = fcmpo[0];
+		FNE:	takb = ~fcmpo[0];
+		FLT:	takb = fcmpo[1];
+		FLE:	takb = fcmpo[2];
+		FGT: takb = ~fcmpo[2];
+		FGE: takb = ~fcmpo[1];
+		FULT: takb = fcmpo[1] | fcmp_nan;
+		FULE: takb = fcmpo[2] | fcmp_nan;
+		FUGT: takb = ~fcmpo[2] | fcmp_nan;
+		FUGE: takb = ~fcmpo[1] | fcmp_nan;
+		FORD: takb = ~fcmp_nan;
+		FUN:	takb = fcmp_nan;
 		default:	takb = 1'b0;
 		endcase	
 	default:	takb = 1'b0;

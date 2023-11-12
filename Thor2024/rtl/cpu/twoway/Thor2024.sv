@@ -430,7 +430,7 @@ input instruction_t fetchbuf_instr;
 input value_t rfo;
 input [63:0] imm;
 begin
-	fnA1 = fnImma(fetchbuf_instr) ? imm : rfo;
+	fnA1 = imm | rfo;
 end
 endfunction
 
@@ -439,7 +439,7 @@ input instruction_t fetchbuf_instr;
 input value_t rfo;
 input [63:0] imm;
 begin
-	fnA2 = fnImmb(fetchbuf_instr) ? imm : rfo;
+	fnA2 = fnImmb(fetchbuf_instr) ? imm : imm|rfo;
 end
 endfunction
 
@@ -448,7 +448,7 @@ input instruction_t fetchbuf_instr;
 input value_t rfo;
 input [63:0] imm;
 begin
-	fnA3 = fnImmc(fetchbuf_instr) ? imm : rfo;
+	fnA3 = imm | rfo;
 end
 endfunction
 
@@ -471,12 +471,7 @@ begin
 	OP_ORI:		fnAP = ir.ri.fmt[0] ? rfo : {64{1'b1}};
 	OP_EORI:	fnAP = ir.ri.fmt[0] ? rfo : {64{1'b1}};
 	OP_SLTI:	fnAP = ir.ri.fmt[0] ? rfo : {64{1'b1}};
-	OP_BEQ:		fnAP = {64{1'b1}};
-	OP_BNE:		fnAP = {64{1'b1}};
-	OP_BLT:		fnAP = {64{1'b1}};
-	OP_BLE:		fnAP = {64{1'b1}};
-	OP_BGT:		fnAP = {64{1'b1}};
-	OP_BGE:		fnAP = {64{1'b1}};
+	OP_Bcc,OP_BSR:	fnAP = {64{1'b1}};
 	OP_LDB,OP_LDBU,OP_LDW,OP_LDWU,OP_LDT,OP_LDTU,OP_LDO:
 		fnAP = ir.ls.fmt[0] ? rfo : {64{1'b1}};
 	OP_LDX:
@@ -1731,7 +1726,7 @@ always_comb
 	BTS_DISP:
 		begin
 			tgtpc = fcu_pc + {{{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],2'b0} +
-											{{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11],12'h000};
+											  {{47{fcu_instr[39]}},fcu_instr[39:25],fcu_instr[12:11]},12'h000};
 			tgtpc[11:0] = 'd0;
 		end
 	BTS_BSR:
@@ -1785,14 +1780,16 @@ Thor2024_branch_eval ube1
 );
 
 always_comb
-	if (fnIsRet(fcu_instr))
+	case(fcu_bts)
+	BTS_RET:
 		fcu_bus = fcu_argA + {fcu_argI,3'd0};
 	/* Under construction.
 	else if (fcu_instr.any.opcode==OP_DBRA)
 		fcu_bus = fcu_argA - 2'd1;
 	*/
-	else
+	default:
 		fcu_bus = tpc;
+	endcase
 
 always_comb
 begin
@@ -2881,14 +2878,14 @@ fcu_dataready <= fcu_available
 				iq[tail0].Rc <= Rc1;
 				iq[tail0].Rt <= Rt1;
 				iq[tail0].Rp <= Rp1;
-				iq[tail0].a0 <= db1.imm;
-				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
+				iq[tail0].a0 <= db1.immb;
+				iq[tail0].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imma);
 				iq[tail0].a1_v <= fnSource1v(fetchbuf1_instr[0]) || rf_v[ Ra1 ];
 				iq[tail0].a1_s <= rf_source [ Ra1 ];
-				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
+				iq[tail0].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.immb);
 				iq[tail0].a2_v <= fnSource2v(fetchbuf1_instr[0]) || rf_v[ Rb1 ];
 				iq[tail0].a2_s  <= rf_source [ Rb1 ];
-				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
+				iq[tail0].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.immc);
 				iq[tail0].a3_v <= fnSource3v(fetchbuf1_instr[0]) || rf_v[ Rc1 ];
 				iq[tail0].a3_s  <= rf_source [ Rc1 ];
 				iq[tail0].at <= rfot1;
@@ -2966,14 +2963,14 @@ fcu_dataready <= fcu_available
 					iq[tail0].Rc <= Rc0;
 					iq[tail0].Rt <= Rt0;
 					iq[tail0].Rp <= Rp0;
-					iq[tail0].a0	<=	db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+					iq[tail0].a0	<=	db0.immb;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imma);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.immb);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.immc);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
@@ -3049,14 +3046,14 @@ fcu_dataready <= fcu_available
 					iq[tail0].Rc <= Rc0;
 					iq[tail0].Rt <= Rt0;
 					iq[tail0].Rp <= Rp0;
-			    iq[tail0].a0 <= db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+			    iq[tail0].a0 <= db0.immb;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imma);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.immb);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s  <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.immc);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
@@ -3139,14 +3136,14 @@ fcu_dataready <= fcu_available
 					iq[tail0].Rc <= Rc0;
 					iq[tail0].Rt <= Rt0;
 					iq[tail0].Rp <= Rp0;
-			    iq[tail0].a0 <= db0.imm;
-					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imm);
+			    iq[tail0].a0 <= db0.immb;
+					iq[tail0].a1 <= fnA1(fetchbuf0_instr[0], rfoa0, db0.imma);
 					iq[tail0].a1_v <= fnSource1v(fetchbuf0_instr[0]) || rf_v[ Ra0 ];
 					iq[tail0].a1_s <= rf_source [ Ra0 ];
-					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.imm);
+					iq[tail0].a2 <= fnA2(fetchbuf0_instr[0], rfob0, db0.immb);
 					iq[tail0].a2_v <= fnSource2v(fetchbuf0_instr[0]) || rf_v[ Rb0 ];
 					iq[tail0].a2_s <= rf_source [ Rb0 ];
-					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.imm);
+					iq[tail0].a3 <= fnA3(fetchbuf0_instr[0], rfoc0, db0.immc);
 					iq[tail0].a3_v <= fnSource3v(fetchbuf0_instr[0]) || rf_v[ Rc0 ];
 					iq[tail0].a3_s  <= rf_source [ Rc0 ];
 					iq[tail0].at <= rfot0;
@@ -3218,10 +3215,10 @@ fcu_dataready <= fcu_available
 						iq[tail1].Rc <= Rc1;
 						iq[tail1].Rt <= Rt1;
 						iq[tail1].Rp <= Rp1;
-						iq[tail1].a0 <= db1.imm;
-						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imm);
-						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.imm);
-						iq[tail1].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.imm);
+						iq[tail1].a0 <= db1.immb;
+						iq[tail1].a1 <= fnA1(fetchbuf1_instr[0], rfoa1, db1.imma);
+						iq[tail1].a2 <= fnA2(fetchbuf1_instr[0], rfob1, db1.immb);
+						iq[tail1].a3 <= fnA3(fetchbuf1_instr[0], rfoc1, db1.immc);
 						iq[tail1].at <= rfot1;
 						iq[tail1].ap <= fnAP(fetchbuf1_instr[0], rfop1);
 						lastq1 <= {1'b0,tail1};

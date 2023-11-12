@@ -75,11 +75,14 @@ begin
 		endcase
 	OP_FLT2:	fnRt = ir.f2.Rt;
 	OP_FLT3:	fnRt = ir.f3.Rt;
-	OP_BSR:	fnRt = 6'd56 + ir[8:7];
-	OP_JSR:	fnRt = 6'd56 + ir[8:7];
+	OP_BSR,OP_JSR:
+		case(ir[8:7])
+		2'd0:	fnRt = 6'd0;
+		2'd1:	fnRt = 6'd57;
+		2'd2:	fnRt = 6'd58;
+		2'd3:	fnRt = 6'd59;
+		endcase
 	OP_RTD:	fnRt = 6'd62;
-	OP_BEQ,OP_BNE,OP_BLT,OP_BLE,OP_BGE,OP_BGT,OP_BBC,OP_BBS,OP_BBCI,OP_BBSI:
-		fnRt = 6'd56 + ir[7];
 	OP_DBRA: fnRt = 6'd55;
 	OP_ADDI,OP_SUBFI,OP_CMPI,OP_MULI,OP_DIVI,OP_SLTI,
 	OP_MULUI,OP_DIVUI,

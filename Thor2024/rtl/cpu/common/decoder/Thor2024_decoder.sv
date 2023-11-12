@@ -43,7 +43,9 @@ output decode_bus_t db;
 Thor2024_decode_imm udcimm
 (
 	.ins(instr),
-	.imm(db.imm)
+	.imma(db.imma),
+	.immb(db.immb),
+	.immc(db.immc)
 );
 
 Thor2024_decode_Ra udcra
@@ -108,7 +110,7 @@ Thor2024_decode_backbr ubkbr1
 
 Thor2024_decode_branch_tgt_src udbts1
 (
-	.instr(instr[0]),
+	.ins(instr[0]),
 	.bts(db.bts)
 );
 

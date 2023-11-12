@@ -44,7 +44,7 @@ function fnIsPfx;
 input instruction_t op;
 begin
 	case(op.any.opcode)
-	OP_PFX:
+	OP_PFXA,OP_PFXB,OP_PFXC:
 		fnIsPfx = 1'b1;
 	default:
 		fnIsPfx = 1'b0;

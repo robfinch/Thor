@@ -191,7 +191,10 @@ always_comb
 	OP_LDX:	bus = a + (b << ir[26:25]) + i;
 	OP_STX:	bus = a + (b << ir[26:25]) + i;
 	OP_BLEND:	bus = blendo;
-	OP_PFX:		bus = 0;
+	OP_NOP:		bus = 0;
+	OP_PFXA:	bus = 0;
+	OP_PFXB:	bus = 0;
+	OP_PFXC:	bus = 0;
 	default:	bus = {2{32'hDEADBEEF}};
 	endcase
 

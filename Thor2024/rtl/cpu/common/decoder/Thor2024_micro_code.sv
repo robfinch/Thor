@@ -57,7 +57,7 @@ case(micro_ip)
 12'h005:	begin next_ip = 12'h006; instr = {2'd0,3'd0,16'h30,SP,6'd0,OP_STO}; end		// Mem48[sp] = 0
 12'h006:	begin next_ip = 12'h007; instr = {3'd0,3'd0,FN_OR,2'd0,6'd0,SP,FP,OP_R2};	end // FP = SP
 12'h007:	begin next_ip = 12'h008; instr = {2'd0,3'd0,16'h0000,SP,SP,OP_ADDI}; end				// SP = SP + const
-12'h008:	begin next_ip = 12'h000; instr = {micro_ir[39:8],1'b0,OP_PFX};	end	
+12'h008:	begin next_ip = 12'h000; instr = {micro_ir[39:8],1'b0,OP_PFXB};	end	
 12'h009:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,6'd0,6'd0,OP_NOP};	end
 // LEAVE
 12'h00C:	begin next_ip = 12'h00D; instr = {micro_ir[39:35],16'h0,6'd0,FP,SP,OP_ORI}; end		// SP = FP
@@ -65,7 +65,7 @@ case(micro_ip)
 12'h00E:	begin next_ip = 12'h00F; instr = {micro_ir[39:35],16'h10,SP,LR1,OP_LDO};	end		// LR1 = Mem16[sp]
 12'h00F:	begin next_ip = 12'h010; instr = {micro_ir[39:35],16'h40,SP,SP,OP_ADDI}; end					// SP = SP + 64
 12'h010:	begin next_ip = 12'h011; instr = {micro_ir[39:35],16'h0000,SP,SP,OP_ADDI}; end				// SP = SP + const
-12'h011:	begin next_ip = 12'h012; instr = {6'd0,micro_ir[34:13],4'h0,1'b0,OP_PFX};	end	
+12'h011:	begin next_ip = 12'h012; instr = {6'd0,micro_ir[34:13],4'h0,1'b0,OP_PFXB};	end	
 12'h012:	begin next_ip = 12'h000; instr = {micro_ir[39:35],10'h00,micro_ir[12:11],LR1,micro_ir[10:7],2'd0,OP_JSR}; end	// PC = LR1 + const
 12'h013:	begin next_ip = 12'h000; instr = {2'd0,3'd0,16'h0000,2'd0,6'd0,6'd0,OP_NOP};	end
 // PUSH
